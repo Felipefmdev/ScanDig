@@ -94,6 +94,7 @@ func _ready() -> void:
 	_build_warning_marker()
 	health_bar.max_value = max_health
 	health_bar.value = health
+	boss_defeated.connect(_report_defeat_to_core)
 	_enter_state(State.EMERGE)
 
 
@@ -420,6 +421,13 @@ func _drop_crown() -> void:
 			global_position + Vector3.UP * 1.5, Vector3(randf_range(-0.5, 0.5), 3.0, randf_range(-0.5, 0.5)))
 	hud.visible = false
 	boss_defeated.emit(BOSS_ID)
+
+
+## Avisa o core (o host valida, ignora repetidos e sincroniza defeated_bosses; desbloqueia
+## a compra do Campo Antigo). Qualquer peer pode reportar.
+func _report_defeat_to_core(boss_id: StringName) -> void:
+	if GameState.instance != null:
+		GameState.instance.request_report_boss_defeated(String(boss_id))
 
 
 # ---------------------------------------------------------------------------

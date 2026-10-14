@@ -101,3 +101,15 @@ func test_death_emits_boss_defeated_and_drops_crown() -> void:
 				and (c as ItemPickup).carried.item.id == "coroa_caranguejo_rei":
 			crown = true
 	assert_true(crown, "larga a Coroa do Caranguejo-Rei")
+
+
+func test_death_reports_boss_defeated_to_core() -> void:
+	var state: GameState = GameState.instance
+	var had_it: bool = state.defeated_bosses.has("king_crab")
+	state.defeated_bosses.erase("king_crab")
+	king.take_damage(1000.0)
+	for i: int in 300:
+		king._process(1.0 / 60.0)
+	assert_true(state.is_boss_defeated("king_crab"))
+	if not had_it:
+		state.defeated_bosses.erase("king_crab")
