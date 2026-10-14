@@ -47,6 +47,8 @@ func _ready() -> void:
 		cube.size = box.size
 		_mesh.mesh = cube
 		_mesh.material_override = make_material(carried.item if carried != null else null, carried != null and carried.is_rare_variant)
+		if carried != null and carried.tool_data != null:
+			(_mesh.material_override as StandardMaterial3D).albedo_color = carried.tool_data.color
 		add_child(_mesh)
 
 	_label = Label3D.new()

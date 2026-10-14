@@ -28,12 +28,27 @@ signal died
 @export_range(-1.0, 1.0, 0.05) var pickup_cone_dot: float = 0.85
 @export var drop_impulse: float = 1.4
 
+@export_group("Ferramentas Compráveis")
+@export var slingshot_damage: float = 20.0
+@export var slingshot_cooldown: float = 0.8
+@export var slingshot_speed: float = 22.0
+@export var repellent_radius: float = 8.0
+@export var repellent_flee_seconds: float = 8.0
+@export var repellent_noise_reduction: float = 30.0
+@export var net_trap_distance: float = 1.6
+@export var medkit_heal: float = 40.0
+
 const BASE_DIG_COOLDOWN: float = 0.35
 ## Layer 5 (ItemPickup).
 const PICKUP_MASK: int = 1 << 4
 const GROUND_MASK: int = 1
 const DIRT_CLOD_COLOR: Color = Color(0.78, 0.64, 0.42)
 const DIRT_CLOD_LIFETIME: float = 3.0
+const TOOL_SLINGSHOT: StringName = &"estilingue"
+const TOOL_REPELLENT: StringName = &"repelente"
+const TOOL_NET_TRAP: StringName = &"armadilha_rede"
+const TOOL_MEDKIT: StringName = &"kit_medico"
+const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
 const SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL: float = 0.25
 const SHOVEL_DAMAGE_REDUCTION_PER_LEVEL: float = 0.15
 const MIN_SHOVEL_DAMAGE_MULTIPLIER: float = 0.3
@@ -55,6 +70,8 @@ const THREAT_MESSAGES: Array[String] = [
 @onready var shovel_rig: Node3D = $Head/Camera3D/ShovelRig
 @onready var inventory: Inventory = $Inventory
 @onready var dig_animator: ShovelDigAnimator = $ShovelDigAnimator
+@onready var tool_view: Node3D = $Head/Camera3D/ToolView
+@onready var slingshot_model: SlingshotModel = $Head/Camera3D/ToolView/Slingshot
 
 # HUD Elements
 @onready var feedback_label: Label = $HUD/FeedbackLabel
@@ -77,6 +94,9 @@ var _shake_tween: Tween = null
 var _threat_fill_style: StyleBoxFlat = null
 var _spawn_transform: Transform3D = Transform3D.IDENTITY
 var _target_pickup: ItemPickup = null
+var _target_offer: ShopOffer = null
+var _use_cooldown: float = 0.0
+var _tool_view_rest: Vector3 = Vector3.ZERO
 var _dig_target: BuriedSpot = null
 var _dig_is_careful: bool = false
 
@@ -113,6 +133,11 @@ func _ready() -> void:
 	dig_animator.impact.connect(_on_shovel_impact)
 	dig_animator.throw_dirt.connect(_on_shovel_throw_dirt)
 	dig_animator.swing_hit.connect(_on_swing_hit)
+
+	if tool_view != null:
+		_tool_view_rest = tool_view.position
+	if GameState.instance != null:
+		GameState.instance.money_changed.connect(_on_team_money_changed)
 
 
 func _ensure_default_input_mappings() -> void:
@@ -199,10 +224,13 @@ func _physics_process(delta: float) -> void:
 		_dig_cooldown -= delta
 	if _attack_cooldown > 0.0:
 		_attack_cooldown -= delta
+	if _use_cooldown > 0.0:
+		_use_cooldown -= delta
 
 	_handle_dig_actions()
 	_handle_attack_action()
 	_handle_inventory_actions()
+	_handle_use_tool_action()
 
 
 func _process(_delta: float) -> void:
@@ -391,10 +419,17 @@ func _show_temporary_message(text: String, color: Color = Color.WHITE, duration:
 
 
 func _update_session_hud() -> void:
-	if session_info_label != null:
-		session_info_label.text = "🎒 Mochila: %d/%d (R$ %d) | 💰 Entregue: R$ %d" % [
-			inventory.get_count(), inventory.capacity, inventory.get_total_value(), session_money
-		]
+	if session_info_label == null:
+		return
+	var bag: String = "🎒 Mochila: %d/%d (R$ %d)" % [inventory.get_count(), inventory.capacity, inventory.get_total_value()]
+	if GameState.instance != null:
+		session_info_label.text = "%s | 💰 Equipa: R$ %d" % [bag, GameState.instance.team_money]
+	else:
+		session_info_label.text = "%s | 💰 Entregue: R$ %d" % [bag, session_money]
+
+
+func _on_team_money_changed(_new_amount: int) -> void:
+	_update_session_hud()
 
 
 func _get_category_name(cat: int) -> String:
@@ -591,7 +626,10 @@ func _on_swing_hit() -> void:
 			continue
 		if dist > 0.05 and forward.dot(to_target / dist) < attack_cone_dot:
 			continue
-		target.call("take_damage", damage)
+		if target.has_method("is_alive"):
+			target.call("take_damage", damage, global_position)  # EnemyBase: origem do golpe
+		else:
+			target.call("take_damage", damage)
 		hits += 1
 
 	if hits > 0:
@@ -615,6 +653,9 @@ func _handle_inventory_actions() -> void:
 
 
 func _interact() -> void:
+	if _target_offer != null and is_instance_valid(_target_offer):
+		_buy_offer(_target_offer)
+		return
 	var sell_point: SellPoint = _get_sell_point_in_range()
 	if sell_point != null and _count_deliverable() > 0:
 		var items: Array[CarriedItem] = inventory.take_where(SellPoint.can_deliver)
@@ -691,7 +732,15 @@ func _find_target_pickup() -> ItemPickup:
 
 
 func _update_interaction_target() -> void:
-	var target: ItemPickup = _find_target_pickup()
+	var offer: ShopOffer = _find_target_offer()
+	if offer != _target_offer:
+		if _target_offer != null and is_instance_valid(_target_offer):
+			_target_offer.set_highlighted(false)
+		_target_offer = offer
+		if _target_offer != null:
+			_target_offer.set_highlighted(true)
+
+	var target: ItemPickup = null if _target_offer != null else _find_target_pickup()
 	if target != _target_pickup:
 		if _target_pickup != null and is_instance_valid(_target_pickup):
 			_target_pickup.set_highlighted(false)
@@ -703,7 +752,10 @@ func _update_interaction_target() -> void:
 		return
 	var sell_point: SellPoint = _get_sell_point_in_range()
 	var deliverable: int = _count_deliverable()
-	if sell_point != null and deliverable > 0:
+	if _target_offer != null:
+		var full: String = "  — mochila cheia!" if inventory.is_full() else ""
+		interact_prompt.text = _target_offer.get_prompt() + full
+	elif sell_point != null and deliverable > 0:
 		interact_prompt.text = "[E] Entregar mochila (%d itens, R$ %d)" % [deliverable, inventory.get_total_value()]
 	elif _target_pickup != null and _target_pickup.carried != null:
 		var aimed: CarriedItem = _target_pickup.carried
@@ -741,3 +793,185 @@ func _update_tool_in_hand() -> void:
 		detector.call("set_active", active)
 	else:
 		detector.visible = active
+	if tool_view != null:
+		tool_view.visible = c != null and c.tool_id == TOOL_SLINGSHOT
+
+
+# ---------------------------------------------------------------------------
+# Loja (ShopOffer) e ferramentas compráveis (botão esquerdo)
+# ---------------------------------------------------------------------------
+
+## Produto da banca em mira: o mais alinhado com a mira dentro do alcance (cone frontal).
+func _find_target_offer() -> ShopOffer:
+	var from: Vector3 = camera.global_position
+	var fwd: Vector3 = -camera.global_basis.z
+	var best: ShopOffer = null
+	var best_dot: float = 0.93
+	for n: Node in get_tree().get_nodes_in_group(ShopOffer.GROUP):
+		var offer: ShopOffer = n as ShopOffer
+		if offer == null or offer.tool_data == null:
+			continue
+		var to_o: Vector3 = (offer.global_position + Vector3.UP * 0.15) - from
+		var dist: float = to_o.length()
+		if dist > interact_range or dist < 0.01:
+			continue
+		var d: float = fwd.dot(to_o / dist)
+		if d > best_dot:
+			best = offer
+			best_dot = d
+	return best
+
+
+func _buy_offer(offer: ShopOffer) -> void:
+	if inventory.is_full():
+		_show_temporary_message("🎒 Mochila cheia! Liberte um slot antes de comprar.", Color(1.0, 0.6, 0.3), 1.8)
+		return
+	var result: Dictionary = offer.try_buy()
+	var message: String = result.get("message", "")
+	if not result.get("ok", false):
+		_show_temporary_message("❌ " + message, Color(1.0, 0.45, 0.4), 1.8)
+		return
+	var c: CarriedItem = result.get("carried", null)
+	if c != null:
+		inventory.add_item(c)
+	_show_temporary_message("🛒 " + message, Color(0.55, 0.9, 1.0), 1.6)
+
+
+## A gaivota (Dev_Detector) chama isto: há algum item escavado para roubar?
+func has_loot() -> bool:
+	return _count_deliverable() > 0
+
+
+## Tira e devolve UM item escavado aleatório (nunca ferramentas). null se não houver.
+func steal_loot() -> CarriedItem:
+	var candidates: Array[int] = []
+	for i: int in inventory.slots.size():
+		if SellPoint.can_deliver(inventory.slots[i]):
+			candidates.append(i)
+	if candidates.is_empty():
+		return null
+	var c: CarriedItem = inventory.remove_at(candidates.pick_random())
+	if c != null:
+		_show_temporary_message("🐦 Uma gaivota roubou %s!" % c.get_display_name(), Color(1.0, 0.55, 0.35), 2.2)
+		_shake_camera(0.02, 0.2)
+	return c
+
+
+func _handle_use_tool_action() -> void:
+	if not Input.is_action_just_pressed("use_tool") or _use_cooldown > 0.0:
+		return
+	var c: CarriedItem = inventory.get_selected()
+	if c == null or c.tool_data == null:
+		return
+	match c.tool_id:
+		TOOL_SLINGSHOT:
+			_fire_slingshot()
+		TOOL_REPELLENT:
+			_use_repellent()
+			_consume(c)
+		TOOL_NET_TRAP:
+			if _place_net_trap():
+				_consume(c)
+		TOOL_MEDKIT:
+			if health >= max_health:
+				_show_temporary_message("A vida já está cheia.", Color(0.9, 0.9, 0.9), 1.0)
+				return
+			heal(medkit_heal)
+			_show_temporary_message("🩹 +%d de vida" % int(medkit_heal), Color(0.5, 1.0, 0.55), 1.2)
+			_consume(c)
+
+
+## Gasta uma carga do item selecionado; remove-o do slot quando acaba.
+func _consume(c: CarriedItem) -> void:
+	_use_cooldown = 0.35
+	if c.consume_charge():
+		var idx: int = inventory.slots.find(c)
+		if idx >= 0:
+			inventory.remove_at(idx)
+		_show_temporary_message("%s acabou." % c.tool_name, Color(0.9, 0.9, 0.9), 1.2)
+	else:
+		inventory.notify_changed()
+
+
+func _fire_slingshot() -> void:
+	_use_cooldown = slingshot_cooldown
+	var fwd: Vector3 = -camera.global_basis.z
+	var pos: Vector3 = camera.global_position + fwd * 0.6 + camera.global_basis.x * 0.04 - camera.global_basis.y * 0.05
+	SlingshotProjectile.launch(get_parent(), self, pos, fwd * slingshot_speed + Vector3.UP * 1.2, slingshot_damage)
+	# Recuo do estilingue na mão: elástico estica e solta.
+	if slingshot_model != null and tool_view != null:
+		var t: Tween = create_tween()
+		t.tween_property(slingshot_model, "pull", 1.0, 0.06)
+		t.parallel().tween_property(tool_view, "position", _tool_view_rest + Vector3(0, -0.02, 0.06), 0.06)
+		t.tween_property(slingshot_model, "pull", 0.0, 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t.parallel().tween_property(tool_view, "position", _tool_view_rest, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func _use_repellent() -> void:
+	var fwd: Vector3 = -camera.global_basis.z
+	_spawn_spray(camera.global_position + fwd * 0.6 - camera.global_basis.y * 0.15, fwd)
+	var fled: int = 0
+	for n: Node in get_tree().get_nodes_in_group("enemies"):
+		var e: Node3D = n as Node3D
+		if e == null or e.global_position.distance_to(global_position) > repellent_radius:
+			continue
+		if e.has_method("is_alive") and not e.call("is_alive"):
+			continue
+		if e.has_method("flee_from"):
+			e.call("flee_from", global_position, repellent_flee_seconds)
+			fled += 1
+	if DisturbanceMeter.instance != null:
+		DisturbanceMeter.instance.add_noise(-repellent_noise_reduction, global_position)
+	_show_temporary_message("💨 Repelente! %d criatura(s) fugiram. A ameaça baixou." % fled, Color(0.5, 1.0, 0.45), 1.6)
+
+
+func _spawn_spray(pos: Vector3, dir: Vector3) -> void:
+	var parent: Node = get_parent() if get_parent() != null else self
+	var p: CPUParticles3D = CPUParticles3D.new()
+	p.one_shot = true
+	p.emitting = false
+	p.amount = 70
+	p.lifetime = 0.9
+	p.explosiveness = 0.75
+	p.direction = Vector3.FORWARD
+	p.spread = 22.0
+	p.initial_velocity_min = 3.5
+	p.initial_velocity_max = 6.5
+	p.gravity = Vector3(0, -0.6, 0)
+	p.damping_min = 2.0
+	p.damping_max = 4.0
+	p.scale_amount_min = 0.6
+	p.scale_amount_max = 1.6
+	var mesh: SphereMesh = SphereMesh.new()
+	mesh.radius = 0.06
+	mesh.height = 0.12
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = REPELLENT_COLOR
+	mesh.material = mat
+	p.mesh = mesh
+	parent.add_child(p)
+	p.global_position = pos
+	p.look_at(pos + dir, Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD)
+	p.restart()
+	get_tree().create_timer(p.lifetime + 0.6).timeout.connect(p.queue_free)
+
+
+func _place_net_trap() -> bool:
+	var fwd: Vector3 = -global_basis.z
+	fwd.y = 0.0
+	var aim: Vector3 = global_position + fwd.normalized() * net_trap_distance
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+		aim + Vector3.UP * 1.5, aim + Vector3.DOWN * 3.0, GROUND_MASK, [get_rid()]
+	)
+	var hit: Dictionary = space.intersect_ray(query)
+	if hit.is_empty():
+		_show_temporary_message("Não dá para pousar a rede aqui.", Color(1.0, 0.6, 0.4), 1.2)
+		return false
+	NetTrap.place(get_parent(), hit["position"], rotation.y)
+	_show_temporary_message("🕸️ Armadilha de rede armada.", Color(0.95, 0.85, 0.6), 1.2)
+	return true

@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://gameplay/detector/metal_detector.tscn" id="2_detector"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://gameplay/player/hotbar.gd" id="5_hotbar"]
 [ext_resource type="Script" path="res://gameplay/player/shovel_dig_animator.gd" id="6_dig_anim"]
 [ext_resource type="Script" path="res://gameplay/player/hand_model.gd" id="7_hand_model"]
+[ext_resource type="Script" path="res://gameplay/weapons/slingshot/slingshot_model.gd" id="8_slingshot"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.4
@@ -71,6 +72,17 @@ transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0.5, 0)
 script = ExtResource("7_hand_model")
 is_left = true
 pose = 1
+
+[node name="ToolView" type="Node3D" parent="Head/Camera3D"]
+transform = Transform3D(0.984808, -0.173648, 0, 0.17101, 0.969846, 0.173648, -0.0301537, -0.17101, 0.984808, 0.24, -0.25, -0.5)
+visible = false
+
+[node name="Slingshot" type="Node3D" parent="Head/Camera3D/ToolView"]
+script = ExtResource("8_slingshot")
+
+[node name="ToolHand" type="Node3D" parent="Head/Camera3D/ToolView"]
+transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, -0.02, 0)
+script = ExtResource("7_hand_model")
 
 [node name="Hand" type="Node3D" parent="Head/Camera3D"]
 transform = Transform3D(0.992546, 0.0427358, -0.114175, 0, 0.936672, 0.350207, 0.121869, -0.347596, 0.929688, 0.24, -0.22, -0.42)

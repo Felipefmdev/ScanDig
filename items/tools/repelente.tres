@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"repelente"
+display_name = "Repelente de Caranguejo"
+description = "Spray: inimigos a 8 m fogem e enterram-se; baixa a ameaça do subsolo."
+price = 60
+category = 1
+charges = 3
+color = Color(0.3, 0.85, 0.4, 1)

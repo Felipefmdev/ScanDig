@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"estilingue"
+display_name = "Estilingue"
+description = "Arma à distância. Atira pedras (20 de dano). Recarga 0.8 s."
+price = 250
+category = 0
+charges = -1
+color = Color(0.55, 0.35, 0.2, 1)

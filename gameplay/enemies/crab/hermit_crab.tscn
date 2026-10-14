@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://gameplay/enemies/crab/crab.tscn" id="1_crab"]
+[ext_resource type="Script" path="res://gameplay/enemies/crab/hermit_crab.gd" id="2_hermit"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hermit"]
+size = Vector3(0.95, 0.75, 0.85)
+
+[node name="HermitCrab" instance=ExtResource("1_crab")]
+script = ExtResource("2_hermit")
+max_health = 120.0
+death_color = Color(0.93, 0.84, 0.66, 1)
+stun_fx_height = 1.25
+move_speed = 1.4
+attack_damage = 18.0
+attack_range = 1.4
+attack_cooldown = 1.9
+burrow_depth = 0.9
+walk_sideways = false
+
+[node name="CollisionShape3D" parent="." index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0.05)
+shape = SubResource("BoxShape3D_hermit")
+
+[node name="BodyRoot" parent="." index="1"]
+transform = Transform3D(1.25, 0, 0, 0, 1.25, 0, 0, 0, 1.25, 0, 0, 0)

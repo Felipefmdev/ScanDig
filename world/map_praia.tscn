@@ -1,8 +1,8 @@
-[gd_scene load_steps=59 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=67 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
-[ext_resource type="Resource" path="res://items/maps/praia.tres" id="3_praia"]
+[ext_resource type="Resource" uid="uid://cwxp3whloc4wf" path="res://items/maps/praia.tres" id="3_praia"]
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
@@ -29,6 +29,12 @@
 [ext_resource type="PackedScene" uid="uid://mmsx4g4tx0nm" path="res://assets/models/kenney_pirate/rocks-sand-c.glb" id="k_rocks_sand_c"]
 [ext_resource type="PackedScene" uid="uid://co1dcl48ni0yo" path="res://assets/models/kenney_pirate/ship-wreck.glb" id="k_ship_wreck"]
 [ext_resource type="PackedScene" uid="uid://fnevn3teb2hr" path="res://assets/models/kenney_pirate/structure-platform-dock.glb" id="k_structure_platform_dock"]
+[ext_resource type="Script" path="res://items/shop_offer.gd" id="9_shop_offer"]
+[ext_resource type="Script" path="res://core/game_state.gd" id="10_game_state"]
+[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="11_tool_estilingue"]
+[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="11_tool_repelente"]
+[ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="11_tool_armadilha_rede"]
+[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="11_tool_kit_medico"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sunset"]
 sky_top_color = Color(0.32, 0.4, 0.62, 1)
@@ -145,6 +151,12 @@ size = Vector3(0.75, 0.68, 0.75)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_sell_crate"]
 size = Vector3(0.62, 0.45, 0.76)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_shop_counter"]
+size = Vector3(3.1, 0.54, 0.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_shop_blocker"]
+size = Vector3(4.5, 0.3, 3.5)
 
 [node name="MapPraia" type="Node3D"]
 
@@ -752,6 +764,70 @@ modulate = Color(1, 0.88, 0.35, 1)
 text = "ENTREGA [E]"
 font_size = 56
 outline_size = 14
+
+[node name="Banca" type="Node3D" parent="."]
+transform = Transform3D(6.1232e-17, 0, 1, 0, 1, 0, -1, 0, 6.1232e-17, 7, 0, 0.5)
+
+[node name="Counter" type="StaticBody3D" parent="Banca" groups=["spot_blockers"]]
+
+[node name="Collision" type="CollisionShape3D" parent="Banca/Counter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.27, 0)
+shape = SubResource("BoxShape3D_shop_counter")
+
+[node name="Crate1" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, -1.14, 0, 0)
+
+[node name="Crate2" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, -0.38, 0, 0)
+
+[node name="Crate3" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, 0.38, 0, 0)
+
+[node name="Crate4" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, 1.14, 0, 0)
+
+[node name="SpotBlocker" type="StaticBody3D" parent="Banca" groups=["spot_blockers"]]
+
+[node name="Collision" type="CollisionShape3D" parent="Banca/SpotBlocker"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0.4)
+shape = SubResource("BoxShape3D_shop_blocker")
+
+[node name="Barrel" parent="Banca" instance=ExtResource("k_barrel")]
+transform = Transform3D(0.46985, 0, 0.17101, 0, 0.5, 0, -0.17101, 0, 0.46985, 2.1, 0, 0.6)
+
+[node name="Offer1" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0.54, 0.05)
+script = ExtResource("9_shop_offer")
+tool_data = ExtResource("11_tool_estilingue")
+
+[node name="Offer2" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0.54, 0.05)
+script = ExtResource("9_shop_offer")
+tool_data = ExtResource("11_tool_repelente")
+
+[node name="Offer3" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.54, 0.05)
+script = ExtResource("9_shop_offer")
+tool_data = ExtResource("11_tool_armadilha_rede")
+
+[node name="Offer4" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 0.54, 0.05)
+script = ExtResource("9_shop_offer")
+tool_data = ExtResource("11_tool_kit_medico")
+
+[node name="Label" type="Label3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+billboard = 1
+no_depth_test = true
+pixel_size = 0.008
+modulate = Color(0.55, 0.9, 1, 1)
+outline_modulate = Color(0, 0, 0, 1)
+text = "LOJA"
+font_size = 64
+outline_size = 14
+
+[node name="GameState" type="Node" parent="."]
+script = ExtResource("10_game_state")
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)

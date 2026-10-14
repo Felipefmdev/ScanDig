@@ -1,0 +1,351 @@
+class_name Seagull
+extends EnemyBase
+
+## Gaivota ladra: voa em círculos por cima do jogador, mergulha e ROUBA um item escavado da
+## mochila (player.steal_loot()). Sem nada para roubar, só bica (PECK_DAMAGE) e volta a tentar.
+## Depois de roubar foge para longe e desaparece passado despawn_after segundos. Se for abatida
+## (estilingue), cai e larga o item roubado como ItemPickup onde tocar no chão.
+
+enum State {
+	CIRCLE,
+	DIVE,
+	ESCAPE,
+	FALL,
+}
+
+@export var circle_radius: float = 6.0
+## Altura do voo em círculo acima do jogador.
+@export var circle_height: float = 7.0
+@export var fly_speed: float = 6.5
+@export var dive_speed: float = 11.0
+@export var escape_speed: float = 9.0
+@export var circle_time_min: float = 4.0
+@export var circle_time_max: float = 7.0
+## Distância ao peito do jogador a que rouba/bica.
+@export var steal_distance: float = 1.1
+@export var peck_damage: float = 5.0
+## Mergulhos sem sucesso antes de desistir e ir embora.
+@export var max_dives: int = 3
+## Distância a que foge depois de roubar.
+@export var escape_distance: float = 30.0
+## Segundos depois do roubo (ou da desistência) até desaparecer.
+@export var despawn_after: float = 20.0
+## Máscara do chão (para saber onde cai quando é abatida).
+@export_flags_3d_physics var ground_mask: int = 1
+
+const CHEST_OFFSET: Vector3 = Vector3(0.0, 1.3, 0.0)
+const MAX_DIVE_TIME: float = 3.5
+const STEER: float = 3.0
+const WHITE: Color = Color(0.96, 0.96, 0.95)
+const WING_GREY: Color = Color(0.62, 0.65, 0.7)
+const WING_TIP: Color = Color(0.16, 0.17, 0.2)
+const BEAK_YELLOW: Color = Color(1.0, 0.8, 0.1)
+const EYE_BLACK: Color = Color(0.04, 0.04, 0.05)
+const FEET_ORANGE: Color = Color(0.95, 0.55, 0.2)
+
+var state: State = State.CIRCLE
+## Item roubado (largado se a gaivota for abatida).
+var stolen: CarriedItem = null
+
+var _orbit_angle: float = 0.0
+var _orbit_dir: float = 1.0
+var _circle_left: float = 5.0
+var _state_time: float = 0.0
+var _dives: int = 0
+var _leave_timer: float = -1.0
+var _escape_dir: Vector3 = Vector3.FORWARD
+var _escape_start: Vector3 = Vector3.ZERO
+var _flap_time: float = 0.0
+var _fall_ground_y: float = 0.0
+var _wing_left: Node3D = null
+var _wing_right: Node3D = null
+var _loot_visual: MeshInstance3D = null
+
+
+func _ready() -> void:
+	super._ready()
+	_build_model()
+	_orbit_dir = 1.0 if randf() < 0.5 else -1.0
+	_circle_left = randf_range(circle_time_min, circle_time_max)
+	var target: Node3D = _update_target(0.0)
+	if target != null:
+		var rel: Vector3 = global_position - target.global_position
+		_orbit_angle = atan2(rel.z, rel.x)
+
+
+func _enemy_physics(delta: float) -> void:
+	_state_time += delta
+	if _leave_timer >= 0.0:
+		_leave_timer -= delta
+		if _leave_timer <= 0.0:
+			queue_free()
+			return
+
+	match state:
+		State.CIRCLE:
+			_process_circle(delta)
+		State.DIVE:
+			_process_dive(delta)
+		State.ESCAPE:
+			_process_escape(delta)
+		State.FALL:
+			_process_fall(delta)
+
+	_animate_wings(delta)
+
+
+func _enter_state(new_state: State) -> void:
+	state = new_state
+	_state_time = 0.0
+
+
+# ---------------------------------------------------------------------------
+# Estados
+# ---------------------------------------------------------------------------
+
+func _process_circle(delta: float) -> void:
+	var target: Node3D = _update_target(delta)
+	if target == null:
+		_start_escape(global_position - Vector3(0.0, 0.0, 1.0))
+		return
+	_orbit_angle += _orbit_dir * (fly_speed / circle_radius) * delta
+	var goal: Vector3 = target.global_position + Vector3(cos(_orbit_angle), 0.0, sin(_orbit_angle)) * circle_radius
+	goal.y = target.global_position.y + circle_height + sin(_state_time * 0.8) * 0.6
+	_fly_towards(goal, fly_speed * 1.3, delta)
+
+	_circle_left -= delta
+	if _circle_left <= 0.0:
+		_dives += 1
+		_enter_state(State.DIVE)
+
+
+func _process_dive(delta: float) -> void:
+	var target: Node3D = _update_target(delta)
+	if target == null or _state_time > MAX_DIVE_TIME:
+		_after_failed_dive()
+		return
+	var chest: Vector3 = target.global_position + CHEST_OFFSET
+	_fly_towards(chest, dive_speed, delta, 6.0)
+	if global_position.distance_to(chest) <= steal_distance:
+		_grab(target)
+
+
+func _grab(target: Node3D) -> void:
+	var loot: CarriedItem = null
+	if target.has_method("steal_loot"):
+		loot = target.call("steal_loot") as CarriedItem
+	if loot != null:
+		stolen = loot
+		_show_loot()
+		_start_escape(target.global_position)
+		return
+	if target.has_method("take_damage"):
+		target.call("take_damage", peck_damage)
+	_after_failed_dive()
+
+
+func _after_failed_dive() -> void:
+	if _dives >= max_dives:
+		var target: Node3D = _target if is_instance_valid(_target) else null
+		_start_escape(target.global_position if target != null else global_position + Vector3.FORWARD)
+		return
+	_circle_left = randf_range(circle_time_min, circle_time_max)
+	_enter_state(State.CIRCLE)
+
+
+func _start_escape(away_from: Vector3) -> void:
+	var dir: Vector3 = global_position - away_from
+	dir.y = 0.0
+	if dir.length_squared() < 0.01:
+		dir = Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
+	_escape_dir = dir.normalized()
+	_escape_start = global_position
+	if _leave_timer < 0.0:
+		_leave_timer = despawn_after
+	_enter_state(State.ESCAPE)
+
+
+func _process_escape(delta: float) -> void:
+	var travelled: float = Vector2(global_position.x - _escape_start.x, global_position.z - _escape_start.z).length()
+	var goal: Vector3 = global_position + _escape_dir * 5.0
+	goal.y = _escape_start.y + 9.0
+	if travelled >= escape_distance:
+		# Já longe: plana em círculos largos até desaparecer
+		_escape_dir = _escape_dir.rotated(Vector3.UP, 0.6 * delta)
+		_fly_towards(goal, fly_speed, delta)
+	else:
+		_fly_towards(goal, escape_speed, delta)
+
+
+## Abatida: cai a rodopiar e, ao tocar no chão, larga o item roubado.
+func _process_fall(delta: float) -> void:
+	velocity.y -= _gravity * delta
+	velocity.x = move_toward(velocity.x, 0.0, 2.0 * delta)
+	velocity.z = move_toward(velocity.z, 0.0, 2.0 * delta)
+	global_position += velocity * delta
+	rotation.z += delta * 8.0
+	if global_position.y <= _fall_ground_y + 0.15 or _state_time > 6.0:
+		global_position.y = maxf(global_position.y, _fall_ground_y + 0.15)
+		_land_and_drop()
+
+
+func _land_and_drop() -> void:
+	if stolen != null and get_parent() != null:
+		ItemPickup.spawn(get_parent(), stolen, global_position + Vector3.UP * 0.3,
+			Vector3(randf_range(-0.4, 0.4), 1.2, randf_range(-0.4, 0.4)))
+		stolen = null
+	spawn_particles(global_position, WHITE, 22, 2.2)
+	queue_free()
+
+
+# ---------------------------------------------------------------------------
+# Ganchos da EnemyBase
+# ---------------------------------------------------------------------------
+
+## Atordoada (rede): fica a pairar no sítio, a bater as asas devagar.
+func _stunned_physics(delta: float) -> void:
+	velocity = velocity.move_toward(Vector3.ZERO, 12.0 * delta)
+	global_position += velocity * delta
+	_animate_wings(delta * 0.3)
+
+
+func _on_stun_ended() -> void:
+	if state == State.DIVE:
+		_after_failed_dive()
+
+
+func _on_flee_started() -> void:
+	if state != State.FALL:
+		_start_escape(_flee_origin)
+
+
+## Morte: não desaparece logo — cai e só depois larga o item.
+func _on_died() -> void:
+	_fall_ground_y = _find_ground_y()
+	velocity = Vector3(velocity.x * 0.3, 1.0, velocity.z * 0.3)
+	spawn_particles(global_position, WHITE, 14, 1.8)
+	_enter_state(State.FALL)
+	# _dead bloqueia _enemy_physics; a queda corre no seu próprio processo
+	set_physics_process(false)
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if state == State.FALL and _dead:
+		_state_time += delta
+		_process_fall(delta)
+
+
+func _find_ground_y() -> float:
+	if not is_inside_tree():
+		return global_position.y - 8.0
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+		global_position, global_position + Vector3.DOWN * 60.0, ground_mask)
+	var hit: Dictionary = space.intersect_ray(query)
+	if not hit.is_empty():
+		return (hit["position"] as Vector3).y
+	return global_position.y - 8.0
+
+
+# ---------------------------------------------------------------------------
+# Voo
+# ---------------------------------------------------------------------------
+
+## Voo sem colisões (mask 0): ajusta a velocidade para o objetivo e orienta-se pelo movimento.
+func _fly_towards(goal: Vector3, speed: float, delta: float, steer: float = STEER) -> void:
+	var to_goal: Vector3 = goal - global_position
+	var desired: Vector3 = to_goal.normalized() * speed if to_goal.length() > 0.05 else Vector3.ZERO
+	velocity = velocity.lerp(desired, clampf(steer * delta, 0.0, 1.0))
+	global_position += velocity * delta
+	_face_velocity(delta)
+
+
+func _face_velocity(delta: float) -> void:
+	var flat: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
+	if flat.length_squared() < 0.01:
+		return
+	var yaw: float = atan2(-flat.x, -flat.z)
+	rotation.y = lerp_angle(rotation.y, yaw, clampf(6.0 * delta, 0.0, 1.0))
+	var pitch: float = atan2(velocity.y, flat.length())
+	rotation.x = lerpf(rotation.x, clampf(pitch, -0.9, 0.6), clampf(5.0 * delta, 0.0, 1.0))
+	# Inclina nas curvas
+	var turn: float = clampf(-_orbit_dir * 0.35, -0.5, 0.5) if state == State.CIRCLE else 0.0
+	rotation.z = lerpf(rotation.z, turn, clampf(4.0 * delta, 0.0, 1.0))
+
+
+func _animate_wings(delta: float) -> void:
+	if _wing_left == null:
+		return
+	var freq: float = 7.0
+	var amp: float = 0.25
+	match state:
+		State.DIVE:
+			freq = 0.0
+			amp = 0.0
+		State.ESCAPE:
+			freq = 12.0
+			amp = 0.6
+		State.FALL:
+			freq = 20.0
+			amp = 0.3
+	_flap_time += delta * freq
+	var flap: float = sin(_flap_time) * amp
+	# Em mergulho as asas recolhem para trás
+	var tuck: float = 0.55 if state == State.DIVE else 0.0
+	_wing_left.rotation = Vector3(0.0, -tuck, flap)
+	_wing_right.rotation = Vector3(0.0, tuck, -flap)
+
+
+# ---------------------------------------------------------------------------
+# Modelo low-poly facetado (SurfaceTool): branca, asas cinza com pontas pretas, bico amarelo
+# ---------------------------------------------------------------------------
+
+func _build_model() -> void:
+	var mat: StandardMaterial3D = LowPolyMesh.make_material()
+	_register_flash_material(mat)
+
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Corpo e cauda
+	LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.24), Vector3(0.0, 0.02, -0.2), 0.1, 0.12, 6, WHITE)
+	LowPolyMesh.box(st, Vector3(0.0, 0.03, 0.36), Vector3(0.17, 0.025, 0.2), Basis(Vector3.RIGHT, -0.1), WING_GREY)
+	# Cabeça, olhos e bico
+	LowPolyMesh.box(st, Vector3(0.0, 0.09, -0.27), Vector3(0.14, 0.14, 0.15), Basis.IDENTITY, WHITE)
+	LowPolyMesh.box(st, Vector3(-0.072, 0.12, -0.3), Vector3(0.012, 0.03, 0.03), Basis.IDENTITY, EYE_BLACK)
+	LowPolyMesh.box(st, Vector3(0.072, 0.12, -0.3), Vector3(0.012, 0.03, 0.03), Basis.IDENTITY, EYE_BLACK)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.07, -0.34), Vector3(0.0, 0.055, -0.48), 0.035, 0.0, 4, BEAK_YELLOW)
+	# Patas recolhidas
+	LowPolyMesh.box(st, Vector3(-0.04, -0.1, 0.12), Vector3(0.03, 0.03, 0.08), Basis.IDENTITY, FEET_ORANGE)
+	LowPolyMesh.box(st, Vector3(0.04, -0.1, 0.12), Vector3(0.03, 0.03, 0.08), Basis.IDENTITY, FEET_ORANGE)
+	add_child(LowPolyMesh.commit(st, "Body", mat))
+
+	_wing_left = _build_wing(-1.0, mat)
+	_wing_right = _build_wing(1.0, mat)
+
+
+func _build_wing(side: float, mat: Material) -> Node3D:
+	var pivot: Node3D = Node3D.new()
+	pivot.name = "WingLeft" if side < 0.0 else "WingRight"
+	pivot.position = Vector3(0.09 * side, 0.05, -0.02)
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	LowPolyMesh.box(st, Vector3(0.2 * side, 0.0, 0.0), Vector3(0.4, 0.025, 0.21), Basis.IDENTITY, WING_GREY)
+	LowPolyMesh.box(st, Vector3(0.5 * side, 0.0, 0.03), Vector3(0.22, 0.02, 0.14), Basis(Vector3.UP, 0.15 * side), WING_TIP)
+	pivot.add_child(LowPolyMesh.commit(st, "Mesh", mat))
+	add_child(pivot)
+	return pivot
+
+
+## Mostra o item roubado pendurado no bico.
+func _show_loot() -> void:
+	if stolen == null:
+		return
+	_loot_visual = MeshInstance3D.new()
+	_loot_visual.name = "Loot"
+	var cube: BoxMesh = BoxMesh.new()
+	cube.size = Vector3(0.12, 0.12, 0.12)
+	_loot_visual.mesh = cube
+	_loot_visual.material_override = ItemPickup.make_material(stolen.item, stolen.is_rare_variant)
+	_loot_visual.position = Vector3(0.0, -0.06, -0.5)
+	add_child(_loot_visual)

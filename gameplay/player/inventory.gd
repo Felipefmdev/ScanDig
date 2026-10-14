@@ -103,6 +103,11 @@ func take_where(predicate: Callable) -> Array[CarriedItem]:
 	return out
 
 
+## Avisa a UI de que um item mudou por dentro (ex.: gastou uma carga).
+func notify_changed() -> void:
+	inventory_changed.emit()
+
+
 func select(index: int) -> void:
 	if slots.is_empty():
 		return
