@@ -1,2 +1,11 @@
-# Normalize EOL for all files that Git considers text files.
+# Normaliza finais de linha (evita avisos CRLF/LF entre Windows e CI)
 * text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.glb binary
+*.ttf binary
+*.otf binary
+*.wav binary
+*.ogg binary
+*.mp3 binary

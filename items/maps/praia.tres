@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="MapData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="MapData" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://items/map_data.gd" id="1_map"]
 [ext_resource type="Script" path="res://items/item_data.gd" id="7_item"]
@@ -6,7 +6,6 @@
 [ext_resource type="Resource" path="res://items/catalog/chave_enferrujada.tres" id="3_chave"]
 [ext_resource type="Resource" path="res://items/catalog/moeda_antiga.tres" id="4_moeda"]
 [ext_resource type="Resource" path="res://items/catalog/alianca_ouro.tres" id="5_alianca"]
-[ext_resource type="Resource" path="res://items/catalog/relogio_ouro.tres" id="6_relogio"]
 
 [resource]
 script = ExtResource("1_map")
@@ -14,7 +13,7 @@ id = "praia"
 display_name = "Praia"
 unlock_cost = 0
 required_detector_level = 1
-item_pool = Array[ExtResource("7_item")]([ExtResource("2_lata"), ExtResource("2_lata"), ExtResource("2_lata"), ExtResource("3_chave"), ExtResource("3_chave"), ExtResource("4_moeda"), ExtResource("4_moeda"), ExtResource("5_alianca"), ExtResource("6_relogio")])
+item_pool = Array[ExtResource("7_item")]([ExtResource("2_lata"), ExtResource("2_lata"), ExtResource("2_lata"), ExtResource("2_lata"), ExtResource("2_lata"), ExtResource("3_chave"), ExtResource("3_chave"), ExtResource("3_chave"), ExtResource("3_chave"), ExtResource("4_moeda"), ExtResource("4_moeda"), ExtResource("5_alianca")])
 rare_variant_chance = 0.05
 noise_multiplier = 1.0
 noise_decay_per_second = 2.5

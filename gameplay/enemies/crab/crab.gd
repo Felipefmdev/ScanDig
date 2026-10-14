@@ -14,11 +14,11 @@ enum State {
 }
 
 @export var max_health: float = 50.0
-@export var move_speed: float = 2.6
+@export var move_speed: float = 1.9
 @export var turn_speed: float = 8.0
 @export var attack_damage: float = 10.0
 @export var attack_range: float = 1.2
-@export var attack_cooldown: float = 1.2
+@export var attack_cooldown: float = 1.6
 @export var emerge_time: float = 0.8
 @export var burrow_time: float = 0.9
 ## Profundidade de onde o caranguejo sai (abaixo da superfície).

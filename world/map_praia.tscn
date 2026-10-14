@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
+[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 [ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
 [ext_resource type="PackedScene" uid="uid://cv33lw4gpdbbx" path="res://assets/models/kenney_pirate/boat-row-small.glb" id="k_boat_row_small"]
 [ext_resource type="PackedScene" uid="uid://bluwbs4vyj4mu" path="res://assets/models/kenney_pirate/bottle.glb" id="k_bottle"]
@@ -28,7 +29,6 @@
 [ext_resource type="PackedScene" uid="uid://mmsx4g4tx0nm" path="res://assets/models/kenney_pirate/rocks-sand-c.glb" id="k_rocks_sand_c"]
 [ext_resource type="PackedScene" uid="uid://co1dcl48ni0yo" path="res://assets/models/kenney_pirate/ship-wreck.glb" id="k_ship_wreck"]
 [ext_resource type="PackedScene" uid="uid://fnevn3teb2hr" path="res://assets/models/kenney_pirate/structure-platform-dock.glb" id="k_structure_platform_dock"]
-[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sunset"]
 sky_top_color = Color(0.32, 0.4, 0.62, 1)
