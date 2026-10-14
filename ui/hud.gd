@@ -34,6 +34,8 @@ func _resolve_game_state() -> void:
 			_game_state.money_changed.connect(_on_money_changed)
 		if not _game_state.collection_updated.is_connected(_on_collection_updated):
 			_game_state.collection_updated.connect(_on_collection_updated)
+		if not _game_state.upgrades_changed.is_connected(_on_upgrades_changed):
+			_game_state.upgrades_changed.connect(_on_upgrades_changed)
 		
 		# Atualizar valores iniciais
 		update_money(_game_state.team_money)
@@ -63,6 +65,9 @@ func update_museum(total_found: int, max_items: int) -> void:
 
 func _on_money_changed(new_amount: int) -> void:
 	update_money(new_amount)
+
+
+func _on_upgrades_changed(_levels: Dictionary) -> void:
 	if _game_state != null:
 		update_detector(_game_state.equipped_detector_level)
 

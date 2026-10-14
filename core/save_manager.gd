@@ -85,11 +85,11 @@ func save_game(target_state: GameState = null) -> Error:
 		return ERR_DOES_NOT_EXIST
 	
 	var save_data: Dictionary = {
-		"version": 1,
+		"version": 2,
 		"team_money": state.team_money,
 		"current_day": state.current_day,
 		"discovered_items": state.discovered_items.duplicate(),
-		"equipped_detector_level": state.equipped_detector_level,
+		"upgrade_levels": state.upgrade_levels.duplicate(),
 	}
 	
 	var error: Error = save_to_file(save_data)
@@ -120,21 +120,17 @@ func load_game(target_state: GameState = null) -> Error:
 		save_failed.emit(err_msg)
 		return ERR_INVALID_DATA
 	
-	if save_data.has("team_money"):
-		state.team_money = int(save_data["team_money"])
-	if save_data.has("current_day"):
-		state.current_day = int(save_data["current_day"])
-	if save_data.has("equipped_detector_level"):
-		state.equipped_detector_level = int(save_data["equipped_detector_level"])
-	if save_data.has("discovered_items"):
-		var raw_items: Array = save_data["discovered_items"]
-		var items: Array[String] = []
-		for item in raw_items:
-			items.append(str(item))
-		state.discovered_items = items
+	if not state.is_authority():
+		var err_msg: String = "SaveManager: Apenas o host pode carregar o save."
+		push_warning(err_msg)
+		save_failed.emit(err_msg)
+		return ERR_UNAUTHORIZED
 	
-	state.money_changed.emit(state.team_money)
-	state.collection_updated.emit(state.discovered_items.size(), state.get_total_catalog_items())
+	# Save v1 guardava apenas o nível do detector.
+	if not save_data.has("upgrade_levels") and save_data.has("equipped_detector_level"):
+		save_data["upgrade_levels"] = {"detector": maxi(int(save_data["equipped_detector_level"]) - 1, 0)}
+	
+	state.load_snapshot(save_data)
 	game_loaded.emit()
 	return OK
 

@@ -20,6 +20,9 @@ extends Control
 
 var _game_state: GameState = null
 var _catalog_items: Array[ItemData] = []
+var _pending_purchase: bool = false
+
+const SHOP_BUTTONS: Array[String] = ["detector", "pinpointer", "shovel"]
 
 
 func _resolve_node(unique_id: String, rel_path: String) -> Node:
@@ -50,8 +53,15 @@ func _resolve_game_state() -> void:
 			_game_state.collection_updated.connect(_on_collection_updated)
 		if not _game_state.item_sold.is_connected(_on_item_sold):
 			_game_state.item_sold.connect(_on_item_sold)
+		if not _game_state.item_donated.is_connected(_on_item_donated):
+			_game_state.item_donated.connect(_on_item_donated)
+		if not _game_state.upgrades_changed.is_connected(_on_upgrades_changed):
+			_game_state.upgrades_changed.connect(_on_upgrades_changed)
+		if not _game_state.purchase_result.is_connected(_on_purchase_result):
+			_game_state.purchase_result.connect(_on_purchase_result)
 	
 	_refresh_museum_display()
+	_refresh_shop_buttons()
 
 
 func _load_catalog() -> void:
@@ -80,18 +90,40 @@ func _load_catalog() -> void:
 
 
 func _setup_shop_buttons() -> void:
-	if buy_detector_btn != null:
-		buy_detector_btn.pressed.connect(func() -> void:
-			_purchase_upgrade("detector_nivel_2", 300, "Detector Nível 2")
-		)
-	if buy_pinpointer_btn != null:
-		buy_pinpointer_btn.pressed.connect(func() -> void:
-			_purchase_upgrade("pinpointer_precisao", 500, "Pinpointer de Precisão")
-		)
-	if buy_shovel_btn != null:
-		buy_shovel_btn.pressed.connect(func() -> void:
-			_purchase_upgrade("pa_fibra", 800, "Pá de Fibra")
-		)
+	for upgrade_id: String in SHOP_BUTTONS:
+		var btn: Button = _get_shop_button(upgrade_id)
+		if btn != null:
+			btn.pressed.connect(_purchase_upgrade.bind(upgrade_id))
+
+
+func _get_shop_button(upgrade_id: String) -> Button:
+	match upgrade_id:
+		"detector":
+			return buy_detector_btn
+		"pinpointer":
+			return buy_pinpointer_btn
+		"shovel":
+			return buy_shovel_btn
+	return null
+
+
+func _refresh_shop_buttons() -> void:
+	if _game_state == null:
+		return
+	for upgrade_id: String in SHOP_BUTTONS:
+		var btn: Button = _get_shop_button(upgrade_id)
+		if btn == null:
+			continue
+		var display_name: String = GameState.UPGRADES[upgrade_id]["name"]
+		var level: int = _game_state.get_upgrade_level(upgrade_id)
+		var max_level: int = _game_state.get_upgrade_max_level(upgrade_id)
+		var cost: int = _game_state.get_next_upgrade_cost(upgrade_id)
+		if cost < 0:
+			btn.text = "%s — MÁXIMO (%d/%d)" % [display_name, level, max_level]
+			btn.disabled = true
+		else:
+			btn.text = "Comprar %s (%d/%d) — R$ %d" % [display_name, level, max_level, cost]
+			btn.disabled = _pending_purchase
 
 
 func _setup_museum_controls() -> void:
@@ -107,57 +139,45 @@ func _setup_museum_controls() -> void:
 		register_item_btn.pressed.connect(_on_register_test_pressed)
 
 
-func _purchase_upgrade(upgrade_id: String, cost: int, display_name: String) -> void:
+func _purchase_upgrade(upgrade_id: String) -> void:
 	if _game_state == null:
 		_set_shop_feedback("Erro: GameState não disponível.")
 		return
-	
-	if _game_state.team_money < cost:
-		_set_shop_feedback("Saldo insuficiente para comprar %s (Custo: R$ %d)!" % [display_name, cost])
+	if _pending_purchase:
 		return
 	
-	var mp: MultiplayerAPI = multiplayer
-	if mp != null and mp.has_multiplayer_peer() and not (mp.multiplayer_peer is OfflineMultiplayerPeer):
-		_game_state.rpc("buy_upgrade", upgrade_id, cost)
-	else:
-		_game_state.buy_upgrade(upgrade_id, cost)
-	
-	_set_shop_feedback("Compra realizada com sucesso: %s!" % display_name)
+	# A confirmação (ou recusa) chega pelo sinal purchase_result vindo do host.
+	_pending_purchase = true
+	_refresh_shop_buttons()
+	_set_shop_feedback("Processando compra...")
+	_game_state.request_buy_upgrade(upgrade_id)
+
+
+func _on_purchase_result(_upgrade_id: String, _success: bool, message: String) -> void:
+	_pending_purchase = false
+	_set_shop_feedback(message)
+	_refresh_shop_buttons()
+
+
+func _on_upgrades_changed(_levels: Dictionary) -> void:
+	_refresh_shop_buttons()
 
 
 func _on_sell_test_pressed() -> void:
 	var selected_item: ItemData = _get_selected_catalog_item()
 	if selected_item == null or _game_state == null:
 		return
-	
-	var mp: MultiplayerAPI = multiplayer
-	if mp != null and mp.has_multiplayer_peer() and not (mp.multiplayer_peer is OfflineMultiplayerPeer):
-		_game_state.rpc("sell_found_item", selected_item.id, selected_item.base_value)
-	else:
-		_game_state.sell_found_item(selected_item.id, selected_item.base_value)
-	
-	_set_museum_feedback("Item vendido: %s por R$ %d!" % [selected_item.display_name, selected_item.base_value])
+	_game_state.request_sell_item(selected_item.id, selected_item.base_value)
 
 
 func _on_register_test_pressed() -> void:
 	var selected_item: ItemData = _get_selected_catalog_item()
 	if selected_item == null or _game_state == null:
 		return
-	
-	var was_already_discovered: bool = _game_state.discovered_items.has(selected_item.id)
-	
-	var mp: MultiplayerAPI = multiplayer
-	if mp != null and mp.has_multiplayer_peer() and not (mp.multiplayer_peer is OfflineMultiplayerPeer):
-		_game_state.rpc("register_museum_item", selected_item.id)
-	else:
-		_game_state.register_museum_item(selected_item.id)
-	
-	if was_already_discovered:
+	if _game_state.discovered_items.has(selected_item.id):
 		_set_museum_feedback("%s já estava cadastrado no Museu!" % selected_item.display_name)
-	else:
-		_set_museum_feedback("%s doado com sucesso ao Museu!" % selected_item.display_name)
-	
-	_refresh_museum_display()
+		return
+	_game_state.request_donate_item(selected_item.id)
 
 
 func _get_selected_catalog_item() -> ItemData:
@@ -200,6 +220,10 @@ func _on_collection_updated(_total_found: int, _max_items: int) -> void:
 
 func _on_item_sold(item_name: String, value: int) -> void:
 	_set_museum_feedback("Venda concluída: %s (+R$ %d)" % [item_name, value])
+
+
+func _on_item_donated(item_name: String, reward: int) -> void:
+	_set_museum_feedback("%s doado ao Museu! (+R$ %d de recompensa)" % [item_name, reward])
 
 
 func _set_shop_feedback(msg: String) -> void:

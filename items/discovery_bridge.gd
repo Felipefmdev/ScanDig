@@ -14,9 +14,5 @@ static func report_item_found(item: ItemData, final_value: int) -> void:
 		# Cena sem GameState (ex.: test_sandbox): apenas ignora.
 		return
 
-	if state.multiplayer.has_multiplayer_peer():
-		state.register_museum_item.rpc(item.id)
-		state.sell_found_item.rpc(item.id, final_value)
-	else:
-		state.register_museum_item(item.id)
-		state.sell_found_item(item.id, final_value)
+	# O host decide: inédito -> doado ao museu (recompensa parcial); repetido -> vendido.
+	state.request_report_discovery(item.id, final_value)
