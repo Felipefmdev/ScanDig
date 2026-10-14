@@ -9,7 +9,7 @@ const ACTIONS: PackedStringArray = [
 ]
 const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
-	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state",
+	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
@@ -17,7 +17,7 @@ const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlo
 const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop"]
 const CONDITION_VARS: PackedStringArray = [
 	"money", "inventory", "enemies", "spots", "time", "health",
-	"nearest_spot", "free_slots", "deliverable", "sell_dist",
+	"nearest_spot", "free_slots", "deliverable", "sell_dist", "pickup_dist",
 ]
 const DIG_MODES: PackedStringArray = ["fast", "careful", "smart"]
 ## Distância "infinita" usada pelas variáveis nearest_spot/sell_dist quando não há alvo.
@@ -64,6 +64,9 @@ var _m: Dictionary = {
 	"spots_dug": 0,
 	"items_picked": 0,
 	"step_failures": 0,
+	"explore_steps": 0,
+	"max_threat_level": 0,
+	"threat_level_times": [],
 }
 var _last_health: float = -1.0
 var _watched_player: Node = null
@@ -149,7 +152,7 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			return "'if' invalido '%s'" % str(d["if"])
 		step["if"] = conds
 	var timeout_default: float = DEFAULT_WAIT_TIMEOUT
-	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot"]:
+	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot", "explore"]:
 		timeout_default = 30.0
 	if d.has("timeout"):
 		if not _is_number(d["timeout"]) or float(d["timeout"]) <= 0.0:
@@ -198,6 +201,26 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			if value != "nearest":
 				return "'goto_spot' so aceita \"nearest\""
 			step["walk"] = d.get("walk", false) == true
+			# radius: só considera spots a esta distância (ex.: alcance do radar); 0 = todos.
+			var sense: Variant = d.get("radius", 0.0)
+			if not _is_number(sense) or float(sense) < 0.0:
+				return "'radius' deve ser >= 0"
+			step["radius"] = float(sense)
+			step["timeout"] = timeout
+		"explore":
+			if not _is_number(value) or float(value) <= 0.0:
+				return "'explore' deve ser a distancia (m) > 0"
+			step["distance"] = float(value)
+			step["bounds"] = Rect2()
+			if d.has("bounds"):
+				var b: Variant = _number_array(d["bounds"], 4)
+				if b == null or b[2] <= b[0] or b[3] <= b[1]:
+					return "'bounds' deve ser [min_x, min_z, max_x, max_z]"
+				step["bounds"] = Rect2(b[0], b[1], b[2] - b[0], b[3] - b[1])
+			var stop_near: Variant = d.get("stop_near_spot", 0.0)
+			if not _is_number(stop_near) or float(stop_near) < 0.0:
+				return "'stop_near_spot' deve ser >= 0"
+			step["stop_near_spot"] = float(stop_near)
 			step["timeout"] = timeout
 		"loop":
 			if not value is Array or (value as Array).is_empty():
@@ -384,6 +407,11 @@ func _process(_delta: float) -> void:
 		if _last_health >= 0.0 and hp < _last_health:
 			_m["damage_taken"] = float(_m["damage_taken"]) + (_last_health - hp)
 		_last_health = hp
+	var meter: DisturbanceMeter = DisturbanceMeter.instance
+	if meter != null and meter.current_level > int(_m["max_threat_level"]):
+		_m["max_threat_level"] = meter.current_level
+		(_m["threat_level_times"] as Array).append(snappedf(now, 0.1))
+		_log("t=%.1f ameaca do subsolo chegou ao nivel %d" % [now, meter.current_level])
 	if float(_m["first_enemy_time"]) < 0.0 and _alive_enemy_count() > 0:
 		_m["first_enemy_time"] = now
 		_log("t=%.1f primeiro inimigo apareceu" % now)
@@ -464,7 +492,7 @@ func _execute(step: Dictionary) -> void:
 			_look_at(step["target"])
 		"goto_spot":
 			if step["walk"]:
-				await _walk_to_nearest_spot(step["timeout"])
+				await _walk_to_nearest_spot(step["timeout"], step["radius"])
 			else:
 				_goto_nearest_spot()
 		"loop":
@@ -481,6 +509,8 @@ func _execute(step: Dictionary) -> void:
 				await _walk_to(sp.global_position, 1.2, step["timeout"], 0.5)
 		"sell":
 			await _sell(step["timeout"])
+		"explore":
+			await _explore(step["distance"], step["bounds"], step["stop_near_spot"], step["timeout"])
 		"set_state":
 			_set_state(step["state"])
 		"screenshot":
@@ -610,7 +640,7 @@ func _face_flat(player: Node3D, target: Vector3) -> void:
 ## Caminha (move_forward + rumo) até ficar a `arrive` m (no plano) do alvo. Salta se
 ## encravar; se em STUCK_SECONDS avançar menos de STUCK_MIN_PROGRESS (ou no timeout),
 ## faz teleport de recurso e conta-o em teleport_fallbacks. Devolve true se chegou a andar.
-func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float) -> bool:
+func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float, stop_near_spot: float = 0.0) -> bool:
 	var player: Node3D = _player()
 	if player == null:
 		_fail("walk: jogador nao encontrado")
@@ -628,6 +658,11 @@ func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float) -
 		if to.length() <= arrive:
 			walked = true
 			break
+		if stop_near_spot > 0.0:
+			var near: BuriedSpot = _nearest_spot(player.global_position)
+			if near != null and near.global_position.distance_to(player.global_position) <= stop_near_spot:
+				walked = true
+				break
 		_face_flat(player, target)
 		var now: float = _elapsed()
 		if now - jump_t >= 1.0:
@@ -654,6 +689,28 @@ func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float) -
 		await get_tree().physics_frame
 	Input.action_release("move_forward")
 	return walked
+
+
+## Procura como um jogador com radar: caminha `distance` m numa direção aleatória (dentro de
+## bounds, se dados) e pára mais cedo se um spot ficar a menos de stop_near_spot m.
+func _explore(distance: float, bounds: Rect2, stop_near_spot: float, timeout: float) -> void:
+	var player: Node3D = _player()
+	if player == null:
+		_fail("explore: jogador nao encontrado")
+		return
+	var from: Vector3 = player.global_position
+	var target: Vector3 = from
+	for attempt: int in 12:
+		var angle: float = randf() * TAU
+		target = from + Vector3(cos(angle), 0.0, sin(angle)) * distance
+		if not bounds.has_area() or bounds.has_point(Vector2(target.x, target.z)):
+			break
+		if attempt == 11:
+			# Sem sorte: aponta para o centro dos limites.
+			var c: Vector2 = bounds.get_center()
+			target = from + (Vector3(c.x, from.y, c.y) - from).normalized() * distance
+	_m["explore_steps"] = int(_m["explore_steps"]) + 1
+	await _walk_to(target, 0.5, timeout, 0.3, stop_near_spot)
 
 
 func _nearest_spot(from: Vector3) -> BuriedSpot:
@@ -683,7 +740,7 @@ func _nearest_sell_point() -> SellPoint:
 	return best
 
 
-func _walk_to_nearest_spot(timeout: float) -> void:
+func _walk_to_nearest_spot(timeout: float, radius: float = 0.0) -> void:
 	var player: Node3D = _player()
 	if player == null:
 		_fail("goto_spot: jogador nao encontrado")
@@ -691,6 +748,9 @@ func _walk_to_nearest_spot(timeout: float) -> void:
 	var spot: BuriedSpot = _nearest_spot(player.global_position)
 	if spot == null:
 		_fail("goto_spot: nenhum spot ativo")
+		return
+	if radius > 0.0 and spot.global_position.distance_to(player.global_position) > radius:
+		_fail("goto_spot: nenhum spot a menos de %.1f m" % radius)
 		return
 	var target: Vector3 = spot.global_position
 	_log("  a caminhar para spot em %s (%.1f m)" % [_vec(target), target.distance_to(player.global_position)])
@@ -879,6 +939,15 @@ func _condition_value(var_name: String) -> float:
 			return float(inv.capacity - inv.get_count()) if inv != null else 0.0
 		"deliverable":
 			return float(_deliverable_count())
+		"pickup_dist":
+			var pl: Node3D = _player()
+			var best: float = NO_TARGET_DISTANCE
+			if pl != null:
+				for n: Node in get_tree().get_nodes_in_group(PICKUP_GROUP):
+					var pk: ItemPickup = n as ItemPickup
+					if pk != null and is_instance_valid(pk) and pk.carried != null:
+						best = minf(best, pk.global_position.distance_to(pl.global_position))
+			return best
 		"sell_dist":
 			var p: Node3D = _player()
 			var sp: SellPoint = _nearest_sell_point()
@@ -909,7 +978,13 @@ func collect_state() -> Dictionary:
 		"inventory": [],
 		"enemies": [],
 		"spots": [],
+		"threat": {},
 	}
+	if DisturbanceMeter.instance != null:
+		state["threat"] = {
+			"noise": snappedf(DisturbanceMeter.instance.current_noise, 0.1),
+			"level": DisturbanceMeter.instance.current_level,
+		}
 	var gs: Node = get_node_or_null(^"/root/CoreGameState")
 	if gs != null and gs.has_method("get_snapshot"):
 		state["game_state"] = gs.call("get_snapshot")

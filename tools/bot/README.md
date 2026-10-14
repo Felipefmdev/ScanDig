@@ -39,6 +39,8 @@ tem exatamente uma ação:
 | `{"goto_spot":"nearest","walk":true,"timeout":40}` | **caminha** (move_forward + rumo) até 1 m do spot; salta se encravar e, se avançar < 1 m em 5 s, teleport de recurso (contado em `teleport_fallbacks`) |
 | `{"dig_spot":true,"mode":"smart","timeout":30}` | cava (botão direito real) o spot ao alcance até revelar. `fast` = sem Shift, `careful` = Shift, `smart` = Shift só nas 2 últimas camadas |
 | `{"pickup":true,"radius":6,"timeout":10}` | aproxima-se do item no chão mais próximo, olha e carrega E |
+| `{"goto_spot":"nearest","walk":true,"radius":8}` | igual, mas só aceita spots a ≤ `radius` m (alcance do radar nível 1); senão regista aviso |
+| `{"explore":10,"bounds":[-23,-23,23,23],"stop_near_spot":8}` | procura como um jogador: caminha 10 m numa direção aleatória dentro dos limites e pára se um spot ficar a ≤ 8 m |
 | `{"goto_sell":true}` | caminha até ao SellPoint mais próximo |
 | `{"t":0,"set_state":{"upgrade_levels":{"backpack":3},"unlocked_maps":["campo"],"team_money":5000}}` | atalho de debug: funde estes campos no snapshot do `CoreGameState` e reaplica-o (`team_money`, `upgrade_levels`, `unlocked_maps`, `defeated_bosses`) |
 | `{"sell":true}` | carrega E dentro do raio do SellPoint (mesmo caminho do jogador: `Player._interact` → `SellPoint.deliver`) |
@@ -49,11 +51,13 @@ Raiz opcional: `"dump_every": 60` e `"screenshot_every": 120` (segundos) → `pe
 
 Com passos de alto nível o `summary.json` ganha `metrics`: `time_to_goal`, `money_per_min`,
 `money_earned`, `items_sold`, `sold_value`, `sell_trips`, `spots_dug`, `items_picked`,
-`first_enemy_time`, `damage_taken`, `deaths`, `teleport_fallbacks`, `step_failures`
+`first_enemy_time`, `damage_taken`, `deaths`, `teleport_fallbacks`, `explore_steps`,
+`max_threat_level`, `threat_level_times`, `step_failures`
 (avisos de jogo, ex. "pickup: nenhum item" — não contam como erros). Exemplo: `praia_300.json`.
 
 Ações: `move_forward/backward/left/right`, `jump`, `interact`, `use_tool`, `careful_dig`
 (botão direito = cavar; `tap` não simula Shift — usa `dig_spot` com `mode`).
 Variáveis de `wait_until`/`until`/`if`: `money`, `inventory`, `enemies`, `spots`, `time`, `health`,
-`nearest_spot` (m; 9999 sem spots), `free_slots`, `deliverable` (itens vendáveis), `sell_dist` (m);
+`nearest_spot` (m; 9999 sem spots), `free_slots`, `deliverable` (itens vendáveis), `sell_dist` (m),
+`pickup_dist` (m até ao item no chão mais próximo);
 operadores `>= <= == != > <`.

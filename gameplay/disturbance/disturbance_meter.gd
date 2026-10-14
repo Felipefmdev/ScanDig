@@ -3,14 +3,15 @@ extends Node
 
 ## Diferencial do ScanDig: "o subsolo acorda".
 ## Cada pazada e cada bip do detector geram barulho. Ao passar limiares, o mapa reage
-## (criaturas, eventos). Escavar com cuidado é silencioso; escavar rápido é barulhento.
+## (criaturas, eventos). Escavar com cuidado faz metade do barulho de escavar rápido.
 
 signal noise_changed(current: float, max_noise: float)
 signal threshold_reached(level: int, origin: Vector3)
 signal threshold_cleared(level: int)
 
 const NOISE_FAST_DIG: float = 8.0
-const NOISE_CAREFUL_DIG: float = 2.0
+## Cuidadoso = metade do rápido (issue #19: com 2.0 a ameaça nunca subia na Praia).
+const NOISE_CAREFUL_DIG: float = 4.0
 const NOISE_REVEAL: float = 5.0
 
 static var instance: DisturbanceMeter = null

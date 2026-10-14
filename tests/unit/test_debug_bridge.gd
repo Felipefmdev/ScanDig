@@ -127,3 +127,22 @@ func test_set_state() -> void:
 	assert_eq((ok as Dictionary)["state"]["upgrade_levels"], {"backpack": 3})
 	for bad: Variant in [{}, {"current_day": 2}, {"team_money": "x"}, {"upgrade_levels": 3}, {"unlocked_maps": "campo"}]:
 		assert_true(Bridge.parse_step({"t": 0, "set_state": bad}) is String, "deveria falhar: %s" % str(bad))
+
+
+func test_explore_and_radar_radius() -> void:
+	var ok: Variant = Bridge.parse_step({"explore": 10, "bounds": [-23, -23, 23, 23], "stop_near_spot": 8}, true)
+	assert_true(ok is Dictionary, str(ok))
+	assert_eq(ok["distance"], 10.0)
+	assert_eq(ok["bounds"], Rect2(-23, -23, 46, 46))
+	assert_eq(ok["stop_near_spot"], 8.0)
+	var spot: Variant = Bridge.parse_step({"goto_spot": "nearest", "walk": true, "radius": 8}, true)
+	assert_eq(spot["radius"], 8.0)
+	assert_eq(Bridge.parse_condition("pickup_dist<=6"), {"var": "pickup_dist", "op": "<=", "value": 6.0})
+	var bad: Array = [
+		{"explore": 0},
+		{"explore": 5, "bounds": [1, 1, 0, 0]},
+		{"explore": 5, "stop_near_spot": -1},
+		{"goto_spot": "nearest", "radius": -2},
+	]
+	for raw: Variant in bad:
+		assert_true(Bridge.parse_step(raw, true) is String, "deveria falhar: %s" % str(raw))

@@ -9,6 +9,6 @@ display_name = "Moeda Antiga"
 category = 1
 material_type = 2
 size_category = 0
-base_value = 150
+base_value = 60
 fragility = 0.3
 depth_cm = 25

@@ -82,3 +82,42 @@ Observações:
   Subsolo nunca chega ao limiar. Cavar "inteligente" anula a pressão dos caranguejos.
 - Sugestões: baixar o peso/valor da Moeda Antiga ou o bónus de perfeição na Praia, e/ou
   dar ruído também à escavação cuidadosa; repetir o teste com humanos.
+
+## Rebalanceamento da Praia por bot 2026-10-14 (issue #19)
+
+> Também é **um bot**: não luta nem foge dos caranguejos (por isso morre mais do que um
+> humano), mas agora joga mais perto de um humano: **apanha o detetor** no início (ocupa 1
+> dos 3 slots e o radar faz ruído) e só "vê" spots a ≤ 8 m (alcance do radar nível 1);
+> fora disso **explora** (10 m numa direção aleatória). Roteiro: `tools/bot/praia_300.json`.
+
+Mudanças:
+
+| o quê | antes | depois | ficheiro |
+|---|---|---|---|
+| ruído da pazada cuidadosa | 2 | 4 (metade da rápida, 8) | `gameplay/disturbance/disturbance_meter.gd` |
+| decaimento do ruído na Praia | 2.5/s | 2.2/s | `items/maps/praia.tres` |
+| spots ativos na Praia | 8 | 5 | `items/maps/praia.tres` |
+| `item_pool` (lata/chave/moeda em 20) | 12 / 6 / 2 | 17 / 2 / 1 | `items/maps/praia.tres` |
+| Moeda Antiga `base_value` | 150 | 60 (perfeita = 75) | `items/catalog/moeda_antiga.tres` |
+
+Resultados (3 corridas por configuração, início 100 R$, meta `money>=300`):
+
+| configuração | corrida | até 300 | R$/min | itens | 1.º inimigo | ameaça máx. | dano | mortes |
+|---|---|---|---|---|---|---|---|---|
+| antiga + bot com radar | `20-32-47` | 3 min 48 s | 57.7 | 14 | 224 s (ambiente) | 0 | 0 | 0 |
+| iteração 1 (decay 1.5, 6 spots, 16/3/1) | `20-37-38` | 3 min 46 s | 57.8 | 15 | 28 s | 3 | 145 | 1 |
+| | `20-37-40` | 7 min 53 s | 26.7 | 18 | 13 s | 3 | 421 | 4 |
+| | `20-37-42` | 6 min 26 s | 35.7 | 17 | 83 s | 2 | 286 | 2 |
+| **final** (decay 2.2, 5 spots, 17/2/1) | `20-46-17` (janela) | 11 min 20 s | 19.6 | 25 | 127 s | 1 | 504 | 5 |
+| | `20-46-19` | 8 min 36 s | 24.1 | 30 | 134 s | 1 | 195 | 1 |
+| | `20-46-21` | 9 min 21 s | 22.5 | 23 | 61 s | 1 | 252 | 2 |
+
+(Pastas `.bot_runs/praia_300_2026-10-14_<hora>`.)
+
+Leitura:
+- **Final: 20–24 R$/min, 300 em 8,5–11,5 min**: dentro da meta de 8–15 min. A moeda (R$ 75)
+  ainda dá um pico agradável, mas já não decide a corrida sozinha.
+- **Inimigos voltam a aparecer**: a ameaça chega ao nível 1 entre 1 e 2,5 min. Na iteração 1
+  (decay 1.5) chegava ao nível 3 em ~1,5 min e era demais.
+- As mortes do bot (1–5) vêm de não se defender; um humano mata/foge dos caranguejos, por
+  isso deve morrer menos, mas perde tempo a lutar. Falta o **teste com humanos**.
