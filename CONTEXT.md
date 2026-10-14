@@ -17,8 +17,8 @@
 
 | Equipa / Dev | Âmbito de Edição Permitido | Áreas Proibidas |
 | :--- | :--- | :--- |
-| **Dev A** (`Lead_Gameplay`, `Dev_Detector`, `Dev_Player`) | `res://gameplay/` (todos os subdiretórios)<br>`res://world/test_sandbox.tscn`<br>`res://items/` (pasta partilhada) | **PROIBIDO** editar `res://core/` e `res://ui/` |
-| **Dev B** | `res://core/`<br>`res://ui/`<br>`res://items/` (pasta partilhada) | `res://gameplay/` |
+| **Dev A** (`Lead_Gameplay`, `Dev_Detector`, `Dev_Player`) | `res://gameplay/` (todos os subdiretórios)<br>`res://world/test_sandbox.tscn`<br>`res://items/` (pasta partilhada)<br>`res://assets/` (pasta partilhada)<br>`res://world/map_*.tscn` | **PROIBIDO** editar `res://core/` e `res://ui/` |
+| **Dev B** | `res://core/`<br>`res://ui/`<br>`res://items/` (pasta partilhada)<br>`res://assets/` (pasta partilhada) | `res://gameplay/` |
 
 ---
 
@@ -43,6 +43,7 @@ res://
 │   ├── detector/          # Dev_Detector: Detetor de metais, física 3D, áudio procedural
 │   ├── digging/           # Dev_Player / Dev A: Sistema de escavação do terreno
 │   └── player/            # Dev_Player: CharacterBody3D, câmara 1ª pessoa, inventário rápido
+├── assets/                # Partilhada: modelos 3D, texturas e áudio de terceiros (ver License.txt de cada pacote; preferir CC0 e glTF/.glb)
 ├── items/                 # Partilhada: Definições de itens e catálogo
 │   ├── catalog/           # Recursos .tres de instâncias de itens
 │   └── item_data.gd       # Script base Resource para ItemData

@@ -21,7 +21,19 @@ signal died
 ## Cosseno do meio-ângulo do cone à frente do jogador (0.5 = 60° para cada lado).
 @export_range(-1.0, 1.0, 0.05) var attack_cone_dot: float = 0.5
 
+@export_group("Mochila e Interação")
+## Alcance do raycast da câmara para apanhar itens.
+@export var interact_range: float = 2.5
+## Cone frontal de recurso quando o raycast não acerta (cosseno do meio-ângulo).
+@export_range(-1.0, 1.0, 0.05) var pickup_cone_dot: float = 0.85
+@export var drop_impulse: float = 1.4
+
 const BASE_DIG_COOLDOWN: float = 0.35
+## Layer 5 (ItemPickup).
+const PICKUP_MASK: int = 1 << 4
+const GROUND_MASK: int = 1
+const DIRT_CLOD_COLOR: Color = Color(0.78, 0.64, 0.42)
+const DIRT_CLOD_LIFETIME: float = 3.0
 const SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL: float = 0.25
 const SHOVEL_DAMAGE_REDUCTION_PER_LEVEL: float = 0.15
 const MIN_SHOVEL_DAMAGE_MULTIPLIER: float = 0.3
@@ -40,8 +52,9 @@ const THREAT_MESSAGES: Array[String] = [
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera3D
 @onready var detector: MetalDetector = $Head/Camera3D/Hand/MetalDetector
-@onready var readout_label: Label3D = $Head/Camera3D/Hand/VisorLabel
-@onready var hand: Node3D = $Head/Camera3D/Hand
+@onready var shovel_rig: Node3D = $Head/Camera3D/ShovelRig
+@onready var inventory: Inventory = $Inventory
+@onready var dig_animator: ShovelDigAnimator = $ShovelDigAnimator
 
 # HUD Elements
 @onready var feedback_label: Label = $HUD/FeedbackLabel
@@ -51,6 +64,8 @@ const THREAT_MESSAGES: Array[String] = [
 @onready var threat_message_label: Label = $HUD/ThreatMessageLabel
 @onready var health_label: Label = $HUD/HealthPanel/HealthLabel
 @onready var health_bar: ProgressBar = $HUD/HealthPanel/HealthBar
+@onready var hotbar: Hotbar = $HUD/Hotbar
+@onready var interact_prompt: Label = $HUD/InteractPrompt
 
 var health: float = 100.0
 
@@ -59,12 +74,13 @@ var _attack_cooldown: float = 0.0
 var _feedback_tween: Tween = null
 var _threat_tween: Tween = null
 var _shake_tween: Tween = null
-var _swing_tween: Tween = null
 var _threat_fill_style: StyleBoxFlat = null
-var _hand_rest_rotation: Vector3 = Vector3.ZERO
 var _spawn_transform: Transform3D = Transform3D.IDENTITY
+var _target_pickup: ItemPickup = null
+var _dig_target: BuriedSpot = null
+var _dig_is_careful: bool = false
 
-# Contador de Sessão (Mochila / Dinheiro)
+# Contador de Sessão: total já entregue na base
 var session_money: int = 0
 var session_items_count: int = 0
 
@@ -78,8 +94,6 @@ func _ready() -> void:
 		feedback_label.modulate.a = 0.0
 	if threat_message_label != null:
 		threat_message_label.modulate.a = 0.0
-	if hand != null:
-		_hand_rest_rotation = hand.rotation
 
 	_spawn_transform = global_transform
 	health = max_health
@@ -87,6 +101,18 @@ func _ready() -> void:
 	_on_health_changed(health, max_health)
 
 	_setup_threat_hud()
+
+	inventory.inventory_changed.connect(_on_inventory_changed)
+	inventory.selected_slot_changed.connect(_on_selected_slot_changed)
+	hotbar.bind(inventory)
+	_on_inventory_changed()
+	if interact_prompt != null:
+		interact_prompt.text = ""
+
+	dig_animator.setup(shovel_rig, camera, self)
+	dig_animator.impact.connect(_on_shovel_impact)
+	dig_animator.throw_dirt.connect(_on_shovel_throw_dirt)
+	dig_animator.swing_hit.connect(_on_swing_hit)
 
 
 func _ensure_default_input_mappings() -> void:
@@ -98,6 +124,11 @@ func _ensure_default_input_mappings() -> void:
 	_add_mouse_if_empty("use_tool", MOUSE_BUTTON_LEFT)
 	_add_mouse_if_empty("careful_dig", MOUSE_BUTTON_RIGHT)
 	_add_key_if_empty("attack", KEY_F)
+	_add_key_if_empty("interact", KEY_E)
+	_add_key_if_empty("drop", KEY_Q)
+	_add_key_if_empty("slot_1", KEY_1)
+	_add_key_if_empty("slot_2", KEY_2)
+	_add_key_if_empty("slot_3", KEY_3)
 
 
 func _add_key_if_empty(action: StringName, keycode: Key) -> void:
@@ -133,6 +164,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.is_pressed():
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		var mb: InputEventMouseButton = event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			inventory.cycle(-1)
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			inventory.cycle(1)
 
 
 func _physics_process(delta: float) -> void:
@@ -166,29 +202,20 @@ func _physics_process(delta: float) -> void:
 
 	_handle_dig_actions()
 	_handle_attack_action()
+	_handle_inventory_actions()
 
 
 func _process(_delta: float) -> void:
-	if detector != null and readout_label != null:
-		readout_label.text = detector.get_readout_text()
+	_update_interaction_target()
 
 
+## Botão direito saca a pá e cava: sozinho = pá rápida, com Shift = escavação cuidadosa.
+## (A ação "careful_dig" é o botão direito no InputMap; o botão esquerdo já não cava.)
 func _handle_dig_actions() -> void:
-	if _dig_cooldown > 0.0:
+	if _dig_cooldown > 0.0 or dig_animator.is_playing():
 		return
-
-	var is_careful: bool = false
-	var triggered: bool = false
-
-	if Input.is_action_just_pressed("use_tool"):
-		is_careful = false
-		triggered = true
-	elif Input.is_action_just_pressed("careful_dig"):
-		is_careful = true
-		triggered = true
-
-	if triggered:
-		_perform_dig(is_careful)
+	if Input.is_action_just_pressed("careful_dig"):
+		_perform_dig(Input.is_physical_key_pressed(KEY_SHIFT))
 
 
 func get_dig_cooldown() -> float:
@@ -201,8 +228,12 @@ func get_dig_damage_multiplier() -> float:
 	return maxf(MIN_SHOVEL_DAMAGE_MULTIPLIER, 1.0 - level_bonus * SHOVEL_DAMAGE_REDUCTION_PER_LEVEL)
 
 
+## Fator de velocidade da animação de cavar (pás melhores cavam mais depressa).
+func get_dig_speed_factor() -> float:
+	return 1.0 + float(maxi(shovel_level, 1) - 1) * SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL
+
+
 func _perform_dig(is_careful: bool) -> void:
-	_dig_cooldown = get_dig_cooldown()
 	var spots: Array[Node] = get_tree().get_nodes_in_group("buried_spots")
 	var closest_spot: BuriedSpot = null
 	var min_dist: float = dig_range + 0.1
@@ -215,11 +246,89 @@ func _perform_dig(is_careful: bool) -> void:
 				min_dist = dist
 				closest_spot = s
 
-	if closest_spot != null and min_dist <= dig_range:
-		var res: Dictionary = closest_spot.dig(is_careful, get_dig_damage_multiplier())
-		_show_dig_feedback(res, is_careful)
+	var has_spot: bool = closest_spot != null and min_dist <= dig_range
+	_dig_target = closest_spot if has_spot else null
+	_dig_is_careful = is_careful
+
+	# Ponto real do chão onde a lâmina vai cravar: no spot, ou à frente do jogador.
+	var aim: Vector3
+	if has_spot:
+		aim = closest_spot.global_position
 	else:
-		_show_temporary_message("❌ Nenhum sinal para escavar por perto (aproxime-se)", Color(0.95, 0.4, 0.4), 1.2)
+		var fwd: Vector3 = -global_basis.z
+		fwd.y = 0.0
+		aim = global_position + fwd.normalized() * 1.2
+	var ground: Vector3 = _find_ground_point(aim)
+
+	var duration: float = dig_animator.play(ground, is_careful, get_dig_speed_factor())
+	_dig_cooldown = maxf(get_dig_cooldown(), duration)
+
+
+func _find_ground_point(around: Vector3) -> Vector3:
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+		around + Vector3.UP * 1.5, around + Vector3.DOWN * 3.0, GROUND_MASK, [get_rid()]
+	)
+	var hit: Dictionary = space.intersect_ray(query)
+	if hit.is_empty():
+		return Vector3(around.x, global_position.y, around.z)
+	return hit["position"]
+
+
+## A lâmina cravou: só agora o dig() é aplicado.
+func _on_shovel_impact(_ground_point: Vector3) -> void:
+	if not _dig_is_careful:
+		_shake_camera(0.035, 0.2)
+	var spot: BuriedSpot = _dig_target
+	_dig_target = null
+	if spot != null and is_instance_valid(spot) and spot.is_inside_tree() and spot.is_in_group("buried_spots"):
+		var res: Dictionary = spot.dig(_dig_is_careful, get_dig_damage_multiplier())
+		_show_dig_feedback(res, _dig_is_careful)
+	else:
+		_show_temporary_message("❌ Só areia... nenhum sinal aqui (aproxime-se de um sinal)", Color(0.95, 0.4, 0.4), 1.2)
+
+
+func _on_shovel_throw_dirt(blade_position: Vector3, side: Vector3) -> void:
+	var count: int = randi_range(3, 6)
+	var parent: Node = get_parent() if get_parent() != null else self
+	var strength: float = 1.0 if _dig_is_careful else 1.6
+	for i: int in count:
+		_spawn_dirt_clod(parent, blade_position + Vector3(randf_range(-0.08, 0.08), 0.0, randf_range(-0.08, 0.08)),
+			(side * randf_range(1.2, 2.2) + Vector3.UP * randf_range(1.6, 2.8)) * strength
+			+ Vector3(randf_range(-0.4, 0.4), 0.0, randf_range(-0.4, 0.4)))
+
+
+## Torrão de terra físico: não colide com o jogador (layer 0, só vê o chão) e some em ~3s.
+func _spawn_dirt_clod(parent: Node, pos: Vector3, velocity_start: Vector3) -> void:
+	var clod: RigidBody3D = RigidBody3D.new()
+	clod.collision_layer = 0
+	clod.collision_mask = GROUND_MASK
+	clod.mass = 0.08
+	var size: float = randf_range(0.05, 0.1)
+	var shape: CollisionShape3D = CollisionShape3D.new()
+	var box: BoxShape3D = BoxShape3D.new()
+	box.size = Vector3.ONE * size
+	shape.shape = box
+	clod.add_child(shape)
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var cube: BoxMesh = BoxMesh.new()
+	cube.size = box.size
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = DIRT_CLOD_COLOR.darkened(randf_range(0.0, 0.25))
+	mat.roughness = 1.0
+	cube.material = mat
+	mesh.mesh = cube
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	clod.add_child(mesh)
+	parent.add_child(clod)
+	clod.global_position = pos
+	clod.rotation = Vector3(randf() * TAU, randf() * TAU, randf() * TAU)
+	clod.linear_velocity = velocity_start
+	clod.angular_velocity = Vector3(randf_range(-8, 8), randf_range(-8, 8), randf_range(-8, 8))
+	var tween: Tween = clod.create_tween()
+	tween.tween_interval(DIRT_CLOD_LIFETIME - 0.5)
+	tween.tween_property(mesh, "scale", Vector3.ONE * 0.01, 0.5)
+	tween.tween_callback(clod.queue_free)
 
 
 func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
@@ -234,10 +343,6 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 	var is_perfect: bool = res.get("is_perfect", false)
 
 	if revealed:
-		session_items_count += 1
-		session_money += final_val
-		_update_session_hud()
-
 		var rarity_str: String = _get_category_name(item.category if item != null else 0)
 		var item_name: String = item.display_name if item != null else "Artefato Misterioso"
 		var msg: String = ""
@@ -252,6 +357,7 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 		]
 		if is_perfect:
 			msg += "\n✔ ESCAVAÇÃO PERFEITA! (+25%)"
+		msg += "\n[E] apanhar"
 		_show_temporary_message(msg, color, duration)
 	elif damaged:
 		var layer_num: int = max_layers - dirt_left
@@ -286,7 +392,9 @@ func _show_temporary_message(text: String, color: Color = Color.WHITE, duration:
 
 func _update_session_hud() -> void:
 	if session_info_label != null:
-		session_info_label.text = "🎒 Mochila: %d itens | 💰 R$ %d" % [session_items_count, session_money]
+		session_info_label.text = "🎒 Mochila: %d/%d (R$ %d) | 💰 Entregue: R$ %d" % [
+			inventory.get_count(), inventory.capacity, inventory.get_total_value(), session_money
+		]
 
 
 func _get_category_name(cat: int) -> String:
@@ -403,8 +511,27 @@ func heal(amount: float) -> void:
 
 func _die() -> void:
 	died.emit()
-	_show_temporary_message("💀 Você desmaiou... e acordou de volta no ponto de partida.", Color(1.0, 0.4, 0.4), 3.0)
+	dig_animator.cancel()
+	var lost: int = _drop_all_items()
+	var msg: String = "💀 Você desmaiou... e acordou de volta no ponto de partida."
+	if lost > 0:
+		msg += "\nA mochila caiu no local da morte (%d itens) — volte para apanhar!" % lost
+	_show_temporary_message(msg, Color(1.0, 0.4, 0.4), 4.0)
 	_respawn()
+
+
+## Larga todos os itens da mochila espalhados à volta do jogador. Devolve quantos caíram.
+func _drop_all_items() -> int:
+	var items: Array[CarriedItem] = inventory.take_all()
+	var parent: Node = get_parent()
+	if parent == null:
+		return 0
+	var origin: Vector3 = global_position + Vector3.UP * 0.8
+	for i: int in items.size():
+		var angle: float = TAU * float(i) / float(items.size()) + randf_range(-0.3, 0.3)
+		var dir: Vector3 = Vector3(cos(angle), 0.0, sin(angle))
+		ItemPickup.spawn(parent, items[i], origin + dir * 0.3, dir * randf_range(0.8, 1.4) + Vector3.UP * 1.6)
+	return items.size()
 
 
 func _respawn() -> void:
@@ -429,7 +556,7 @@ func _on_health_changed(current: float, max_value: float) -> void:
 # ---------------------------------------------------------------------------
 
 func _handle_attack_action() -> void:
-	if _attack_cooldown > 0.0:
+	if _attack_cooldown > 0.0 or dig_animator.is_playing():
 		return
 	if Input.is_action_just_pressed("attack"):
 		_perform_attack()
@@ -441,8 +568,11 @@ func get_attack_damage() -> float:
 
 func _perform_attack() -> void:
 	_attack_cooldown = attack_cooldown
-	_play_swing_animation()
+	if dig_animator.play_swing() <= 0.0:
+		_on_swing_hit()
 
+
+func _on_swing_hit() -> void:
 	var forward: Vector3 = -global_basis.z
 	forward.y = 0.0
 	forward = forward.normalized()
@@ -469,13 +599,145 @@ func _perform_attack() -> void:
 		_show_temporary_message("⚔️ Golpe com a pá! (%d de dano)" % int(damage), Color(1.0, 0.75, 0.4), 0.8)
 
 
-func _play_swing_animation() -> void:
-	if hand == null:
+# ---------------------------------------------------------------------------
+# Mochila, apanhar/largar e entrega
+# ---------------------------------------------------------------------------
+
+func _handle_inventory_actions() -> void:
+	for i: int in inventory.capacity:
+		var action: StringName = StringName("slot_%d" % (i + 1))
+		if InputMap.has_action(action) and Input.is_action_just_pressed(action):
+			inventory.select(i)
+	if Input.is_action_just_pressed("interact"):
+		_interact()
+	if InputMap.has_action("drop") and Input.is_action_just_pressed("drop"):
+		_drop_selected()
+
+
+func _interact() -> void:
+	var sell_point: SellPoint = _get_sell_point_in_range()
+	if sell_point != null and _count_deliverable() > 0:
+		var items: Array[CarriedItem] = inventory.take_where(SellPoint.can_deliver)
+		var total: int = sell_point.deliver(items)
+		session_items_count += items.size()
+		session_money += total
+		_update_session_hud()
+		_show_temporary_message("📦 Entregue: %d itens, R$ %d" % [items.size(), total], Color(0.5, 1.0, 0.55), 2.5)
 		return
-	if _swing_tween != null and _swing_tween.is_valid():
-		_swing_tween.kill()
-	hand.rotation = _hand_rest_rotation
-	_swing_tween = create_tween()
-	_swing_tween.tween_property(hand, "rotation:x", _hand_rest_rotation.x + 0.5, 0.08).set_ease(Tween.EASE_OUT)
-	_swing_tween.tween_property(hand, "rotation:x", _hand_rest_rotation.x - 0.9, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	_swing_tween.tween_property(hand, "rotation:x", _hand_rest_rotation.x, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	if _target_pickup == null or not is_instance_valid(_target_pickup):
+		if sell_point != null:
+			_show_temporary_message("Nada para entregar (as ferramentas ficam na mochila).", Color(0.9, 0.9, 0.9), 1.4)
+		return
+	if inventory.is_full():
+		_show_temporary_message("🎒 Mochila cheia! Entregue na base ou largue um item [Q].", Color(1.0, 0.6, 0.3), 1.8)
+		return
+	var c: CarriedItem = _target_pickup.take()
+	_target_pickup = null
+	if c == null:
+		return
+	inventory.add_item(c)
+	var value: String = "" if c.is_tool() else " (R$ %d)" % c.final_value
+	_show_temporary_message("✋ Apanhou: %s%s" % [c.get_display_name(), value],
+		Color(0.85, 0.55, 1.0) if c.is_rare_variant else Color(0.95, 0.95, 0.85), 1.4)
+
+
+func _drop_selected() -> void:
+	var c: CarriedItem = inventory.take_selected()
+	if c == null:
+		_show_temporary_message("Slot vazio.", Color(0.9, 0.9, 0.9), 0.8)
+		return
+	var fwd: Vector3 = -camera.global_basis.z
+	var pos: Vector3 = camera.global_position + fwd * 0.7 + Vector3.DOWN * 0.3
+	var flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	ItemPickup.spawn(get_parent(), c, pos, flat * drop_impulse + Vector3.UP * 0.6)
+
+
+func _get_sell_point_in_range() -> SellPoint:
+	for n: Node in get_tree().get_nodes_in_group(SellPoint.GROUP):
+		var sp: SellPoint = n as SellPoint
+		if sp != null and sp.is_in_range(global_position):
+			return sp
+	return null
+
+
+## Pickup em mira: raycast da câmara (layer 5) ou, em alternativa, o mais próximo num cone frontal.
+func _find_target_pickup() -> ItemPickup:
+	var from: Vector3 = camera.global_position
+	var fwd: Vector3 = -camera.global_basis.z
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+		from, from + fwd * interact_range, PICKUP_MASK, [get_rid()]
+	)
+	var hit: Dictionary = space.intersect_ray(query)
+	if not hit.is_empty() and hit["collider"] is ItemPickup:
+		return hit["collider"] as ItemPickup
+
+	var best: ItemPickup = null
+	var best_dist: float = interact_range
+	for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+		var p: ItemPickup = n as ItemPickup
+		if p == null or p.carried == null:
+			continue
+		var to_p: Vector3 = p.global_position - from
+		var dist: float = to_p.length()
+		if dist > best_dist or dist < 0.01:
+			continue
+		if fwd.dot(to_p / dist) < pickup_cone_dot:
+			continue
+		best = p
+		best_dist = dist
+	return best
+
+
+func _update_interaction_target() -> void:
+	var target: ItemPickup = _find_target_pickup()
+	if target != _target_pickup:
+		if _target_pickup != null and is_instance_valid(_target_pickup):
+			_target_pickup.set_highlighted(false)
+		_target_pickup = target
+		if _target_pickup != null:
+			_target_pickup.set_highlighted(true)
+
+	if interact_prompt == null:
+		return
+	var sell_point: SellPoint = _get_sell_point_in_range()
+	var deliverable: int = _count_deliverable()
+	if sell_point != null and deliverable > 0:
+		interact_prompt.text = "[E] Entregar mochila (%d itens, R$ %d)" % [deliverable, inventory.get_total_value()]
+	elif _target_pickup != null and _target_pickup.carried != null:
+		var aimed: CarriedItem = _target_pickup.carried
+		var suffix: String = "  — mochila cheia!" if inventory.is_full() else ""
+		var value: String = "" if aimed.is_tool() else " (R$ %d)" % aimed.final_value
+		interact_prompt.text = "[E] Apanhar %s%s%s" % [aimed.get_display_name(), value, suffix]
+	else:
+		interact_prompt.text = ""
+
+
+func _on_inventory_changed() -> void:
+	_update_session_hud()
+	_update_tool_in_hand()
+
+
+func _on_selected_slot_changed(_index: int) -> void:
+	_update_tool_in_hand()
+
+
+func _count_deliverable() -> int:
+	var n: int = 0
+	for c: CarriedItem in inventory.slots:
+		if SellPoint.can_deliver(c):
+			n += 1
+	return n
+
+
+## O detector só aparece e funciona com o slot selecionado a conter a ferramenta "detector".
+func _update_tool_in_hand() -> void:
+	if detector == null:
+		return
+	var c: CarriedItem = inventory.get_selected()
+	var active: bool = c != null and c.tool_id == &"detector"
+	if detector.has_method("set_active"):
+		detector.call("set_active", active)
+	else:
+		detector.visible = active

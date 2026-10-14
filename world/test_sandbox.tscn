@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=17 format=3 uid="uid://cufgqcuuq0ywj"]
 
 [ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://items/buried_spot.tscn" id="2_spot"]
@@ -8,6 +8,8 @@
 [ext_resource type="Resource" path="res://items/catalog/orbe_vibrante.tres" id="6_orbe"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="7_disturbance"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="8_spawner"]
+[ext_resource type="Script" path="res://items/sell_point.gd" id="9_sell_point"]
+[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.384314, 0.54902, 0.74902, 1)
@@ -30,6 +32,19 @@ glow_enabled = true
 albedo_color = Color(0.85, 0.76, 0.55, 1)
 roughness = 0.9
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sell_ring"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.85, 0.3, 0.14)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_sell_ring"]
+material = SubResource("StandardMaterial3D_sell_ring")
+top_radius = 2.5
+bottom_radius = 2.5
+height = 0.02
+radial_segments = 48
+rings = 1
+
 [node name="TestSandbox" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -50,6 +65,25 @@ script = ExtResource("7_disturbance")
 
 [node name="EnemySpawner" type="Node3D" parent="."]
 script = ExtResource("8_spawner")
+
+[node name="SellPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 2)
+script = ExtResource("9_sell_point")
+
+[node name="Ring" type="MeshInstance3D" parent="SellPoint"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.012, 0)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_sell_ring")
+
+[node name="Label" type="Label3D" parent="SellPoint"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+pixel_size = 0.008
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.88, 0.35, 1)
+text = "ENTREGA [E]"
+font_size = 56
+outline_size = 14
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
@@ -77,3 +111,7 @@ item = ExtResource("4_moeda")
 [node name="BuriedSpot6" parent="." instance=ExtResource("2_spot")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 3)
 item = ExtResource("3_lata")
+
+[node name="DetectorSpawn" type="Marker3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.05, -4.5)
+script = ExtResource("d_detector_spawn")

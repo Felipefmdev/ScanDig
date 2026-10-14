@@ -1,10 +1,34 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=59 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
 [ext_resource type="Resource" path="res://items/maps/praia.tres" id="3_praia"]
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
+[ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
+[ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
+[ext_resource type="PackedScene" uid="uid://cv33lw4gpdbbx" path="res://assets/models/kenney_pirate/boat-row-small.glb" id="k_boat_row_small"]
+[ext_resource type="PackedScene" uid="uid://bluwbs4vyj4mu" path="res://assets/models/kenney_pirate/bottle.glb" id="k_bottle"]
+[ext_resource type="PackedScene" uid="uid://3q1pqo6818cx" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
+[ext_resource type="PackedScene" uid="uid://tpyunr7h3idb" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
+[ext_resource type="PackedScene" uid="uid://pycke7estxhy" path="res://assets/models/kenney_pirate/flag-pirate.glb" id="k_flag_pirate"]
+[ext_resource type="PackedScene" uid="uid://b7y2o841epna3" path="res://assets/models/kenney_pirate/grass-patch.glb" id="k_grass_patch"]
+[ext_resource type="PackedScene" uid="uid://cjno870p6bc73" path="res://assets/models/kenney_pirate/grass-plant.glb" id="k_grass_plant"]
+[ext_resource type="PackedScene" uid="uid://cljjkey0wlm1l" path="res://assets/models/kenney_pirate/palm-bend.glb" id="k_palm_bend"]
+[ext_resource type="PackedScene" uid="uid://bmdkrjdxm4gxs" path="res://assets/models/kenney_pirate/palm-detailed-bend.glb" id="k_palm_detailed_bend"]
+[ext_resource type="PackedScene" uid="uid://b5v42rgbotrrw" path="res://assets/models/kenney_pirate/palm-detailed-straight.glb" id="k_palm_detailed_straight"]
+[ext_resource type="PackedScene" uid="uid://cgc64pxard4mp" path="res://assets/models/kenney_pirate/palm-straight.glb" id="k_palm_straight"]
+[ext_resource type="PackedScene" uid="uid://bv3tbyfk5k0gx" path="res://assets/models/kenney_pirate/patch-sand.glb" id="k_patch_sand"]
+[ext_resource type="PackedScene" uid="uid://b1ikdyqvuy8sf" path="res://assets/models/kenney_pirate/patch-sand-foliage.glb" id="k_patch_sand_foliage"]
+[ext_resource type="PackedScene" uid="uid://qtujhqu2ay0f" path="res://assets/models/kenney_pirate/rocks-a.glb" id="k_rocks_a"]
+[ext_resource type="PackedScene" uid="uid://mkympwtstmwn" path="res://assets/models/kenney_pirate/rocks-b.glb" id="k_rocks_b"]
+[ext_resource type="PackedScene" uid="uid://caeqhqj12i3s8" path="res://assets/models/kenney_pirate/rocks-c.glb" id="k_rocks_c"]
+[ext_resource type="PackedScene" uid="uid://b1pe2syco7mca" path="res://assets/models/kenney_pirate/rocks-sand-a.glb" id="k_rocks_sand_a"]
+[ext_resource type="PackedScene" uid="uid://4cur1nyb0l4f" path="res://assets/models/kenney_pirate/rocks-sand-b.glb" id="k_rocks_sand_b"]
+[ext_resource type="PackedScene" uid="uid://mmsx4g4tx0nm" path="res://assets/models/kenney_pirate/rocks-sand-c.glb" id="k_rocks_sand_c"]
+[ext_resource type="PackedScene" uid="uid://co1dcl48ni0yo" path="res://assets/models/kenney_pirate/ship-wreck.glb" id="k_ship_wreck"]
+[ext_resource type="PackedScene" uid="uid://fnevn3teb2hr" path="res://assets/models/kenney_pirate/structure-platform-dock.glb" id="k_structure_platform_dock"]
+[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sunset"]
 sky_top_color = Color(0.32, 0.4, 0.62, 1)
@@ -40,11 +64,49 @@ roughness = 0.6
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dune"]
 albedo_color = Color(0.93, 0.82, 0.6, 1)
-roughness = 1.0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rock"]
-albedo_color = Color(0.42, 0.4, 0.38, 1)
-roughness = 0.85
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(1.502, 0.949, 1.514)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_2"]
+size = Vector3(1.314, 1.113, 1.413)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_3"]
+size = Vector3(1.916, 1.087, 1.646)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_4"]
+size = Vector3(1.725, 1.083, 1.482)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_5"]
+size = Vector3(1.499, 1.232, 1.586)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6"]
+size = Vector3(1.948, 1.37, 1.953)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_7"]
+size = Vector3(1.669, 1.174, 1.674)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_8"]
+height = 2.6
+radius = 0.22
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_9"]
+size = Vector3(4.64, 0.3, 3.62)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_10"]
+size = Vector3(2.5, 1.31, 2.51)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_11"]
+size = Vector3(0.7, 0.643, 0.7)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_12"]
+size = Vector3(0.636, 0.584, 0.636)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_13"]
+size = Vector3(0.616, 0.439, 0.747)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_14"]
+size = Vector3(0.513, 0.366, 0.622)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_water"]
 transparency = 1
@@ -61,6 +123,28 @@ size = Vector3(1, 6, 62)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_z"]
 size = Vector3(62, 6, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sell_ring"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.85, 0.3, 0.14)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_sell_ring"]
+material = SubResource("StandardMaterial3D_sell_ring")
+top_radius = 2.5
+bottom_radius = 2.5
+height = 0.02
+radial_segments = 48
+rings = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sell_blocker"]
+size = Vector3(5.6, 0.3, 5.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sell_chest"]
+size = Vector3(0.75, 0.68, 0.75)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sell_crate"]
+size = Vector3(0.62, 0.45, 0.76)
 
 [node name="MapPraia" type="Node3D"]
 
@@ -87,65 +171,490 @@ size = Vector3(4, 0.01, 60)
 material = SubResource("StandardMaterial3D_wet_sand")
 
 [node name="Dune1" type="CSGSphere3D" parent="Terrain"]
-transform = Transform3D(5.19615, 0, -3, 0, 1, 0, 1.75, 0, 3.03109, -14, -0.4, -12)
+transform = Transform3D(5.19615, 0, 1.75, 0, 1, 0, -3, 0, 3.03109, -14, -0.4, -12)
 use_collision = true
 radial_segments = 24
 rings = 12
 material = SubResource("StandardMaterial3D_dune")
 
 [node name="Dune2" type="CSGSphere3D" parent="Terrain"]
-transform = Transform3D(3.21394, 0, 3.83022, 0, 1, 0, -3.06418, 0, 2.57115, -18, -0.45, 10)
+transform = Transform3D(3.21394, 0, -3.06418, 0, 1, 0, 3.83022, 0, 2.57115, -18, -0.45, 10)
 use_collision = true
 radial_segments = 24
 rings = 12
 material = SubResource("StandardMaterial3D_dune")
 
 [node name="Dune3" type="CSGSphere3D" parent="Terrain"]
-transform = Transform3D(1.21554, 0, -6.89365, 0, 1, 0, 2.95442, 0, 0.520945, 6, -0.5, 18)
+transform = Transform3D(1.21554, 0, 2.95442, 0, 1, 0, -6.89365, 0, 0.520945, 6, -0.5, 18)
 use_collision = true
 radial_segments = 24
 rings = 12
 material = SubResource("StandardMaterial3D_dune")
 
-[node name="Rock1" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
-transform = Transform3D(1.25822, 0.288244, -0.542022, -0.11781, 0.871766, 0.19012, 0.460356, -0.15309, 0.987236, 8, 0.2, -9)
-use_collision = true
-radius = 0.9
-radial_segments = 7
-rings = 4
-material = SubResource("StandardMaterial3D_rock")
+[node name="Decor" type="Node3D" parent="."]
 
-[node name="Rock2" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
-transform = Transform3D(0.353881, -0.172697, -0.919209, -0.0485436, 1.27324, -0.257899, 0.747636, 0.0836228, 0.272117, -6, 0.3, 5)
-use_collision = true
-radius = 0.8
-radial_segments = 6
-rings = 4
-material = SubResource("StandardMaterial3D_rock")
+[node name="Rocks" type="Node3D" parent="Decor"]
 
-[node name="Rock3" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
-transform = Transform3D(-1.3319, 0.465874, -1.11759, 0.138787, 0.676148, 0.116456, 0.771345, 0, -0.919253, 15, 0.15, 6)
-use_collision = true
-radius = 1.0
-radial_segments = 8
-rings = 4
-material = SubResource("StandardMaterial3D_rock")
+[node name="Rock1" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
+transform = Transform3D(0.90631, 0, 0.42262, 0, 1, 0, -0.42262, 0, 0.90631, 8, 0, -9)
 
-[node name="Rock4" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
-transform = Transform3D(1.25822, 0.288244, -0.542022, -0.11781, 0.871766, 0.19012, 0.460356, -0.15309, 0.987236, 22, 0.1, -18)
-use_collision = true
-radius = 0.7
-radial_segments = 6
-rings = 4
-material = SubResource("StandardMaterial3D_rock")
+[node name="Collision" type="CollisionShape3D" parent="Decor/Rocks/Rock1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.11, 0.47437, -0.02475)
+shape = SubResource("BoxShape3D_1")
 
-[node name="Rock5" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
-transform = Transform3D(0.353881, -0.172697, -0.919209, -0.0485436, 1.27324, -0.257899, 0.747636, 0.0836228, 0.272117, -22, 0.25, -3)
-use_collision = true
-radius = 0.85
-radial_segments = 7
-rings = 4
-material = SubResource("StandardMaterial3D_rock")
+[node name="Model" parent="Decor/Rocks/Rock1" instance=ExtResource("k_rocks_c")]
+transform = Transform3D(0.55, 0, 0, 0, 0.55, 0, 0, 0, 0.55, 0, 0, 0)
+
+[node name="Rock2" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
+transform = Transform3D(0.34202, 0, 0.93969, 0, 1, 0, -0.93969, 0, 0.34202, -6, 0, 5)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Rocks/Rock2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06, 0.5565, -0.046)
+shape = SubResource("BoxShape3D_2")
+
+[node name="Model" parent="Decor/Rocks/Rock2" instance=ExtResource("k_rocks_sand_b")]
+transform = Transform3D(0.4, 0, 0, 0, 0.4, 0, 0, 0, 0.4, 0, 0, 0)
+
+[node name="Rock3" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
+transform = Transform3D(-0.76604, 0, 0.64279, 0, 1, 0, -0.64279, 0, -0.76604, 15, 0, 6)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Rocks/Rock3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0725, 0.54375, -0.0275)
+shape = SubResource("BoxShape3D_3")
+
+[node name="Model" parent="Decor/Rocks/Rock3" instance=ExtResource("k_rocks_a")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="Rock4" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
+transform = Transform3D(-0.93969, 0, -0.34202, 0, 1, 0, 0.34202, 0, -0.93969, 22, 0, -18)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Rocks/Rock4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06525, 0.54169, -0.02475)
+shape = SubResource("BoxShape3D_4")
+
+[node name="Model" parent="Decor/Rocks/Rock4" instance=ExtResource("k_rocks_sand_a")]
+transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, 0, 0)
+
+[node name="Rock5" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
+transform = Transform3D(0.5, 0, -0.86603, 0, 1, 0, 0.86603, 0, 0.5, -22, 0, -3)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Rocks/Rock5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0765, 0.61594, -0.063)
+shape = SubResource("BoxShape3D_5")
+
+[node name="Model" parent="Decor/Rocks/Rock5" instance=ExtResource("k_rocks_b")]
+transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, 0, 0)
+
+[node name="Rock6" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
+transform = Transform3D(0.96593, 0, 0.25882, 0, 1, 0, -0.25882, 0, 0.96593, 27.5, 0, -24)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Rocks/Rock6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1505, 0.68512, -0.056)
+shape = SubResource("BoxShape3D_6")
+
+[node name="Model" parent="Decor/Rocks/Rock6" instance=ExtResource("k_rocks_sand_c")]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0)
+
+[node name="Rock7" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
+transform = Transform3D(-0.64279, 0, -0.76604, 0, 1, 0, 0.76604, 0, -0.64279, 27, 0, 22)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Rocks/Rock7"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.129, 0.58725, -0.048)
+shape = SubResource("BoxShape3D_7")
+
+[node name="Model" parent="Decor/Rocks/Rock7" instance=ExtResource("k_rocks_sand_c")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
+
+[node name="Palms" type="Node3D" parent="Decor"]
+
+[node name="Palm1" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(-0.97824, 0, -0.2075, 0, 1, 0, 0.2075, 0, -0.97824, -26, 0, -24)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm1" instance=ExtResource("k_palm_bend")]
+transform = Transform3D(1.23, 0, 0, 0, 1.23, 0, 0, 0, 1.23, 0, 0, 0)
+
+[node name="Palm2" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(0.45048, 0, -0.89279, 0, 1, 0, 0.89279, 0, 0.45048, -23.5, 0, -20.5)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm2" instance=ExtResource("k_palm_straight")]
+transform = Transform3D(1.02, 0, 0, 0, 1.02, 0, 0, 0, 1.02, 0, 0, 0)
+
+[node name="Palm3" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(0.24633, 0, -0.96919, 0, 1, 0, 0.96919, 0, 0.24633, -27, 0, -9)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm3" instance=ExtResource("k_palm_detailed_bend")]
+transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 0, 0, 0)
+
+[node name="Palm4" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(0.27932, 0, 0.9602, 0, 1, 0, -0.9602, 0, 0.27932, -25.5, 0, 13)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm4" instance=ExtResource("k_palm_detailed_straight")]
+transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 0, 0, 0)
+
+[node name="Palm5" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(0.852, 0, -0.52354, 0, 1, 0, 0.52354, 0, 0.852, -22, 0, 24.5)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm5" instance=ExtResource("k_palm_bend")]
+transform = Transform3D(1.25, 0, 0, 0, 1.25, 0, 0, 0, 1.25, 0, 0, 0)
+
+[node name="Palm6" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(0.9169, 0, 0.39913, 0, 1, 0, -0.39913, 0, 0.9169, -9, 0, -26.5)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm6" instance=ExtResource("k_palm_straight")]
+transform = Transform3D(1.13, 0, 0, 0, 1.13, 0, 0, 0, 1.13, 0, 0, 0)
+
+[node name="Palm7" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(-0.5781, 0, 0.81597, 0, 1, 0, -0.81597, 0, -0.5781, 4, 0, -26)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm7"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm7" instance=ExtResource("k_palm_detailed_bend")]
+transform = Transform3D(1.26, 0, 0, 0, 1.26, 0, 0, 0, 1.26, 0, 0, 0)
+
+[node name="Palm8" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(-0.51579, 0, -0.85671, 0, 1, 0, 0.85671, 0, -0.51579, 13, 0, 26.5)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm8"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm8" instance=ExtResource("k_palm_detailed_straight")]
+transform = Transform3D(1.31, 0, 0, 0, 1.31, 0, 0, 0, 1.31, 0, 0, 0)
+
+[node name="Palm9" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(-0.82899, 0, -0.55926, 0, 1, 0, 0.55926, 0, -0.82899, 20.5, 0, 23.5)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm9"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm9" instance=ExtResource("k_palm_bend")]
+transform = Transform3D(1.32, 0, 0, 0, 1.32, 0, 0, 0, 1.32, 0, 0, 0)
+
+[node name="Palm10" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(-0.3898, 0, 0.9209, 0, 1, 0, -0.9209, 0, -0.3898, 24, 0, -27)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm10"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm10" instance=ExtResource("k_palm_straight")]
+transform = Transform3D(1.31, 0, 0, 0, 1.31, 0, 0, 0, 1.31, 0, 0, 0)
+
+[node name="Palm11" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(0.86106, 0, -0.5085, 0, 1, 0, 0.5085, 0, 0.86106, -12, 0, -5)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm11"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm11" instance=ExtResource("k_palm_detailed_bend")]
+transform = Transform3D(1.26, 0, 0, 0, 1.26, 0, 0, 0, 1.26, 0, 0, 0)
+
+[node name="Palm12" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(0.91192, 0, 0.41037, 0, 1, 0, -0.41037, 0, 0.91192, -9.5, 0, -2.5)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm12"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm12" instance=ExtResource("k_palm_detailed_straight")]
+transform = Transform3D(1.04, 0, 0, 0, 1.04, 0, 0, 0, 1.04, 0, 0, 0)
+
+[node name="Palm13" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
+transform = Transform3D(-0.73465, 0, -0.67845, 0, 1, 0, 0.67845, 0, -0.73465, 10.5, 0, 14)
+
+[node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm13"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("CylinderShape3D_8")
+
+[node name="Model" parent="Decor/Palms/Palm13" instance=ExtResource("k_palm_bend")]
+transform = Transform3D(1.19, 0, 0, 0, 1.19, 0, 0, 0, 1.19, 0, 0, 0)
+
+[node name="SandPatches" type="Node3D" parent="Decor"]
+
+[node name="PatchSand1" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
+transform = Transform3D(0.93969, 0, 0.34202, 0, 1, 0, -0.34202, 0, 0.93969, -5, 0, -15)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_9")
+
+[node name="Model" parent="Decor/SandPatches/PatchSand1" instance=ExtResource("k_patch_sand")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="PatchSand2" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
+transform = Transform3D(-0.34202, 0, 0.93969, 0, 1, 0, -0.93969, 0, -0.34202, 13, 0, -1.5)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_9")
+
+[node name="Model" parent="Decor/SandPatches/PatchSand2" instance=ExtResource("k_patch_sand")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="PatchSand3" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
+transform = Transform3D(0.5, 0, -0.86603, 0, 1, 0, 0.86603, 0, 0.5, -14, 0, 21)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_9")
+
+[node name="Model" parent="Decor/SandPatches/PatchSand3" instance=ExtResource("k_patch_sand")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="PatchSand4" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
+transform = Transform3D(0.42262, 0, 0.90631, 0, 1, 0, -0.90631, 0, 0.42262, 2, 0, 9)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_9")
+
+[node name="Model" parent="Decor/SandPatches/PatchSand4" instance=ExtResource("k_patch_sand")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="PatchFoliage1" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
+transform = Transform3D(-0.93969, 0, 0.34202, 0, 1, 0, -0.34202, 0, -0.93969, -20, 0, -13)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchFoliage1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_9")
+
+[node name="Model" parent="Decor/SandPatches/PatchFoliage1" instance=ExtResource("k_patch_sand_foliage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="PatchFoliage2" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
+transform = Transform3D(-0.5, 0, -0.86603, 0, 1, 0, 0.86603, 0, -0.5, 18, 0, -12)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchFoliage2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_9")
+
+[node name="Model" parent="Decor/SandPatches/PatchFoliage2" instance=ExtResource("k_patch_sand_foliage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="PatchFoliage3" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
+transform = Transform3D(0.98481, 0, 0.17365, 0, 1, 0, -0.17365, 0, 0.98481, -1, 0, 23)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchFoliage3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_9")
+
+[node name="Model" parent="Decor/SandPatches/PatchFoliage3" instance=ExtResource("k_patch_sand_foliage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="Foliage" type="Node3D" parent="Decor"]
+
+[node name="Grass1" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(-0.60075, 0, -0.35931, 0, 0.7, 0, 0.35931, 0, -0.60075, -26.732, 0, -23.179)
+
+[node name="Grass3" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(-0.24798, 0, 0.6546, 0, 0.7, 0, -0.6546, 0, -0.24798, -26.03, 0, -9.5194)
+
+[node name="Grass5" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(0.29979, 0, -0.63256, 0, 0.7, 0, 0.63256, 0, 0.29979, -21.149, 0, 25.197)
+
+[node name="Grass7" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(0.22305, 0, -0.66351, 0, 0.7, 0, 0.66351, 0, 0.22305, 3.0957, 0, -25.374)
+
+[node name="Grass9" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(0.67526, 0, -0.18444, 0, 0.7, 0, 0.18444, 0, 0.67526, 19.433, 0, 23.767)
+
+[node name="Grass11" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(-0.065246, 0, 0.69695, 0, 0.7, 0, -0.69695, 0, -0.065246, -13.06, 0, -4.7075)
+
+[node name="Grass13" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(0.67356, 0, 0.19056, 0, 0.7, 0, -0.19056, 0, 0.67356, 9.5272, 0, 13.487)
+
+[node name="Loose1" parent="Decor/Foliage" instance=ExtResource("k_grass_patch")]
+transform = Transform3D(-0.66856, 0, 0.43934, 0, 0.8, 0, -0.43934, 0, -0.66856, -15.5, 0, -9.5)
+
+[node name="Loose2" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(-0.58405, 0, -0.5467, 0, 0.8, 0, 0.5467, 0, -0.58405, -12, 0, -14)
+
+[node name="Loose3" parent="Decor/Foliage" instance=ExtResource("k_grass_patch")]
+transform = Transform3D(-0.43647, 0, -0.49507, 0, 0.66, 0, 0.49507, 0, -0.43647, -19, 0, 13)
+
+[node name="Loose4" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(-0.16109, 0, 0.72225, 0, 0.74, 0, -0.72225, 0, -0.16109, -16, 0, 7.5)
+
+[node name="Loose5" parent="Decor/Foliage" instance=ExtResource("k_grass_patch")]
+transform = Transform3D(0.7271, 0, -0.42062, 0, 0.84, 0, 0.42062, 0, 0.7271, 8, 0, 19.5)
+
+[node name="Loose6" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(-0.33013, 0, 0.77241, 0, 0.84, 0, -0.77241, 0, -0.33013, 4, 0, 16.5)
+
+[node name="Loose7" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
+transform = Transform3D(-0.56015, 0, -0.46812, 0, 0.73, 0, 0.46812, 0, -0.56015, 9.5, 0, -10.5)
+
+[node name="Loose8" parent="Decor/Foliage" instance=ExtResource("k_grass_patch")]
+transform = Transform3D(0.19098, 0, -0.73561, 0, 0.76, 0, 0.73561, 0, 0.19098, -23, 0, -1.5)
+
+[node name="Shore" type="Node3D" parent="Decor"]
+
+[node name="ShipWreck" parent="Decor/Shore" instance=ExtResource("k_ship_wreck")]
+transform = Transform3D(0.88309, 0.18443, 0.6294, -0.17166, 1.0838, -0.076732, -0.633, -0.036618, 0.89887, 34, -0.9, -13)
+
+[node name="Dock1" type="StaticBody3D" parent="Decor/Shore" groups=["spot_blockers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.75, -1, 12)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Shore/Dock1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.655, -0.005)
+shape = SubResource("BoxShape3D_10")
+
+[node name="Model" parent="Decor/Shore/Dock1" instance=ExtResource("k_structure_platform_dock")]
+
+[node name="Dock2" type="StaticBody3D" parent="Decor/Shore" groups=["spot_blockers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.25, -1, 12)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Shore/Dock2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.655, -0.005)
+shape = SubResource("BoxShape3D_10")
+
+[node name="Model" parent="Decor/Shore/Dock2" instance=ExtResource("k_structure_platform_dock")]
+
+[node name="Dock3" type="StaticBody3D" parent="Decor/Shore" groups=["spot_blockers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33.75, -1, 12)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Shore/Dock3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.655, -0.005)
+shape = SubResource("BoxShape3D_10")
+
+[node name="Model" parent="Decor/Shore/Dock3" instance=ExtResource("k_structure_platform_dock")]
+
+[node name="Dock4" type="StaticBody3D" parent="Decor/Shore" groups=["spot_blockers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.25, -1, 12)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Shore/Dock4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.655, -0.005)
+shape = SubResource("BoxShape3D_10")
+
+[node name="Model" parent="Decor/Shore/Dock4" instance=ExtResource("k_structure_platform_dock")]
+
+[node name="RowBoat" parent="Decor/Shore" instance=ExtResource("k_boat_row_small")]
+transform = Transform3D(-0.79764, 0.041803, -0.29072, 0.044486, 0.84884, 0, 0.29032, -0.015215, -0.79874, 35, -0.35, 15.2)
+
+[node name="PirateFlag" parent="Decor/Shore" instance=ExtResource("k_flag_pirate")]
+transform = Transform3D(0.69282, 0, -0.4, 0, 0.8, 0, 0.4, 0, 0.69282, 37, 0.31, 11)
+
+[node name="Props" type="Node3D" parent="Decor"]
+
+[node name="Barrel1" type="StaticBody3D" parent="Decor/Props" groups=["spot_blockers"]]
+transform = Transform3D(0.98481, 0, 0.17365, 0, 1, 0, -0.17365, 0, 0.98481, 26.8, 0, 9.4)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Props/Barrel1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32134, 0)
+shape = SubResource("BoxShape3D_11")
+
+[node name="Model" parent="Decor/Props/Barrel1" instance=ExtResource("k_barrel")]
+transform = Transform3D(0.55, 0, 0, 0, 0.55, 0, 0, 0, 0.55, 0, 0, 0)
+
+[node name="Barrel2" type="StaticBody3D" parent="Decor/Props" groups=["spot_blockers"]]
+transform = Transform3D(0.34202, 0, 0.93969, 0, 1, 0, -0.93969, 0, 0.34202, 27.6, 0, 8.4)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Props/Barrel2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.29212, 0)
+shape = SubResource("BoxShape3D_12")
+
+[node name="Model" parent="Decor/Props/Barrel2" instance=ExtResource("k_barrel")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="Crate1" type="StaticBody3D" parent="Decor/Props" groups=["spot_blockers"]]
+transform = Transform3D(0.90631, 0, 0.42262, 0, 1, 0, -0.42262, 0, 0.90631, 26.4, 0, 14.6)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Props/Crate1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21945, 0.003)
+shape = SubResource("BoxShape3D_13")
+
+[node name="Model" parent="Decor/Props/Crate1" instance=ExtResource("k_crate")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
+
+[node name="Crate2" type="StaticBody3D" parent="Decor/Props" groups=["spot_blockers"]]
+transform = Transform3D(0.96593, 0, -0.25882, 0, 1, 0, 0.25882, 0, 0.96593, 27.4, 0, 15.8)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Props/Crate2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21945, 0.003)
+shape = SubResource("BoxShape3D_13")
+
+[node name="Model" parent="Decor/Props/Crate2" instance=ExtResource("k_crate")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
+
+[node name="Barrel3" type="StaticBody3D" parent="Decor/Props" groups=["spot_blockers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 21)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Props/Barrel3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32134, 0)
+shape = SubResource("BoxShape3D_11")
+
+[node name="Model" parent="Decor/Props/Barrel3" instance=ExtResource("k_barrel")]
+transform = Transform3D(0.55, 0, 0, 0, 0.55, 0, 0, 0, 0.55, 0, 0, 0)
+
+[node name="Crate3" type="StaticBody3D" parent="Decor/Props" groups=["spot_blockers"]]
+transform = Transform3D(0.76604, 0, 0.64279, 0, 1, 0, -0.64279, 0, 0.76604, -11, 0, -7.2)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Props/Crate3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21945, 0.003)
+shape = SubResource("BoxShape3D_13")
+
+[node name="Model" parent="Decor/Props/Crate3" instance=ExtResource("k_crate")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
+
+[node name="Crate1Top" type="StaticBody3D" parent="Decor/Props" groups=["spot_blockers"]]
+transform = Transform3D(0.5, 0, 0.86603, 0, 1, 0, -0.86603, 0, 0.5, 26.45, 0.462, 14.6)
+
+[node name="Collision" type="CollisionShape3D" parent="Decor/Props/Crate1Top"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18287, 0.0025)
+shape = SubResource("BoxShape3D_14")
+
+[node name="Model" parent="Decor/Props/Crate1Top" instance=ExtResource("k_crate")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="BarrelFallen" parent="Decor/Props" instance=ExtResource("k_barrel")]
+transform = Transform3D(2.6514e-17, -0.43301, 0.25, 0.5, 3.0616e-17, 0, -1.5308e-17, 0.25, 0.43301, 28.3, 0.33, -11)
+
+[node name="Bottle1" parent="Decor/Props" instance=ExtResource("k_bottle")]
+transform = Transform3D(3.286e-18, -0.053664, -0.32561, 0.33, 2.0207e-17, 0, 1.9938e-17, -0.32561, 0.053664, 27.2, 0.06, -6)
+
+[node name="Bottle2" parent="Decor/Props" instance=ExtResource("k_bottle")]
+transform = Transform3D(-1.8994e-17, 0.3102, -0.11258, 0.33, 2.0207e-17, 0, 6.8937e-18, -0.11258, -0.3102, 25.8, 0.06, 3)
+
+[node name="Bottle3" parent="Decor/Props" instance=ExtResource("k_bottle")]
+transform = Transform3D(-1.2309e-17, 0.20102, -0.26171, 0.33, 2.0207e-17, 0, 1.6025e-17, -0.26171, -0.20102, 28.4, 0.06, 18)
+
+[node name="Bottle4" parent="Decor/Props" instance=ExtResource("k_bottle")]
+transform = Transform3D(1.1715e-17, -0.19133, -0.26888, 0.33, 2.0207e-17, 0, 1.6464e-17, -0.26888, 0.19133, 9, 0.06, -16)
+
+[node name="Bottle5" parent="Decor/Props" instance=ExtResource("k_bottle")]
+transform = Transform3D(4.575e-18, -0.074715, 0.32143, 0.33, 2.0207e-17, 0, -1.9682e-17, 0.32143, 0.074715, -3, 0.06, 13.5)
+
+[node name="Bottle6" parent="Decor/Props" instance=ExtResource("k_bottle")]
+transform = Transform3D(1.9947e-17, -0.32576, -0.052727, 0.33, 2.0207e-17, 0, 3.2286e-18, -0.052727, 0.32576, 21, 0.06, 10)
 
 [node name="Sea" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, -0.15, 0)
@@ -183,5 +692,70 @@ area_size = Vector2(50, 50)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 0)
 script = ExtResource("5_enemy_spawner")
 
+[node name="BaseEntrega" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, 3.5)
+script = ExtResource("8_sell_point")
+
+[node name="Ring" type="MeshInstance3D" parent="BaseEntrega"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.012, 0)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_sell_ring")
+
+[node name="SpotBlocker" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
+
+[node name="Collision" type="CollisionShape3D" parent="BaseEntrega/SpotBlocker"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+shape = SubResource("BoxShape3D_sell_blocker")
+
+[node name="Chest" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
+transform = Transform3D(-0.70711, 0, -0.70711, 0, 1, 0, 0.70711, 0, -0.70711, 0.75, 0, 0.75)
+
+[node name="Collision" type="CollisionShape3D" parent="BaseEntrega/Chest"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.34, 0)
+shape = SubResource("BoxShape3D_sell_chest")
+
+[node name="Model" parent="BaseEntrega/Chest" instance=ExtResource("k_chest")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
+
+[node name="Crate" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
+transform = Transform3D(0.93969, 0, 0.34202, 0, 1, 0, -0.34202, 0, 0.93969, 1.55, 0, -0.15)
+
+[node name="Collision" type="CollisionShape3D" parent="BaseEntrega/Crate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.225, 0)
+shape = SubResource("BoxShape3D_sell_crate")
+
+[node name="Model" parent="BaseEntrega/Crate" instance=ExtResource("k_crate")]
+transform = Transform3D(0.58, 0, 0, 0, 0.58, 0, 0, 0, 0.58, 0, 0, 0)
+
+[node name="CrateTop" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
+transform = Transform3D(0.42262, 0, 0.90631, 0, 1, 0, -0.90631, 0, 0.42262, 1.55, 0.45, -0.12)
+
+[node name="Collision" type="CollisionShape3D" parent="BaseEntrega/CrateTop"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.185, 0)
+shape = SubResource("BoxShape3D_sell_crate")
+
+[node name="Model" parent="BaseEntrega/CrateTop" instance=ExtResource("k_crate")]
+transform = Transform3D(0.48, 0, 0, 0, 0.48, 0, 0, 0, 0.48, 0, 0, 0)
+
+[node name="Barrel" parent="BaseEntrega" instance=ExtResource("k_barrel")]
+transform = Transform3D(0.43301, 0, 0.25, 0, 0.5, 0, -0.25, 0, 0.43301, -0.15, 0, 1.6)
+
+[node name="Flag" parent="BaseEntrega" instance=ExtResource("k_flag_pirate")]
+transform = Transform3D(-0.70711, 0, -0.70711, 0, 1, 0, 0.70711, 0, -0.70711, 0.2, 0, 1.25)
+
+[node name="Label" type="Label3D" parent="BaseEntrega"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 2, 0.75)
+pixel_size = 0.008
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.88, 0.35, 1)
+text = "ENTREGA [E]"
+font_size = 56
+outline_size = 14
+
 [node name="Player" parent="." instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+
+[node name="DetectorSpawn" type="Marker3D" parent="."]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 3.6, 0.05, 3.6)
+script = ExtResource("d_detector_spawn")

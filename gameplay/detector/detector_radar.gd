@@ -1,10 +1,15 @@
 class_name DetectorRadar
 extends Control
 
-## Ecrã circular do radar no canto inferior do ecrã. Só desenha: o estado (varrimento,
-## blips, nível) vem do MetalDetector. Frente da câmara = cima, jogador no centro.
+## Ecrã circular do radar. Normalmente desenhado num SubViewport e mostrado no ecrã do aparelho;
+## opcionalmente no canto do ecrã (debug). Só desenha: o estado (varrimento, blips, nível)
+## vem do MetalDetector. Frente da câmara = cima, jogador no centro.
 
 @export var detector_path: NodePath = NodePath("../..")
+## Escala de todo o desenho (coordenadas virtuais = size / ui_scale).
+@export var ui_scale: float = 1.0
+## Pinta o fundo inteiro (ecrã do aparelho); desligado no modo HUD transparente.
+@export var fill_background: bool = false
 
 const BG_COLOR: Color = Color(0.02, 0.08, 0.05, 0.78)
 const GRID_COLOR: Color = Color(0.25, 1.0, 0.45, 0.22)
@@ -18,7 +23,10 @@ const SWEEP_TRAIL_STEPS: int = 18
 const SWEEP_TRAIL_ANGLE: float = 0.7
 const BLIP_RADIUS: float = 5.0
 const ENEMY_BLIP_RADIUS: float = 6.0
-const TEXT_HEIGHT: float = 22.0
+const SCREEN_BG_COLOR: Color = Color(0.015, 0.07, 0.04, 1.0)
+const FOOTER_LINES: int = 4
+const FOOTER_LINE_HEIGHT: float = 17.0
+const FOOTER_FONT_SIZE: int = 14
 ## Profundidade (cm) a partir da qual o blip do Nv3 fica no tamanho/brilho mínimo.
 const DEEP_CM: float = 60.0
 
@@ -58,10 +66,17 @@ func _draw() -> void:
 	if detector == null:
 		return
 
-	var radius: float = minf(size.x, size.y - TEXT_HEIGHT) * 0.5 - 2.0
+	var k: float = maxf(ui_scale, 0.01)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
+	var vsize: Vector2 = size / k
+	if fill_background:
+		draw_rect(Rect2(Vector2.ZERO, vsize), SCREEN_BG_COLOR)
+
+	var footer_h: float = FOOTER_LINE_HEIGHT * float(FOOTER_LINES) + 4.0
+	var radius: float = minf(vsize.x, vsize.y - footer_h) * 0.5 - 3.0
 	if radius <= 4.0:
 		return
-	var center: Vector2 = Vector2(size.x * 0.5, radius + 2.0)
+	var center: Vector2 = Vector2(vsize.x * 0.5, radius + 3.0)
 	var level: int = detector.get_detector_level()
 
 	_draw_background(center, radius)
@@ -85,7 +100,7 @@ func _draw() -> void:
 	])
 	draw_colored_polygon(tri, TEXT_COLOR)
 
-	_draw_footer(center, radius, level)
+	_draw_footer(center, radius, level, vsize.x)
 
 
 func _draw_background(center: Vector2, radius: float) -> void:
@@ -158,18 +173,31 @@ func _draw_enemy_blip(p: Vector2, alpha: float) -> void:
 	]), c)
 
 
-func _draw_footer(center: Vector2, radius: float, level: int) -> void:
+## Texto por baixo do círculo: nível/alcance/inimigos, sinal, material (Nv2+), profundidade (Nv3).
+func _draw_footer(center: Vector2, radius: float, level: int, width: float) -> void:
+	var lines: PackedStringArray = PackedStringArray()
+	var enemies: int = detector.get_enemy_count()
+	var head: String = "Nv.%d  %dm" % [level, int(round(detector.max_detection_distance))]
+	if enemies > 0:
+		head += "  ⚠%d" % enemies
+	lines.append(head)
+
+	var bars_count: int = int(round(detector.get_signal_strength() * 6.0))
+	var bars: String = ""
+	for i: int in range(6):
+		bars += "█" if i < bars_count else "░"
+	lines.append("Sinal " + bars)
+
+	var target: BuriedSpot = detector.get_current_target()
+	var item: ItemData = target.item if target != null else null
+	lines.append("Mat: " + (MetalDetector.get_material_name(item.material_type) if item != null and level >= 2 else "---"))
+	lines.append("Prof: " + (MetalDetector.get_depth_range_text(item) if item != null and level >= 3 else "---"))
+
 	var font: Font = ThemeDB.fallback_font
-	var font_size: int = 14
-	var text: String = "RADAR Nv.%d  %dm" % [level, int(round(detector.max_detection_distance))]
-
-	if level >= 3:
-		var target: BuriedSpot = detector.get_current_target()
-		if target != null and target.item != null:
-			text = "Nv.3  Prof ~%s" % MetalDetector.get_depth_range_text(target.item)
-		else:
-			text = "Nv.3  Prof ---"
-
-	var baseline: Vector2 = Vector2(0.0, center.y + radius + 18.0)
-	draw_string(font, baseline + Vector2(1.0, 1.0), text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, Color(0, 0, 0, 0.8))
-	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, TEXT_COLOR)
+	var y: float = center.y + radius + FOOTER_LINE_HEIGHT
+	for line: String in lines:
+		var pos: Vector2 = Vector2(0.0, y)
+		if not fill_background:
+			draw_string(font, pos + Vector2(1.0, 1.0), line, HORIZONTAL_ALIGNMENT_CENTER, width, FOOTER_FONT_SIZE, Color(0, 0, 0, 0.8))
+		draw_string(font, pos, line, HORIZONTAL_ALIGNMENT_CENTER, width, FOOTER_FONT_SIZE, TEXT_COLOR)
+		y += FOOTER_LINE_HEIGHT

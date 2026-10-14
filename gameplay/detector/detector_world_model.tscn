@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/detector/detector_model.gd" id="1_model"]
+
+[node name="DetectorWorldModel" type="Node3D"]
+
+[node name="Model" type="Node3D" parent="."]
+position = Vector3(0, 0, 0.37)
+rotation = Vector3(0.785398, 0, 0)
+scale = Vector3(0.7, 0.7, 0.7)
+script = ExtResource("1_model")
+show_hand = false

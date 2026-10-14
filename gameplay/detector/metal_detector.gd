@@ -18,9 +18,13 @@ signal blip_lit(blip: RadarBlip)
 ## Segundos por volta completa da linha de varrimento.
 @export var sweep_period: float = 1.5
 @export var scan_interval: float = 0.05
+## Mostra também uma cópia do radar no canto inferior esquerdo do ecrã (só para debug).
+@export var debug_screen_radar: bool = false
 
 @onready var audio_player: AudioStreamPlayer3D = $AudioStreamPlayer3D
 @onready var coil_tip: Marker3D = $CoilTip
+@onready var model: DetectorModel = $Model
+@onready var radar_viewport: SubViewport = $RadarViewport
 
 const MAX_LEVEL: int = 3
 ## Ruído médio que o radar gera enquanto há alvos no alcance; cada ping reporta NOISE_PER_SECOND * sweep_period.
@@ -88,6 +92,7 @@ var _sparkle_phase: float = 0.0
 var _unknown_drift: float = 0.0
 
 # Variáveis de Balanço Procedural (Sway de caminhada)
+var _active: bool = true
 var _sway_time: float = 0.0
 var _initial_pos: Vector3 = Vector3.ZERO
 var _initial_rot: Vector3 = Vector3.ZERO
@@ -98,7 +103,75 @@ func _ready() -> void:
 	_initial_rot = rotation
 	_refresh_level_stats()
 	_setup_audio_generator()
-	_update_target_detection()
+	_setup_screen()
+	# O detetor é uma ferramenta de inventário: começa guardado até o jogador o equipar.
+	set_active(false)
+
+
+## Liga/desliga o detetor (slot do inventário). Inativo: invisível e sem scan, radar,
+## ping nem barulho; o SubViewport do radar deixa de renderizar.
+func set_active(active: bool) -> void:
+	_active = active
+	visible = active
+	set_process(active)
+	if radar_viewport != null:
+		radar_viewport.render_target_update_mode = (
+			SubViewport.UPDATE_ALWAYS if active else SubViewport.UPDATE_DISABLED
+		)
+	if active:
+		if audio_player != null and not audio_player.playing:
+			audio_player.play()
+			_playback = audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+		_refresh_level_stats()
+		_update_target_detection()
+	else:
+		_blips.clear()
+		_ping_t = -1.0
+		_pinged_this_turn = false
+		if _current_target != null:
+			_current_target = null
+			_current_distance = 999.0
+			target_lost.emit()
+		if audio_player != null:
+			audio_player.stop()
+		_playback = null
+
+
+func is_active() -> bool:
+	return _active
+
+
+## Aplica a textura do SubViewport do radar ao ecrã da caixa de controlo.
+func _setup_screen() -> void:
+	if model != null and model.screen_mesh != null and radar_viewport != null:
+		var tex: ViewportTexture = radar_viewport.get_texture()
+		var mat: StandardMaterial3D = StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_texture = tex
+		mat.emission_enabled = true
+		mat.emission_texture = tex
+		mat.emission_energy_multiplier = 0.35
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+		model.screen_mesh.material_override = mat
+
+	# O visor de texto antigo (Label3D na Hand do player.tscn) passou para dentro do ecrã.
+	var old_visor: Node = get_node_or_null("../VisorLabel")
+	if old_visor is Node3D:
+		(old_visor as Node3D).visible = false
+
+	if debug_screen_radar:
+		var layer: CanvasLayer = CanvasLayer.new()
+		layer.name = "DebugRadarLayer"
+		var radar: DetectorRadar = DetectorRadar.new()
+		radar.detector = self
+		radar.anchor_top = 1.0
+		radar.anchor_bottom = 1.0
+		radar.offset_left = 24.0
+		radar.offset_top = -330.0
+		radar.offset_right = 244.0
+		radar.offset_bottom = -86.0
+		layer.add_child(radar)
+		add_child(layer)
 
 
 func _setup_audio_generator() -> void:

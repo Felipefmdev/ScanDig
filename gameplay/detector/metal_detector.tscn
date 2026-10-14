@@ -1,78 +1,37 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://gameplay/detector/metal_detector.gd" id="1_detector"]
 [ext_resource type="Script" path="res://gameplay/detector/detector_radar.gd" id="2_radar"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_metal"]
-albedo_color = Color(0.2, 0.22, 0.25, 1)
-metallic = 0.8
-roughness = 0.3
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_coil"]
-albedo_color = Color(0.1, 0.1, 0.1, 1)
-roughness = 0.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_box"]
-albedo_color = Color(0.85, 0.6, 0.1, 1)
-roughness = 0.5
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_screen"]
-albedo_color = Color(0.03, 0.06, 0.04, 1)
-roughness = 0.2
+[ext_resource type="Script" path="res://gameplay/detector/detector_model.gd" id="3_model"]
 
 [node name="MetalDetector" type="Node3D"]
+position = Vector3(-0.02, 0.12, 0.1)
+rotation = Vector3(0.20944, -0.20944, 0)
 script = ExtResource("1_detector")
 
-[node name="VisualModel" type="Node3D" parent="."]
-
-[node name="Shaft" type="CSGCylinder3D" parent="VisualModel"]
-transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -0.25, -0.4)
-radius = 0.02
-height = 1.0
-sides = 8
-material = SubResource("StandardMaterial3D_metal")
-
-[node name="Coil" type="CSGCylinder3D" parent="VisualModel"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.7, -0.7)
-radius = 0.18
-height = 0.03
-sides = 16
-material = SubResource("StandardMaterial3D_coil")
-
-[node name="CoilCenterHole" type="CSGCylinder3D" parent="VisualModel/Coil"]
-operation = 2
-radius = 0.1
-height = 0.04
-sides = 16
-
-[node name="ControlBox" type="CSGBox3D" parent="VisualModel"]
-transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 0.05, -0.15)
-size = Vector3(0.14, 0.08, 0.12)
-material = SubResource("StandardMaterial3D_box")
-
-[node name="ScreenPanel" type="CSGBox3D" parent="VisualModel/ControlBox"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.041, 0.01)
-size = Vector3(0.125, 0.002, 0.09)
-material = SubResource("StandardMaterial3D_screen")
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("3_model")
 
 [node name="CoilTip" type="Marker3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.7, -0.7)
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -0.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.07)
 max_distance = 15.0
 
-[node name="RadarLayer" type="CanvasLayer" parent="."]
+[node name="RadarViewport" type="SubViewport" parent="."]
+disable_3d = true
+size = Vector2i(256, 368)
+render_target_update_mode = 4
 
-[node name="Radar" type="Control" parent="RadarLayer"]
+[node name="Radar" type="Control" parent="RadarViewport"]
 layout_mode = 3
-anchors_preset = 2
-anchor_top = 1.0
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = -330.0
-offset_right = 244.0
-offset_bottom = -86.0
-grow_vertical = 0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2_radar")
+ui_scale = 1.6
+fill_background = true
