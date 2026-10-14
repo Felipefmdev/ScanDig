@@ -17,8 +17,12 @@
 
 | Equipa / Dev | Âmbito de Edição Permitido | Áreas Proibidas |
 | :--- | :--- | :--- |
-| **Dev A** (`Lead_Gameplay`, `Dev_Detector`, `Dev_Player`) | `res://gameplay/` (todos os subdiretórios)<br>`res://world/test_sandbox.tscn`<br>`res://items/` (pasta partilhada)<br>`res://assets/` (pasta partilhada)<br>`res://world/map_*.tscn` | **PROIBIDO** editar `res://core/` e `res://ui/` |
-| **Dev B** | `res://core/`<br>`res://ui/`<br>`res://items/` (pasta partilhada)<br>`res://assets/` (pasta partilhada) | `res://gameplay/` |
+| **Dev A** (`Lead_Gameplay`, `Dev_Detector`, `Dev_Player`) | `res://gameplay/` (todos os subdiretórios)<br>`res://world/test_sandbox.tscn`<br>`res://items/` (ver regra abaixo)<br>`res://assets/` (pasta partilhada)<br>`res://world/map_*.tscn` | **PROIBIDO** editar `res://core/` e `res://ui/` |
+| **Dev B** (`Arquiteto`, `Dev_Netcode`, `Dev_UI_Economy`) | `res://core/`<br>`res://ui/`<br>`res://world/lobby_base.tscn`<br>`res://items/catalog/` e `res://items/maps/`<br>`res://assets/` (pasta partilhada) | `res://gameplay/`, `res://world/map_*.tscn`, `res://world/test_sandbox.tscn` |
+
+**Regra de `res://items/`:** o Dev B edita `items/catalog/` e `items/maps/`. Os ficheiros de ponte/gameplay em `items/` (`discovery_bridge.gd`, `sell_point.gd`, `buried_spot.gd`) só mudam **mediante acordo entre Dev A e Dev B**.
+
+**Autoloads oficiais** (`project.godot`, prefixo `Core*` para não colidir com o `class_name`): `CoreGameState`, `CoreNetwork`, `CoreSave`, `CoreSession`, `CoreSessionUI`. Detalhes em `docs/CORE_AND_NETWORK.md`.
 
 ---
 
