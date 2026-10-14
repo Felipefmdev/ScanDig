@@ -32,8 +32,15 @@ const MAX_AMPLITUDE: float = 0.35
 const ATTACK_TIME: float = 0.004
 const RELEASE_TIME: float = 0.006
 
+# Variáveis de Balanço Procedural (Sway de caminhada)
+var _sway_time: float = 0.0
+var _initial_pos: Vector3 = Vector3.ZERO
+var _initial_rot: Vector3 = Vector3.ZERO
+
 
 func _ready() -> void:
+	_initial_pos = position
+	_initial_rot = rotation
 	_setup_audio_generator()
 	_update_target_detection()
 
@@ -55,6 +62,28 @@ func _process(delta: float) -> void:
 
 	_update_beeping(delta)
 	_fill_audio_buffer()
+
+
+## Aplica balanço suave (sway) na haste e visor quando o jogador anda
+func apply_walk_sway(is_moving: bool, delta: float) -> void:
+	if is_moving:
+		_sway_time += delta * 6.5
+		# Movimento de arco de varredura lateral característico
+		var sway_angle_z: float = sin(_sway_time) * deg_to_rad(3.5)
+		var sway_angle_x: float = cos(_sway_time * 2.0) * deg_to_rad(1.8)
+		var sway_offset_x: float = sin(_sway_time) * 0.022
+		var sway_offset_y: float = absf(cos(_sway_time)) * 0.012
+
+		rotation.z = lerpf(rotation.z, _initial_rot.z + sway_angle_z, 8.0 * delta)
+		rotation.x = lerpf(rotation.x, _initial_rot.x + sway_angle_x, 8.0 * delta)
+		position.x = lerpf(position.x, _initial_pos.x + sway_offset_x, 8.0 * delta)
+		position.y = lerpf(position.y, _initial_pos.y + sway_offset_y, 8.0 * delta)
+	else:
+		# Retorna à posição e repouso originais
+		rotation.z = lerpf(rotation.z, _initial_rot.z, 6.0 * delta)
+		rotation.x = lerpf(rotation.x, _initial_rot.x, 6.0 * delta)
+		position.x = lerpf(position.x, _initial_pos.x, 6.0 * delta)
+		position.y = lerpf(position.y, _initial_pos.y, 6.0 * delta)
 
 
 func _update_target_detection() -> void:

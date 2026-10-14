@@ -11,12 +11,24 @@ extends CharacterBody3D
 @onready var detector: MetalDetector = $Head/Camera3D/Hand/MetalDetector
 @onready var readout_label: Label3D = $Head/Camera3D/Hand/VisorLabel
 
+# HUD Elements
+@onready var feedback_label: Label = $HUD/FeedbackLabel
+@onready var session_info_label: Label = $HUD/SessionInfoLabel
+
 var _dig_cooldown: float = 0.0
+var _feedback_tween: Tween = null
+
+# Contador de Sessão (Mochila / Dinheiro)
+var session_money: int = 0
+var session_items_count: int = 0
 
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_ensure_default_input_mappings()
+	_update_session_hud()
+	if feedback_label != null:
+		feedback_label.modulate.a = 0.0
 
 
 func _ensure_default_input_mappings() -> void:
@@ -83,6 +95,11 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# Aplica balanço procedural (sway) na haste do detector enquanto caminha
+	if detector != null:
+		var is_walking: bool = (velocity.length() > 0.2 and is_on_floor())
+		detector.apply_walk_sway(is_walking, delta)
+
 	if _dig_cooldown > 0.0:
 		_dig_cooldown -= delta
 
@@ -119,7 +136,7 @@ func _perform_dig(is_careful: bool) -> void:
 	var min_dist: float = dig_range + 0.1
 	var player_pos: Vector3 = global_position
 
-	for s in spots:
+	for s: Node in spots:
 		if s is BuriedSpot and s.is_inside_tree():
 			var dist: float = player_pos.distance_to(s.global_position)
 			if dist < min_dist:
@@ -127,7 +144,76 @@ func _perform_dig(is_careful: bool) -> void:
 				closest_spot = s
 
 	if closest_spot != null and min_dist <= dig_range:
-		print("[Player] >> Escavando (%s) a %.2fm do alvo..." % ["Cuidadosa" if is_careful else "Pá Rápida", min_dist])
-		var _res: Dictionary = closest_spot.dig(is_careful)
+		var res: Dictionary = closest_spot.dig(is_careful)
+		_show_dig_feedback(res, is_careful)
 	else:
-		print("[Player] Nenhum ponto de escavação a menos de %.1fm (alvo mais próximo a %.2fm)." % [dig_range, min_dist])
+		_show_temporary_message("❌ Nenhum sinal para escavar por perto (aproxime-se)", Color(0.95, 0.4, 0.4), 1.2)
+
+
+func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
+	var revealed: bool = res.get("revealed", false)
+	var dirt_left: int = res.get("dirt_layers", 0)
+	var max_layers: int = res.get("max_layers", 3)
+	var integrity: float = res.get("integrity", 1.0)
+	var damaged: bool = res.get("damaged", false)
+	var item: ItemData = res.get("item", null)
+	var final_val: int = res.get("final_value", 0)
+
+	if revealed:
+		session_items_count += 1
+		session_money += final_val
+		_update_session_hud()
+
+		var rarity_str: String = _get_category_name(item.category if item != null else 0)
+		var item_name: String = item.display_name if item != null else "Artefato Misterioso"
+		var msg: String = "★ DESCOBERTA: %s [%s]!\nIntegridade: %d%% | Valor: R$ %d" % [
+			item_name, rarity_str, int(integrity * 100.0), final_val
+		]
+		_show_temporary_message(msg, Color(1.0, 0.88, 0.25), 3.5)
+	elif damaged:
+		var layer_num: int = max_layers - dirt_left
+		var msg: String = "💥 CRACK! Você bateu com a pá no objeto!\nIntegridade caiu para %d%% (Camada %d/%d)" % [
+			int(integrity * 100.0), layer_num, max_layers
+		]
+		_show_temporary_message(msg, Color(1.0, 0.35, 0.35), 2.2)
+	else:
+		var tool_name: String = "Escavação Cuidadosa" if is_careful else "Pá Rápida"
+		var layer_num: int = max_layers - dirt_left
+		var msg: String = "⛏️ [%s] Escavando terra... (Camada %d/%d)" % [
+			tool_name, layer_num, max_layers
+		]
+		_show_temporary_message(msg, Color(0.85, 0.95, 0.85), 1.6)
+
+
+func _show_temporary_message(text: String, color: Color = Color.WHITE, duration: float = 2.0) -> void:
+	if feedback_label == null:
+		return
+
+	feedback_label.text = text
+	feedback_label.modulate = color
+
+	if _feedback_tween != null and _feedback_tween.is_valid():
+		_feedback_tween.kill()
+
+	_feedback_tween = create_tween()
+	_feedback_tween.tween_property(feedback_label, "modulate:a", 1.0, 0.08)
+	_feedback_tween.tween_interval(duration)
+	_feedback_tween.tween_property(feedback_label, "modulate:a", 0.0, 0.4)
+
+
+func _update_session_hud() -> void:
+	if session_info_label != null:
+		session_info_label.text = "🎒 Mochila: %d itens | 💰 R$ %d" % [session_items_count, session_money]
+
+
+func _get_category_name(cat: int) -> String:
+	match cat:
+		ItemData.Category.COMUM:
+			return "Comum"
+		ItemData.Category.HISTORICO:
+			return "Histórico"
+		ItemData.Category.RARO:
+			return "Raro"
+		ItemData.Category.ESTRANHO:
+			return "Estranho"
+	return "Comum"
