@@ -116,6 +116,16 @@ Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado
 4. Host: `request_end_expedition()` → `advance_day()` → `SaveManager.save_game()` → `_rpc_return_to_lobby(summary)` → `expedition_ended(summary)` em todos.
 5. Queda do host: cliente volta ao lobby e recebe `host_lost`.
 
+### Mapa carregado por peer (`peer_scene_ready`)
+A Godot 4.3 não avisa quando `change_scene_to_file` termina. O `SessionManager` guarda a cena pedida em `_change_scene`, compara com `current_scene.scene_file_path` no `_process` e espera mais um frame (para os `_ready` da cena rodarem) antes de avisar. Se outra troca começar nesse frame, o aviso é descartado.
+- `signal peer_scene_ready(peer_id: int, map_id: String)`: só no host. Um peer, inclusive o próprio host (id 1), terminou de carregar o mapa atual. No solo/offline é emitido para o peer 1. O lobby não gera aviso.
+- `get_ready_peers() -> Array[int]` (ordenado) e `is_peer_scene_ready(peer_id) -> bool`: só fazem sentido no host; nos clientes devolvem `[]`/`false`.
+- O cliente avisa o host por `_rpc_report_scene_ready(map_id)` (`any_peer`). O host ignora aviso sem expedição ou de outro mapa (atrasado).
+- A lista é limpa em toda troca de cena (entrar no mapa e voltar ao lobby) e na queda do host; um peer que desconecta sai dela.
+- Os ids de cliente no ENet são aleatórios (ex.: `[1, 480135759]`), não 2, 3, 4.
+
+Spawners/Synchronizers do mapa devem usar `public_visibility = false` e liberar cada peer em `peer_scene_ready` (`set_visibility_for(peer_id, true)`).
+
 Resumo: `{day, map_id, map_name, money_start, money_end, money_earned, entries: [{name, action: "sold"|"donated", value}]}`.
 
 Rede: ENet, porta `7777`, máx. 4 jogadores (`NetworkManager.host_game` / `join_game` / `disconnect_game`).
@@ -144,9 +154,11 @@ $G --headless --path . --script res://core/tests/upgrade_test.gd    # loja/mochi
 $G --headless --path . --script res://core/tests/value_cap_test.gd  # teto de venda/doação: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/purchase_item_test.gd  # ferramentas da Praia: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/map_unlock_test.gd    # progressão de mapas (grava o save): "RESULT fails=0"
+$G --headless --path . --script res://core/tests/scene_ready_test.gd   # peer_scene_ready no solo: "RESULT fails=0"
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host.gd > /tmp/h.log 2>&1 &); sleep 3
-timeout 60 $G --headless --path . --script res://core/tests/net_client.gd   # cliente entra a meio: estado igual ao host
+timeout 60 $G --headless --path . --script res://core/tests/net_client.gd   # cliente entra a meio: estado igual ao host, "CLIENT RESULT fails=0"
+grep HOST /tmp/h.log   # "HOST scene_ready=[1, <id do cliente>] ... ok=true" e "HOST ready_after_end=[]"
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host_drop.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client_drop.gd   # "host_lost=true scene=LobbyBase"

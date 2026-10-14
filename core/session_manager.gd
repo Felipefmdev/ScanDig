@@ -8,6 +8,8 @@ signal scene_changing(target_scene: String)
 signal expedition_started(map_id: String)
 signal expedition_ended(summary: Dictionary)
 signal host_lost()
+## Só no host: um peer (inclusive o próprio host, id 1) terminou de carregar o mapa atual.
+signal peer_scene_ready(peer_id: int, map_id: String)
 
 const LOBBY_SCENE: String = "res://world/lobby_base.tscn"
 const MAP_SCENE_FORMAT: String = "res://world/map_%s.tscn"
@@ -22,6 +24,12 @@ var _current_map: MapData = null
 var _last_summary: Dictionary = {}
 ## Resumo em construção (só no host, durante a expedição).
 var _pending_summary: Dictionary = {}
+## Só no host: peers cujo mapa atual já carregou.
+var _ready_peers: Array[int] = []
+## Cena pedida em _change_scene e ainda não carregada ("" = nenhuma).
+var _pending_scene_path: String = ""
+## Evita dois "aguarda frame" ao mesmo tempo em _process.
+var _awaiting_scene_frame: bool = false
 
 
 func _enter_tree() -> void:
@@ -36,6 +44,7 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	var state: GameState = GameState.instance
 	if state != null:
@@ -43,6 +52,25 @@ func _ready() -> void:
 		state.item_donated.connect(_on_item_donated)
 	else:
 		push_warning("SessionManager: GameState indisponível; resumo do dia ficará sem entradas.")
+
+
+## A Godot 4.3 não avisa quando change_scene_to_file termina: compara a cena atual com a pedida.
+func _process(_delta: float) -> void:
+	if _pending_scene_path.is_empty() or _awaiting_scene_frame:
+		return
+	var current: Node = get_tree().current_scene
+	if current == null or current.scene_file_path != _pending_scene_path:
+		return
+	var scene_path: String = _pending_scene_path
+	_pending_scene_path = ""
+	# Espera um frame para todos os _ready da cena nova rodarem.
+	_awaiting_scene_frame = true
+	await get_tree().process_frame
+	_awaiting_scene_frame = false
+	# Outra troca começou durante a espera: o aviso desta cena já não vale.
+	if not _pending_scene_path.is_empty():
+		return
+	_on_scene_loaded(scene_path)
 
 
 # --- Consulta -------------------------------------------------------------------
@@ -135,6 +163,20 @@ func get_last_summary() -> Dictionary:
 	return _last_summary.duplicate(true)
 
 
+## Só faz sentido no host; nos clientes devolve false.
+func is_peer_scene_ready(peer_id: int) -> bool:
+	return multiplayer.is_server() and _ready_peers.has(peer_id)
+
+
+## Só faz sentido no host; nos clientes devolve []. Ordenado.
+func get_ready_peers() -> Array[int]:
+	if not multiplayer.is_server():
+		return []
+	var peers: Array[int] = _ready_peers.duplicate()
+	peers.sort()
+	return peers
+
+
 # --- Pedidos (só o host executa) -------------------------------------------------
 
 func request_start_expedition(map_id: String) -> void:
@@ -212,6 +254,18 @@ func _rpc_sync_scene(map_id: String) -> void:
 		_rpc_enter_map(map_id)
 
 
+## Cliente -> host: o mapa atual terminou de carregar neste peer.
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_report_scene_ready(map_id: String) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if not multiplayer.is_server() or sender == 0 or _current_map == null:
+		return
+	# Aviso atrasado de um mapa anterior.
+	if map_id != _current_map.id:
+		return
+	_mark_ready(sender, map_id)
+
+
 # --- Eventos ----------------------------------------------------------------------
 
 func _on_peer_connected(peer_id: int) -> void:
@@ -221,9 +275,14 @@ func _on_peer_connected(peer_id: int) -> void:
 		_rpc_sync_scene.rpc_id(peer_id, map_id)
 
 
+func _on_peer_disconnected(peer_id: int) -> void:
+	_ready_peers.erase(peer_id)
+
+
 func _on_server_disconnected() -> void:
 	_current_map = null
 	_pending_summary = {}
+	_ready_peers.clear()
 	_change_scene(LOBBY_SCENE)
 	host_lost.emit()
 
@@ -256,12 +315,31 @@ func _call_all(method: StringName, args: Array) -> void:
 
 
 func _change_scene(scene_path: String) -> void:
+	# Toda troca de cena invalida quem estava pronto; cada peer reavisa ao carregar.
+	_ready_peers.clear()
+	_pending_scene_path = scene_path
 	var tree: SceneTree = get_tree()
 	var current: Node = tree.current_scene
 	if current != null and current.scene_file_path == scene_path:
 		return
 	scene_changing.emit(scene_path)
 	tree.call_deferred(&"change_scene_to_file", scene_path)
+
+
+func _on_scene_loaded(scene_path: String) -> void:
+	if _current_map == null or scene_path != MAP_SCENE_FORMAT % _current_map.id:
+		return
+	if multiplayer.is_server():
+		_mark_ready(HOST_PEER_ID, _current_map.id)
+	elif _is_online():
+		_rpc_report_scene_ready.rpc_id(HOST_PEER_ID, _current_map.id)
+
+
+func _mark_ready(peer_id: int, map_id: String) -> void:
+	if _ready_peers.has(peer_id):
+		return
+	_ready_peers.append(peer_id)
+	peer_scene_ready.emit(peer_id, map_id)
 
 
 func _compare_map_order(a: MapData, b: MapData) -> bool:
