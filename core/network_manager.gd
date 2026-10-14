@@ -109,8 +109,8 @@ func _cleanup_peer() -> void:
 		enet_peer = null
 	
 	var mp: MultiplayerAPI = _get_multiplayer_api()
-	if mp != null and mp.multiplayer_peer != null:
-		mp.multiplayer_peer = null
+	if mp != null and mp.multiplayer_peer != null and not (mp.multiplayer_peer is OfflineMultiplayerPeer):
+		mp.multiplayer_peer = OfflineMultiplayerPeer.new()
 	
 	connected_players.clear()
 
