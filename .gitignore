@@ -8,3 +8,6 @@
 
 # Maestri spatial workspace state
 .maestri/
+
+# Saida do DebugBridge (tools/run_bot.sh)
+.bot_runs/

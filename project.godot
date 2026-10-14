@@ -22,6 +22,7 @@ CoreNetwork="*res://core/network_manager.gd"
 CoreSave="*res://core/save_manager.gd"
 CoreSession="*res://core/session_manager.gd"
 CoreSessionUI="*res://ui/session_ui.tscn"
+DebugBridge="*res://gameplay/debug/debug_bridge.gd"
 
 [input]
 
