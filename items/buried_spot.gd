@@ -141,6 +141,7 @@ func dig(is_careful: bool) -> Dictionary:
 			print("[BuriedSpot] Ponto escavado sem ItemData configurado.")
 
 		item_revealed.emit(item, final_val, integrity)
+		DiscoveryBridge.report_item_found(item, final_val)
 		if is_inside_tree() and get_tree() != null:
 			get_tree().create_timer(4.0).timeout.connect(queue_free)
 		else:
