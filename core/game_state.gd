@@ -306,6 +306,15 @@ func _on_connected_to_server() -> void:
 
 # --- Utilitários ----------------------------------------------------------------
 
+## Host: avança para o próximo dia e propaga o snapshot para todos.
+func advance_day() -> void:
+	if not is_authority():
+		push_warning("GameState: advance_day ignorado em cliente.")
+		return
+	current_day += 1
+	_broadcast_snapshot()
+
+
 func reset_state() -> void:
 	if not is_authority():
 		return
