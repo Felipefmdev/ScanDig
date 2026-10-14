@@ -35,11 +35,12 @@ Só o host (peer 1) altera o estado. Qualquer peer chama `request_*`; `_send_to_
 | `request_sell_item(item_id, final_value)` | `_host_sell_item` |
 | `request_donate_item(item_id)` | `_host_donate_item` |
 | `request_buy_upgrade(upgrade_id)` | `_host_buy_upgrade` → `purchase_result` só para quem comprou |
+| `request_purchase_item(item_id)` | `_host_purchase_item` → `item_purchase_result` só para quem comprou |
 
 Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
 
 ### Sinais do `GameState`
-`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `state_synced()`.
+`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `state_synced()`.
 
 ### Snapshot
 Após cada mudança o host envia a todos `_receive_snapshot` com:
@@ -64,7 +65,13 @@ Consultas de equipamento (só leitura, qualquer peer; clientes leem o valor do s
 - `get_backpack_capacity()` → `BASE_BACKPACK_CAPACITY` (3) + nível de `backpack` (3 a 6).
 - `get_shovel_level()` → 1 + nível de `shovel` (escala do `player.shovel_level`; 1 = pá básica).
 - `has_pinpointer()` → nível de `pinpointer` > 0.
+- `get_tool_data(item_id)` → `ToolData` de `TOOLS_DIR/<id>.tres` (`res://items/tools`), ou `null` se o id for inválido (vazio, com `/`, `\` ou `..`), não existir ou não bater com `ToolData.id`.
 - `get_max_item_value(item_data)` → teto anti-trapaça de venda/doação: `ceil(base_value × BuriedSpot.RARE_VALUE_MULTIPLIER × BuriedSpot.PERFECT_BONUS_MULTIPLIER)` (ex.: base 250 → 938).
+
+### Ferramentas da Praia (`request_purchase_item`)
+A banca da Praia (`ShopOffer`) deve comprar só por esta API, nunca debitando `team_money` no cliente. `request_purchase_item(String(tool_data.id))` → o host valida id, `price > 0` e saldo, debita e envia o snapshot. Só o comprador recebe `item_purchase_result(item_id, success, message)`; com `success == true` o gameplay dele cria o `CarriedItem` (`CarriedItem.create_from_tool_data`). O core não sabe de mochila: o espaço deve ser checado antes do pedido. Ferramentas compradas não entram no snapshot nem no save.
+
+Mensagens: `"Comprado: <nome>"`, `"Saldo insuficiente para <nome> (R$ <preço>)."`, `"Produto indisponível."`.
 
 ### Vender vs. doar (DiscoveryBridge)
 `BuriedSpot` → `ItemPickup` → mochila (`CarriedItem`) → `SellPoint.deliver()` → `DiscoveryBridge.report_item_found(item, final_value)` → `GameState.request_report_discovery`. O host decide:
@@ -103,6 +110,8 @@ timeout 300 $G --headless --path . --editor --quit-after 600 >/dev/null 2>&1   #
 timeout 240 $G --headless --path . -s addons/gut/gut_cmdln.gd       # GUT: "All tests passed!"
 $G --headless --path . --script res://core/tests/flow_test.gd       # offline: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/upgrade_test.gd    # loja/mochila: "RESULT fails=0"
+$G --headless --path . --script res://core/tests/value_cap_test.gd  # teto de venda/doação: "RESULT fails=0"
+$G --headless --path . --script res://core/tests/purchase_item_test.gd  # ferramentas da Praia: "RESULT fails=0"
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client.gd   # cliente entra a meio: estado igual ao host

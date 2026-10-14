@@ -12,12 +12,16 @@ signal item_donated(item_name: String, reward: int)
 signal upgrades_changed(upgrade_levels: Dictionary)
 signal purchase_result(upgrade_id: String, success: bool, message: String)
 signal state_synced()
+## Só o peer que comprou recebe. item_id = ToolData.id.
+signal item_purchase_result(item_id: String, success: bool, message: String)
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
 const MUSEUM_REWARD_RATIO: float = 0.5
 ## Espaços da mochila sem nenhum upgrade.
 const BASE_BACKPACK_CAPACITY: int = 3
+## Catálogo de ferramentas compráveis (ToolData); o nome do arquivo é o id.
+const TOOLS_DIR: String = "res://items/tools"
 
 ## Definição da loja: custo de cada nível e nível máximo.
 const UPGRADES: Dictionary = {
@@ -112,6 +116,22 @@ func get_total_catalog_items() -> int:
 	return max_museum_items
 
 
+## Consulta para UI e gameplay. Devolve null se o id for inválido ou não existir.
+func get_tool_data(item_id: String) -> ToolData:
+	# Só aceita nomes simples: impede que um cliente carregue arquivos fora de TOOLS_DIR.
+	if item_id.is_empty() or not item_id.is_valid_filename():
+		return null
+	if item_id.contains("/") or item_id.contains("\\") or item_id.contains(".."):
+		return null
+	var tool_path: String = "%s/%s.tres" % [TOOLS_DIR, item_id]
+	if not ResourceLoader.exists(tool_path):
+		return null
+	var tool: ToolData = load(tool_path) as ToolData
+	if tool == null or String(tool.id) != item_id:
+		return null
+	return tool
+
+
 func get_item_display_name(item_id: String) -> String:
 	var item_data: ItemData = _load_item(item_id)
 	if item_data != null and not item_data.display_name.is_empty():
@@ -137,6 +157,11 @@ func request_donate_item(item_id: String) -> void:
 
 func request_buy_upgrade(upgrade_id: String) -> void:
 	_send_to_host(&"_host_buy_upgrade", [upgrade_id])
+
+
+## Compra de ferramenta (ToolData). A resposta chega por item_purchase_result.
+func request_purchase_item(item_id: String) -> void:
+	_send_to_host(&"_host_purchase_item", [item_id])
 
 
 func _send_to_host(method: StringName, args: Array) -> void:
@@ -220,6 +245,33 @@ func _host_buy_upgrade(upgrade_id: String) -> void:
 		purchase_result.emit(upgrade_id, success, message)
 	else:
 		_receive_purchase_result.rpc_id(sender, upgrade_id, success, message)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_purchase_item(item_id: String) -> void:
+	if not is_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender == 0:
+		sender = multiplayer.get_unique_id()
+
+	var success: bool = false
+	var message: String = ""
+	var tool: ToolData = get_tool_data(item_id)
+	if tool == null or tool.price <= 0:
+		message = "Produto indisponível."
+	elif team_money < tool.price:
+		message = "Saldo insuficiente para %s (R$ %d)." % [tool.display_name, tool.price]
+	else:
+		team_money -= tool.price
+		success = true
+		message = "Comprado: %s" % tool.display_name
+		_broadcast_snapshot()
+
+	if sender == multiplayer.get_unique_id():
+		item_purchase_result.emit(item_id, success, message)
+	else:
+		_receive_item_purchase_result.rpc_id(sender, item_id, success, message)
 
 
 # --- Sincronização -------------------------------------------------------------
@@ -314,6 +366,11 @@ func _receive_donated(item_id: String, reward: int) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_purchase_result(upgrade_id: String, success: bool, message: String) -> void:
 	purchase_result.emit(upgrade_id, success, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_item_purchase_result(item_id: String, success: bool, message: String) -> void:
+	item_purchase_result.emit(item_id, success, message)
 
 
 func _on_peer_connected(peer_id: int) -> void:
