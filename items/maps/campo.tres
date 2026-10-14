@@ -1,6 +1,12 @@
-[gd_resource type="Resource" script_class="MapData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MapData" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://items/map_data.gd" id="1_map"]
+[ext_resource type="Script" path="res://items/item_data.gd" id="2_item"]
+[ext_resource type="Resource" path="res://items/catalog/ferradura_velha.tres" id="i0_ferradura_velha"]
+[ext_resource type="Resource" path="res://items/catalog/colher_prata.tres" id="i1_colher_prata"]
+[ext_resource type="Resource" path="res://items/catalog/ponta_lanca_ferro.tres" id="i2_ponta_lanca_ferro"]
+[ext_resource type="Resource" path="res://items/catalog/medalha_militar.tres" id="i3_medalha_militar"]
+[ext_resource type="Resource" path="res://items/catalog/anel_sinete.tres" id="i4_anel_sinete"]
 
 [resource]
 script = ExtResource("1_map")
@@ -8,3 +14,8 @@ id = "campo"
 display_name = "Campo Antigo"
 unlock_cost = 2000
 required_detector_level = 1
+item_pool = Array[ExtResource("2_item")]([ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i2_ponta_lanca_ferro"), ExtResource("i2_ponta_lanca_ferro"), ExtResource("i2_ponta_lanca_ferro"), ExtResource("i2_ponta_lanca_ferro"), ExtResource("i3_medalha_militar"), ExtResource("i3_medalha_militar"), ExtResource("i4_anel_sinete")])
+rare_variant_chance = 0.06
+noise_multiplier = 1.3
+noise_decay_per_second = 2.2
+spot_count = 10

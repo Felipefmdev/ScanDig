@@ -16,6 +16,10 @@ const GREEN_LIGHT: Color = Color(0.4, 0.62, 0.16)
 ## Zonas sem relva (x, z, raio): base, banca, arena do chefe, praia molhada.
 @export var exclusion_zones: Array[Vector3] = []
 @export var max_x: float = 24.0
+## Que chão usar: Praia (BeachTerrain) ou Campo (FieldTerrain).
+@export_enum("Praia", "Campo") var terrain: int = 0
+@export var color_dark: Color = GREEN_DARK
+@export var color_light: Color = GREEN_LIGHT
 
 @export var rebuild_now: bool = false:
 	set(value):
@@ -43,7 +47,7 @@ func rebuild() -> void:
 				continue
 			var s: float = rng.randf_range(0.7, 1.35) * lerpf(1.15, 0.7, r / maxf(c.z, 0.01))
 			var basis: Basis = Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.8, 1.3), s))
-			xforms.append(Transform3D(basis, Vector3(x, BeachTerrain.height_at(x, z) - 0.03, z)))
+			xforms.append(Transform3D(basis, Vector3(x, _height(x, z) - 0.03, z)))
 
 	var mm: MultiMesh = MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -53,6 +57,10 @@ func rebuild() -> void:
 		mm.set_instance_transform(i, xforms[i])
 	multimesh = mm
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func _height(x: float, z: float) -> float:
+	return FieldTerrain.height_at(x, z) if terrain == 1 else BeachTerrain.height_at(x, z)
 
 
 func _excluded(x: float, z: float) -> bool:
@@ -80,9 +88,9 @@ func _build_tuft_mesh() -> ArrayMesh:
 		var mid: Vector3 = base + dir * lean * 0.45 + Vector3.UP * h * 0.55
 		var tip: Vector3 = base + dir * lean + Vector3.UP * h
 		var shade: float = rng.randf_range(0.0, 0.25)
-		var c0: Color = GREEN_DARK.darkened(shade)
-		var c1: Color = GREEN_DARK.lerp(GREEN_LIGHT, 0.55).darkened(shade * 0.5)
-		var c2: Color = GREEN_LIGHT.darkened(shade * 0.3)
+		var c0: Color = color_dark.darkened(shade)
+		var c1: Color = color_dark.lerp(color_light, 0.55).darkened(shade * 0.5)
+		var c2: Color = color_light.darkened(shade * 0.3)
 		# quad de baixo + triângulo da ponta (duas faces visíveis: material sem culling)
 		_tri(st, base - side * w, base + side * w, mid + side * w * 0.6, c0, c0, c1)
 		_tri(st, base - side * w, mid + side * w * 0.6, mid - side * w * 0.6, c0, c1, c1)

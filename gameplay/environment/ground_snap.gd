@@ -2,10 +2,12 @@
 class_name GroundSnap
 extends Node3D
 
-## Põe cada filho direto à altura do chão da Praia (BeachTerrain.height_at) em _ready,
+## Põe cada filho direto à altura do chão (BeachTerrain/FieldTerrain.height_at) em _ready,
 ## mantendo x/z e a rotação. `sink` enterra ligeiramente (troncos, rochas).
 
 @export var sink: float = 0.05
+## Que chão usar: Praia (BeachTerrain) ou Campo (FieldTerrain).
+@export_enum("Praia", "Campo") var terrain: int = 0
 
 
 func _ready() -> void:
@@ -14,4 +16,8 @@ func _ready() -> void:
 		if n == null:
 			continue
 		var p: Vector3 = n.global_position
-		n.global_position = Vector3(p.x, BeachTerrain.height_at(p.x, p.z) - sink, p.z)
+		n.global_position = Vector3(p.x, _height(p.x, p.z) - sink, p.z)
+
+
+func _height(x: float, z: float) -> float:
+	return FieldTerrain.height_at(x, z) if terrain == 1 else BeachTerrain.height_at(x, z)
