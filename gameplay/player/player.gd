@@ -864,15 +864,18 @@ func _buy_offer(offer: ShopOffer) -> void:
 		SFX.play_ui(SFX.ERROR, -4.0)
 		_show_temporary_message("🎒 Mochila cheia! Liberte um slot antes de comprar.", Color(1.0, 0.6, 0.3), 1.8)
 		return
-	var result: Dictionary = offer.try_buy()
+	var result: Dictionary = await offer.try_buy(inventory)
+	if not is_inside_tree():
+		return
 	var message: String = result.get("message", "")
 	if not result.get("ok", false):
 		SFX.play_ui(SFX.ERROR, -4.0)
 		_show_temporary_message("❌ " + message, Color(1.0, 0.45, 0.4), 1.8)
 		return
 	var c: CarriedItem = result.get("carried", null)
-	if c != null:
-		inventory.add_item(c)
+	# A mochila pode ter enchido enquanto o host respondia: o item cai aos pés.
+	if c != null and not inventory.add_item(c):
+		ItemPickup.spawn(get_parent(), c, global_position + Vector3.UP * 0.8, Vector3.UP * 1.2)
 	SFX.play_ui(SFX.BUY)
 	_show_temporary_message("🛒 " + message, Color(0.55, 0.9, 1.0), 1.6)
 

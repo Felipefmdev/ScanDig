@@ -2,16 +2,19 @@ class_name ShopOffer
 extends Node3D
 
 ## Um produto exposto na banca da base. O jogador olha para ele e carrega E (ver Player).
-## O dinheiro vem do GameState (Dev B). Enquanto o GameState não tiver uma compra genérica
-## (request_purchase_item), a compra só é feita localmente e apenas fora de uma partida online.
+## O dinheiro vem do GameState (Dev B): a compra é validada e debitada no host
+## (request_purchase_item / item_purchase_result), por isso funciona offline e em coop.
 
 signal purchased(tool_data: ToolData)
 
 const GROUP: StringName = &"shop_offers"
+## Tempo máximo à espera de item_purchase_result (igual à aba Loja).
+const PURCHASE_TIMEOUT: float = 5.0
 
 @export var tool_data: ToolData = null
 
 var _label: Label3D = null
+var _pending: bool = false
 
 
 func _ready() -> void:
@@ -56,36 +59,49 @@ func get_prompt() -> String:
 	return "[E] Comprar %s (R$ %d)" % [tool_data.display_name, tool_data.price]
 
 
-## Tenta comprar. Devolve {"ok": bool, "message": String, "carried": CarriedItem}.
-## O chamador garante que a mochila tem espaço ANTES de chamar.
-func try_buy() -> Dictionary:
+## Tenta comprar pelo host (GameState.request_purchase_item). É uma corrotina: use
+## `await offer.try_buy(inventory)`. Devolve {"ok": bool, "message": String, "carried": CarriedItem}.
+## A mochila é verificada ANTES do pedido (o core não sabe de mochilas); o débito é só no host.
+func try_buy(inventory: Inventory) -> Dictionary:
 	var result: Dictionary = {"ok": false, "message": "", "carried": null}
 	if tool_data == null:
 		result["message"] = "Produto indisponível."
 		return result
-
+	if inventory != null and inventory.is_full():
+		result["message"] = "Mochila cheia! Liberte um slot antes de comprar."
+		return result
 	var state: GameState = GameState.instance
 	if state == null:
 		result["message"] = "Loja fechada (sem GameState nesta cena)."
 		return result
-
-	# TODO(Dev B): trocar por uma compra validada no host (request_purchase_item + sinal de
-	# resultado). Até lá, só se compra fora de uma partida online.
-	# O peer por omissão (OfflineMultiplayerPeer) conta como CONNECTED: só bloqueia rede real.
-	var peer: MultiplayerPeer = state.multiplayer.multiplayer_peer
-	if peer != null and not (peer is OfflineMultiplayerPeer) and peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED:
-		result["message"] = "Compras em coop ainda não suportadas."
+	if _pending:
+		result["message"] = "Compra em curso..."
 		return result
 
-	if state.team_money < tool_data.price:
-		result["message"] = "Saldo insuficiente (R$ %d)." % tool_data.price
-		return result
+	_pending = true
+	var item_id: String = String(tool_data.id)
+	var reply: Dictionary = {}
+	var on_result: Callable = func(id: String, success: bool, message: String) -> void:
+		if id == item_id and reply.is_empty():
+			reply["success"] = success
+			reply["message"] = message
+	# Liga antes do pedido: no host/offline a resposta é emitida dentro da própria chamada.
+	state.item_purchase_result.connect(on_result)
+	state.request_purchase_item(item_id)
+	var deadline: int = Time.get_ticks_msec() + int(PURCHASE_TIMEOUT * 1000.0)
+	while reply.is_empty() and Time.get_ticks_msec() < deadline and is_inside_tree():
+		await get_tree().process_frame
+	if is_instance_valid(state) and state.item_purchase_result.is_connected(on_result):
+		state.item_purchase_result.disconnect(on_result)
+	_pending = false
 
-	# Provisório (só offline): debita localmente.
-	state.team_money -= tool_data.price
-	state.money_changed.emit(state.team_money)
+	if reply.is_empty():
+		result["message"] = "Sem resposta do anfitrião. Tente de novo."
+		return result
+	result["message"] = reply["message"]
+	if not reply["success"]:
+		return result
 	result["ok"] = true
-	result["message"] = "Comprado: %s" % tool_data.display_name
 	result["carried"] = CarriedItem.create_from_tool_data(tool_data)
 	purchased.emit(tool_data)
 	return result
