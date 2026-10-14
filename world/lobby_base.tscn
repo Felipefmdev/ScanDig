@@ -1,8 +1,8 @@
 [gd_scene load_steps=10 format=3 uid="uid://dwiinrcl0r4yi"]
 
-[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="4_hud"]
-[ext_resource type="PackedScene" path="res://ui/multiplayer_menu.tscn" id="5_netmenu"]
-[ext_resource type="PackedScene" path="res://ui/base_station_ui.tscn" id="6_baseui"]
+[ext_resource type="PackedScene" uid="uid://cunl1wbc8gk2w" path="res://ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" uid="uid://bbtor7gnehadw" path="res://ui/multiplayer_menu.tscn" id="5_netmenu"]
+[ext_resource type="PackedScene" uid="uid://ci3ueg3kurhk3" path="res://ui/base_station_ui.tscn" id="6_baseui"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_lobby"]
 sky_top_color = Color(0.38, 0.65, 0.88, 1)
