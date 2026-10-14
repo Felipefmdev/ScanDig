@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://items/buried_spot.tscn" id="2_spot"]
@@ -6,6 +6,7 @@
 [ext_resource type="Resource" path="res://items/catalog/moeda_antiga.tres" id="4_moeda"]
 [ext_resource type="Resource" path="res://items/catalog/relogio_ouro.tres" id="5_relogio"]
 [ext_resource type="Resource" path="res://items/catalog/orbe_vibrante.tres" id="6_orbe"]
+[ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="7_disturbance"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.384314, 0.54902, 0.74902, 1)
@@ -42,6 +43,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 use_collision = true
 size = Vector3(40, 1, 40)
 material = SubResource("StandardMaterial3D_sand")
+
+[node name="DisturbanceMeter" type="Node" parent="."]
+script = ExtResource("7_disturbance")
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)

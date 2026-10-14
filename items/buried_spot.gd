@@ -7,7 +7,14 @@ signal item_revealed(item_data: ItemData, final_value: int, final_integrity: flo
 @export var item: ItemData = null
 @export var dirt_layers: int = 3
 @export_range(0.0, 1.0) var integrity: float = 1.0
+## Chance de o item sair como variante rara (vale RARE_VALUE_MULTIPLIER vezes mais).
+@export_range(0.0, 1.0, 0.01) var rare_variant_chance: float = 0.05
 
+const RARE_VALUE_MULTIPLIER: float = 3.0
+## Bónus para escavações perfeitas (integridade 100%).
+const PERFECT_BONUS_MULTIPLIER: float = 1.25
+
+var is_rare_variant: bool = false
 var _is_revealed: bool = false
 var _dirt_mound: Node3D = null
 var _revealed_mesh: Node3D = null
@@ -17,6 +24,7 @@ const MAX_DIRT_LAYERS: int = 3
 
 func _ready() -> void:
 	add_to_group("buried_spots")
+	is_rare_variant = item != null and randf() < rare_variant_chance
 	_create_visuals()
 	_create_particles()
 
@@ -77,7 +85,8 @@ func _create_particles() -> void:
 	add_child(_dirt_particles)
 
 
-func dig(is_careful: bool) -> Dictionary:
+## damage_multiplier: escala o dano à integridade (ex.: pás melhores < 1.0). Opcional.
+func dig(is_careful: bool, damage_multiplier: float = 1.0) -> Dictionary:
 	if _is_revealed or dirt_layers <= 0:
 		return {
 			"revealed": true,
@@ -86,7 +95,9 @@ func dig(is_careful: bool) -> Dictionary:
 			"integrity": integrity,
 			"damaged": false,
 			"item": item,
-			"final_value": 0
+			"final_value": 0,
+			"is_rare_variant": is_rare_variant,
+			"is_perfect": false
 		}
 
 	# Primeira pazada torna a escavação visível no terreno
@@ -98,6 +109,10 @@ func dig(is_careful: bool) -> Dictionary:
 		_dirt_particles.restart()
 
 	dirt_layers -= 1
+	DisturbanceMeter.report(
+		DisturbanceMeter.NOISE_CAREFUL_DIG if is_careful else DisturbanceMeter.NOISE_FAST_DIG,
+		global_position
+	)
 
 	# Ajusta o buraco conforme as camadas são removidas
 	if _dirt_mound != null:
@@ -112,7 +127,7 @@ func dig(is_careful: bool) -> Dictionary:
 	if not is_careful:
 		# Se dirt_layers <= 1, aplica dano à integridade baseado na fragilidade do item
 		if dirt_layers <= 1 and item != null:
-			damage_amount = clampf(item.fragility * 0.45, 0.08, 0.90)
+			damage_amount = clampf(item.fragility * 0.45, 0.08, 0.90) * maxf(damage_multiplier, 0.0)
 			integrity = clampf(integrity - damage_amount, 0.05, 1.0)
 			damaged_this_hit = true
 			print("[BuriedSpot] CRACK! Pazada agressiva causou dano! Integridade: %d%%" % int(integrity * 100.0))
@@ -123,6 +138,7 @@ func dig(is_careful: bool) -> Dictionary:
 
 	var revealed: bool = (dirt_layers <= 0)
 	var final_val: int = 0
+	var is_perfect: bool = false
 
 	if revealed:
 		_is_revealed = true
@@ -130,6 +146,12 @@ func dig(is_careful: bool) -> Dictionary:
 
 		if item != null:
 			final_val = item.calculate_value(integrity)
+			if is_rare_variant:
+				final_val = int(round(float(final_val) * RARE_VALUE_MULTIPLIER))
+			is_perfect = integrity >= 1.0
+			if is_perfect:
+				final_val = int(round(float(final_val) * PERFECT_BONUS_MULTIPLIER))
+			DisturbanceMeter.report(DisturbanceMeter.NOISE_REVEAL, global_position)
 			print("========================================")
 			print("★ ITEM ENCONTRADO: %s" % item.display_name)
 			print("  Integridade: %d%%" % int(integrity * 100.0))
@@ -157,7 +179,9 @@ func dig(is_careful: bool) -> Dictionary:
 		"damaged": damaged_this_hit,
 		"damage_amount": damage_amount,
 		"item": item,
-		"final_value": final_val
+		"final_value": final_val,
+		"is_rare_variant": is_rare_variant,
+		"is_perfect": is_perfect
 	}
 
 
