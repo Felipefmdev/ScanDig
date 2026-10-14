@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.3"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+          chmod +x godot
+
+      - name: Import project (registers class_name cache)
+        run: ./godot --headless --path . --editor --quit || true
+
+      - name: Parse-check every scene by loading it
+        run: |
+          for scene in world/map_praia.tscn world/test_sandbox.tscn; do
+            ./godot --headless --path . --quit-after 60 "res://$scene" 2>&1 | tee run.log
+            if grep -q "SCRIPT ERROR" run.log; then echo "Script error in $scene"; exit 1; fi
+          done
+
+      - name: Unit tests (GUT)
+        run: ./godot --headless --path . -s addons/gut/gut_cmdln.gd
