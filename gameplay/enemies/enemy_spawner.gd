@@ -54,7 +54,11 @@ func _on_threshold_reached(level: int, origin: Vector3) -> void:
 
 
 func get_alive_count() -> int:
-	_alive = _alive.filter(func(n: Node3D) -> bool: return is_instance_valid(n))
+	# Caranguejos mortos ficam como referências libertadas; um lambda tipado (n: Node3D)
+	# rebenta ao receber um objeto libertado, por isso limpamos com um ciclo.
+	for i: int in range(_alive.size() - 1, -1, -1):
+		if not is_instance_valid(_alive[i]):
+			_alive.remove_at(i)
 	return _alive.size()
 
 
