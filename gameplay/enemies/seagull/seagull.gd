@@ -143,7 +143,7 @@ func _grab(target: Node3D) -> void:
 		_start_escape(target.global_position)
 		return
 	if target.has_method("take_damage"):
-		target.call("take_damage", peck_damage)
+		_deal_damage(target, peck_damage)
 	_after_failed_dive()
 
 

@@ -19,6 +19,9 @@ const DEFAULT_SEAGULL_SCENE: PackedScene = preload("res://gameplay/enemies/seagu
 @export var hermit_scene: PackedScene = null
 @export var seagull_scene: PackedScene = null
 @export var max_alive: int = 6
+## Usa DifficultyProfile (nº de jogadores) para max_alive, tabelas por nível, graça, intervalos
+## e dano. Desligado: usa os @export deste nó tal como estão.
+@export var use_player_scaling: bool = true
 
 @export_group("Por limiar de ameaça")
 ## Quantos de cada surgem por nível de ameaça (índice 0 = nível 1).
@@ -56,6 +59,7 @@ var _alive: Array[Node3D] = []
 var _connected: bool = false
 var _ambient_timer: float = 0.0
 var _seagull_timer: float = 0.0
+var _elapsed: float = 0.0
 
 
 func _ready() -> void:
@@ -66,8 +70,8 @@ func _ready() -> void:
 	if seagull_scene == null:
 		seagull_scene = DEFAULT_SEAGULL_SCENE
 	# O primeiro caranguejo ambiente chega mais cedo (pressão logo no 1.º minuto)
-	_ambient_timer = randf_range(ambient_interval_min, ambient_interval_max) * 0.5
-	_seagull_timer = randf_range(seagull_interval_min, seagull_interval_max)
+	_ambient_timer = randf_range(ambient_interval_min, ambient_interval_max) * _interval_multiplier() * 0.5
+	_seagull_timer = randf_range(seagull_interval_min, seagull_interval_max) * _interval_multiplier()
 	_try_connect()
 
 
@@ -93,11 +97,11 @@ func _try_connect() -> void:
 func _on_threshold_reached(level: int, origin: Vector3) -> void:
 	if level <= 0:
 		return
-	for i: int in range(_count_for_level(spawns_per_level, level)):
+	for i: int in range(_count_for_level(_crab_table(), level)):
 		_spawn_ground(crab_scene, origin, min_spawn_radius, max_spawn_radius, level)
-	for i: int in range(_count_for_level(hermits_per_level, level)):
+	for i: int in range(_count_for_level(_hermit_table(), level)):
 		_spawn_ground(hermit_scene, origin, min_spawn_radius, max_spawn_radius, level)
-	for i: int in range(_count_for_level(seagulls_per_level, level)):
+	for i: int in range(_count_for_level(_seagull_table(), level)):
 		var player: Node3D = _find_player()
 		_spawn_seagull(player.global_position if player != null else origin)
 
@@ -113,9 +117,13 @@ func _count_for_level(table: Array[int], level: int) -> int:
 # ---------------------------------------------------------------------------
 
 func _process_ambient(delta: float) -> void:
+	_elapsed += delta
+	# Período de graça (solo): nada de spawns ambiente nos primeiros minutos
+	if _elapsed < _profile().ambient_grace_seconds:
+		return
 	_ambient_timer -= delta
 	if _ambient_timer <= 0.0:
-		_ambient_timer = randf_range(ambient_interval_min, ambient_interval_max)
+		_ambient_timer = randf_range(ambient_interval_min, ambient_interval_max) * _interval_multiplier()
 		var player: Node3D = _find_player()
 		if player != null:
 			# spawn_level 0: não volta para a areia quando a ameaça baixa
@@ -126,7 +134,7 @@ func _process_ambient(delta: float) -> void:
 		var player: Node3D = _find_player()
 		if player != null and player.has_method("has_loot") and bool(player.call("has_loot")):
 			_spawn_seagull(player.global_position)
-			_seagull_timer = randf_range(seagull_interval_min, seagull_interval_max)
+			_seagull_timer = randf_range(seagull_interval_min, seagull_interval_max) * _interval_multiplier()
 		else:
 			_seagull_timer = SEAGULL_RETRY
 
@@ -153,7 +161,7 @@ func get_alive_count() -> int:
 
 ## Inimigo de chão (caranguejo/ermitão) num ponto válido a r_min..r_max de center.
 func _spawn_ground(scene: PackedScene, center: Vector3, r_min: float, r_max: float, level: int) -> Node3D:
-	if scene == null or get_alive_count() >= max_alive:
+	if scene == null or get_alive_count() >= get_max_alive():
 		return null
 	var pos: Vector3 = _pick_ground_position(center, r_min, r_max)
 	if not pos.is_finite():
@@ -167,7 +175,7 @@ func _spawn_ground(scene: PackedScene, center: Vector3, r_min: float, r_max: flo
 
 
 func _spawn_seagull(player_pos: Vector3) -> Node3D:
-	if seagull_scene == null or get_alive_count() >= max_alive:
+	if seagull_scene == null or get_alive_count() >= get_max_alive():
 		return null
 	var angle: float = randf() * TAU
 	var pos: Vector3 = player_pos + Vector3(cos(angle), 0.0, sin(angle)) * seagull_spawn_distance
@@ -207,3 +215,38 @@ func _pick_ground_position(center: Vector3, r_min: float, r_max: float) -> Vecto
 			continue
 		return p
 	return Vector3.INF
+
+
+# ---------------------------------------------------------------------------
+# Dificuldade por nº de jogadores (issue #11)
+# ---------------------------------------------------------------------------
+
+func _profile() -> DifficultyProfile:
+	if use_player_scaling:
+		return DifficultyProfile.current(get_tree() if is_inside_tree() else null)
+	var p: DifficultyProfile = DifficultyProfile.new()
+	p.max_alive = max_alive
+	p.crabs_per_level = spawns_per_level
+	p.hermits_per_level = hermits_per_level
+	p.seagulls_per_level = seagulls_per_level
+	return p
+
+
+func get_max_alive() -> int:
+	return _profile().max_alive
+
+
+func _interval_multiplier() -> float:
+	return _profile().ambient_interval_multiplier
+
+
+func _crab_table() -> Array[int]:
+	return _profile().crabs_per_level
+
+
+func _hermit_table() -> Array[int]:
+	return _profile().hermits_per_level
+
+
+func _seagull_table() -> Array[int]:
+	return _profile().seagulls_per_level

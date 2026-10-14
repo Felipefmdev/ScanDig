@@ -234,7 +234,7 @@ func _do_slam_impact() -> void:
 		if n is Node3D and n.has_method("take_damage"):
 			var p: Vector3 = (n as Node3D).global_position
 			if Vector2(p.x - _slam_point.x, p.z - _slam_point.z).length() <= SLAM_RADIUS:
-				n.call("take_damage", slam_damage)
+				_deal_damage(n, slam_damage)
 
 
 ## Ponto fraco: pinça presa na areia, sem se mexer, leva dano x2.
@@ -272,7 +272,7 @@ func _process_charge(delta: float) -> void:
 			if n is Node3D and n.has_method("take_damage"):
 				var p: Vector3 = (n as Node3D).global_position
 				if Vector2(p.x - global_position.x, p.z - global_position.z).length() <= CHARGE_HIT_RADIUS:
-					n.call("take_damage", charge_damage)
+					_deal_damage(n, charge_damage)
 					_charge_hit = true
 	var travelled: float = Vector2(global_position.x - _charge_start.x, global_position.z - _charge_start.z).length()
 	if travelled >= charge_length or (is_on_wall() and _state_time > 0.2):

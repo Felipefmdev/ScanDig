@@ -194,7 +194,7 @@ func _process_flee(delta: float) -> void:
 func _pinch() -> void:
 	SFX.play_at(SFX.CRAB_PINCH, global_position)
 	if _target != null and _target.has_method("take_damage"):
-		_target.call("take_damage", attack_damage)
+		_deal_damage(_target, attack_damage)
 
 	var tween: Tween = create_tween().set_parallel(true)
 	tween.tween_property(claw_left, "rotation:y", -0.6, 0.08)

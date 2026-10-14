@@ -38,6 +38,11 @@ signal died
 @export var net_trap_distance: float = 1.6
 @export var medkit_heal: float = 40.0
 
+@export_group("Som")
+@export var footsteps_enabled: bool = true
+## Volume dos passos na areia (dB). Baixo de propósito: é um som repetitivo.
+@export_range(-40.0, 0.0) var footsteps_volume_db: float = -24.0
+
 const BASE_DIG_COOLDOWN: float = 0.35
 ## Layer 5 (ItemPickup).
 const PICKUP_MASK: int = 1 << 4
@@ -309,7 +314,7 @@ func _find_ground_point(around: Vector3) -> Vector3:
 
 ## A lâmina cravou: só agora o dig() é aplicado.
 func _on_shovel_impact(ground_point: Vector3) -> void:
-	SFX.play_at(SFX.DIG_CAREFUL if _dig_is_careful else SFX.DIG_FAST, ground_point, -2.0 if _dig_is_careful else 2.0)
+	SFX.play_at(SFX.DIG_CAREFUL if _dig_is_careful else SFX.DIG_FAST, ground_point, -6.0 if _dig_is_careful else -3.0, 0.06)
 	if not _dig_is_careful:
 		_shake_camera(0.035, 0.2)
 	var spot: BuriedSpot = _dig_target
@@ -324,7 +329,7 @@ func _on_shovel_impact(ground_point: Vector3) -> void:
 func _on_shovel_throw_dirt(blade_position: Vector3, side: Vector3) -> void:
 	# Os torrões caem ~0.45 s depois de saírem da lâmina.
 	var land: Vector3 = blade_position + side * 1.0
-	get_tree().create_timer(0.45).timeout.connect(func() -> void: SFX.play_at(SFX.DIRT_FALL, land, -6.0, 0.15))
+	get_tree().create_timer(0.05).timeout.connect(func() -> void: SFX.play_at(SFX.DIRT_FALL, land, -8.0, 0.08))
 	var count: int = randi_range(3, 6)
 	var parent: Node = get_parent() if get_parent() != null else self
 	var strength: float = 1.0 if _dig_is_careful else 1.6
@@ -1004,10 +1009,10 @@ func _place_net_trap() -> bool:
 ## (andar mais depressa = ritmo mais rápido).
 func _update_footsteps(delta: float) -> void:
 	var horizontal: Vector2 = Vector2(velocity.x, velocity.z)
-	if not is_on_floor() or horizontal.length() < 0.5:
+	if not footsteps_enabled or not is_on_floor() or horizontal.length() < 0.5:
 		_step_distance = STEP_LENGTH * 0.6  # o 1.o passo sai pouco depois de arrancar
 		return
 	_step_distance += horizontal.length() * delta
 	if _step_distance >= STEP_LENGTH:
 		_step_distance = 0.0
-		SFX.play_at(SFX.FOOTSTEP_SAND, global_position, -12.0, 0.12)
+		SFX.play_at(SFX.FOOTSTEP_SAND, global_position, footsteps_volume_db + randf_range(-1.5, 1.5), 0.05)

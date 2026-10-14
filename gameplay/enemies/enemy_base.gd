@@ -204,6 +204,14 @@ func _update_target(delta: float) -> Node3D:
 	return _target
 
 
+## Aplica dano ao jogador já escalado pela dificuldade (nº de jogadores). Usar sempre isto.
+func _deal_damage(target: Node, amount: float) -> void:
+	if target == null or not target.has_method("take_damage"):
+		return
+	var tree: SceneTree = get_tree() if is_inside_tree() else null
+	target.call("take_damage", amount * DifficultyProfile.current(tree).enemy_damage_multiplier)
+
+
 ## Regista um material para o flash de dano (albedo_color é animado de volta à cor base).
 func _register_flash_material(mat: StandardMaterial3D) -> void:
 	if mat == null:

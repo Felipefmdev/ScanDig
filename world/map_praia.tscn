@@ -1,4 +1,4 @@
-[gd_scene load_steps=68 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=70 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -6,6 +6,12 @@
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
+[ext_resource type="Script" path="res://items/shop_offer.gd" id="9_shop_offer"]
+[ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="11_tool_armadilha_rede"]
+[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="11_tool_estilingue"]
+[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="11_tool_kit_medico"]
+[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="11_tool_repelente"]
+[ext_resource type="Script" path="res://gameplay/enemies/boss/boss_altar.gd" id="b_boss_altar"]
 [ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 [ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
 [ext_resource type="PackedScene" uid="uid://cv33lw4gpdbbx" path="res://assets/models/kenney_pirate/boat-row-small.glb" id="k_boat_row_small"]
@@ -15,12 +21,6 @@
 [ext_resource type="PackedScene" uid="uid://pycke7estxhy" path="res://assets/models/kenney_pirate/flag-pirate.glb" id="k_flag_pirate"]
 [ext_resource type="PackedScene" uid="uid://b7y2o841epna3" path="res://assets/models/kenney_pirate/grass-patch.glb" id="k_grass_patch"]
 [ext_resource type="PackedScene" uid="uid://cjno870p6bc73" path="res://assets/models/kenney_pirate/grass-plant.glb" id="k_grass_plant"]
-[ext_resource type="PackedScene" uid="uid://cljjkey0wlm1l" path="res://assets/models/kenney_pirate/palm-bend.glb" id="k_palm_bend"]
-[ext_resource type="PackedScene" uid="uid://bmdkrjdxm4gxs" path="res://assets/models/kenney_pirate/palm-detailed-bend.glb" id="k_palm_detailed_bend"]
-[ext_resource type="PackedScene" uid="uid://b5v42rgbotrrw" path="res://assets/models/kenney_pirate/palm-detailed-straight.glb" id="k_palm_detailed_straight"]
-[ext_resource type="PackedScene" uid="uid://cgc64pxard4mp" path="res://assets/models/kenney_pirate/palm-straight.glb" id="k_palm_straight"]
-[ext_resource type="PackedScene" uid="uid://bv3tbyfk5k0gx" path="res://assets/models/kenney_pirate/patch-sand.glb" id="k_patch_sand"]
-[ext_resource type="PackedScene" uid="uid://b1ikdyqvuy8sf" path="res://assets/models/kenney_pirate/patch-sand-foliage.glb" id="k_patch_sand_foliage"]
 [ext_resource type="PackedScene" uid="uid://qtujhqu2ay0f" path="res://assets/models/kenney_pirate/rocks-a.glb" id="k_rocks_a"]
 [ext_resource type="PackedScene" uid="uid://mkympwtstmwn" path="res://assets/models/kenney_pirate/rocks-b.glb" id="k_rocks_b"]
 [ext_resource type="PackedScene" uid="uid://caeqhqj12i3s8" path="res://assets/models/kenney_pirate/rocks-c.glb" id="k_rocks_c"]
@@ -29,48 +29,22 @@
 [ext_resource type="PackedScene" uid="uid://mmsx4g4tx0nm" path="res://assets/models/kenney_pirate/rocks-sand-c.glb" id="k_rocks_sand_c"]
 [ext_resource type="PackedScene" uid="uid://co1dcl48ni0yo" path="res://assets/models/kenney_pirate/ship-wreck.glb" id="k_ship_wreck"]
 [ext_resource type="PackedScene" uid="uid://fnevn3teb2hr" path="res://assets/models/kenney_pirate/structure-platform-dock.glb" id="k_structure_platform_dock"]
-[ext_resource type="Script" path="res://items/shop_offer.gd" id="9_shop_offer"]
-[ext_resource type="Script" path="res://core/game_state.gd" id="10_game_state"]
-[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="11_tool_estilingue"]
-[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="11_tool_repelente"]
-[ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="11_tool_armadilha_rede"]
-[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="11_tool_kit_medico"]
-[ext_resource type="Script" path="res://gameplay/enemies/boss/boss_altar.gd" id="b_boss_altar"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sunset"]
-sky_top_color = Color(0.32, 0.4, 0.62, 1)
-sky_horizon_color = Color(0.98, 0.66, 0.42, 1)
-sky_curve = 0.12
-ground_bottom_color = Color(0.3, 0.24, 0.2, 1)
-ground_horizon_color = Color(0.98, 0.66, 0.42, 1)
-sun_angle_max = 20.0
-sun_curve = 0.08
-
-[sub_resource type="Sky" id="Sky_sunset"]
-sky_material = SubResource("ProceduralSkyMaterial_sunset")
-
-[sub_resource type="Environment" id="Environment_praia"]
-background_mode = 2
-sky = SubResource("Sky_sunset")
-ambient_light_source = 3
-ambient_light_energy = 0.8
-tonemap_mode = 2
-glow_enabled = true
-fog_enabled = true
-fog_light_color = Color(0.92, 0.7, 0.52, 1)
-fog_density = 0.006
-fog_sky_affect = 0.2
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sand"]
-albedo_color = Color(0.89, 0.78, 0.56, 1)
-roughness = 0.95
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wet_sand"]
-albedo_color = Color(0.62, 0.52, 0.38, 1)
-roughness = 0.6
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dune"]
-albedo_color = Color(0.93, 0.82, 0.6, 1)
+[ext_resource type="Environment" path="res://world/environment_praia.tres" id="w_env_praia"]
+[ext_resource type="Shader" path="res://world/shaders/water_stylized.gdshader" id="w_water_shader"]
+[ext_resource type="Script" path="res://gameplay/environment/beach_terrain.gd" id="env_terrain"]
+[ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
+[ext_resource type="Script" path="res://gameplay/environment/palm_model.gd" id="env_palm"]
+[ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="env_snap"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_bush.glb" id="nat_plant_bush"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_bushDetailed.glb" id="nat_plant_bushDetailed"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_bushLarge.glb" id="nat_plant_bushLarge"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_flatTall.glb" id="nat_plant_flatTall"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/flower_yellowA.glb" id="nat_flower_yellowA"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/flower_purpleB.glb" id="nat_flower_purpleB"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/flower_redA.glb" id="nat_flower_redA"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallA.glb" id="nat_rock_smallA"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallC.glb" id="nat_rock_smallC"]
+[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallFlatA.glb" id="nat_rock_smallFlatA"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(1.502, 0.949, 1.514)
@@ -97,9 +71,6 @@ size = Vector3(1.669, 1.174, 1.674)
 height = 2.6
 radius = 0.22
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_9"]
-size = Vector3(4.64, 0.3, 3.62)
-
 [sub_resource type="BoxShape3D" id="BoxShape3D_10"]
 size = Vector3(2.5, 1.31, 2.51)
 
@@ -115,15 +86,15 @@ size = Vector3(0.616, 0.439, 0.747)
 [sub_resource type="BoxShape3D" id="BoxShape3D_14"]
 size = Vector3(0.513, 0.366, 0.622)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_water"]
-transparency = 1
-albedo_color = Color(0.12, 0.42, 0.55, 0.78)
-metallic = 0.3
-roughness = 0.08
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_water"]
+render_priority = 0
+shader = ExtResource("w_water_shader")
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_water"]
-material = SubResource("StandardMaterial3D_water")
-size = Vector2(60, 80)
+material = SubResource("ShaderMaterial_water")
+size = Vector2(70, 90)
+subdivide_width = 70
+subdivide_depth = 90
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_x"]
 size = Vector3(1, 6, 62)
@@ -162,51 +133,179 @@ size = Vector3(4.5, 0.3, 3.5)
 [node name="MapPraia" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_praia")
+environment = ExtResource("w_env_praia")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.34202, 0, 0.939693, 0.259014, 0.961262, 0.0942735, -0.903291, 0.275637, -0.328771, 0, 20, 0)
-light_color = Color(1, 0.74, 0.5, 1)
-light_energy = 1.1
+position = Vector3(0, 20, 0)
+rotation = Vector3(-0.872665, -0.610865, 0)
+light_color = Color(1, 0.97, 0.9, 1)
+light_energy = 1.25
 shadow_enabled = true
+shadow_bias = 0.04
+shadow_blur = 1.4
+directional_shadow_mode = 2
+directional_shadow_max_distance = 70.0
 
 [node name="Terrain" type="Node3D" parent="."]
 
-[node name="Ground" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-use_collision = true
-size = Vector3(60, 1, 60)
-material = SubResource("StandardMaterial3D_sand")
-
-[node name="WetSand" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0.005, 0)
-size = Vector3(4, 0.01, 60)
-material = SubResource("StandardMaterial3D_wet_sand")
-
-[node name="Dune1" type="CSGSphere3D" parent="Terrain"]
-transform = Transform3D(5.19615, 0, 1.75, 0, 1, 0, -3, 0, 3.03109, -14, -0.4, -12)
-use_collision = true
-radial_segments = 24
-rings = 12
-material = SubResource("StandardMaterial3D_dune")
-
-[node name="Dune2" type="CSGSphere3D" parent="Terrain"]
-transform = Transform3D(3.21394, 0, -3.06418, 0, 1, 0, 3.83022, 0, 2.57115, -18, -0.45, 10)
-use_collision = true
-radial_segments = 24
-rings = 12
-material = SubResource("StandardMaterial3D_dune")
-
-[node name="Dune3" type="CSGSphere3D" parent="Terrain"]
-transform = Transform3D(1.21554, 0, 2.95442, 0, 1, 0, -6.89365, 0, 0.520945, 6, -0.5, 18)
-use_collision = true
-radial_segments = 24
-rings = 12
-material = SubResource("StandardMaterial3D_dune")
-
 [node name="Decor" type="Node3D" parent="."]
 
+[node name="Beach" type="StaticBody3D" parent="Terrain"]
+script = ExtResource("env_terrain")
+
+[node name="Grass" type="MultiMeshInstance3D" parent="Terrain"]
+script = ExtResource("env_grass")
+cluster_centers = Array[Vector3]([Vector3(-27, -12.5, 2.6), Vector3(-12.5, -27, 2.6), Vector3(-27, -9, 2.6), Vector3(-25.5, 13, 2.6), Vector3(-22, 24.5, 2.6), Vector3(-9, -26.5, 2.6), Vector3(4, -26, 2.6), Vector3(13, 26.5, 2.6), Vector3(20.5, 23.5, 2.6), Vector3(24, -27, 2.6), Vector3(-12, -5, 2.6), Vector3(-9.5, -2.5, 2.6), Vector3(10.5, 14, 2.6), Vector3(-14, -12, 4.2), Vector3(-18, 10, 4.2), Vector3(6, 18, 4.2), Vector3(-26, 2, 4.2), Vector3(16, -22, 4.2), Vector3(-6, 5, 2.2), Vector3(-22, -3, 2.2), Vector3(8, -9, 2.2), Vector3(15, 6, 2.2), Vector3(-12, 22, 2.2), Vector3(-4, -18, 2.2), Vector3(12, -14, 2.2)])
+tufts_per_cluster = 110
+exclusion_zones = Array[Vector3]([Vector3(0, 0, 2.5), Vector3(3.5, 3.5, 4.5), Vector3(7, 0.5, 3.6), Vector3(-22, -22, 8.5)])
+
+[node name="Vegetation" type="Node3D" parent="Decor"]
+script = ExtResource("env_snap")
+sink = 0.03
+
+[node name="Plant1" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bush")]
+transform = Transform3D(-1.5572, 0, -0.22878, 0, 1.5739, 0, 0.22878, 0, -1.5572, -29.43, 0, -13.748)
+
+[node name="Plant2" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(0.80043, 0, -0.7119, 0, 1.0712, 0, 0.7119, 0, 0.80043, -10.546, 0, -25.531)
+
+[node name="Plant3" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(-0.2956, 0, -1.3041, 0, 1.3372, 0, 1.3041, 0, -0.2956, -11.654, 0, -28.17)
+
+[node name="Plant4" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(-0.62411, 0, -1.1311, 0, 1.2919, 0, 1.1311, 0, -0.62411, -9.4433, 0, -27.793)
+
+[node name="Plant5" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(-1.1446, 0, 0.81039, 0, 1.4024, 0, -0.81039, 0, -1.1446, -29.38, 0, -9.743)
+
+[node name="Plant6" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bush")]
+transform = Transform3D(-0.51581, 0, -0.76563, 0, 0.92318, 0, 0.76563, 0, -0.51581, -26.159, 0, -6.2627)
+
+[node name="Plant7" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(0.36578, 0, 1.1218, 0, 1.18, 0, -1.1218, 0, 0.36578, -22.778, 0, 12.313)
+
+[node name="Plant8" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(-1.3123, 0, -0.49906, 0, 1.404, 0, 0.49906, 0, -1.3123, -26.252, 0, 11.004)
+
+[node name="Plant9" parent="Decor/Vegetation" instance=ExtResource("nat_flower_yellowA")]
+transform = Transform3D(0.46598, 0, -1.137, 0, 1.2288, 0, 1.137, 0, 0.46598, -23.11, 0, 11.425)
+
+[node name="Plant10" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(1.1882, 0, -0.26349, 0, 1.217, 0, 0.26349, 0, 1.1882, -23.031, 0, 21.929)
+
+[node name="Plant11" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(-0.8749, 0, -1.1814, 0, 1.4701, 0, 1.1814, 0, -0.8749, -19.176, 0, 23.911)
+
+[node name="Plant12" parent="Decor/Vegetation" instance=ExtResource("nat_flower_purpleB")]
+transform = Transform3D(0.92877, 0, -0.53768, 0, 1.0732, 0, 0.53768, 0, 0.92877, -10.089, 0, -25.342)
+
+[node name="Plant13" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bushDetailed")]
+transform = Transform3D(0.41966, 0, 1.259, 0, 1.3271, 0, -1.259, 0, 0.41966, -7.2403, 0, -25.349)
+
+[node name="Plant14" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(-0.90199, 0, -1.0284, 0, 1.3679, 0, 1.0284, 0, -0.90199, 2.0416, 0, -27.864)
+
+[node name="Plant15" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(1.2425, 0, -0.51456, 0, 1.3449, 0, 0.51456, 0, 1.2425, 15.528, 0, 26.582)
+
+[node name="Plant16" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(-0.46966, 0, -0.83624, 0, 0.9591, 0, 0.83624, 0, -0.46966, 20.902, 0, 25.842)
+
+[node name="Plant17" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(-0.96934, 0, 0.79774, 0, 1.2554, 0, -0.79774, 0, -0.96934, 23.04, 0, 22.402)
+
+[node name="Plant18" parent="Decor/Vegetation" instance=ExtResource("nat_flower_purpleB")]
+transform = Transform3D(0.79132, 0, 0.62289, 0, 1.0071, 0, -0.62289, 0, 0.79132, 22.175, 0, 25.761)
+
+[node name="Plant19" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bush")]
+transform = Transform3D(-0.59013, 0, 1.1102, 0, 1.2573, 0, -1.1102, 0, -0.59013, -9.1675, 0, -6.2354)
+
+[node name="Plant20" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bushDetailed")]
+transform = Transform3D(-1.2209, 0, 0.26018, 0, 1.2483, 0, -0.26018, 0, -1.2209, -12.613, 0, -3.2522)
+
+[node name="Plant21" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(-0.62186, 0, 1.0304, 0, 1.2035, 0, -1.0304, 0, -0.62186, -8.9898, 0, -3.9188)
+
+[node name="Plant22" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bushDetailed")]
+transform = Transform3D(1.2537, 0, 0.27324, 0, 1.2831, 0, -0.27324, 0, 1.2537, -11.585, 0, -3.9797)
+
+[node name="Plant23" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bush")]
+transform = Transform3D(0.035987, 0, -1.2157, 0, 1.2163, 0, 1.2157, 0, 0.035987, -10.431, 0, -3.7353)
+
+[node name="Plant24" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bush")]
+transform = Transform3D(-0.97293, 0, -0.18519, 0, 0.9904, 0, 0.18519, 0, -0.97293, 7.9559, 0, 14.259)
+
+[node name="Plant25" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bushLarge")]
+transform = Transform3D(-1.0463, 0, 0.53019, 0, 1.173, 0, -0.53019, 0, -1.0463, -12.836, 0, -12.907)
+
+[node name="Plant26" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(0.46984, 0, 0.91776, 0, 1.031, 0, -0.91776, 0, 0.46984, -15.164, 0, -11.302)
+
+[node name="Plant27" parent="Decor/Vegetation" instance=ExtResource("nat_flower_purpleB")]
+transform = Transform3D(0.50669, 0, 1.0255, 0, 1.1438, 0, -1.0255, 0, 0.50669, -17.117, 0, -11.281)
+
+[node name="Plant28" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(0.8488, 0, -1.2018, 0, 1.4713, 0, 1.2018, 0, 0.8488, -19.431, 0, 10.162)
+
+[node name="Plant29" parent="Decor/Vegetation" instance=ExtResource("nat_flower_redA")]
+transform = Transform3D(-1.1079, 0, 0.72277, 0, 1.3228, 0, -0.72277, 0, -1.1079, -17.636, 0, 13.086)
+
+[node name="Plant30" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bushLarge")]
+transform = Transform3D(-0.94001, 0, 1.261, 0, 1.5728, 0, -1.261, 0, -0.94001, -17.398, 0, 7.1643)
+
+[node name="Plant31" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(-0.20701, 0, -0.9546, 0, 0.97679, 0, 0.9546, 0, -0.20701, 4.4647, 0, 20.066)
+
+[node name="Plant32" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(-0.62119, 0, -1.1351, 0, 1.294, 0, 1.1351, 0, -0.62119, -25.979, 0, -0.66186)
+
+[node name="Plant33" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bushDetailed")]
+transform = Transform3D(0.74455, 0, 1.3804, 0, 1.5684, 0, -1.3804, 0, 0.74455, -24.142, 0, 4.045)
+
+[node name="Plant34" parent="Decor/Vegetation" instance=ExtResource("nat_plant_bushLarge")]
+transform = Transform3D(1.0615, 0, 0.83758, 0, 1.3522, 0, -0.83758, 0, 1.0615, -27.087, 0, -0.49158)
+
+[node name="Plant35" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(0.82026, 0, 1.3178, 0, 1.5523, 0, -1.3178, 0, 0.82026, 15.518, 0, -19.166)
+
+[node name="Plant36" parent="Decor/Vegetation" instance=ExtResource("nat_plant_flatTall")]
+transform = Transform3D(1.1846, 0, 0.11521, 0, 1.1902, 0, -0.11521, 0, 1.1846, 15.953, 0, -20.773)
+
+[node name="Pebble37" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallA")]
+transform = Transform3D(1.3907, 0, 0.93075, 0, 1.6734, 0, -0.93075, 0, 1.3907, 24.886, 0, -25.759)
+
+[node name="Pebble38" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallC")]
+transform = Transform3D(0.32133, 0, -1.6986, 0, 1.7287, 0, 1.6986, 0, 0.32133, 28.452, 0, 19.302)
+
+[node name="Pebble39" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallC")]
+transform = Transform3D(-0.50763, 0, 1.1519, 0, 1.2588, 0, -1.1519, 0, -0.50763, 27.119, 0, 6.2178)
+
+[node name="Pebble40" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallA")]
+transform = Transform3D(-0.79043, 0, -1.8737, 0, 2.0336, 0, 1.8737, 0, -0.79043, 26.351, 0, 25.872)
+
+[node name="Pebble41" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallC")]
+transform = Transform3D(-0.51509, 0, 1.912, 0, 1.9802, 0, -1.912, 0, -0.51509, 27.226, 0, 22.882)
+
+[node name="Pebble42" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallC")]
+transform = Transform3D(-0.52885, 0, 2.0839, 0, 2.1499, 0, -2.0839, 0, -0.52885, 28.014, 0, -11.803)
+
+[node name="Pebble43" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallC")]
+transform = Transform3D(-0.87387, 0, 1.8914, 0, 2.0836, 0, -1.8914, 0, -0.87387, 27.699, 0, -20.395)
+
+[node name="Pebble44" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallFlatA")]
+transform = Transform3D(2.0613, 0, 0.75891, 0, 2.1966, 0, -0.75891, 0, 2.0613, 26.669, 0, -8.5059)
+
+[node name="Pebble45" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallA")]
+transform = Transform3D(1.0032, 0, 1.0118, 0, 1.4248, 0, -1.0118, 0, 1.0032, 25.148, 0, -20.375)
+
+[node name="Pebble46" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallC")]
+transform = Transform3D(-1.2517, 0, 0.7371, 0, 1.4526, 0, -0.7371, 0, -1.2517, 24.615, 0, 4.2189)
+
+[node name="Pebble47" parent="Decor/Vegetation" instance=ExtResource("nat_rock_smallA")]
+transform = Transform3D(-1.1192, 0, -1.8024, 0, 2.1216, 0, 1.8024, 0, -1.1192, 27.6, 0, -17.093)
+
 [node name="Rocks" type="Node3D" parent="Decor"]
+script = ExtResource("env_snap")
 
 [node name="Rock1" type="StaticBody3D" parent="Decor/Rocks" groups=["spot_blockers"]]
 transform = Transform3D(0.90631, 0, 0.42262, 0, 1, 0, -0.42262, 0, 0.90631, 8, 0, -9)
@@ -279,6 +378,8 @@ shape = SubResource("BoxShape3D_7")
 transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
 
 [node name="Palms" type="Node3D" parent="Decor"]
+script = ExtResource("env_snap")
+sink = 0.12
 
 [node name="Palm1" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(-0.97824, 0, -0.2075, 0, 1, 0, 0.2075, 0, -0.97824, -27, 0, -12.5)
@@ -287,8 +388,13 @@ transform = Transform3D(-0.97824, 0, -0.2075, 0, 1, 0, 0.2075, 0, -0.97824, -27,
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm1" instance=ExtResource("k_palm_bend")]
-transform = Transform3D(1.23, 0, 0, 0, 1.23, 0, 0, 0, 1.23, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm1"]
+script = ExtResource("env_palm")
+height = 5.0144
+bend = 0.95327
+fronds = 13
+frond_length = 2.9189
+seed_value = 1
 
 [node name="Palm2" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(0.45048, 0, -0.89279, 0, 1, 0, 0.89279, 0, 0.45048, -12.5, 0, -27)
@@ -297,8 +403,13 @@ transform = Transform3D(0.45048, 0, -0.89279, 0, 1, 0, 0.89279, 0, 0.45048, -12.
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm2" instance=ExtResource("k_palm_straight")]
-transform = Transform3D(1.02, 0, 0, 0, 1.02, 0, 0, 0, 1.02, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm2"]
+script = ExtResource("env_palm")
+height = 6.4107
+bend = 1.1079
+fronds = 16
+frond_length = 2.8484
+seed_value = 2
 
 [node name="Palm3" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(0.24633, 0, -0.96919, 0, 1, 0, 0.96919, 0, 0.24633, -27, 0, -9)
@@ -307,8 +418,13 @@ transform = Transform3D(0.24633, 0, -0.96919, 0, 1, 0, 0.96919, 0, 0.24633, -27,
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm3" instance=ExtResource("k_palm_detailed_bend")]
-transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm3"]
+script = ExtResource("env_palm")
+height = 5.7861
+bend = 1.2497
+fronds = 16
+frond_length = 2.8257
+seed_value = 3
 
 [node name="Palm4" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(0.27932, 0, 0.9602, 0, 1, 0, -0.9602, 0, 0.27932, -25.5, 0, 13)
@@ -317,8 +433,13 @@ transform = Transform3D(0.27932, 0, 0.9602, 0, 1, 0, -0.9602, 0, 0.27932, -25.5,
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm4" instance=ExtResource("k_palm_detailed_straight")]
-transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm4"]
+script = ExtResource("env_palm")
+height = 5.8557
+bend = 0.61191
+fronds = 13
+frond_length = 2.3775
+seed_value = 4
 
 [node name="Palm5" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(0.852, 0, -0.52354, 0, 1, 0, 0.52354, 0, 0.852, -22, 0, 24.5)
@@ -327,8 +448,13 @@ transform = Transform3D(0.852, 0, -0.52354, 0, 1, 0, 0.52354, 0, 0.852, -22, 0, 
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm5" instance=ExtResource("k_palm_bend")]
-transform = Transform3D(1.25, 0, 0, 0, 1.25, 0, 0, 0, 1.25, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm5"]
+script = ExtResource("env_palm")
+height = 6.2702
+bend = 0.88455
+fronds = 16
+frond_length = 2.7756
+seed_value = 5
 
 [node name="Palm6" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(0.9169, 0, 0.39913, 0, 1, 0, -0.39913, 0, 0.9169, -9, 0, -26.5)
@@ -337,8 +463,13 @@ transform = Transform3D(0.9169, 0, 0.39913, 0, 1, 0, -0.39913, 0, 0.9169, -9, 0,
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm6" instance=ExtResource("k_palm_straight")]
-transform = Transform3D(1.13, 0, 0, 0, 1.13, 0, 0, 0, 1.13, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm6"]
+script = ExtResource("env_palm")
+height = 5.1784
+bend = 0.62697
+fronds = 15
+frond_length = 2.8636
+seed_value = 6
 
 [node name="Palm7" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(-0.5781, 0, 0.81597, 0, 1, 0, -0.81597, 0, -0.5781, 4, 0, -26)
@@ -347,8 +478,13 @@ transform = Transform3D(-0.5781, 0, 0.81597, 0, 1, 0, -0.81597, 0, -0.5781, 4, 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm7" instance=ExtResource("k_palm_detailed_bend")]
-transform = Transform3D(1.26, 0, 0, 0, 1.26, 0, 0, 0, 1.26, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm7"]
+script = ExtResource("env_palm")
+height = 6.5994
+bend = 0.96766
+fronds = 13
+frond_length = 2.8062
+seed_value = 7
 
 [node name="Palm8" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(-0.51579, 0, -0.85671, 0, 1, 0, 0.85671, 0, -0.51579, 13, 0, 26.5)
@@ -357,8 +493,13 @@ transform = Transform3D(-0.51579, 0, -0.85671, 0, 1, 0, 0.85671, 0, -0.51579, 13
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm8" instance=ExtResource("k_palm_detailed_straight")]
-transform = Transform3D(1.31, 0, 0, 0, 1.31, 0, 0, 0, 1.31, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm8"]
+script = ExtResource("env_palm")
+height = 4.9614
+bend = 0.99948
+fronds = 15
+frond_length = 2.6202
+seed_value = 8
 
 [node name="Palm9" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(-0.82899, 0, -0.55926, 0, 1, 0, 0.55926, 0, -0.82899, 20.5, 0, 23.5)
@@ -367,8 +508,13 @@ transform = Transform3D(-0.82899, 0, -0.55926, 0, 1, 0, 0.55926, 0, -0.82899, 20
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm9" instance=ExtResource("k_palm_bend")]
-transform = Transform3D(1.32, 0, 0, 0, 1.32, 0, 0, 0, 1.32, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm9"]
+script = ExtResource("env_palm")
+height = 6.3777
+bend = 1.2152
+fronds = 15
+frond_length = 2.3173
+seed_value = 9
 
 [node name="Palm10" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(-0.3898, 0, 0.9209, 0, 1, 0, -0.9209, 0, -0.3898, 24, 0, -27)
@@ -377,8 +523,13 @@ transform = Transform3D(-0.3898, 0, 0.9209, 0, 1, 0, -0.9209, 0, -0.3898, 24, 0,
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm10" instance=ExtResource("k_palm_straight")]
-transform = Transform3D(1.31, 0, 0, 0, 1.31, 0, 0, 0, 1.31, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm10"]
+script = ExtResource("env_palm")
+height = 6.0796
+bend = 0.7726
+fronds = 16
+frond_length = 2.3635
+seed_value = 10
 
 [node name="Palm11" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(0.86106, 0, -0.5085, 0, 1, 0, 0.5085, 0, 0.86106, -12, 0, -5)
@@ -387,8 +538,13 @@ transform = Transform3D(0.86106, 0, -0.5085, 0, 1, 0, 0.5085, 0, 0.86106, -12, 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm11" instance=ExtResource("k_palm_detailed_bend")]
-transform = Transform3D(1.26, 0, 0, 0, 1.26, 0, 0, 0, 1.26, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm11"]
+script = ExtResource("env_palm")
+height = 6.4037
+bend = 1.0208
+fronds = 13
+frond_length = 2.5978
+seed_value = 11
 
 [node name="Palm12" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(0.91192, 0, 0.41037, 0, 1, 0, -0.41037, 0, 0.91192, -9.5, 0, -2.5)
@@ -397,8 +553,13 @@ transform = Transform3D(0.91192, 0, 0.41037, 0, 1, 0, -0.41037, 0, 0.91192, -9.5
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm12" instance=ExtResource("k_palm_detailed_straight")]
-transform = Transform3D(1.04, 0, 0, 0, 1.04, 0, 0, 0, 1.04, 0, 0, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm12"]
+script = ExtResource("env_palm")
+height = 6.2446
+bend = 1.4268
+fronds = 16
+frond_length = 2.5787
+seed_value = 12
 
 [node name="Palm13" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
 transform = Transform3D(-0.73465, 0, -0.67845, 0, 1, 0, 0.67845, 0, -0.73465, 10.5, 0, 14)
@@ -407,82 +568,16 @@ transform = Transform3D(-0.73465, 0, -0.67845, 0, 1, 0, 0.67845, 0, -0.73465, 10
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
 shape = SubResource("CylinderShape3D_8")
 
-[node name="Model" parent="Decor/Palms/Palm13" instance=ExtResource("k_palm_bend")]
-transform = Transform3D(1.19, 0, 0, 0, 1.19, 0, 0, 0, 1.19, 0, 0, 0)
-
-[node name="SandPatches" type="Node3D" parent="Decor"]
-
-[node name="PatchSand1" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
-transform = Transform3D(0.93969, 0, 0.34202, 0, 1, 0, -0.34202, 0, 0.93969, -5, 0, -15)
-
-[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
-shape = SubResource("BoxShape3D_9")
-
-[node name="Model" parent="Decor/SandPatches/PatchSand1" instance=ExtResource("k_patch_sand")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
-
-[node name="PatchSand2" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
-transform = Transform3D(-0.34202, 0, 0.93969, 0, 1, 0, -0.93969, 0, -0.34202, 13, 0, -1.5)
-
-[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
-shape = SubResource("BoxShape3D_9")
-
-[node name="Model" parent="Decor/SandPatches/PatchSand2" instance=ExtResource("k_patch_sand")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
-
-[node name="PatchSand3" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
-transform = Transform3D(0.5, 0, -0.86603, 0, 1, 0, 0.86603, 0, 0.5, -14, 0, 21)
-
-[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
-shape = SubResource("BoxShape3D_9")
-
-[node name="Model" parent="Decor/SandPatches/PatchSand3" instance=ExtResource("k_patch_sand")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
-
-[node name="PatchSand4" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
-transform = Transform3D(0.42262, 0, 0.90631, 0, 1, 0, -0.90631, 0, 0.42262, 2, 0, 9)
-
-[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchSand4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
-shape = SubResource("BoxShape3D_9")
-
-[node name="Model" parent="Decor/SandPatches/PatchSand4" instance=ExtResource("k_patch_sand")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
-
-[node name="PatchFoliage1" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
-transform = Transform3D(-0.93969, 0, 0.34202, 0, 1, 0, -0.34202, 0, -0.93969, -20, 0, -13)
-
-[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchFoliage1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
-shape = SubResource("BoxShape3D_9")
-
-[node name="Model" parent="Decor/SandPatches/PatchFoliage1" instance=ExtResource("k_patch_sand_foliage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
-
-[node name="PatchFoliage2" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
-transform = Transform3D(-0.5, 0, -0.86603, 0, 1, 0, 0.86603, 0, -0.5, 18, 0, -12)
-
-[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchFoliage2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
-shape = SubResource("BoxShape3D_9")
-
-[node name="Model" parent="Decor/SandPatches/PatchFoliage2" instance=ExtResource("k_patch_sand_foliage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
-
-[node name="PatchFoliage3" type="StaticBody3D" parent="Decor/SandPatches" groups=["spot_blockers"]]
-transform = Transform3D(0.98481, 0, 0.17365, 0, 1, 0, -0.17365, 0, 0.98481, -1, 0, 23)
-
-[node name="Collision" type="CollisionShape3D" parent="Decor/SandPatches/PatchFoliage3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
-shape = SubResource("BoxShape3D_9")
-
-[node name="Model" parent="Decor/SandPatches/PatchFoliage3" instance=ExtResource("k_patch_sand_foliage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+[node name="Model" type="Node3D" parent="Decor/Palms/Palm13"]
+script = ExtResource("env_palm")
+height = 5.7444
+bend = 1.3978
+fronds = 16
+frond_length = 2.6591
+seed_value = 13
 
 [node name="Foliage" type="Node3D" parent="Decor"]
+script = ExtResource("env_snap")
 
 [node name="Grass1" parent="Decor/Foliage" instance=ExtResource("k_grass_plant")]
 transform = Transform3D(-0.60075, 0, -0.35931, 0, 0.7, 0, 0.35931, 0, -0.60075, -26.732, 0, -23.179)
@@ -670,7 +765,7 @@ transform = Transform3D(4.575e-18, -0.074715, 0.32143, 0.33, 2.0207e-17, 0, -1.9
 transform = Transform3D(1.9947e-17, -0.32576, -0.052727, 0.33, 2.0207e-17, 0, 3.2286e-18, -0.052727, 0.32576, 21, 0.06, 10)
 
 [node name="Sea" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, -0.15, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55, -0.15, 0)
 cast_shadow = 0
 mesh = SubResource("PlaneMesh_water")
 
@@ -818,17 +913,13 @@ tool_data = ExtResource("11_tool_kit_medico")
 
 [node name="Label" type="Label3D" parent="Banca"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+pixel_size = 0.008
 billboard = 1
 no_depth_test = true
-pixel_size = 0.008
 modulate = Color(0.55, 0.9, 1, 1)
-outline_modulate = Color(0, 0, 0, 1)
 text = "LOJA"
 font_size = 64
 outline_size = 14
-
-[node name="GameState" type="Node" parent="."]
-script = ExtResource("10_game_state")
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)

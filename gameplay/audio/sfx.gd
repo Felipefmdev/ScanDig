@@ -14,13 +14,13 @@ const DEFAULT_PITCH_VAR: float = 0.08
 const _IMPACT: String = "res://assets/audio/kenney_impact-sounds/"
 const _RPG: String = "res://assets/audio/kenney_rpg-audio/"
 const _UI: String = "res://assets/audio/kenney_interface-sounds/"
-const _GEN: String = "res://assets/audio/generated/"
+const _GEN: String = "res://assets/audio/generated/"  # sons de areia: tools/gen_sand_sfx.py (pico -3 dBFS)
 
 # --- Jogador / ferramentas ---------------------------------------------------
-const DIG_FAST: Array[String] = [_IMPACT + "impactSoft_heavy_000.ogg", _IMPACT + "impactSoft_heavy_001.ogg", _IMPACT + "impactSoft_heavy_002.ogg"]
-const DIG_CAREFUL: Array[String] = [_IMPACT + "impactSoft_medium_000.ogg", _IMPACT + "impactSoft_medium_001.ogg"]
-const DIRT_FALL: Array[String] = [_IMPACT + "footstep_snow_001.ogg", _IMPACT + "footstep_snow_003.ogg"]
-const FOOTSTEP_SAND: Array[String] = [_IMPACT + "footstep_snow_000.ogg", _IMPACT + "footstep_snow_001.ogg", _IMPACT + "footstep_snow_002.ogg", _IMPACT + "footstep_snow_003.ogg", _IMPACT + "footstep_snow_004.ogg"]
+const DIG_FAST: Array[String] = [_GEN + "sand_dig_fast_0.wav", _GEN + "sand_dig_fast_1.wav", _GEN + "sand_dig_fast_2.wav"]
+const DIG_CAREFUL: Array[String] = [_GEN + "sand_dig_careful_0.wav", _GEN + "sand_dig_careful_1.wav"]
+const DIRT_FALL: Array[String] = [_GEN + "sand_throw_0.wav", _GEN + "sand_throw_1.wav"]
+const FOOTSTEP_SAND: Array[String] = [_GEN + "sand_step_0.wav", _GEN + "sand_step_1.wav", _GEN + "sand_step_2.wav", _GEN + "sand_step_3.wav", _GEN + "sand_step_4.wav"]
 const PICKUP: Array[String] = [_RPG + "handleSmallLeather.ogg"]
 const DROP: Array[String] = [_RPG + "dropLeather.ogg"]
 const DELIVER_COINS: Array[String] = [_RPG + "handleCoins.ogg", _RPG + "handleCoins2.ogg"]
