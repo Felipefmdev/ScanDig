@@ -84,11 +84,17 @@ func save_game(target_state: GameState = null) -> Error:
 		save_failed.emit(err_msg)
 		return ERR_DOES_NOT_EXIST
 	
+	if not state.is_authority():
+		var not_host_msg: String = "SaveManager: Apenas o host pode salvar o jogo."
+		push_warning(not_host_msg)
+		save_failed.emit(not_host_msg)
+		return ERR_UNAUTHORIZED
+	
 	var save_data: Dictionary = {
 		"version": 2,
 		"team_money": state.team_money,
 		"current_day": state.current_day,
-		"discovered_items": state.discovered_items.duplicate(),
+		"discovered_items": Array(state.discovered_items),
 		"upgrade_levels": state.upgrade_levels.duplicate(),
 	}
 	

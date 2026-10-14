@@ -143,6 +143,10 @@ func _host_sell_item(item_id: String, final_value: int) -> void:
 	var item_data: ItemData = _load_item(item_id)
 	if item_data == null:
 		return
+	# Itens inéditos devem ir para o museu; impede cliente de pular a regra.
+	if not discovered_items.has(item_id):
+		_host_donate_item(item_id, final_value)
+		return
 	var value: int = clampi(final_value, 0, item_data.base_value)
 	team_money += value
 	_broadcast_snapshot()
@@ -200,7 +204,8 @@ func get_snapshot() -> Dictionary:
 	return {
 		"team_money": team_money,
 		"current_day": current_day,
-		"discovered_items": discovered_items.duplicate(),
+		# Array/Dictionary sem tipo: serializam de forma previsível via RPC e JSON.
+		"discovered_items": Array(discovered_items),
 		"upgrade_levels": upgrade_levels.duplicate(),
 	}
 
@@ -210,13 +215,20 @@ func get_snapshot() -> Dictionary:
 func apply_snapshot(data: Dictionary) -> void:
 	team_money = int(data.get("team_money", team_money))
 	current_day = int(data.get("current_day", current_day))
-	if data.has("discovered_items"):
+	if data.get("discovered_items") is Array:
 		var items: Array[String] = []
-		for item in data["discovered_items"]:
-			items.append(str(item))
+		for item: Variant in data["discovered_items"]:
+			var item_id: String = str(item)
+			if not item_id.is_empty() and not items.has(item_id):
+				items.append(item_id)
 		discovered_items = items
-	if data.has("upgrade_levels"):
-		upgrade_levels = (data["upgrade_levels"] as Dictionary).duplicate()
+	if data.get("upgrade_levels") is Dictionary:
+		# JSON devolve números como float e pode conter chaves obsoletas.
+		var source: Dictionary = data["upgrade_levels"]
+		var levels: Dictionary = {}
+		for key: String in UPGRADES.keys():
+			levels[key] = clampi(int(source.get(key, 0)), 0, get_upgrade_max_level(key))
+		upgrade_levels = levels
 	_ensure_upgrade_keys()
 	equipped_detector_level = 1 + get_upgrade_level("detector")
 	money_changed.emit(team_money)
@@ -248,8 +260,9 @@ func _receive_snapshot(data: Dictionary) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _request_full_state() -> void:
-	if is_authority():
-		_receive_snapshot.rpc_id(multiplayer.get_remote_sender_id(), get_snapshot())
+	var sender: int = multiplayer.get_remote_sender_id()
+	if is_authority() and sender != 0 and sender != multiplayer.get_unique_id():
+		_receive_snapshot.rpc_id(sender, get_snapshot())
 
 
 func _notify_sold(item_id: String, value: int) -> void:
@@ -281,13 +294,14 @@ func _receive_purchase_result(upgrade_id: String, success: bool, message: String
 
 func _on_peer_connected(peer_id: int) -> void:
 	# Sincronização completa para quem entra.
-	if is_authority():
+	if is_authority() and _is_online():
 		_receive_snapshot.rpc_id(peer_id, get_snapshot())
 
 
 func _on_connected_to_server() -> void:
 	# Redundância caso o snapshot do host chegue antes de o nó estar pronto.
-	_request_full_state.rpc_id(HOST_PEER_ID)
+	if not is_authority():
+		_request_full_state.rpc_id(HOST_PEER_ID)
 
 
 # --- Utilitários ----------------------------------------------------------------

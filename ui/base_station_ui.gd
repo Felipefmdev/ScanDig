@@ -23,6 +23,10 @@ var _catalog_items: Array[ItemData] = []
 var _pending_purchase: bool = false
 
 const SHOP_BUTTONS: Array[String] = ["detector", "pinpointer", "shovel"]
+## Tempo máximo aguardando purchase_result antes de liberar os botões novamente.
+const PURCHASE_TIMEOUT_SEC: float = 5.0
+
+var _purchase_timer: SceneTreeTimer = null
 
 
 func _resolve_node(unique_id: String, rel_path: String) -> Node:
@@ -119,11 +123,16 @@ func _refresh_shop_buttons() -> void:
 		var max_level: int = _game_state.get_upgrade_max_level(upgrade_id)
 		var cost: int = _game_state.get_next_upgrade_cost(upgrade_id)
 		if cost < 0:
-			btn.text = "%s — MÁXIMO (%d/%d)" % [display_name, level, max_level]
+			btn.text = "%s  •  Nível %d/%d
+NÍVEL MÁXIMO" % [display_name, level, max_level]
+			btn.tooltip_text = "%s já está no nível máximo." % display_name
 			btn.disabled = true
 		else:
-			btn.text = "Comprar %s (%d/%d) — R$ %d" % [display_name, level, max_level, cost]
-			btn.disabled = _pending_purchase
+			var affordable: bool = _game_state.team_money >= cost
+			btn.text = "%s  •  Nível %d/%d
+Comprar nível %d — R$ %d" % [display_name, level, max_level, level + 1, cost]
+			btn.tooltip_text = "" if affordable else "Saldo insuficiente (R$ %d)." % _game_state.team_money
+			btn.disabled = _pending_purchase or not affordable
 
 
 func _setup_museum_controls() -> void:
@@ -150,11 +159,25 @@ func _purchase_upgrade(upgrade_id: String) -> void:
 	_pending_purchase = true
 	_refresh_shop_buttons()
 	_set_shop_feedback("Processando compra...")
+	var timer: SceneTreeTimer = get_tree().create_timer(PURCHASE_TIMEOUT_SEC)
+	_purchase_timer = timer
+	timer.timeout.connect(_on_purchase_timeout.bind(timer))
 	_game_state.request_buy_upgrade(upgrade_id)
+
+
+func _on_purchase_timeout(timer: SceneTreeTimer) -> void:
+	# Ignora timers de compras anteriores já respondidas.
+	if not _pending_purchase or timer != _purchase_timer:
+		return
+	_pending_purchase = false
+	_purchase_timer = null
+	_set_shop_feedback("Sem resposta do host. Tente novamente.")
+	_refresh_shop_buttons()
 
 
 func _on_purchase_result(_upgrade_id: String, _success: bool, message: String) -> void:
 	_pending_purchase = false
+	_purchase_timer = null
 	_set_shop_feedback(message)
 	_refresh_shop_buttons()
 
@@ -211,7 +234,8 @@ func _refresh_museum_display() -> void:
 
 
 func _on_state_updated(_amount: int) -> void:
-	pass
+	# Saldo mudou: reavalia quais upgrades estão acessíveis.
+	_refresh_shop_buttons()
 
 
 func _on_collection_updated(_total_found: int, _max_items: int) -> void:
