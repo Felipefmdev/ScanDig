@@ -14,6 +14,9 @@ signal purchase_result(upgrade_id: String, success: bool, message: String)
 signal state_synced()
 ## Só o peer que comprou recebe. item_id = ToolData.id.
 signal item_purchase_result(item_id: String, success: bool, message: String)
+signal progression_changed(unlocked_maps: Array, defeated_bosses: Array)
+## Só o peer que pediu recebe.
+signal map_unlock_result(map_id: String, success: bool, message: String)
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
@@ -22,6 +25,14 @@ const MUSEUM_REWARD_RATIO: float = 0.5
 const BASE_BACKPACK_CAPACITY: int = 3
 ## Catálogo de ferramentas compráveis (ToolData); o nome do arquivo é o id.
 const TOOLS_DIR: String = "res://items/tools"
+## Definições de mapa (MapData); arquivo <id>.tres, id == nome do arquivo.
+const MAPS_DIR: String = "res://items/maps"
+## Chefe que precisa ser vencido antes de pagar o desbloqueio de cada mapa.
+const MAP_UNLOCK_BOSSES: Dictionary = {
+	"campo": {"boss_id": "king_crab", "boss_name": "Caranguejo-Rei"},
+	"ruinas": {"boss_id": "giant_mole", "boss_name": "Toupeira Gigante"},
+	"cratera": {"boss_id": "ancient_guardian", "boss_name": "Guardião Ancestral"},
+}
 
 ## Definição da loja: custo de cada nível e nível máximo.
 const UPGRADES: Dictionary = {
@@ -42,6 +53,9 @@ static var instance: GameState = null
 
 ## upgrade_id -> nível comprado (0 = não comprado).
 var upgrade_levels: Dictionary = {}
+## Mapas pagos; mapas com unlock_cost <= 0 (a Praia) não precisam estar aqui.
+var unlocked_maps: Array[String] = []
+var defeated_bosses: Array[String] = []
 
 
 func _enter_tree() -> void:
@@ -118,10 +132,7 @@ func get_total_catalog_items() -> int:
 
 ## Consulta para UI e gameplay. Devolve null se o id for inválido ou não existir.
 func get_tool_data(item_id: String) -> ToolData:
-	# Só aceita nomes simples: impede que um cliente carregue arquivos fora de TOOLS_DIR.
-	if item_id.is_empty() or not item_id.is_valid_filename():
-		return null
-	if item_id.contains("/") or item_id.contains("\\") or item_id.contains(".."):
+	if not _is_safe_resource_id(item_id):
 		return null
 	var tool_path: String = "%s/%s.tres" % [TOOLS_DIR, item_id]
 	if not ResourceLoader.exists(tool_path):
@@ -130,6 +141,33 @@ func get_tool_data(item_id: String) -> ToolData:
 	if tool == null or String(tool.id) != item_id:
 		return null
 	return tool
+
+
+func is_map_unlocked(map_id: String) -> bool:
+	var map_data: MapData = _load_map(map_id)
+	if map_data == null:
+		return false
+	return map_data.unlock_cost <= 0 or unlocked_maps.has(map_id)
+
+
+func is_boss_defeated(boss_id: String) -> bool:
+	return defeated_bosses.has(boss_id)
+
+
+## "" se pode desbloquear agora; senão o motivo, em português, pronto para a UI.
+func get_map_unlock_block_reason(map_id: String) -> String:
+	var map_data: MapData = _load_map(map_id)
+	if map_data == null:
+		return "Mapa desconhecido."
+	if is_map_unlocked(map_id):
+		return "%s já está desbloqueado." % map_data.display_name
+	if MAP_UNLOCK_BOSSES.has(map_id):
+		var boss: Dictionary = MAP_UNLOCK_BOSSES[map_id]
+		if not is_boss_defeated(str(boss["boss_id"])):
+			return "Vença o chefe %s primeiro." % str(boss["boss_name"])
+	if team_money < map_data.unlock_cost:
+		return "Saldo insuficiente para desbloquear %s (R$ %d)." % [map_data.display_name, map_data.unlock_cost]
+	return ""
 
 
 func get_item_display_name(item_id: String) -> String:
@@ -157,6 +195,16 @@ func request_donate_item(item_id: String) -> void:
 
 func request_buy_upgrade(upgrade_id: String) -> void:
 	_send_to_host(&"_host_buy_upgrade", [upgrade_id])
+
+
+## Desbloqueio pago de mapa. A resposta chega por map_unlock_result.
+func request_unlock_map(map_id: String) -> void:
+	_send_to_host(&"_host_unlock_map", [map_id])
+
+
+## Chamado pelo gameplay quando um chefe morre.
+func request_report_boss_defeated(boss_id: String) -> void:
+	_send_to_host(&"_host_report_boss_defeated", [boss_id])
 
 
 ## Compra de ferramenta (ToolData). A resposta chega por item_purchase_result.
@@ -274,6 +322,41 @@ func _host_purchase_item(item_id: String) -> void:
 		_receive_item_purchase_result.rpc_id(sender, item_id, success, message)
 
 
+@rpc("any_peer", "call_remote", "reliable")
+func _host_unlock_map(map_id: String) -> void:
+	if not is_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender == 0:
+		sender = multiplayer.get_unique_id()
+
+	var success: bool = false
+	var message: String = get_map_unlock_block_reason(map_id)
+	if message.is_empty():
+		var map_data: MapData = _load_map(map_id)
+		team_money -= map_data.unlock_cost
+		unlocked_maps.append(map_id)
+		success = true
+		message = "%s desbloqueado!" % map_data.display_name
+		_broadcast_snapshot()
+
+	if sender == multiplayer.get_unique_id():
+		map_unlock_result.emit(map_id, success, message)
+	else:
+		_receive_map_unlock_result.rpc_id(sender, map_id, success, message)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_report_boss_defeated(boss_id: String) -> void:
+	if not is_authority() or defeated_bosses.has(boss_id):
+		return
+	for entry: Dictionary in MAP_UNLOCK_BOSSES.values():
+		if str(entry["boss_id"]) == boss_id:
+			defeated_bosses.append(boss_id)
+			_broadcast_snapshot()
+			return
+
+
 # --- Sincronização -------------------------------------------------------------
 
 func get_snapshot() -> Dictionary:
@@ -283,6 +366,8 @@ func get_snapshot() -> Dictionary:
 		# Array/Dictionary sem tipo: serializam de forma previsível via RPC e JSON.
 		"discovered_items": Array(discovered_items),
 		"upgrade_levels": upgrade_levels.duplicate(),
+		"unlocked_maps": Array(unlocked_maps),
+		"defeated_bosses": Array(defeated_bosses),
 	}
 
 
@@ -292,12 +377,11 @@ func apply_snapshot(data: Dictionary) -> void:
 	team_money = int(data.get("team_money", team_money))
 	current_day = int(data.get("current_day", current_day))
 	if data.get("discovered_items") is Array:
-		var items: Array[String] = []
-		for item: Variant in data["discovered_items"]:
-			var item_id: String = str(item)
-			if not item_id.is_empty() and not items.has(item_id):
-				items.append(item_id)
-		discovered_items = items
+		discovered_items = _to_id_list(data["discovered_items"])
+	if data.get("unlocked_maps") is Array:
+		unlocked_maps = _to_id_list(data["unlocked_maps"])
+	if data.get("defeated_bosses") is Array:
+		defeated_bosses = _to_id_list(data["defeated_bosses"])
 	if data.get("upgrade_levels") is Dictionary:
 		# JSON devolve números como float e pode conter chaves obsoletas.
 		var source: Dictionary = data["upgrade_levels"]
@@ -310,6 +394,7 @@ func apply_snapshot(data: Dictionary) -> void:
 	money_changed.emit(team_money)
 	collection_updated.emit(discovered_items.size(), get_total_catalog_items())
 	upgrades_changed.emit(upgrade_levels.duplicate())
+	progression_changed.emit(Array(unlocked_maps), Array(defeated_bosses))
 	state_synced.emit()
 
 
@@ -373,6 +458,11 @@ func _receive_item_purchase_result(item_id: String, success: bool, message: Stri
 	item_purchase_result.emit(item_id, success, message)
 
 
+@rpc("authority", "call_remote", "reliable")
+func _receive_map_unlock_result(map_id: String, success: bool, message: String) -> void:
+	map_unlock_result.emit(map_id, success, message)
+
+
 func _on_peer_connected(peer_id: int) -> void:
 	# Sincronização completa para quem entra.
 	if is_authority() and _is_online():
@@ -403,6 +493,8 @@ func reset_state() -> void:
 	current_day = 1
 	discovered_items.clear()
 	upgrade_levels.clear()
+	unlocked_maps.clear()
+	defeated_bosses.clear()
 	_broadcast_snapshot()
 
 
@@ -414,6 +506,35 @@ func _ensure_upgrade_keys() -> void:
 	for key: String in UPGRADES.keys():
 		if not upgrade_levels.has(key):
 			upgrade_levels[key] = 0
+
+
+## Só aceita nomes simples: impede que um cliente carregue arquivos fora das pastas do catálogo.
+func _is_safe_resource_id(resource_id: String) -> bool:
+	if resource_id.is_empty() or not resource_id.is_valid_filename():
+		return false
+	return not (resource_id.contains("/") or resource_id.contains("\\") or resource_id.contains(".."))
+
+
+func _load_map(map_id: String) -> MapData:
+	if not _is_safe_resource_id(map_id):
+		return null
+	var map_path: String = "%s/%s.tres" % [MAPS_DIR, map_id]
+	if not ResourceLoader.exists(map_path):
+		return null
+	var map_data: MapData = load(map_path) as MapData
+	if map_data == null or map_data.id != map_id:
+		return null
+	return map_data
+
+
+## Converte uma lista do snapshot/JSON em ids únicos e não vazios.
+func _to_id_list(source: Array) -> Array[String]:
+	var ids: Array[String] = []
+	for value: Variant in source:
+		var id: String = str(value)
+		if not id.is_empty() and not ids.has(id):
+			ids.append(id)
+	return ids
 
 
 func _load_item(item_id: String) -> ItemData:

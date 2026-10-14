@@ -36,17 +36,19 @@ Só o host (peer 1) altera o estado. Qualquer peer chama `request_*`; `_send_to_
 | `request_donate_item(item_id)` | `_host_donate_item` |
 | `request_buy_upgrade(upgrade_id)` | `_host_buy_upgrade` → `purchase_result` só para quem comprou |
 | `request_purchase_item(item_id)` | `_host_purchase_item` → `item_purchase_result` só para quem comprou |
+| `request_unlock_map(map_id)` | `_host_unlock_map` → `map_unlock_result` só para quem pediu |
+| `request_report_boss_defeated(boss_id)` | `_host_report_boss_defeated` |
 
 Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
 
 ### Sinais do `GameState`
-`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `state_synced()`.
+`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `progression_changed(unlocked_maps, defeated_bosses)`, `map_unlock_result(map_id, success, message)`, `state_synced()`.
 
 ### Snapshot
 Após cada mudança o host envia a todos `_receive_snapshot` com:
 
 ```
-{ "team_money": int, "current_day": int, "discovered_items": Array[String], "upgrade_levels": { "detector": int, "pinpointer": int, "shovel": int, "backpack": int } }
+{ "team_money": int, "current_day": int, "discovered_items": Array[String], "upgrade_levels": { "detector": int, "pinpointer": int, "shovel": int, "backpack": int }, "unlocked_maps": Array[String], "defeated_bosses": Array[String] }
 ```
 
 Quem entra recebe o snapshot em `peer_connected` (e o cliente pede de novo com `_request_full_state`). `apply_snapshot` valida tipos e limita níveis.
@@ -73,13 +75,42 @@ A banca da Praia (`ShopOffer`) deve comprar só por esta API, nunca debitando `t
 
 Mensagens: `"Comprado: <nome>"`, `"Saldo insuficiente para <nome> (R$ <preço>)."`, `"Produto indisponível."`.
 
+### Progressão de mapas
+Regras em `docs/PACING.md` §1. Ordem: `praia` → `campo` → `ruinas` → `cratera` (`SessionManager.MAP_ORDER`; ids fora da lista vão para o fim, em ordem alfabética). `MapData` em `GameState.MAPS_DIR` (`res://items/maps/<id>.tres`, `id` == nome do arquivo).
+
+| Mapa | Nome | `unlock_cost` | Chefe exigido (`MAP_UNLOCK_BOSSES`) |
+| :--- | :--- | :--- | :--- |
+| `praia` | Praia | 0 (sempre desbloqueada) | — |
+| `campo` | Campo Antigo | 2.000 | `king_crab` (Caranguejo-Rei) |
+| `ruinas` | Ruínas | 8.000 | `giant_mole` (Toupeira Gigante) |
+| `cratera` | Cratera | 25.000 | `ancient_guardian` (Guardião Ancestral) |
+
+Desbloquear é uma compra única, só depois de vencer o chefe exigido. Um mapa desbloqueado só é jogável se `res://world/map_<id>.tscn` existir (senão a UI mostra "Em breve").
+
+`GameState`:
+- `unlocked_maps: Array[String]` (só mapas pagos) e `defeated_bosses: Array[String]`.
+- `is_map_unlocked(map_id)` → `unlock_cost <= 0` ou está em `unlocked_maps`.
+- `is_boss_defeated(boss_id)`.
+- `get_map_unlock_block_reason(map_id)` → `""` se pode desbloquear agora; senão o motivo pronto para a UI.
+- `request_unlock_map(map_id)` → o host revalida com `get_map_unlock_block_reason`, debita `unlock_cost`, adiciona a `unlocked_maps` e sincroniza. Resposta em `map_unlock_result` só para quem pediu.
+- `request_report_boss_defeated(boss_id)` → o host aceita só os `boss_id` de `MAP_UNLOCK_BOSSES`, sem duplicar e sem dar dinheiro. O gameplay liga o `boss_defeated` de cada chefe a isso.
+- `map_id` vazio, com `/`, `\` ou `..`, inválido como nome de arquivo ou com `MapData.id` diferente é tratado como mapa desconhecido.
+
+Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado."`, `"Vença o chefe <chefe> primeiro."`, `"Saldo insuficiente para desbloquear <nome> (R$ <custo>)."`, sucesso `"<nome> desbloqueado!"`.
+
+`SessionManager`:
+- `get_available_maps()` ordenado por `MAP_ORDER`.
+- `can_start_map(map_id)` exige `MapData`, mapa desbloqueado, cena e nível do detector.
+- `get_map_status(map_id)` → Dictionary com as chaves sempre presentes: `map_id`, `display_name`, `unlocked`, `has_scene`, `playable` (== `can_start_map`), `unlock_cost`, `required_boss_id`, `required_boss_name` (`""` sem chefe), `boss_defeated` (true sem chefe), `can_unlock` (`get_map_unlock_block_reason == ""`), `reason`.
+- Ordem do `reason`: `"Mapa desconhecido."` → se bloqueado, `get_map_unlock_block_reason` ou `"Desbloqueie por R$ <custo>."` → `"Em breve."` sem cena → `"Requer detector nível <n>."` → `""` (jogável). Id desconhecido devolve todas as chaves vazias/false/0.
+
 ### Vender vs. doar (DiscoveryBridge)
 `BuriedSpot` → `ItemPickup` → mochila (`CarriedItem`) → `SellPoint.deliver()` → `DiscoveryBridge.report_item_found(item, final_value)` → `GameState.request_report_discovery`. O host decide:
 - **Item inédito:** doado ao museu, a equipe recebe `MUSEUM_REWARD_RATIO` (50%) do valor.
 - **Item repetido:** vendido por `final_value` (limitado a `get_max_item_value()` = `base_value × RARE_VALUE_MULTIPLIER × PERFECT_BONUS_MULTIPLIER`, arredondado para cima).
 
 ### Ciclo do `SessionManager`
-1. Host: `request_start_expedition(map_id)` (exige `can_start_map`: nível do detector e cena `res://world/map_<id>.tscn`).
+1. Host: `request_start_expedition(map_id)` (exige `can_start_map`: mapa desbloqueado, nível do detector e cena `res://world/map_<id>.tscn`).
 2. RPC `_rpc_enter_map` → todos trocam de cena (`scene_changing`, `expedition_started`). Quem entra no meio recebe `_rpc_sync_scene`.
 3. Durante a expedição o host junta `item_sold`/`item_donated` no resumo.
 4. Host: `request_end_expedition()` → `advance_day()` → `SaveManager.save_game()` → `_rpc_return_to_lobby(summary)` → `expedition_ended(summary)` em todos.
@@ -89,13 +120,13 @@ Resumo: `{day, map_id, map_name, money_start, money_end, money_earned, entries: 
 
 Rede: ENet, porta `7777`, máx. 4 jogadores (`NetworkManager.host_game` / `join_game` / `disconnect_game`).
 
-## 3. Save (`user://scandig_save.json`, versão 2)
+## 3. Save (`user://scandig_save.json`, versão 3)
 
 ```json
-{ "version": 2, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0 } }
+{ "version": 3, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"] }
 ```
 
-Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
+Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
 
 ## 4. Testes headless (Git Bash)
 
@@ -112,6 +143,7 @@ $G --headless --path . --script res://core/tests/flow_test.gd       # offline: "
 $G --headless --path . --script res://core/tests/upgrade_test.gd    # loja/mochila: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/value_cap_test.gd  # teto de venda/doação: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/purchase_item_test.gd  # ferramentas da Praia: "RESULT fails=0"
+$G --headless --path . --script res://core/tests/map_unlock_test.gd    # progressão de mapas (grava o save): "RESULT fails=0"
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client.gd   # cliente entra a meio: estado igual ao host

@@ -13,6 +13,8 @@ const LOBBY_SCENE: String = "res://world/lobby_base.tscn"
 const MAP_SCENE_FORMAT: String = "res://world/map_%s.tscn"
 const MAPS_DIR: String = "res://items/maps"
 const HOST_PEER_ID: int = 1
+## Ordem de progressão; ids fora da lista vão para o fim, em ordem alfabética.
+const MAP_ORDER: Array[String] = ["praia", "campo", "ruinas", "cratera"]
 
 static var instance: SessionManager = null
 
@@ -59,6 +61,7 @@ func get_available_maps() -> Array[MapData]:
 		var map_data: MapData = ResourceLoader.load("%s/%s" % [MAPS_DIR, clean_name]) as MapData
 		if map_data != null and not map_data.id.is_empty():
 			maps.append(map_data)
+	maps.sort_custom(_compare_map_order)
 	return maps
 
 
@@ -67,9 +70,57 @@ func can_start_map(map_id: String) -> bool:
 	var state: GameState = GameState.instance
 	if map_data == null or state == null:
 		return false
-	if not ResourceLoader.exists(MAP_SCENE_FORMAT % map_id):
+	if not state.is_map_unlocked(map_id) or not ResourceLoader.exists(MAP_SCENE_FORMAT % map_id):
 		return false
 	return map_data.required_detector_level <= state.equipped_detector_level
+
+
+## Tudo o que a UI precisa para uma linha da lista de mapas (chaves sempre presentes).
+func get_map_status(map_id: String) -> Dictionary:
+	var status: Dictionary = {
+		"map_id": map_id,
+		"display_name": "",
+		"unlocked": false,
+		"has_scene": false,
+		"playable": false,
+		"unlock_cost": 0,
+		"required_boss_id": "",
+		"required_boss_name": "",
+		"boss_defeated": false,
+		"can_unlock": false,
+		"reason": "Mapa desconhecido.",
+	}
+	var map_data: MapData = _find_map(map_id)
+	var state: GameState = GameState.instance
+	if map_data == null or state == null:
+		return status
+
+	var boss: Dictionary = GameState.MAP_UNLOCK_BOSSES.get(map_id, {})
+	var boss_id: String = str(boss.get("boss_id", ""))
+	var unlocked: bool = state.is_map_unlocked(map_id)
+	var has_scene: bool = ResourceLoader.exists(MAP_SCENE_FORMAT % map_id)
+	var playable: bool = can_start_map(map_id)
+	var block_reason: String = state.get_map_unlock_block_reason(map_id)
+
+	var reason: String = ""
+	if not unlocked:
+		reason = block_reason if not block_reason.is_empty() else "Desbloqueie por R$ %d." % map_data.unlock_cost
+	elif not has_scene:
+		reason = "Em breve."
+	elif not playable:
+		reason = "Requer detector nível %d." % map_data.required_detector_level
+
+	status["display_name"] = map_data.display_name
+	status["unlocked"] = unlocked
+	status["has_scene"] = has_scene
+	status["playable"] = playable
+	status["unlock_cost"] = map_data.unlock_cost
+	status["required_boss_id"] = boss_id
+	status["required_boss_name"] = str(boss.get("boss_name", ""))
+	status["boss_defeated"] = boss_id.is_empty() or state.is_boss_defeated(boss_id)
+	status["can_unlock"] = block_reason.is_empty()
+	status["reason"] = reason
+	return status
 
 
 func is_in_expedition() -> bool:
@@ -211,6 +262,16 @@ func _change_scene(scene_path: String) -> void:
 		return
 	scene_changing.emit(scene_path)
 	tree.call_deferred(&"change_scene_to_file", scene_path)
+
+
+func _compare_map_order(a: MapData, b: MapData) -> bool:
+	var index_a: int = MAP_ORDER.find(a.id)
+	var index_b: int = MAP_ORDER.find(b.id)
+	if index_a == -1 and index_b == -1:
+		return a.id < b.id
+	if index_a == -1 or index_b == -1:
+		return index_b == -1
+	return index_a < index_b
 
 
 func _find_map(map_id: String) -> MapData:
