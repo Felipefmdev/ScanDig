@@ -1,0 +1,10 @@
+{
+	"scene": "res://world/map_praia.tscn",
+	"steps": [
+		{"t": 0.8, "screenshot": "01_base_3_slots"},
+		{"t": 1.0, "set_state": {"upgrade_levels": {"backpack": 3}}},
+		{"t": 1.5, "screenshot": "02_mochila_6_slots"},
+		{"t": 1.6, "dump": "02_mochila_6_slots"},
+		{"t": 2.0, "quit": true}
+	]
+}

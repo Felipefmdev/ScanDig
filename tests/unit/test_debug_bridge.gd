@@ -119,3 +119,11 @@ func test_invalid_high_level_steps() -> void:
 	for raw: Variant in bad:
 		assert_true(Bridge.parse_step(raw) is String, "deveria falhar: %s" % str(raw))
 	assert_false(Bridge.parse_script({"steps": [], "dump_every": 0})["ok"])
+
+
+func test_set_state() -> void:
+	var ok: Variant = Bridge.parse_step({"t": 0, "set_state": {"upgrade_levels": {"backpack": 3}, "unlocked_maps": ["campo"], "team_money": 5000}})
+	assert_true(ok is Dictionary, str(ok))
+	assert_eq((ok as Dictionary)["state"]["upgrade_levels"], {"backpack": 3})
+	for bad: Variant in [{}, {"current_day": 2}, {"team_money": "x"}, {"upgrade_levels": 3}, {"unlocked_maps": "campo"}]:
+		assert_true(Bridge.parse_step({"t": 0, "set_state": bad}) is String, "deveria falhar: %s" % str(bad))

@@ -130,6 +130,7 @@ func _ready() -> void:
 
 	_setup_threat_hud()
 
+	_apply_backpack_capacity()
 	inventory.inventory_changed.connect(_on_inventory_changed)
 	inventory.selected_slot_changed.connect(_on_selected_slot_changed)
 	hotbar.bind(inventory)
@@ -146,6 +147,7 @@ func _ready() -> void:
 		_tool_view_rest = tool_view.position
 	if GameState.instance != null:
 		GameState.instance.money_changed.connect(_on_team_money_changed)
+		GameState.instance.upgrades_changed.connect(_on_upgrades_changed)
 
 
 func _ensure_default_input_mappings() -> void:
@@ -443,6 +445,20 @@ func _update_session_hud() -> void:
 
 func _on_team_money_changed(_new_amount: int) -> void:
 	_update_session_hud()
+
+
+## Mochila Reforçada: slots = CoreGameState.get_backpack_capacity() (3 a 6).
+## Cada peer lê o seu próprio GameState (o host sincroniza-o por snapshot).
+func _apply_backpack_capacity() -> void:
+	if GameState.instance != null:
+		inventory.capacity = GameState.instance.get_backpack_capacity()
+
+
+## Snapshot tardio (coop) pode trazer o nível da mochila depois do _ready.
+## Só cresce: encolher a meio da expedição deitaria itens fora.
+func _on_upgrades_changed(_levels: Dictionary) -> void:
+	if GameState.instance != null and GameState.instance.get_backpack_capacity() > inventory.capacity:
+		_apply_backpack_capacity()
 
 
 func _get_category_name(cat: int) -> String:

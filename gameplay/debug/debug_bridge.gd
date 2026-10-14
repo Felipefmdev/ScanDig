@@ -9,8 +9,10 @@ const ACTIONS: PackedStringArray = [
 ]
 const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
-	"loop", "dig_spot", "pickup", "goto_sell", "sell",
+	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state",
 ]
+## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
+const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
 ## Passos sem 't' obrigatório (dentro de um loop o tempo absoluto não faz sentido).
 const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop"]
 const CONDITION_VARS: PackedStringArray = [
@@ -238,6 +240,21 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			if value != true:
 				return "'%s' deve ser true" % kind
 			step["timeout"] = timeout
+		"set_state":
+			if not value is Dictionary or (value as Dictionary).is_empty():
+				return "'set_state' deve ser um objeto nao vazio"
+			for key: Variant in value:
+				if not SET_STATE_KEYS.has(str(key)):
+					return "'set_state' nao aceita '%s' (%s)" % [key, ", ".join(SET_STATE_KEYS)]
+			var st: Dictionary = value
+			if st.has("team_money") and not _is_number(st["team_money"]):
+				return "'team_money' deve ser um numero"
+			if st.has("upgrade_levels") and not st["upgrade_levels"] is Dictionary:
+				return "'upgrade_levels' deve ser um objeto"
+			for key: String in ["unlocked_maps", "defeated_bosses"]:
+				if st.has(key) and not st[key] is Array:
+					return "'%s' deve ser uma lista" % key
+			step["state"] = st
 	return step
 
 
@@ -464,6 +481,8 @@ func _execute(step: Dictionary) -> void:
 				await _walk_to(sp.global_position, 1.2, step["timeout"], 0.5)
 		"sell":
 			await _sell(step["timeout"])
+		"set_state":
+			_set_state(step["state"])
 		"screenshot":
 			await _screenshot(step["label"])
 		"dump":
@@ -790,6 +809,24 @@ func _deliverable_count() -> int:
 		if SellPoint.can_deliver(c):
 			n += 1
 	return n
+
+
+## Atalho de debug: funde campos no snapshot do CoreGameState e reaplica-o
+## (emite money_changed/upgrades_changed/progression_changed como um sync normal).
+func _set_state(changes: Dictionary) -> void:
+	var gs: Node = get_node_or_null(^"/root/CoreGameState")
+	if gs == null or not gs.has_method("get_snapshot") or not gs.has_method("apply_snapshot"):
+		_error("set_state: CoreGameState indisponivel")
+		return
+	var snap: Dictionary = gs.call("get_snapshot")
+	for key: String in changes:
+		if key == "upgrade_levels":
+			var levels: Dictionary = snap.get("upgrade_levels", {})
+			levels.merge(changes[key], true)
+			snap[key] = levels
+		else:
+			snap[key] = changes[key]
+	gs.call("apply_snapshot", snap)
 
 
 func _screenshot(label: String) -> void:
