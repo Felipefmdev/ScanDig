@@ -1,0 +1,10 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Godot exports and builds
+/build/
+/bin/
+
+# Maestri spatial workspace state
+.maestri/

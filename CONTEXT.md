@@ -1,0 +1,58 @@
+# ScanDig — Diretrizes do Projeto e Contexto de Arquitetura
+
+## 1. Engine e Linguagem
+- **Engine:** Godot 4.3 Standard (Forward+).
+- **Linguagem:** GDScript 2.0 com **tipagem estática obrigatória** em todas as variáveis, parâmetros de função e retornos.
+  - Exemplo: `var speed: float = 5.0`, `func dig(target_depth: float) -> bool:`.
+- **Proibido usar sintaxe legada do Godot 3:**
+  - NÃO usar `Spatial`, `KinematicBody`, `yield()`, conexões antigas de sinais em string `connect("signal", self, "method")` ou `export var` sem `@`.
+- **Obrigatório usar padrões do Godot 4.3:**
+  - Usar `Node3D`, `CharacterBody3D`.
+  - Usar anotações modernas: `@export`, `@export_range`, `@onready`, `@rpc("any_peer", "call_local")`.
+  - Conexão de sinais tipada via Callable: `signal_name.connect(_on_signal_name)`.
+
+---
+
+## 2. Divisão de Responsabilidades e Permissões de Equipa
+
+| Equipa / Dev | Âmbito de Edição Permitido | Áreas Proibidas |
+| :--- | :--- | :--- |
+| **Dev A** (`Lead_Gameplay`, `Dev_Detector`, `Dev_Player`) | `res://gameplay/` (todos os subdiretórios)<br>`res://world/test_sandbox.tscn`<br>`res://items/` (pasta partilhada) | **PROIBIDO** editar `res://core/` e `res://ui/` |
+| **Dev B** | `res://core/`<br>`res://ui/`<br>`res://items/` (pasta partilhada) | `res://gameplay/` |
+
+---
+
+## 3. Mapeamento de Entradas (Input Map Configurado)
+As seguintes ações de input já estão pré-configuradas no `project.godot`:
+- `move_forward`: Movimento para a frente
+- `move_backward`: Movimento para trás
+- `move_left`: Movimento para a esquerda
+- `move_right`: Movimento para a direita
+- `jump`: Salto
+- `interact`: Interação com objetos/mundo
+- `use_tool`: Ação principal da ferramenta ativa (detetar / escavar)
+- `careful_dig`: Modo de escavação cuidadosa / minuciosa
+
+---
+
+## 4. Estrutura de Diretórios
+```
+res://
+├── core/                  # Dev B: Sistemas centrais, managers globais e autoloads
+├── gameplay/              # Dev A: Gameplay loop
+│   ├── detector/          # Dev_Detector: Detetor de metais, física 3D, áudio procedural
+│   ├── digging/           # Dev_Player / Dev A: Sistema de escavação do terreno
+│   └── player/            # Dev_Player: CharacterBody3D, câmara 1ª pessoa, inventário rápido
+├── items/                 # Partilhada: Definições de itens e catálogo
+│   ├── catalog/           # Recursos .tres de instâncias de itens
+│   └── item_data.gd       # Script base Resource para ItemData
+├── ui/                    # Dev B: Interfaces HUD, menus, feedback visual
+└── world/                 # Cenários e sandbox de testes (ex: test_sandbox.tscn)
+```
+
+---
+
+## 5. Convenções de Código
+1. Scripts sempre com extensão `.gd`. Cenas com extensão `.tscn` formatadas estritamente em texto puro.
+2. Nomes de ficheiros em `snake_case`. Nomes de classes em `PascalCase`.
+3. Sinais definidos no topo dos scripts usando tipos nos argumentos: `signal item_detected(item: ItemData, signal_strength: float)`.
