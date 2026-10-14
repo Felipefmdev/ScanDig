@@ -59,7 +59,7 @@ func _run() -> void:
 	_check(praia["unlocked"] and praia["has_scene"] and praia["playable"] and praia["reason"] == "", "status praia jogável: %s" % str(praia))
 
 	var campo: Dictionary = sm.get_map_status("campo")
-	_check(not campo["unlocked"] and not campo["has_scene"], "status campo bloqueado e sem cena")
+	_check(not campo["unlocked"] and campo["has_scene"] and not campo["playable"], "status campo bloqueado, com cena: %s" % str(campo))
 	_check(campo["required_boss_name"] == "Caranguejo-Rei" and not campo["boss_defeated"], "status campo exige Caranguejo-Rei")
 	_check(campo["reason"] == "Vença o chefe Caranguejo-Rei primeiro.", "status campo reason: %s" % str(campo["reason"]))
 
@@ -94,8 +94,8 @@ func _run() -> void:
 	_check(gs.is_map_unlocked("campo"), "campo desbloqueado")
 
 	campo = sm.get_map_status("campo")
-	_check(campo["unlocked"] and not campo["playable"] and campo["reason"] == "Em breve.", "status campo Em breve: %s" % str(campo["reason"]))
-	_check(not sm.can_start_map("campo"), "can_start_map campo false sem cena")
+	_check(campo["unlocked"] and campo["playable"] and campo["reason"] == "", "status campo jogável: %s" % str(campo["reason"]))
+	_check(sm.can_start_map("campo"), "can_start_map campo true")
 
 	result = await _unlock(gs, "campo")
 	_check(result.get("success", true) == false and result.get("message", "") == "Campo Antigo já está desbloqueado.", "desbloqueio repetido falha: %s" % str(result.get("message", "")))
@@ -110,6 +110,16 @@ func _run() -> void:
 	_check(int(saved.get("version", 0)) == 3, "save versão 3: %s" % str(saved.get("version")))
 	_check(saved.get("unlocked_maps", []) == ["campo"], "save unlocked_maps: %s" % str(saved.get("unlocked_maps")))
 	_check(saved.get("defeated_bosses", []) == ["king_crab"], "save defeated_bosses: %s" % str(saved.get("defeated_bosses")))
+
+	# Ruínas ainda não tem cena: desbloqueada, mas "Em breve".
+	await _report_boss(gs, "giant_mole")
+	gs.load_snapshot({"team_money": 8000})
+	result = await _unlock(gs, "ruinas")
+	_check(result.get("success", false) == true and result.get("message", "") == "Ruínas desbloqueado!", "desbloqueio ruinas ok: %s" % str(result.get("message", "")))
+	var ruinas: Dictionary = sm.get_map_status("ruinas")
+	_check(ruinas["unlocked"] and not ruinas["has_scene"] and not ruinas["playable"], "status ruinas desbloqueada e sem cena: %s" % str(ruinas))
+	_check(ruinas["reason"] == "Em breve.", "status ruinas Em breve: %s" % str(ruinas["reason"]))
+	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem cena")
 
 	gs.reset_state()
 	gs.load_snapshot({"team_money": 300, "current_day": 4, "discovered_items": [], "upgrade_levels": {"detector": 1}})

@@ -59,8 +59,21 @@ func _run() -> void:
 	await _wait(5)
 	_check(feedback.text == "Campo Antigo desbloqueado!", "feedback: %s" % feedback.text)
 	_check(not unlock_btn.visible, "desbloquear oculto após compra")
-	_check(map_list.get_item_text(1).contains("Em breve"), "item 1 em breve: %s" % map_list.get_item_text(1))
-	_check(depart_btn.disabled and depart_btn.tooltip_text == "Em breve.", "partir bloqueado: %s" % depart_btn.tooltip_text)
+	_check(map_list.get_item_text(1).begins_with("✔ Campo Antigo"), "item 1 jogável: %s" % map_list.get_item_text(1))
+	_select_map(map_list, 1)
+	_check(not depart_btn.disabled, "partir habilitado no Campo: %s" % depart_btn.tooltip_text)
+
+	# Ruínas ainda não tem cena: desbloqueada, mas "Em breve".
+	gs.request_report_boss_defeated("giant_mole")
+	gs.load_snapshot({"team_money": 8000})
+	await _wait(3)
+	_select_map(map_list, 2)
+	_check(unlock_btn.visible and not unlock_btn.disabled, "desbloquear habilitado nas Ruínas: %s" % unlock_btn.tooltip_text)
+	unlock_btn.pressed.emit()
+	await _wait(5)
+	_check(feedback.text == "Ruínas desbloqueado!", "feedback ruínas: %s" % feedback.text)
+	_check(map_list.get_item_text(2).contains("Em breve"), "item 2 em breve: %s" % map_list.get_item_text(2))
+	_check(depart_btn.disabled and depart_btn.tooltip_text == "Em breve.", "partir bloqueado nas Ruínas: %s" % depart_btn.tooltip_text)
 
 	_select_map(map_list, 0)
 	_check(not depart_btn.disabled, "partir habilitado na Praia: %s" % depart_btn.tooltip_text)
