@@ -45,13 +45,25 @@ Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
 Após cada mudança o host envia a todos `_receive_snapshot` com:
 
 ```
-{ "team_money": int, "current_day": int, "discovered_items": Array[String], "upgrade_levels": { "detector": int, "pinpointer": int, "shovel": int } }
+{ "team_money": int, "current_day": int, "discovered_items": Array[String], "upgrade_levels": { "detector": int, "pinpointer": int, "shovel": int, "backpack": int } }
 ```
 
 Quem entra recebe o snapshot em `peer_connected` (e o cliente pede de novo com `_request_full_state`). `apply_snapshot` valida tipos e limita níveis.
 
 ### Loja (`GameState.UPGRADES`)
-`detector` 3 níveis (300 / 600 / 1200) · `pinpointer` 1 nível (500) · `shovel` 1 nível (800). `get_next_upgrade_cost` devolve -1 no máximo. `equipped_detector_level = 1 + nível do detector` (lido pelo `MetalDetector`).
+| Upgrade | Nome | Custos | Nível máx. |
+| :--- | :--- | :--- | :--- |
+| `detector` | Detector | 300 / 600 / 1200 | 3 |
+| `pinpointer` | Pinpointer de Precisão | 500 | 1 |
+| `shovel` | Pá de Fibra | 800 | 1 |
+| `backpack` | Mochila Reforçada | 400 / 800 / 1600 | 3 |
+
+`get_next_upgrade_cost` devolve -1 no máximo. `equipped_detector_level = 1 + nível do detector` (lido pelo `MetalDetector`).
+
+Consultas de equipamento (só leitura, qualquer peer; clientes leem o valor do snapshot):
+- `get_backpack_capacity()` → `BASE_BACKPACK_CAPACITY` (3) + nível de `backpack` (3 a 6).
+- `get_shovel_level()` → 1 + nível de `shovel` (escala do `player.shovel_level`; 1 = pá básica).
+- `has_pinpointer()` → nível de `pinpointer` > 0.
 
 ### Vender vs. doar (DiscoveryBridge)
 `BuriedSpot` → `ItemPickup` → mochila (`CarriedItem`) → `SellPoint.deliver()` → `DiscoveryBridge.report_item_found(item, final_value)` → `GameState.request_report_discovery`. O host decide:
@@ -75,7 +87,7 @@ Rede: ENet, porta `7777`, máx. 4 jogadores (`NetworkManager.host_game` / `join_
 { "version": 2, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0 } }
 ```
 
-Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
+Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
 
 ## 4. Testes headless (Git Bash)
 
@@ -89,6 +101,7 @@ timeout 300 $G --headless --path . --editor --quit-after 600 >/dev/null 2>&1   #
 
 timeout 240 $G --headless --path . -s addons/gut/gut_cmdln.gd       # GUT: "All tests passed!"
 $G --headless --path . --script res://core/tests/flow_test.gd       # offline: "RESULT fails=0"
+$G --headless --path . --script res://core/tests/upgrade_test.gd    # loja/mochila: "RESULT fails=0"
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client.gd   # cliente entra a meio: estado igual ao host

@@ -16,12 +16,15 @@ signal state_synced()
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
 const MUSEUM_REWARD_RATIO: float = 0.5
+## Espaços da mochila sem nenhum upgrade.
+const BASE_BACKPACK_CAPACITY: int = 3
 
 ## Definição da loja: custo de cada nível e nível máximo.
 const UPGRADES: Dictionary = {
 	"detector": {"name": "Detector", "costs": [300, 600, 1200], "max_level": 3},
 	"pinpointer": {"name": "Pinpointer de Precisão", "costs": [500], "max_level": 1},
 	"shovel": {"name": "Pá de Fibra", "costs": [800], "max_level": 1},
+	"backpack": {"name": "Mochila Reforçada", "costs": [400, 800, 1600], "max_level": 3},
 }
 
 static var instance: GameState = null
@@ -76,6 +79,20 @@ func get_next_upgrade_cost(upgrade_id: String) -> int:
 	if level >= costs.size() or level >= get_upgrade_max_level(upgrade_id):
 		return -1
 	return int(costs[level])
+
+
+## Espaços da mochila: 3 (sem upgrade) a 6.
+func get_backpack_capacity() -> int:
+	return BASE_BACKPACK_CAPACITY + get_upgrade_level("backpack")
+
+
+## Nível da pá na escala do player.shovel_level: 1 = pá básica.
+func get_shovel_level() -> int:
+	return 1 + get_upgrade_level("shovel")
+
+
+func has_pinpointer() -> bool:
+	return get_upgrade_level("pinpointer") > 0
 
 
 func is_authority() -> bool:
