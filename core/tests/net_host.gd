@@ -15,7 +15,7 @@ func _run() -> void:
 	while NetworkManager.instance.connected_players.size() < 2 and t < 15.0:
 		await _w(0.5); t += 0.5
 	print("HOST players=", NetworkManager.instance.connected_players.size())
-	await _w(2.0)
+	await _w(4.0)
 	GameState.instance.request_report_discovery("alianca_ouro", 400)
 	await _w(1.0)
 	SessionManager.instance.request_end_expedition()
