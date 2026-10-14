@@ -1,0 +1,124 @@
+[gd_scene load_steps=2 format=3 uid="uid://d3basestationscandig01"]
+
+[ext_resource type="Script" path="res://ui/base_station_ui.gd" id="1_base_ui"]
+
+[node name="BaseStationUI" type="Control"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -210.0
+offset_right = 270.0
+offset_bottom = 210.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_base_ui")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Base de Operações — Tenda de Pesquisa"
+horizontal_alignment = 1
+
+[node name="TabContainer" type="TabContainer" parent="PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Loja de Equipamentos" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+metadata/_tab_index = 0
+
+[node name="ShopInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
+layout_mode = 2
+text = "Melhorias de ferramentas para a equipe (custo debitado do saldo comum):"
+
+[node name="BuyDetectorButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Comprar Detector Nível 2 (R$ 300)"
+
+[node name="BuyPinpointerButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Comprar Pinpointer de Precisão (R$ 500)"
+
+[node name="BuyShovelButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Comprar Pá de Fibra (R$ 800)"
+
+[node name="ShopFeedbackLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Museu de Achados" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
+metadata/_tab_index = 1
+
+[node name="MuseumInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+layout_mode = 2
+text = "Catálogo de Relíquias e Descobertas:"
+
+[node name="MuseumItemList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SimSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+layout_mode = 2
+
+[node name="SimLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+layout_mode = 2
+text = "Simulação de Achado em Campo (Testes Dev B):"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ItemSelectBox" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SellItemButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Vender Item"
+
+[node name="RegisterItemButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Doar ao Museu"
+
+[node name="MuseumFeedbackLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
