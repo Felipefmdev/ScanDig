@@ -1,0 +1,70 @@
+# Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://ui/tests/expedition_tab_test.gd
+extends SceneTree
+
+var _fails: int = 0
+
+func _check(cond: bool, msg: String) -> void:
+	print(("PASS " if cond else "FAIL ") + msg)
+	if not cond:
+		_fails += 1
+
+func _wait(frames: int) -> void:
+	for i in range(frames):
+		await process_frame
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+func _select_map(map_list: ItemList, idx: int) -> void:
+	map_list.select(idx)
+	map_list.item_selected.emit(idx)
+
+func _run() -> void:
+	change_scene_to_file("res://world/lobby_base.tscn")
+	await _wait(10)
+	var gs: GameState = GameState.instance
+	_check(gs != null, "GameState presente")
+	var ui: BaseStationUI = current_scene.get_node("UILayer/BaseStationUI") as BaseStationUI
+	_check(ui != null, "BaseStationUI presente")
+	if gs == null or ui == null:
+		print("RESULT fails=%d" % _fails)
+		quit(_fails)
+		return
+
+	var map_list: ItemList = ui.map_list
+	var unlock_btn: Button = ui.unlock_map_btn
+	var depart_btn: Button = ui.depart_btn
+	var feedback: Label = ui.expedition_feedback_label
+	_check(unlock_btn != null, "UnlockMapButton presente")
+
+	gs.load_snapshot({"team_money": 2500, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
+	await _wait(3)
+
+	_check(map_list.item_count == 4, "4 mapas na lista: %d" % map_list.item_count)
+	_check(map_list.get_item_text(0).begins_with("✔ Praia"), "item 0 jogável: %s" % map_list.get_item_text(0))
+	var row1: String = map_list.get_item_text(1)
+	_check(row1.contains("🔒 Campo Antigo") and row1.contains("Caranguejo-Rei"), "item 1 bloqueado: %s" % row1)
+
+	_select_map(map_list, 1)
+	_check(unlock_btn.visible, "desbloquear visível no Campo")
+	_check(unlock_btn.disabled, "desbloquear desabilitado sem chefe: %s" % unlock_btn.tooltip_text)
+	_check(depart_btn.disabled, "partir desabilitado no Campo bloqueado")
+
+	gs.request_report_boss_defeated("king_crab")
+	await _wait(3)
+	_check(not unlock_btn.disabled, "desbloquear habilitado após chefe")
+	_check(unlock_btn.text == "Desbloquear Campo Antigo (R$ 2000)", "texto do botão: %s" % unlock_btn.text)
+
+	unlock_btn.pressed.emit()
+	await _wait(5)
+	_check(feedback.text == "Campo Antigo desbloqueado!", "feedback: %s" % feedback.text)
+	_check(not unlock_btn.visible, "desbloquear oculto após compra")
+	_check(map_list.get_item_text(1).contains("Em breve"), "item 1 em breve: %s" % map_list.get_item_text(1))
+	_check(depart_btn.disabled and depart_btn.tooltip_text == "Em breve.", "partir bloqueado: %s" % depart_btn.tooltip_text)
+
+	_select_map(map_list, 0)
+	_check(not depart_btn.disabled, "partir habilitado na Praia: %s" % depart_btn.tooltip_text)
+
+	gs.reset_state()
+	print("RESULT fails=%d" % _fails)
+	quit(_fails)

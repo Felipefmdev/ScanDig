@@ -21,6 +21,7 @@ extends Control
 
 # Expedições
 @onready var map_list: ItemList = _resolve_node("MapList", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapList") as ItemList
+@onready var unlock_map_btn: Button = _resolve_node("UnlockMapButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/UnlockMapButton") as Button
 @onready var depart_btn: Button = _resolve_node("DepartButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/DepartButton") as Button
 @onready var expedition_feedback_label: Label = _resolve_node("ExpeditionFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/ExpeditionFeedbackLabel") as Label
 
@@ -43,6 +44,11 @@ const WAITING_GAME_STATE_TOOLTIP: String = "Aguardando conexão com o estado do 
 const PURCHASE_TIMEOUT_SEC: float = 5.0
 
 var _purchase_timer: SceneTreeTimer = null
+var _pending_unlock: bool = false
+var _unlock_timer: SceneTreeTimer = null
+
+## Cor das linhas de mapas que ainda não podem ser jogados.
+const MAP_LOCKED_COLOR: Color = Color(0.6, 0.6, 0.6)
 
 
 func _resolve_node(unique_id: String, rel_path: String) -> Node:
@@ -66,17 +72,19 @@ func _ready() -> void:
 
 func _setup_expeditions() -> void:
 	_session = get_node_or_null(SESSION_PATH)
-	var refresh_one_arg: Callable = _refresh_depart_button.unbind(1)
+	var refresh_one_arg: Callable = _refresh_expedition_buttons.unbind(1)
 	if map_list != null:
 		map_list.item_selected.connect(refresh_one_arg)
+	if unlock_map_btn != null:
+		unlock_map_btn.pressed.connect(_on_unlock_map_pressed)
 	if depart_btn != null:
 		depart_btn.pressed.connect(_on_depart_pressed)
 	if _session != null:
 		for sig: StringName in [&"expedition_started", &"expedition_ended", &"scene_changing"]:
 			if _session.has_signal(sig):
 				_session.connect(sig, refresh_one_arg)
-	multiplayer.connected_to_server.connect(_refresh_depart_button)
-	multiplayer.server_disconnected.connect(_refresh_depart_button)
+	multiplayer.connected_to_server.connect(_refresh_expedition_buttons)
+	multiplayer.server_disconnected.connect(_refresh_expedition_buttons)
 	multiplayer.peer_connected.connect(refresh_one_arg)
 	_refresh_map_list()
 
@@ -99,18 +107,55 @@ func _refresh_map_list() -> void:
 	var previous: int = map_list.get_selected_items()[0] if map_list.is_anything_selected() else 0
 	map_list.clear()
 	for map: MapData in _maps:
-		map_list.add_item("%s  •  Detector nível %d  •  %d pontos" % [_map_name(map), map.required_detector_level, map.spot_count])
+		var status: Dictionary = _get_map_status(map)
+		if status.is_empty():
+			# Core sem progressão de mapas: linha antiga.
+			map_list.add_item(_format_map_details(map))
+			continue
+		var idx: int = map_list.add_item(_format_map_row(map, status))
+		map_list.set_item_tooltip(idx, str(status.get("reason", "")))
+		if not bool(status.get("playable", false)):
+			# Continua selecionável para o jogador ver o motivo e poder desbloquear.
+			map_list.set_item_custom_fg_color(idx, MAP_LOCKED_COLOR)
 	if not _maps.is_empty():
 		map_list.select(clampi(previous, 0, _maps.size() - 1))
 	elif _session == null:
 		_set_expedition_feedback("Sistema de expedições indisponível.")
 	else:
 		_set_expedition_feedback("Nenhum mapa disponível.")
-	_refresh_depart_button()
+	_refresh_expedition_buttons()
 
 
 func _map_name(map: MapData) -> String:
 	return map.display_name if not map.display_name.is_empty() else map.id
+
+
+func _format_map_details(map: MapData) -> String:
+	return "%s  •  Detector nível %d  •  %d pontos" % [_map_name(map), map.required_detector_level, map.spot_count]
+
+
+func _format_map_row(map: MapData, status: Dictionary) -> String:
+	if bool(status.get("playable", false)):
+		return "✔ " + _format_map_details(map)
+	if not bool(status.get("unlocked", false)):
+		var row: String = "🔒 %s  •  R$ %d" % [_map_name(map), int(status.get("unlock_cost", 0))]
+		var boss_name: String = str(status.get("required_boss_name", ""))
+		if not boss_name.is_empty():
+			row += "  •  Chefe: %s" % boss_name
+			if bool(status.get("boss_defeated", false)):
+				row += " ✔"
+		return row
+	if not bool(status.get("has_scene", false)):
+		return "%s  •  Em breve" % _map_name(map)
+	return _format_map_details(map)
+
+
+## Status de progressão do mapa vindo do core, ou {} se o core não suporta.
+func _get_map_status(map: MapData) -> Dictionary:
+	if map == null:
+		return {}
+	var result: Variant = _session_call(&"get_map_status", [map.id], {})
+	return result as Dictionary if result is Dictionary else {}
 
 
 func _get_selected_map() -> MapData:
@@ -136,9 +181,74 @@ func _get_depart_block_reason(map: MapData) -> String:
 		return "Já existe uma expedição em andamento."
 	if not _is_host():
 		return "Apenas o host pode iniciar a expedição."
+	var status: Dictionary = _get_map_status(map)
+	if not status.is_empty():
+		return str(status.get("reason", ""))
 	if not bool(_session_call(&"can_start_map", [map.id], false)):
 		return "Requer detector nível %d." % map.required_detector_level
 	return ""
+
+
+func _refresh_expedition_buttons() -> void:
+	_refresh_unlock_button()
+	_refresh_depart_button()
+
+
+func _can_request_unlock() -> bool:
+	return _game_state != null and _game_state.has_method(&"request_unlock_map")
+
+
+func _refresh_unlock_button() -> void:
+	if unlock_map_btn == null:
+		return
+	var map: MapData = _get_selected_map()
+	var status: Dictionary = _get_map_status(map)
+	if status.is_empty() or bool(status.get("unlocked", true)) or not _can_request_unlock():
+		unlock_map_btn.visible = false
+		return
+	unlock_map_btn.visible = true
+	unlock_map_btn.text = "Desbloquear %s (R$ %d)" % [_map_name(map), int(status.get("unlock_cost", 0))]
+	unlock_map_btn.disabled = _pending_unlock or not bool(status.get("can_unlock", false))
+	unlock_map_btn.tooltip_text = str(status.get("reason", "")) if unlock_map_btn.disabled else ""
+
+
+func _on_unlock_map_pressed() -> void:
+	var map: MapData = _get_selected_map()
+	if map == null or _pending_unlock or not _can_request_unlock():
+		return
+	var status: Dictionary = _get_map_status(map)
+	if not bool(status.get("can_unlock", false)):
+		_set_expedition_feedback(str(status.get("reason", "")))
+		return
+	# Qualquer peer pode desbloquear; a resposta chega por map_unlock_result.
+	_pending_unlock = true
+	_refresh_unlock_button()
+	_set_expedition_feedback("Processando desbloqueio...")
+	var timer: SceneTreeTimer = get_tree().create_timer(PURCHASE_TIMEOUT_SEC)
+	_unlock_timer = timer
+	timer.timeout.connect(_on_unlock_timeout.bind(timer))
+	_game_state.call(&"request_unlock_map", map.id)
+
+
+func _on_unlock_timeout(timer: SceneTreeTimer) -> void:
+	# Ignora timers de desbloqueios anteriores já respondidos.
+	if not _pending_unlock or timer != _unlock_timer:
+		return
+	_pending_unlock = false
+	_unlock_timer = null
+	_set_expedition_feedback("Sem resposta do host. Tente novamente.")
+	_refresh_unlock_button()
+
+
+func _on_map_unlock_result(_map_id: String, _success: bool, message: String) -> void:
+	_pending_unlock = false
+	_unlock_timer = null
+	_set_expedition_feedback(message)
+	_refresh_map_list()
+
+
+func _on_progression_changed(_unlocked_maps: Array, _defeated_bosses: Array) -> void:
+	_refresh_map_list()
 
 
 func _refresh_depart_button() -> void:
@@ -186,9 +296,17 @@ func _resolve_game_state() -> void:
 			_game_state.upgrades_changed.connect(_on_upgrades_changed)
 		if not _game_state.purchase_result.is_connected(_on_purchase_result):
 			_game_state.purchase_result.connect(_on_purchase_result)
+		# Sinais da progressão de mapas: podem não existir em um core antigo.
+		_connect_game_state_signal(&"map_unlock_result", _on_map_unlock_result)
+		_connect_game_state_signal(&"progression_changed", _on_progression_changed)
 	
 	_refresh_museum_display()
 	_refresh_shop_buttons()
+
+
+func _connect_game_state_signal(signal_name: StringName, callable: Callable) -> void:
+	if _game_state.has_signal(signal_name) and not _game_state.is_connected(signal_name, callable):
+		_game_state.connect(signal_name, callable)
 
 
 func _load_catalog() -> void:
@@ -337,7 +455,7 @@ func _on_purchase_result(_upgrade_id: String, _success: bool, message: String) -
 func _on_upgrades_changed(_levels: Dictionary) -> void:
 	_refresh_shop_buttons()
 	# Nível do detector mudou: mapas podem ter sido liberados.
-	_refresh_depart_button()
+	_refresh_map_list()
 
 
 func _on_sell_test_pressed() -> void:
@@ -388,8 +506,9 @@ func _refresh_museum_display() -> void:
 
 
 func _on_state_updated(_amount: int) -> void:
-	# Saldo mudou: reavalia quais upgrades estão acessíveis.
+	# Saldo mudou: reavalia quais upgrades e desbloqueios de mapa estão acessíveis.
 	_refresh_shop_buttons()
+	_refresh_map_list()
 
 
 func _on_collection_updated(_total_found: int, _max_items: int) -> void:
