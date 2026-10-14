@@ -9,6 +9,7 @@ extends Control
 @onready var buy_detector_btn: Button = _resolve_node("BuyDetectorButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/BuyDetectorButton") as Button
 @onready var buy_pinpointer_btn: Button = _resolve_node("BuyPinpointerButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/BuyPinpointerButton") as Button
 @onready var buy_shovel_btn: Button = _resolve_node("BuyShovelButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/BuyShovelButton") as Button
+@onready var buy_backpack_btn: Button = _resolve_node("BuyBackpackButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/BuyBackpackButton") as Button
 @onready var shop_feedback_label: Label = _resolve_node("ShopFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/ShopFeedbackLabel") as Label
 
 # Museu
@@ -32,7 +33,12 @@ var _game_state: GameState = null
 var _catalog_items: Array[ItemData] = []
 var _pending_purchase: bool = false
 
-const SHOP_BUTTONS: Array[String] = ["detector", "pinpointer", "shovel"]
+const SHOP_BUTTONS: Array[String] = ["detector", "pinpointer", "shovel", "backpack"]
+## Capacidade base da mochila usada quando o GameState ainda não define
+## BASE_BACKPACK_CAPACITY (core antigo). Lida via mapa de constantes para não
+## quebrar a análise estática enquanto a constante não existir.
+const DEFAULT_BACKPACK_BASE: int = 3
+const WAITING_GAME_STATE_TOOLTIP: String = "Aguardando conexão com o estado do jogo..."
 ## Tempo máximo aguardando purchase_result antes de liberar os botões novamente.
 const PURCHASE_TIMEOUT_SEC: float = 5.0
 
@@ -164,8 +170,8 @@ func _set_expedition_feedback(msg: String) -> void:
 func _resolve_game_state() -> void:
 	if GameState.instance != null:
 		_game_state = GameState.instance
-	elif get_tree().root.has_node("GameState"):
-		_game_state = get_tree().root.get_node("GameState") as GameState
+	elif get_tree().root.has_node("CoreGameState"):
+		_game_state = get_tree().root.get_node("CoreGameState") as GameState
 	
 	if _game_state != null:
 		if not _game_state.money_changed.is_connected(_on_state_updated):
@@ -225,16 +231,39 @@ func _get_shop_button(upgrade_id: String) -> Button:
 			return buy_pinpointer_btn
 		"shovel":
 			return buy_shovel_btn
+		"backpack":
+			return buy_backpack_btn
 	return null
+
+
+func _get_backpack_base() -> int:
+	if _game_state != null:
+		var script: Script = _game_state.get_script() as Script
+		if script != null:
+			var constants: Dictionary = script.get_script_constant_map()
+			if constants.has("BASE_BACKPACK_CAPACITY"):
+				return int(constants["BASE_BACKPACK_CAPACITY"])
+	return DEFAULT_BACKPACK_BASE
 
 
 func _refresh_shop_buttons() -> void:
 	if _game_state == null:
+		# Core ainda carregando: nada clicável até o GameState chegar.
+		for upgrade_id: String in SHOP_BUTTONS:
+			var waiting_btn: Button = _get_shop_button(upgrade_id)
+			if waiting_btn != null:
+				waiting_btn.disabled = true
+				waiting_btn.tooltip_text = WAITING_GAME_STATE_TOOLTIP
 		return
 	for upgrade_id: String in SHOP_BUTTONS:
 		var btn: Button = _get_shop_button(upgrade_id)
 		if btn == null:
 			continue
+		if not GameState.UPGRADES.has(upgrade_id):
+			# Upgrade ainda não existe no core em execução.
+			btn.visible = false
+			continue
+		btn.visible = true
 		var display_name: String = GameState.UPGRADES[upgrade_id]["name"]
 		var level: int = _game_state.get_upgrade_level(upgrade_id)
 		var max_level: int = _game_state.get_upgrade_max_level(upgrade_id)
@@ -248,7 +277,13 @@ NÍVEL MÁXIMO" % [display_name, level, max_level]
 			var affordable: bool = _game_state.team_money >= cost
 			btn.text = "%s  •  Nível %d/%d
 Comprar nível %d — R$ %d" % [display_name, level, max_level, level + 1, cost]
-			btn.tooltip_text = "" if affordable else "Saldo insuficiente (R$ %d)." % _game_state.team_money
+			if not affordable:
+				btn.tooltip_text = "Saldo insuficiente (R$ %d)." % _game_state.team_money
+			elif upgrade_id == "backpack":
+				var base: int = _get_backpack_base()
+				btn.tooltip_text = "Mochila: %d → %d espaços" % [base + level, base + level + 1]
+			else:
+				btn.tooltip_text = ""
 			btn.disabled = _pending_purchase or not affordable
 
 

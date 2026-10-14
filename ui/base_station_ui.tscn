@@ -87,6 +87,16 @@ alignment = 0
 text_overrun_behavior = 3
 clip_text = true
 
+[node name="BuyBackpackButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "Mochila Reforçada  •  Nível 0/3
+Comprar nível 1 — R$ 400"
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+
 [node name="ShopFeedbackLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
 unique_name_in_owner = true
 layout_mode = 2
