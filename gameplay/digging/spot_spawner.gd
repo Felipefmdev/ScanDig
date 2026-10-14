@@ -22,7 +22,8 @@ const MAX_PLACEMENT_ATTEMPTS: int = 30
 ## Ângulo máximo do terreno (dunas) onde um spot pode nascer.
 @export_range(0.0, 60.0) var max_slope_degrees: float = 25.0
 ## Camadas de física consideradas "chão" no raycast de colocação.
-@export_flags_3d_physics var ground_mask: int = 1
+## layer 6: blockers so para o spawner
+@export_flags_3d_physics var ground_mask: int = 33
 
 var _active_spots: Array[BuriedSpot] = []
 

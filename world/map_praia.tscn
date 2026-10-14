@@ -1,4 +1,4 @@
-[gd_scene load_steps=70 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=71 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -126,6 +126,10 @@ size = Vector3(0.62, 0.45, 0.76)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_shop_counter"]
 size = Vector3(3.1, 0.54, 0.9)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_boss_arena_blocker"]
+height = 1.0
+radius = 8.0
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_shop_blocker"]
 size = Vector3(4.5, 0.3, 3.5)
@@ -931,3 +935,12 @@ script = ExtResource("d_detector_spawn")
 [node name="BossAltar" type="Area3D" parent="."]
 transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, -22, 0, -22)
 script = ExtResource("b_boss_altar")
+
+[node name="BossArenaSpotBlocker" type="StaticBody3D" parent="." groups=["spot_blockers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -22)
+collision_layer = 32
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="BossArenaSpotBlocker"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("CylinderShape3D_boss_arena_blocker")
