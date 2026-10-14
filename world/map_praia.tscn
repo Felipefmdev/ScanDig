@@ -1,0 +1,187 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
+[ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
+[ext_resource type="Resource" path="res://items/maps/praia.tres" id="3_praia"]
+[ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
+[ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sunset"]
+sky_top_color = Color(0.32, 0.4, 0.62, 1)
+sky_horizon_color = Color(0.98, 0.66, 0.42, 1)
+sky_curve = 0.12
+ground_bottom_color = Color(0.3, 0.24, 0.2, 1)
+ground_horizon_color = Color(0.98, 0.66, 0.42, 1)
+sun_angle_max = 20.0
+sun_curve = 0.08
+
+[sub_resource type="Sky" id="Sky_sunset"]
+sky_material = SubResource("ProceduralSkyMaterial_sunset")
+
+[sub_resource type="Environment" id="Environment_praia"]
+background_mode = 2
+sky = SubResource("Sky_sunset")
+ambient_light_source = 3
+ambient_light_energy = 0.8
+tonemap_mode = 2
+glow_enabled = true
+fog_enabled = true
+fog_light_color = Color(0.92, 0.7, 0.52, 1)
+fog_density = 0.006
+fog_sky_affect = 0.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sand"]
+albedo_color = Color(0.89, 0.78, 0.56, 1)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wet_sand"]
+albedo_color = Color(0.62, 0.52, 0.38, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dune"]
+albedo_color = Color(0.93, 0.82, 0.6, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rock"]
+albedo_color = Color(0.42, 0.4, 0.38, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_water"]
+transparency = 1
+albedo_color = Color(0.12, 0.42, 0.55, 0.78)
+metallic = 0.3
+roughness = 0.08
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_water"]
+material = SubResource("StandardMaterial3D_water")
+size = Vector2(60, 80)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_x"]
+size = Vector3(1, 6, 62)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_z"]
+size = Vector3(62, 6, 1)
+
+[node name="MapPraia" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_praia")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.34202, 0, 0.939693, 0.259014, 0.961262, 0.0942735, -0.903291, 0.275637, -0.328771, 0, 20, 0)
+light_color = Color(1, 0.74, 0.5, 1)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="Terrain" type="Node3D" parent="."]
+
+[node name="Ground" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+size = Vector3(60, 1, 60)
+material = SubResource("StandardMaterial3D_sand")
+
+[node name="WetSand" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0.005, 0)
+size = Vector3(4, 0.01, 60)
+material = SubResource("StandardMaterial3D_wet_sand")
+
+[node name="Dune1" type="CSGSphere3D" parent="Terrain"]
+transform = Transform3D(5.19615, 0, -3, 0, 1, 0, 1.75, 0, 3.03109, -14, -0.4, -12)
+use_collision = true
+radial_segments = 24
+rings = 12
+material = SubResource("StandardMaterial3D_dune")
+
+[node name="Dune2" type="CSGSphere3D" parent="Terrain"]
+transform = Transform3D(3.21394, 0, 3.83022, 0, 1, 0, -3.06418, 0, 2.57115, -18, -0.45, 10)
+use_collision = true
+radial_segments = 24
+rings = 12
+material = SubResource("StandardMaterial3D_dune")
+
+[node name="Dune3" type="CSGSphere3D" parent="Terrain"]
+transform = Transform3D(1.21554, 0, -6.89365, 0, 1, 0, 2.95442, 0, 0.520945, 6, -0.5, 18)
+use_collision = true
+radial_segments = 24
+rings = 12
+material = SubResource("StandardMaterial3D_dune")
+
+[node name="Rock1" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
+transform = Transform3D(1.25822, 0.288244, -0.542022, -0.11781, 0.871766, 0.19012, 0.460356, -0.15309, 0.987236, 8, 0.2, -9)
+use_collision = true
+radius = 0.9
+radial_segments = 7
+rings = 4
+material = SubResource("StandardMaterial3D_rock")
+
+[node name="Rock2" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
+transform = Transform3D(0.353881, -0.172697, -0.919209, -0.0485436, 1.27324, -0.257899, 0.747636, 0.0836228, 0.272117, -6, 0.3, 5)
+use_collision = true
+radius = 0.8
+radial_segments = 6
+rings = 4
+material = SubResource("StandardMaterial3D_rock")
+
+[node name="Rock3" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
+transform = Transform3D(-1.3319, 0.465874, -1.11759, 0.138787, 0.676148, 0.116456, 0.771345, 0, -0.919253, 15, 0.15, 6)
+use_collision = true
+radius = 1.0
+radial_segments = 8
+rings = 4
+material = SubResource("StandardMaterial3D_rock")
+
+[node name="Rock4" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
+transform = Transform3D(1.25822, 0.288244, -0.542022, -0.11781, 0.871766, 0.19012, 0.460356, -0.15309, 0.987236, 22, 0.1, -18)
+use_collision = true
+radius = 0.7
+radial_segments = 6
+rings = 4
+material = SubResource("StandardMaterial3D_rock")
+
+[node name="Rock5" type="CSGSphere3D" parent="Terrain" groups=["spot_blockers"]]
+transform = Transform3D(0.353881, -0.172697, -0.919209, -0.0485436, 1.27324, -0.257899, 0.747636, 0.0836228, 0.272117, -22, 0.25, -3)
+use_collision = true
+radius = 0.85
+radial_segments = 7
+rings = 4
+material = SubResource("StandardMaterial3D_rock")
+
+[node name="Sea" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, -0.15, 0)
+cast_shadow = 0
+mesh = SubResource("PlaneMesh_water")
+
+[node name="Bounds" type="StaticBody3D" parent="."]
+
+[node name="WallEast" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.5, 2.5, 0)
+shape = SubResource("BoxShape3D_wall_x")
+
+[node name="WallWest" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30.5, 2.5, 0)
+shape = SubResource("BoxShape3D_wall_x")
+
+[node name="WallNorth" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -30.5)
+shape = SubResource("BoxShape3D_wall_z")
+
+[node name="WallSouth" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 30.5)
+shape = SubResource("BoxShape3D_wall_z")
+
+[node name="DisturbanceMeter" type="Node" parent="."]
+script = ExtResource("2_disturbance")
+map_data = ExtResource("3_praia")
+
+[node name="SpotSpawner" type="Node3D" parent="."]
+script = ExtResource("4_spawner")
+map_data = ExtResource("3_praia")
+area_size = Vector2(50, 50)
+
+[node name="EnemySpawner" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 0)
+script = ExtResource("5_enemy_spawner")
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)

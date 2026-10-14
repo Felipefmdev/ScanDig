@@ -70,6 +70,7 @@ var session_items_count: int = 0
 
 
 func _ready() -> void:
+	add_to_group("player")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_ensure_default_input_mappings()
 	_update_session_hud()
