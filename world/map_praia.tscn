@@ -1,4 +1,4 @@
-[gd_scene load_steps=67 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=68 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -35,6 +35,7 @@
 [ext_resource type="Resource" path="res://items/tools/repelente.tres" id="11_tool_repelente"]
 [ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="11_tool_armadilha_rede"]
 [ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="11_tool_kit_medico"]
+[ext_resource type="Script" path="res://gameplay/enemies/boss/boss_altar.gd" id="b_boss_altar"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sunset"]
 sky_top_color = Color(0.32, 0.4, 0.62, 1)
@@ -280,7 +281,7 @@ transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
 [node name="Palms" type="Node3D" parent="Decor"]
 
 [node name="Palm1" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
-transform = Transform3D(-0.97824, 0, -0.2075, 0, 1, 0, 0.2075, 0, -0.97824, -26, 0, -24)
+transform = Transform3D(-0.97824, 0, -0.2075, 0, 1, 0, 0.2075, 0, -0.97824, -27, 0, -12.5)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm1"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
@@ -290,7 +291,7 @@ shape = SubResource("CylinderShape3D_8")
 transform = Transform3D(1.23, 0, 0, 0, 1.23, 0, 0, 0, 1.23, 0, 0, 0)
 
 [node name="Palm2" type="StaticBody3D" parent="Decor/Palms" groups=["spot_blockers"]]
-transform = Transform3D(0.45048, 0, -0.89279, 0, 1, 0, 0.89279, 0, 0.45048, -23.5, 0, -20.5)
+transform = Transform3D(0.45048, 0, -0.89279, 0, 1, 0, 0.89279, 0, 0.45048, -12.5, 0, -27)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Palms/Palm2"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
@@ -835,3 +836,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 [node name="DetectorSpawn" type="Marker3D" parent="."]
 transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 3.6, 0.05, 3.6)
 script = ExtResource("d_detector_spawn")
+
+[node name="BossAltar" type="Area3D" parent="."]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, -22, 0, -22)
+script = ExtResource("b_boss_altar")

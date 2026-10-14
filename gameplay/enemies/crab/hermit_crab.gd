@@ -41,6 +41,7 @@ func _modify_damage(amount: float, from: Vector3) -> float:
 	facing.y = 0.0
 	if facing.normalized().dot(to_attacker.normalized()) >= FRONT_CONE_DOT:
 		spawn_particles(global_position + Vector3.UP * 0.4, Color(0.8, 0.85, 0.95), 8, 2.5)
+		SFX.play_at(SFX.SHELL_KNOCK, global_position)
 		return amount * FRONT_DAMAGE_FACTOR
 	return amount
 

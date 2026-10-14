@@ -192,6 +192,7 @@ func _process_flee(delta: float) -> void:
 
 
 func _pinch() -> void:
+	SFX.play_at(SFX.CRAB_PINCH, global_position)
 	if _target != null and _target.has_method("take_damage"):
 		_target.call("take_damage", attack_damage)
 
@@ -243,4 +244,5 @@ func _animate_scuttle(delta: float) -> void:
 
 
 func _emit_sand_puff() -> void:
+	SFX.play_at(SFX.EMERGE_SAND, global_position)
 	spawn_particles(Vector3(global_position.x, _surface_y + 0.05, global_position.z), Color(0.85, 0.74, 0.5), 16, 2.0)

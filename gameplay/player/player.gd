@@ -97,6 +97,9 @@ var _target_pickup: ItemPickup = null
 var _target_offer: ShopOffer = null
 var _use_cooldown: float = 0.0
 var _tool_view_rest: Vector3 = Vector3.ZERO
+## Distância percorrida desde o último passo (sons de passos na areia).
+var _step_distance: float = 0.0
+const STEP_LENGTH: float = 1.15
 var _dig_target: BuriedSpot = null
 var _dig_is_careful: bool = false
 
@@ -214,6 +217,7 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0.0, speed)
 
 	move_and_slide()
+	_update_footsteps(delta)
 
 	# Aplica balanço procedural (sway) na haste do detector enquanto caminha
 	if detector != null:
@@ -304,7 +308,8 @@ func _find_ground_point(around: Vector3) -> Vector3:
 
 
 ## A lâmina cravou: só agora o dig() é aplicado.
-func _on_shovel_impact(_ground_point: Vector3) -> void:
+func _on_shovel_impact(ground_point: Vector3) -> void:
+	SFX.play_at(SFX.DIG_CAREFUL if _dig_is_careful else SFX.DIG_FAST, ground_point, -2.0 if _dig_is_careful else 2.0)
 	if not _dig_is_careful:
 		_shake_camera(0.035, 0.2)
 	var spot: BuriedSpot = _dig_target
@@ -317,6 +322,9 @@ func _on_shovel_impact(_ground_point: Vector3) -> void:
 
 
 func _on_shovel_throw_dirt(blade_position: Vector3, side: Vector3) -> void:
+	# Os torrões caem ~0.45 s depois de saírem da lâmina.
+	var land: Vector3 = blade_position + side * 1.0
+	get_tree().create_timer(0.45).timeout.connect(func() -> void: SFX.play_at(SFX.DIRT_FALL, land, -6.0, 0.15))
 	var count: int = randi_range(3, 6)
 	var parent: Node = get_parent() if get_parent() != null else self
 	var strength: float = 1.0 if _dig_is_careful else 1.6
@@ -533,6 +541,8 @@ func take_damage(amount: float) -> void:
 	health = clampf(health - amount, 0.0, max_health)
 	health_changed.emit(health, max_health)
 	_shake_camera(0.03, 0.25)
+	if health > 0.0:
+		SFX.play_ui(SFX.PLAYER_HURT, -2.0)
 	if health <= 0.0:
 		_die()
 
@@ -546,6 +556,7 @@ func heal(amount: float) -> void:
 
 func _die() -> void:
 	died.emit()
+	SFX.play_ui(SFX.PLAYER_DEATH)
 	dig_animator.cancel()
 	var lost: int = _drop_all_items()
 	var msg: String = "💀 Você desmaiou... e acordou de volta no ponto de partida."
@@ -576,6 +587,7 @@ func _respawn() -> void:
 		head.rotation.x = 0.0
 	health = max_health
 	health_changed.emit(health, max_health)
+	get_tree().create_timer(0.35).timeout.connect(func() -> void: SFX.play_ui(SFX.RESPAWN, -6.0))
 
 
 func _on_health_changed(current: float, max_value: float) -> void:
@@ -663,6 +675,7 @@ func _interact() -> void:
 		session_items_count += items.size()
 		session_money += total
 		_update_session_hud()
+		SFX.play_ui(SFX.DELIVER_COINS)
 		_show_temporary_message("📦 Entregue: %d itens, R$ %d" % [items.size(), total], Color(0.5, 1.0, 0.55), 2.5)
 		return
 
@@ -671,6 +684,7 @@ func _interact() -> void:
 			_show_temporary_message("Nada para entregar (as ferramentas ficam na mochila).", Color(0.9, 0.9, 0.9), 1.4)
 		return
 	if inventory.is_full():
+		SFX.play_ui(SFX.ERROR, -4.0)
 		_show_temporary_message("🎒 Mochila cheia! Entregue na base ou largue um item [Q].", Color(1.0, 0.6, 0.3), 1.8)
 		return
 	var c: CarriedItem = _target_pickup.take()
@@ -678,6 +692,7 @@ func _interact() -> void:
 	if c == null:
 		return
 	inventory.add_item(c)
+	SFX.play_ui(SFX.PICKUP)
 	var value: String = "" if c.is_tool() else " (R$ %d)" % c.final_value
 	_show_temporary_message("✋ Apanhou: %s%s" % [c.get_display_name(), value],
 		Color(0.85, 0.55, 1.0) if c.is_rare_variant else Color(0.95, 0.95, 0.85), 1.4)
@@ -692,6 +707,7 @@ func _drop_selected() -> void:
 	var pos: Vector3 = camera.global_position + fwd * 0.7 + Vector3.DOWN * 0.3
 	var flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized()
 	ItemPickup.spawn(get_parent(), c, pos, flat * drop_impulse + Vector3.UP * 0.6)
+	SFX.play_at(SFX.DROP, pos, -3.0)
 
 
 func _get_sell_point_in_range() -> SellPoint:
@@ -824,16 +840,19 @@ func _find_target_offer() -> ShopOffer:
 
 func _buy_offer(offer: ShopOffer) -> void:
 	if inventory.is_full():
+		SFX.play_ui(SFX.ERROR, -4.0)
 		_show_temporary_message("🎒 Mochila cheia! Liberte um slot antes de comprar.", Color(1.0, 0.6, 0.3), 1.8)
 		return
 	var result: Dictionary = offer.try_buy()
 	var message: String = result.get("message", "")
 	if not result.get("ok", false):
+		SFX.play_ui(SFX.ERROR, -4.0)
 		_show_temporary_message("❌ " + message, Color(1.0, 0.45, 0.4), 1.8)
 		return
 	var c: CarriedItem = result.get("carried", null)
 	if c != null:
 		inventory.add_item(c)
+	SFX.play_ui(SFX.BUY)
 	_show_temporary_message("🛒 " + message, Color(0.55, 0.9, 1.0), 1.6)
 
 
@@ -877,6 +896,7 @@ func _handle_use_tool_action() -> void:
 				_show_temporary_message("A vida já está cheia.", Color(0.9, 0.9, 0.9), 1.0)
 				return
 			heal(medkit_heal)
+			SFX.play_ui(SFX.MEDKIT)
 			_show_temporary_message("🩹 +%d de vida" % int(medkit_heal), Color(0.5, 1.0, 0.55), 1.2)
 			_consume(c)
 
@@ -897,6 +917,8 @@ func _fire_slingshot() -> void:
 	_use_cooldown = slingshot_cooldown
 	var fwd: Vector3 = -camera.global_basis.z
 	var pos: Vector3 = camera.global_position + fwd * 0.6 + camera.global_basis.x * 0.04 - camera.global_basis.y * 0.05
+	SFX.play_ui(SFX.SLINGSHOT_STRETCH, -8.0, 0.1)
+	get_tree().create_timer(0.06).timeout.connect(func() -> void: SFX.play_ui(SFX.SLINGSHOT_FIRE, -2.0, 0.1))
 	SlingshotProjectile.launch(get_parent(), self, pos, fwd * slingshot_speed + Vector3.UP * 1.2, slingshot_damage)
 	# Recuo do estilingue na mão: elástico estica e solta.
 	if slingshot_model != null and tool_view != null:
@@ -909,6 +931,7 @@ func _fire_slingshot() -> void:
 
 func _use_repellent() -> void:
 	var fwd: Vector3 = -camera.global_basis.z
+	SFX.play_ui(SFX.SPRAY, -6.0)
 	_spawn_spray(camera.global_position + fwd * 0.6 - camera.global_basis.y * 0.15, fwd)
 	var fled: int = 0
 	for n: Node in get_tree().get_nodes_in_group("enemies"):
@@ -975,3 +998,16 @@ func _place_net_trap() -> bool:
 	NetTrap.place(get_parent(), hit["position"], rotation.y)
 	_show_temporary_message("🕸️ Armadilha de rede armada.", Color(0.95, 0.85, 0.6), 1.2)
 	return true
+
+
+## Passos na areia: um passo a cada STEP_LENGTH metros percorridos no chão
+## (andar mais depressa = ritmo mais rápido).
+func _update_footsteps(delta: float) -> void:
+	var horizontal: Vector2 = Vector2(velocity.x, velocity.z)
+	if not is_on_floor() or horizontal.length() < 0.5:
+		_step_distance = STEP_LENGTH * 0.6  # o 1.o passo sai pouco depois de arrancar
+		return
+	_step_distance += horizontal.length() * delta
+	if _step_distance >= STEP_LENGTH:
+		_step_distance = 0.0
+		SFX.play_at(SFX.FOOTSTEP_SAND, global_position, -12.0, 0.12)

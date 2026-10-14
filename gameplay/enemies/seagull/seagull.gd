@@ -65,6 +65,7 @@ var _loot_visual: MeshInstance3D = null
 func _ready() -> void:
 	super._ready()
 	_build_model()
+	SFX.play_at(SFX.SEAGULL_CAW, global_position, 2.0)
 	_orbit_dir = 1.0 if randf() < 0.5 else -1.0
 	_circle_left = randf_range(circle_time_min, circle_time_max)
 	var target: Node3D = _update_target(0.0)
@@ -116,6 +117,7 @@ func _process_circle(delta: float) -> void:
 	_circle_left -= delta
 	if _circle_left <= 0.0:
 		_dives += 1
+		SFX.play_at(SFX.SEAGULL_DIVE, global_position)
 		_enter_state(State.DIVE)
 
 
@@ -136,6 +138,7 @@ func _grab(target: Node3D) -> void:
 		loot = target.call("steal_loot") as CarriedItem
 	if loot != null:
 		stolen = loot
+		SFX.play_at(SFX.SEAGULL_CAW, global_position)
 		_show_loot()
 		_start_escape(target.global_position)
 		return

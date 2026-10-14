@@ -64,10 +64,12 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if body.is_in_group("enemies") and body.has_method("take_damage"):
 		_spent = true
+		SFX.play_at(SFX.STONE_IMPACT, global_position, 0.0)
 		body.call("take_damage", damage, shot_origin)
 		queue_free()
 		return
 	# Bateu no mundo: continua a magoar enquanto ressalta/rola e some pouco depois.
 	if not _hit_world:
 		_hit_world = true
+		SFX.play_at(SFX.STONE_IMPACT, global_position, -6.0, 0.15)
 		get_tree().create_timer(0.6).timeout.connect(queue_free)

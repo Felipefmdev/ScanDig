@@ -35,7 +35,11 @@ func _ready() -> void:
 	_label.text = "%s\nR$ %d" % [tool_data.display_name, tool_data.price]
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.position.y = 0.55
-	_label.font_size = 26
+	_label.font_size = 24
+	# Quebra nomes longos em várias linhas (largura ~0,8 m) para não colidir com o vizinho.
+	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label.width = 200.0
+	_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_label.pixel_size = 0.004
 	_label.outline_size = 6
 	add_child(_label)

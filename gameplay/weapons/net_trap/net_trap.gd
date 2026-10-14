@@ -67,6 +67,7 @@ func _on_body_entered(body: Node3D) -> void:
 		body.call("stun", stun_seconds)
 	if body.has_method("take_damage"):
 		body.call("take_damage", damage, global_position)
+	SFX.play_at(SFX.NET_CLOSE, global_position, 2.0)
 	triggered.emit(body)
 	# A rede fecha-se para cima à volta do inimigo e some.
 	var t: Tween = create_tween()
