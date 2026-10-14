@@ -1,0 +1,149 @@
+[gd_scene load_steps=2 format=3 uid="uid://c5sessionuiscandig01"]
+
+[ext_resource type="Script" path="res://ui/session_ui.gd" id="1_session_ui"]
+
+[node name="SessionUI" type="CanvasLayer"]
+process_mode = 3
+layer = 50
+script = ExtResource("1_session_ui")
+
+[node name="ExpeditionBar" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -260.0
+offset_top = 10.0
+offset_right = 260.0
+offset_bottom = 54.0
+grow_horizontal = 2
+
+[node name="HBox" type="HBoxContainer" parent="ExpeditionBar"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ExpeditionInfoLabel" type="Label" parent="ExpeditionBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Expedição"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="ReturnButton" type="Button" parent="ExpeditionBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Voltar à base"
+
+[node name="LoadingScreen" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.07, 1)
+
+[node name="LoadingLabel" type="Label" parent="LoadingScreen"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 28
+text = "Carregando..."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SummaryPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -200.0
+offset_right = 280.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="SummaryPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="SummaryPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SummaryTitleLabel" type="Label" parent="SummaryPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Resumo do Dia"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SummaryList" type="ItemList" parent="SummaryPanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SummaryTotalLabel" type="Label" parent="SummaryPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Total ganho: R$ 0"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SummaryCloseButton" type="Button" parent="SummaryPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Fechar"
+
+[node name="HostLostPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -80.0
+offset_right = 220.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="HostLostPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="HostLostPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HostLostLabel" type="Label" parent="HostLostPanel/Margin/VBox"]
+layout_mode = 2
+text = "A conexão com o host foi perdida.
+Você voltou para a base."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="HostLostCloseButton" type="Button" parent="HostLostPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+text = "OK"

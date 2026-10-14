@@ -1,7 +1,7 @@
 class_name BaseStationUI
 extends Control
 
-## Painel da Base/Tenda contendo Loja de Equipamentos e Museu de Achados.
+## Painel da Base/Tenda contendo Loja de Equipamentos, Museu de Achados e Expedições.
 
 @onready var tab_container: TabContainer = _resolve_node("TabContainer", "PanelContainer/MarginContainer/VBoxContainer/TabContainer") as TabContainer
 
@@ -17,6 +17,16 @@ extends Control
 @onready var sell_item_btn: Button = _resolve_node("SellItemButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/SellItemButton") as Button
 @onready var register_item_btn: Button = _resolve_node("RegisterItemButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/RegisterItemButton") as Button
 @onready var museum_feedback_label: Label = _resolve_node("MuseumFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/MuseumFeedbackLabel") as Label
+
+# Expedições
+@onready var map_list: ItemList = _resolve_node("MapList", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapList") as ItemList
+@onready var depart_btn: Button = _resolve_node("DepartButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/DepartButton") as Button
+@onready var expedition_feedback_label: Label = _resolve_node("ExpeditionFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/ExpeditionFeedbackLabel") as Label
+
+const SESSION_PATH: NodePath = ^"/root/CoreSession"
+
+var _session: Node = null
+var _maps: Array[MapData] = []
 
 var _game_state: GameState = null
 var _catalog_items: Array[ItemData] = []
@@ -42,6 +52,113 @@ func _ready() -> void:
 	_setup_shop_buttons()
 	_setup_museum_controls()
 	_resolve_game_state()
+	_setup_expeditions()
+
+
+# --- Expedições ---------------------------------------------------------------
+# O SessionManager (autoload "CoreSession") é acessado dinamicamente e pode não existir.
+
+func _setup_expeditions() -> void:
+	_session = get_node_or_null(SESSION_PATH)
+	var refresh_one_arg: Callable = _refresh_depart_button.unbind(1)
+	if map_list != null:
+		map_list.item_selected.connect(refresh_one_arg)
+	if depart_btn != null:
+		depart_btn.pressed.connect(_on_depart_pressed)
+	if _session != null:
+		for sig: StringName in [&"expedition_started", &"expedition_ended", &"scene_changing"]:
+			if _session.has_signal(sig):
+				_session.connect(sig, refresh_one_arg)
+	multiplayer.connected_to_server.connect(_refresh_depart_button)
+	multiplayer.server_disconnected.connect(_refresh_depart_button)
+	multiplayer.peer_connected.connect(refresh_one_arg)
+	_refresh_map_list()
+
+
+func _session_call(method: StringName, args: Array = [], default_value: Variant = null) -> Variant:
+	if _session != null and is_instance_valid(_session) and _session.has_method(method):
+		return _session.callv(method, args)
+	return default_value
+
+
+func _refresh_map_list() -> void:
+	_maps.clear()
+	var result: Variant = _session_call(&"get_available_maps", [], [])
+	if result is Array:
+		for m: Variant in result:
+			if m is MapData:
+				_maps.append(m as MapData)
+	if map_list == null:
+		return
+	var previous: int = map_list.get_selected_items()[0] if map_list.is_anything_selected() else 0
+	map_list.clear()
+	for map: MapData in _maps:
+		map_list.add_item("%s  •  Detector nível %d  •  %d pontos" % [_map_name(map), map.required_detector_level, map.spot_count])
+	if not _maps.is_empty():
+		map_list.select(clampi(previous, 0, _maps.size() - 1))
+	elif _session == null:
+		_set_expedition_feedback("Sistema de expedições indisponível.")
+	else:
+		_set_expedition_feedback("Nenhum mapa disponível.")
+	_refresh_depart_button()
+
+
+func _map_name(map: MapData) -> String:
+	return map.display_name if not map.display_name.is_empty() else map.id
+
+
+func _get_selected_map() -> MapData:
+	if map_list == null or not map_list.is_anything_selected():
+		return null
+	var idx: int = map_list.get_selected_items()[0]
+	return _maps[idx] if idx >= 0 and idx < _maps.size() else null
+
+
+func _is_host() -> bool:
+	if _game_state != null:
+		return _game_state.is_authority()
+	return multiplayer.is_server()
+
+
+## Retorna o motivo pelo qual não é possível partir, ou "" se puder.
+func _get_depart_block_reason(map: MapData) -> String:
+	if _session == null:
+		return "Sistema de expedições indisponível."
+	if map == null:
+		return "Selecione um mapa."
+	if bool(_session_call(&"is_in_expedition", [], false)):
+		return "Já existe uma expedição em andamento."
+	if not _is_host():
+		return "Apenas o host pode iniciar a expedição."
+	if not bool(_session_call(&"can_start_map", [map.id], false)):
+		return "Requer detector nível %d." % map.required_detector_level
+	return ""
+
+
+func _refresh_depart_button() -> void:
+	if depart_btn == null:
+		return
+	var map: MapData = _get_selected_map()
+	var reason: String = _get_depart_block_reason(map)
+	depart_btn.disabled = not reason.is_empty()
+	depart_btn.tooltip_text = reason
+	depart_btn.text = "Partir para %s" % _map_name(map) if map != null else "Partir"
+
+
+func _on_depart_pressed() -> void:
+	var map: MapData = _get_selected_map()
+	var reason: String = _get_depart_block_reason(map)
+	if not reason.is_empty():
+		_set_expedition_feedback(reason)
+		return
+	depart_btn.disabled = true
+	_set_expedition_feedback("Preparando expedição para %s..." % _map_name(map))
+	_session_call(&"request_start_expedition", [map.id])
+
+
+func _set_expedition_feedback(msg: String) -> void:
+	if expedition_feedback_label != null:
+		expedition_feedback_label.text = msg
 
 
 func _resolve_game_state() -> void:
@@ -184,6 +301,8 @@ func _on_purchase_result(_upgrade_id: String, _success: bool, message: String) -
 
 func _on_upgrades_changed(_levels: Dictionary) -> void:
 	_refresh_shop_buttons()
+	# Nível do detector mudou: mapas podem ter sido liberados.
+	_refresh_depart_button()
 
 
 func _on_sell_test_pressed() -> void:

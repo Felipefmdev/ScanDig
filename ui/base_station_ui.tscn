@@ -140,3 +140,33 @@ unique_name_in_owner = true
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="Expedições" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
+metadata/_tab_index = 2
+
+[node name="ExpeditionInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+layout_mode = 2
+text = "Escolha um local de escavação. Só o host pode iniciar a expedição."
+autowrap_mode = 3
+
+[node name="MapList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DepartButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+disabled = true
+text = "Partir"
+
+[node name="ExpeditionFeedbackLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
