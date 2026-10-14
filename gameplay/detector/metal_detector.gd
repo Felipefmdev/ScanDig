@@ -1,16 +1,22 @@
 class_name MetalDetector
 extends Node3D
 
+signal item_detected(item: ItemData, signal_strength: float)
+signal target_lost()
+
 @export var max_detection_distance: float = 8.0
 @export var min_beep_interval: float = 0.08
 @export var max_beep_interval: float = 1.20
+@export var scan_interval: float = 0.05
 
 @onready var audio_player: AudioStreamPlayer3D = $AudioStreamPlayer3D
+@onready var coil_tip: Marker3D = $CoilTip
 
 var _audio_generator: AudioStreamGenerator = null
 var _playback: AudioStreamGeneratorPlayback = null
 var _sample_rate: float = 22050.0
 
+var _scan_timer: float = 0.0
 var _time_since_last_beep: float = 0.0
 var _current_target: BuriedSpot = null
 var _current_distance: float = 999.0
@@ -20,9 +26,16 @@ var _beep_timer: float = 0.0
 var _beep_duration: float = 0.045
 var _phase: float = 0.0
 
+# Envelope suave para síntese de áudio (elimina estalos e descontinuidades)
+var _current_amplitude: float = 0.0
+const MAX_AMPLITUDE: float = 0.35
+const ATTACK_TIME: float = 0.004
+const RELEASE_TIME: float = 0.006
+
 
 func _ready() -> void:
 	_setup_audio_generator()
+	_update_target_detection()
 
 
 func _setup_audio_generator() -> void:
@@ -35,7 +48,11 @@ func _setup_audio_generator() -> void:
 
 
 func _process(delta: float) -> void:
-	_update_target_detection()
+	_scan_timer += delta
+	if _scan_timer >= scan_interval:
+		_scan_timer = 0.0
+		_update_target_detection()
+
 	_update_beeping(delta)
 	_fill_audio_buffer()
 
@@ -44,22 +61,30 @@ func _update_target_detection() -> void:
 	var spots: Array[Node] = get_tree().get_nodes_in_group("buried_spots")
 	var closest_spot: BuriedSpot = null
 	var min_dist: float = max_detection_distance + 0.1
-	var detector_pos: Vector3 = global_position
+	var detector_pos: Vector3 = coil_tip.global_position if coil_tip != null else global_position
 
-	for spot in spots:
+	for spot: Node in spots:
 		if spot is BuriedSpot and spot.is_inside_tree():
 			var dist: float = detector_pos.distance_to(spot.global_position)
 			if dist < min_dist:
 				min_dist = dist
 				closest_spot = spot
 
+	var had_target: bool = (_current_target != null)
+
 	if min_dist <= max_detection_distance and closest_spot != null:
 		_current_target = closest_spot
 		_current_distance = min_dist
 		_current_freq = _get_frequency_for_item(_current_target.item)
+
+		var dist_factor: float = clampf((_current_distance - 0.5) / (max_detection_distance - 0.5), 0.0, 1.0)
+		var signal_strength: float = 1.0 - dist_factor
+		item_detected.emit(_current_target.item, signal_strength)
 	else:
 		_current_target = null
 		_current_distance = 999.0
+		if had_target:
+			target_lost.emit()
 
 
 func _get_frequency_for_item(item: ItemData) -> float:
@@ -80,7 +105,7 @@ func _get_frequency_for_item(item: ItemData) -> float:
 
 
 func _update_beeping(delta: float) -> void:
-	if _current_target == null or _current_distance > max_detection_distance:
+	if not is_instance_valid(_current_target) or _current_distance > max_detection_distance:
 		_is_beeping = false
 		return
 
@@ -109,19 +134,29 @@ func _fill_audio_buffer() -> void:
 		return
 
 	var phase_step: float = (TAU * _current_freq) / _sample_rate
+	var target_amp: float = MAX_AMPLITUDE if _is_beeping else 0.0
+	var attack_step: float = MAX_AMPLITUDE / (_sample_rate * ATTACK_TIME)
+	var release_step: float = MAX_AMPLITUDE / (_sample_rate * RELEASE_TIME)
 
 	for i in range(frames_available):
+		if _current_amplitude < target_amp:
+			_current_amplitude = minf(_current_amplitude + attack_step, target_amp)
+		elif _current_amplitude > target_amp:
+			_current_amplitude = maxf(_current_amplitude - release_step, target_amp)
+
 		var sample: float = 0.0
-		if _is_beeping:
-			sample = sin(_phase) * 0.35
+		if _current_amplitude > 0.0001:
+			sample = sin(_phase) * _current_amplitude
 			_phase = fmod(_phase + phase_step, TAU)
 		else:
+			_current_amplitude = 0.0
 			_phase = 0.0
+
 		_playback.push_frame(Vector2(sample, sample))
 
 
 func get_readout_text() -> String:
-	if _current_target == null or _current_distance > max_detection_distance:
+	if not is_instance_valid(_current_target) or _current_distance > max_detection_distance:
 		return "DETETOR PRONTO\nSinal: ---\nProf: ---\nMat: ---\nTam: ---"
 
 	var dist_factor: float = clampf((_current_distance - 0.5) / (max_detection_distance - 0.5), 0.0, 1.0)
