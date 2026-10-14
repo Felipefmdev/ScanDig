@@ -1,0 +1,37 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://gameplay/player/player.gd" id="1_player"]
+[ext_resource type="PackedScene" path="res://gameplay/detector/metal_detector.tscn" id="2_detector"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
+height = 1.8
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 1
+collision_mask = 3
+script = ExtResource("1_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+current = true
+
+[node name="Hand" type="Node3D" parent="Head/Camera3D"]
+transform = Transform3D(0.996195, 0.0151897, -0.0858167, 0, 0.984808, 0.173648, 0.0871557, -0.172987, 0.98106, 0.25, -0.3, -0.55)
+
+[node name="MetalDetector" parent="Head/Camera3D/Hand" instance=ExtResource("2_detector")]
+
+[node name="VisorLabel" type="Label3D" parent="Head/Camera3D/Hand"]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 0.14, -0.14)
+pixel_size = 0.0008
+modulate = Color(0.15, 1, 0.25, 1)
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "DETETOR PRONTO"
+font_size = 20
+outline_size = 6

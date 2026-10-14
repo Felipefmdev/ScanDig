@@ -1,0 +1,50 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gameplay/detector/metal_detector.gd" id="1_detector"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_metal"]
+albedo_color = Color(0.2, 0.22, 0.25, 1)
+metallic = 0.8
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_coil"]
+albedo_color = Color(0.1, 0.1, 0.1, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_box"]
+albedo_color = Color(0.85, 0.6, 0.1, 1)
+roughness = 0.5
+
+[node name="MetalDetector" type="Node3D"]
+script = ExtResource("1_detector")
+
+[node name="VisualModel" type="Node3D" parent="."]
+
+[node name="Shaft" type="CSGCylinder3D" parent="VisualModel"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -0.25, -0.4)
+radius = 0.02
+height = 1.0
+sides = 8
+material = SubResource("StandardMaterial3D_metal")
+
+[node name="Coil" type="CSGCylinder3D" parent="VisualModel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.7, -0.7)
+radius = 0.18
+height = 0.03
+sides = 16
+material = SubResource("StandardMaterial3D_coil")
+
+[node name="CoilCenterHole" type="CSGCylinder3D" parent="VisualModel/Coil"]
+operation = 2
+radius = 0.1
+height = 0.04
+sides = 16
+
+[node name="ControlBox" type="CSGBox3D" parent="VisualModel"]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 0.05, -0.15)
+size = Vector3(0.14, 0.08, 0.12)
+material = SubResource("StandardMaterial3D_box")
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -0.6)
+max_distance = 15.0
