@@ -27,7 +27,7 @@ Existem em **todas** as cenas (lobby, mapas, sandbox). Nunca os instanciem como 
 ## 2. Estado e rede
 
 ### Autoridade no host
-Só o host (peer 1) altera o estado. Qualquer peer chama `request_*`; `_send_to_host` executa direto no host ou faz `rpc_id(1, ...)` no cliente. As funções `_host_*` revalidam tudo (item existe, valor ≤ `base_value`, saldo, nível máximo).
+Só o host (peer 1) altera o estado. Qualquer peer chama `request_*`; `_send_to_host` executa direto no host ou faz `rpc_id(1, ...)` no cliente. As funções `_host_*` revalidam tudo (item existe, valor limitado a `get_max_item_value()` = `base_value × RARE_VALUE_MULTIPLIER × PERFECT_BONUS_MULTIPLIER`, arredondado para cima, saldo, nível máximo).
 
 | Pedido (qualquer peer) | Execução no host |
 | :--- | :--- |
@@ -64,11 +64,12 @@ Consultas de equipamento (só leitura, qualquer peer; clientes leem o valor do s
 - `get_backpack_capacity()` → `BASE_BACKPACK_CAPACITY` (3) + nível de `backpack` (3 a 6).
 - `get_shovel_level()` → 1 + nível de `shovel` (escala do `player.shovel_level`; 1 = pá básica).
 - `has_pinpointer()` → nível de `pinpointer` > 0.
+- `get_max_item_value(item_data)` → teto anti-trapaça de venda/doação: `ceil(base_value × BuriedSpot.RARE_VALUE_MULTIPLIER × BuriedSpot.PERFECT_BONUS_MULTIPLIER)` (ex.: base 250 → 938).
 
 ### Vender vs. doar (DiscoveryBridge)
 `BuriedSpot` → `ItemPickup` → mochila (`CarriedItem`) → `SellPoint.deliver()` → `DiscoveryBridge.report_item_found(item, final_value)` → `GameState.request_report_discovery`. O host decide:
 - **Item inédito:** doado ao museu, a equipe recebe `MUSEUM_REWARD_RATIO` (50%) do valor.
-- **Item repetido:** vendido por `final_value` (limitado a `base_value`).
+- **Item repetido:** vendido por `final_value` (limitado a `get_max_item_value()` = `base_value × RARE_VALUE_MULTIPLIER × PERFECT_BONUS_MULTIPLIER`, arredondado para cima).
 
 ### Ciclo do `SessionManager`
 1. Host: `request_start_expedition(map_id)` (exige `can_start_map`: nível do detector e cena `res://world/map_<id>.tscn`).

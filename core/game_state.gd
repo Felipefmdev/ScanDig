@@ -86,6 +86,13 @@ func get_backpack_capacity() -> int:
 	return BASE_BACKPACK_CAPACITY + get_upgrade_level("backpack")
 
 
+## Teto anti-trapaça para o valor de um item: base × rara × perfeita.
+func get_max_item_value(item_data: ItemData) -> int:
+	if item_data == null:
+		return 0
+	return int(ceil(float(item_data.base_value) * BuriedSpot.RARE_VALUE_MULTIPLIER * BuriedSpot.PERFECT_BONUS_MULTIPLIER))
+
+
 ## Nível da pá na escala do player.shovel_level: 1 = pá básica.
 func get_shovel_level() -> int:
 	return 1 + get_upgrade_level("shovel")
@@ -164,7 +171,7 @@ func _host_sell_item(item_id: String, final_value: int) -> void:
 	if not discovered_items.has(item_id):
 		_host_donate_item(item_id, final_value)
 		return
-	var value: int = clampi(final_value, 0, item_data.base_value)
+	var value: int = clampi(final_value, 0, get_max_item_value(item_data))
 	team_money += value
 	_broadcast_snapshot()
 	_notify_sold(item_id, value)
@@ -177,7 +184,7 @@ func _host_donate_item(item_id: String, final_value: int) -> void:
 	var item_data: ItemData = _load_item(item_id)
 	if item_data == null or discovered_items.has(item_id):
 		return
-	var base: int = item_data.base_value if final_value < 0 else clampi(final_value, 0, item_data.base_value)
+	var base: int = item_data.base_value if final_value < 0 else clampi(final_value, 0, get_max_item_value(item_data))
 	var reward: int = int(round(float(base) * MUSEUM_REWARD_RATIO))
 	discovered_items.append(item_id)
 	team_money += reward
