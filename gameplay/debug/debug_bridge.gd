@@ -9,8 +9,23 @@ const ACTIONS: PackedStringArray = [
 ]
 const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
+	"loop", "dig_spot", "pickup", "goto_sell", "sell",
 ]
-const CONDITION_VARS: PackedStringArray = ["money", "inventory", "enemies", "spots", "time", "health"]
+## Passos sem 't' obrigatório (dentro de um loop o tempo absoluto não faz sentido).
+const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop"]
+const CONDITION_VARS: PackedStringArray = [
+	"money", "inventory", "enemies", "spots", "time", "health",
+	"nearest_spot", "free_slots", "deliverable", "sell_dist",
+]
+const DIG_MODES: PackedStringArray = ["fast", "careful", "smart"]
+## Distância "infinita" usada pelas variáveis nearest_spot/sell_dist quando não há alvo.
+const NO_TARGET_DISTANCE: float = 9999.0
+## Caminhar: progresso mínimo em STUCK_SECONDS antes do teleport de recurso.
+const STUCK_SECONDS: float = 5.0
+const STUCK_MIN_PROGRESS: float = 1.0
+const WALK_PITCH_DEG: float = -12.0
+const SELL_POINT_GROUP: StringName = &"sell_points"
+const PICKUP_GROUP: StringName = &"pickups"
 const CONDITION_OPS: PackedStringArray = [">=", "<=", "==", "!=", ">", "<"]
 const TAP_SECONDS: float = 0.1
 const DEFAULT_WAIT_TIMEOUT: float = 60.0
@@ -28,6 +43,28 @@ var _errors: PackedStringArray = []
 var _screenshots: PackedStringArray = []
 var _dumps: PackedStringArray = []
 var _waits: Array[Dictionary] = []
+var _loops: Array[Dictionary] = []
+var _dump_every: float = 0.0
+var _screenshot_every: float = 0.0
+var _next_dump: float = 0.0
+var _next_screenshot: float = 0.0
+var _monitoring: bool = false
+## Métricas de jogo recolhidas por observação (nunca alteram o estado).
+var _m: Dictionary = {
+	"start_money": 0,
+	"first_enemy_time": -1.0,
+	"damage_taken": 0.0,
+	"deaths": 0,
+	"teleport_fallbacks": 0,
+	"items_sold": 0,
+	"sold_value": 0,
+	"sell_trips": 0,
+	"spots_dug": 0,
+	"items_picked": 0,
+	"step_failures": 0,
+}
+var _last_health: float = -1.0
+var _watched_player: Node = null
 
 
 func _ready() -> void:
@@ -72,11 +109,20 @@ static func parse_script(data: Variant) -> Dictionary:
 			errors.append("passo %d: %s" % [i, result])
 		else:
 			steps.append(result)
-	return {"ok": errors.is_empty(), "scene": scene_path, "steps": steps, "errors": errors}
+	var periodic: Dictionary = {}
+	for key: String in ["dump_every", "screenshot_every"]:
+		if not root.has(key):
+			continue
+		if not _is_number(root[key]) or float(root[key]) <= 0.0:
+			errors.append("'%s' deve ser > 0 (segundos)" % key)
+		else:
+			periodic[key] = float(root[key])
+	return {"ok": errors.is_empty(), "scene": scene_path, "steps": steps, "errors": errors, "periodic": periodic}
 
 
 ## Normaliza um passo. Devolve o Dictionary normalizado ou uma String de erro.
-static func parse_step(raw: Variant) -> Variant:
+## `nested` = dentro de um loop: 't' é opcional.
+static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 	if not raw is Dictionary:
 		return "passo deve ser um objeto"
 	var d: Dictionary = raw
@@ -92,9 +138,21 @@ static func parse_step(raw: Variant) -> Variant:
 		if not _is_number(d["t"]) or float(d["t"]) < 0.0:
 			return "'t' deve ser um numero >= 0"
 		t = float(d["t"])
-	elif kind != "wait_until":
+	elif not nested and not UNTIMED_KINDS.has(kind):
 		return "falta 't'"
 	var step: Dictionary = {"kind": kind, "t": t}
+	if d.has("if"):
+		var conds: Variant = parse_conditions(d["if"])
+		if conds == null:
+			return "'if' invalido '%s'" % str(d["if"])
+		step["if"] = conds
+	var timeout_default: float = DEFAULT_WAIT_TIMEOUT
+	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot"]:
+		timeout_default = 30.0
+	if d.has("timeout"):
+		if not _is_number(d["timeout"]) or float(d["timeout"]) <= 0.0:
+			return "'timeout' deve ser > 0"
+	var timeout: float = float(d.get("timeout", timeout_default))
 	var value: Variant = d[kind]
 	match kind:
 		"press", "tap":
@@ -128,11 +186,6 @@ static func parse_step(raw: Variant) -> Variant:
 			if cond == null:
 				return "condicao invalida '%s'" % value
 			step["condition"] = cond
-			var timeout: float = DEFAULT_WAIT_TIMEOUT
-			if d.has("timeout"):
-				if not _is_number(d["timeout"]) or float(d["timeout"]) <= 0.0:
-					return "'timeout' deve ser > 0"
-				timeout = float(d["timeout"])
 			step["timeout"] = timeout
 		"look_at":
 			var v: Variant = _number_array(value, 3)
@@ -142,10 +195,70 @@ static func parse_step(raw: Variant) -> Variant:
 		"goto_spot":
 			if value != "nearest":
 				return "'goto_spot' so aceita \"nearest\""
-		"quit":
+			step["walk"] = d.get("walk", false) == true
+			step["timeout"] = timeout
+		"loop":
+			if not value is Array or (value as Array).is_empty():
+				return "'loop' deve ser uma lista de passos nao vazia"
+			var body: Array[Dictionary] = []
+			for i: int in (value as Array).size():
+				var sub: Variant = parse_step((value as Array)[i], true)
+				if sub is String:
+					return "loop[%d]: %s" % [i, sub]
+				if (sub as Dictionary)["kind"] in ["loop", "quit"]:
+					return "loop[%d]: '%s' nao e permitido dentro de um loop" % [i, (sub as Dictionary)["kind"]]
+				body.append(sub)
+			step["body"] = body
+			if not d.has("until"):
+				return "'loop' precisa de 'until'"
+			var until: Variant = parse_condition(str(d["until"]))
+			if until == null:
+				return "condicao invalida '%s'" % str(d["until"])
+			step["until"] = until
+			if not d.has("timeout"):
+				return "'loop' precisa de 'timeout'"
+			step["timeout"] = timeout
+		"dig_spot":
 			if value != true:
-				return "'quit' deve ser true"
+				return "'dig_spot' deve ser true"
+			var mode: Variant = d.get("mode", "fast")
+			if not mode is String or not DIG_MODES.has(mode):
+				return "'mode' deve ser um de %s" % ", ".join(DIG_MODES)
+			step["mode"] = mode
+			step["timeout"] = timeout
+		"pickup":
+			if value != true:
+				return "'pickup' deve ser true"
+			var radius: Variant = d.get("radius", 6.0)
+			if not _is_number(radius) or float(radius) <= 0.0:
+				return "'radius' deve ser > 0"
+			step["radius"] = float(radius)
+			step["timeout"] = timeout
+		"goto_sell", "sell", "quit":
+			if value != true:
+				return "'%s' deve ser true" % kind
+			step["timeout"] = timeout
 	return step
+
+
+## "if": uma condição ou lista de condições (todas têm de ser verdadeiras).
+static func parse_conditions(v: Variant) -> Variant:
+	var texts: Array = []
+	if v is String:
+		texts.append(v)
+	elif v is Array:
+		texts = v
+	if texts.is_empty():
+		return null
+	var out: Array[Dictionary] = []
+	for text: Variant in texts:
+		if not text is String:
+			return null
+		var c: Variant = parse_condition(text)
+		if c == null:
+			return null
+		out.append(c)
+	return out
 
 
 ## "money>=300" -> {var, op, value}; null se inválida.
@@ -212,13 +325,94 @@ func _run(script_path: String) -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 	_start_msec = Time.get_ticks_msec()
+	var periodic: Dictionary = parsed["periodic"]
+	_dump_every = periodic.get("dump_every", 0.0)
+	_screenshot_every = periodic.get("screenshot_every", 0.0)
+	_next_dump = _dump_every
+	_next_screenshot = _screenshot_every
+	_start_monitoring()
 	for step: Dictionary in parsed["steps"]:
 		await _wait_until_time(step["t"])
+		if not _conditions_met(step.get("if", [])):
+			continue
 		await _execute(step)
 		_executed += 1
 		if step["kind"] == "quit":
 			break
 	_finish(0)
+
+
+# --- Monitorização (só observa) ------------------------------------------------
+
+func _start_monitoring() -> void:
+	_monitoring = true
+	_m["start_money"] = int(_condition_value("money"))
+	for n: Node in get_tree().get_nodes_in_group(SELL_POINT_GROUP):
+		if n is SellPoint:
+			(n as SellPoint).items_delivered.connect(_on_items_delivered)
+
+
+func _process(_delta: float) -> void:
+	if not _monitoring:
+		return
+	var now: float = _elapsed()
+	var player: Node = _player()
+	if player != _watched_player and player != null:
+		_watched_player = player
+		if player.has_signal(&"died"):
+			player.connect(&"died", _on_player_died)
+		_last_health = float(player.get("health")) if "health" in player else -1.0
+	if player != null and "health" in player:
+		var hp: float = float(player.get("health"))
+		if _last_health >= 0.0 and hp < _last_health:
+			_m["damage_taken"] = float(_m["damage_taken"]) + (_last_health - hp)
+		_last_health = hp
+	if float(_m["first_enemy_time"]) < 0.0 and _alive_enemy_count() > 0:
+		_m["first_enemy_time"] = now
+		_log("t=%.1f primeiro inimigo apareceu" % now)
+	if _dump_every > 0.0 and now >= _next_dump:
+		_dump("periodic_%04ds" % int(_next_dump))
+		_next_dump += _dump_every
+	if _screenshot_every > 0.0 and now >= _next_screenshot:
+		_screenshot("periodic_%04ds" % int(_next_screenshot))
+		_next_screenshot += _screenshot_every
+
+
+func _on_player_died() -> void:
+	_m["deaths"] = int(_m["deaths"]) + 1
+	# A morte repõe a vida: não contar o "dano" do respawn ao contrário.
+	_last_health = -1.0
+	_log("t=%.1f jogador morreu (mortes: %d)" % [_elapsed(), _m["deaths"]])
+
+
+func _on_items_delivered(count: int, total_value: int) -> void:
+	_m["items_sold"] = int(_m["items_sold"]) + count
+	_m["sold_value"] = int(_m["sold_value"]) + total_value
+	_m["sell_trips"] = int(_m["sell_trips"]) + 1
+	_log("t=%.1f entregue: %d itens, R$ %d" % [_elapsed(), count, total_value])
+
+
+func _alive_enemy_count() -> int:
+	var n: int = 0
+	for e: Node in get_tree().get_nodes_in_group(ENEMY_GROUP):
+		if not is_instance_valid(e):
+			continue
+		if e is EnemyBase and not (e as EnemyBase).is_alive():
+			continue
+		n += 1
+	return n
+
+
+func _conditions_met(conds: Array) -> bool:
+	for c: Dictionary in conds:
+		if not compare(_condition_value(c["var"]), c["op"], c["value"]):
+			return false
+	return true
+
+
+func _fail(msg: String) -> void:
+	_m["step_failures"] = int(_m["step_failures"]) + 1
+	_log("  aviso: " + msg)
 
 
 func _elapsed() -> float:
@@ -252,7 +446,24 @@ func _execute(step: Dictionary) -> void:
 		"look_at":
 			_look_at(step["target"])
 		"goto_spot":
-			_goto_nearest_spot()
+			if step["walk"]:
+				await _walk_to_nearest_spot(step["timeout"])
+			else:
+				_goto_nearest_spot()
+		"loop":
+			await _run_loop(step)
+		"dig_spot":
+			await _dig_spot(step["mode"], step["timeout"])
+		"pickup":
+			await _pickup(step["radius"], step["timeout"])
+		"goto_sell":
+			var sp: Node3D = _nearest_sell_point()
+			if sp == null:
+				_fail("goto_sell: nenhum ponto de entrega")
+			else:
+				await _walk_to(sp.global_position, 1.2, step["timeout"], 0.5)
+		"sell":
+			await _sell(step["timeout"])
 		"screenshot":
 			await _screenshot(step["label"])
 		"dump":
@@ -319,6 +530,268 @@ func _goto_nearest_spot() -> void:
 	_log("  spot em %s (estava a %.1f m)" % [_vec(target), best_dist])
 
 
+## Repete o corpo até `until` ou timeout. As condições são verificadas entre passos.
+func _run_loop(step: Dictionary) -> void:
+	var until: Dictionary = step["until"]
+	var timeout: float = step["timeout"]
+	var t0: float = _elapsed()
+	var iterations: int = 0
+	var ok: bool = false
+	while true:
+		if _conditions_met([until]):
+			ok = true
+			break
+		if _elapsed() - t0 >= timeout:
+			break
+		for sub: Dictionary in step["body"]:
+			if _conditions_met([until]) or _elapsed() - t0 >= timeout:
+				break
+			if not _conditions_met(sub.get("if", [])):
+				continue
+			await _execute(sub)
+			_executed += 1
+		iterations += 1
+		await get_tree().process_frame
+	var cond_text: String = "%s%s%s" % [until["var"], until["op"], until["value"]]
+	var took: float = _elapsed() - t0
+	_loops.append({"until": cond_text, "ok": ok, "seconds": took, "ended_at": _elapsed(), "iterations": iterations})
+	_log("  loop %s: %s em %.1fs (%d iteracoes)" % [cond_text, "cumprido" if ok else "TIMEOUT", took, iterations])
+
+
+func _sleep(seconds: float) -> void:
+	await get_tree().create_timer(seconds, true, false, true).timeout
+
+
+func _tap(action: String) -> void:
+	Input.action_press(action)
+	await _sleep(TAP_SECONDS)
+	Input.action_release(action)
+
+
+## Shift físico (o Player lê Input.is_physical_key_pressed(KEY_SHIFT) para a escavação cuidadosa).
+func _set_shift(pressed: bool) -> void:
+	var ev: InputEventKey = InputEventKey.new()
+	ev.keycode = KEY_SHIFT
+	ev.physical_keycode = KEY_SHIFT
+	ev.pressed = pressed
+	Input.parse_input_event(ev)
+
+
+## Vira o jogador para o alvo (só yaw) com a cabeça ligeiramente para baixo, como a andar.
+func _face_flat(player: Node3D, target: Vector3) -> void:
+	var dir: Vector3 = target - player.global_position
+	if Vector2(dir.x, dir.z).length() < 0.01:
+		return
+	player.rotation.y = atan2(-dir.x, -dir.z)
+	var head: Node3D = player.get_node_or_null(^"Head") as Node3D
+	if head != null:
+		head.rotation.x = deg_to_rad(WALK_PITCH_DEG)
+
+
+## Caminha (move_forward + rumo) até ficar a `arrive` m (no plano) do alvo. Salta se
+## encravar; se em STUCK_SECONDS avançar menos de STUCK_MIN_PROGRESS (ou no timeout),
+## faz teleport de recurso e conta-o em teleport_fallbacks. Devolve true se chegou a andar.
+func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float) -> bool:
+	var player: Node3D = _player()
+	if player == null:
+		_fail("walk: jogador nao encontrado")
+		return false
+	var t0: float = _elapsed()
+	var check_t: float = t0
+	var check_pos: Vector3 = player.global_position
+	var jump_t: float = t0
+	var jump_pos: Vector3 = player.global_position
+	var walked: bool = false
+	Input.action_press("move_forward")
+	while is_instance_valid(player):
+		var to: Vector3 = target - player.global_position
+		to.y = 0.0
+		if to.length() <= arrive:
+			walked = true
+			break
+		_face_flat(player, target)
+		var now: float = _elapsed()
+		if now - jump_t >= 1.0:
+			if player.global_position.distance_to(jump_pos) < 0.4:
+				_hold_action("jump", TAP_SECONDS)
+			jump_t = now
+			jump_pos = player.global_position
+		var timed_out: bool = now - t0 >= timeout
+		if timed_out or now - check_t >= STUCK_SECONDS:
+			if not timed_out and player.global_position.distance_to(check_pos) >= STUCK_MIN_PROGRESS:
+				check_t = now
+				check_pos = player.global_position
+			else:
+				var dir: Vector3 = to.normalized() if to.length() > 0.01 else Vector3.BACK
+				var pos: Vector3 = target - dir * arrive * 0.8
+				pos.y = target.y + y_offset
+				player.global_position = pos
+				if player is CharacterBody3D:
+					(player as CharacterBody3D).velocity = Vector3.ZERO
+				_m["teleport_fallbacks"] = int(_m["teleport_fallbacks"]) + 1
+				_log("  teleport de recurso #%d (%s) para %s" % [
+					_m["teleport_fallbacks"], "timeout" if timed_out else "preso", _vec(pos)])
+				break
+		await get_tree().physics_frame
+	Input.action_release("move_forward")
+	return walked
+
+
+func _nearest_spot(from: Vector3) -> BuriedSpot:
+	var best: BuriedSpot = null
+	var best_dist: float = INF
+	for n: Node in get_tree().get_nodes_in_group(SPOT_GROUP):
+		if not is_instance_valid(n) or not n is BuriedSpot or _is_altar(n):
+			continue
+		var dist: float = (n as Node3D).global_position.distance_to(from)
+		if dist < best_dist:
+			best_dist = dist
+			best = n
+	return best
+
+
+func _nearest_sell_point() -> SellPoint:
+	var player: Node3D = _player()
+	var best: SellPoint = null
+	var best_dist: float = INF
+	for n: Node in get_tree().get_nodes_in_group(SELL_POINT_GROUP):
+		if not n is SellPoint:
+			continue
+		var dist: float = 0.0 if player == null else (n as Node3D).global_position.distance_to(player.global_position)
+		if dist < best_dist:
+			best_dist = dist
+			best = n
+	return best
+
+
+func _walk_to_nearest_spot(timeout: float) -> void:
+	var player: Node3D = _player()
+	if player == null:
+		_fail("goto_spot: jogador nao encontrado")
+		return
+	var spot: BuriedSpot = _nearest_spot(player.global_position)
+	if spot == null:
+		_fail("goto_spot: nenhum spot ativo")
+		return
+	var target: Vector3 = spot.global_position
+	_log("  a caminhar para spot em %s (%.1f m)" % [_vec(target), target.distance_to(player.global_position)])
+	await _walk_to(target, GOTO_SPOT_DISTANCE, timeout, 0.3)
+	if is_instance_valid(spot):
+		_look_at(spot.global_position)
+
+
+## Cava o spot ao alcance (dig_range do jogador) com o botão direito real até revelar.
+## mode: fast (sem Shift), careful (Shift), smart (rápido e Shift nas últimas camadas,
+## onde a pazada rápida estraga o item).
+func _dig_spot(mode: String, timeout: float) -> void:
+	var player: Node3D = _player()
+	if player == null:
+		_fail("dig_spot: jogador nao encontrado")
+		return
+	var dig_range: float = float(player.get("dig_range")) if "dig_range" in player else 1.8
+	var spot: BuriedSpot = _nearest_spot(player.global_position)
+	if spot == null or spot.global_position.distance_to(player.global_position) > dig_range:
+		_fail("dig_spot: nenhum spot ao alcance")
+		return
+	var t0: float = _elapsed()
+	var taps: int = 0
+	while is_instance_valid(spot) and spot.is_in_group(SPOT_GROUP):
+		if _elapsed() - t0 >= timeout:
+			_fail("dig_spot: timeout (%d pazadas, faltam %d camadas)" % [taps, spot.dirt_layers])
+			break
+		if spot.global_position.distance_to(player.global_position) > dig_range:
+			_fail("dig_spot: jogador saiu do alcance (morte/empurrao?)")
+			break
+		_look_at(spot.global_position)
+		_set_shift(mode == "careful" or (mode == "smart" and spot.dirt_layers <= 2))
+		await _tap("careful_dig")
+		taps += 1
+		await _sleep(0.15)
+	_set_shift(false)
+	if not is_instance_valid(spot) or not spot.is_in_group(SPOT_GROUP):
+		_m["spots_dug"] = int(_m["spots_dug"]) + 1
+		_log("  spot revelado em %.1fs (%d pazadas)" % [_elapsed() - t0, taps])
+
+
+## Apanha o pickup mais próximo (raio) como o jogador: aproxima-se, olha e carrega E.
+func _pickup(radius: float, timeout: float) -> void:
+	var player: Node3D = _player()
+	var inv: Inventory = player.get_node_or_null(^"Inventory") as Inventory if player != null else null
+	if inv == null:
+		_fail("pickup: jogador/mochila nao encontrados")
+		return
+	if inv.is_full():
+		_fail("pickup: mochila cheia")
+		return
+	await _sleep(0.9) # deixa o item saltar e assentar
+	var t0: float = _elapsed()
+	while _elapsed() - t0 < timeout:
+		var target: ItemPickup = null
+		var best: float = radius
+		for n: Node in get_tree().get_nodes_in_group(PICKUP_GROUP):
+			var p: ItemPickup = n as ItemPickup
+			if p == null or not is_instance_valid(p) or p.carried == null:
+				continue
+			var dist: float = p.global_position.distance_to(player.global_position)
+			if dist < best:
+				best = dist
+				target = p
+		if target == null:
+			if _elapsed() - t0 > 1.5:
+				_fail("pickup: nenhum item a menos de %.1f m" % radius)
+				return
+			await get_tree().process_frame
+			continue
+		if best > 1.6:
+			await _walk_to(target.global_position, 1.0, 5.0, 0.3)
+			if not is_instance_valid(target):
+				continue
+		_look_at(target.global_position)
+		await get_tree().process_frame
+		var before: int = inv.get_count()
+		await _tap("interact")
+		await _sleep(0.2)
+		if inv.get_count() > before:
+			_m["items_picked"] = int(_m["items_picked"]) + 1
+			return
+	_fail("pickup: timeout")
+
+
+## Entrega a mochila pelo mesmo caminho do jogador real (E dentro do raio do SellPoint).
+func _sell(timeout: float) -> void:
+	var player: Node3D = _player()
+	var sp: SellPoint = _nearest_sell_point()
+	if player == null or sp == null or not sp.is_in_range(player.global_position):
+		_fail("sell: fora do raio de entrega")
+		return
+	if _deliverable_count() == 0:
+		_log("  sell: nada para entregar")
+		return
+	var t0: float = _elapsed()
+	while _deliverable_count() > 0:
+		if _elapsed() - t0 >= timeout:
+			_fail("sell: timeout")
+			return
+		await _tap("interact")
+		await _sleep(0.3)
+
+
+func _player_inventory() -> Inventory:
+	var player: Node3D = _player()
+	return player.get_node_or_null(^"Inventory") as Inventory if player != null else null
+
+
+func _deliverable_count() -> int:
+	var inv: Inventory = _player_inventory()
+	if inv == null:
+		return 0
+	var n: int = 0
+	for c: CarriedItem in inv.slots:
+		if SellPoint.can_deliver(c):
+			n += 1
+	return n
+
+
 func _screenshot(label: String) -> void:
 	if DisplayServer.get_name() == "headless":
 		_error("screenshot '%s' ignorado: renderer headless" % label)
@@ -359,6 +832,23 @@ func _wait_condition(cond: Dictionary, timeout: float) -> void:
 
 
 func _condition_value(var_name: String) -> float:
+	match var_name:
+		"nearest_spot":
+			var p: Node3D = _player()
+			var s: BuriedSpot = _nearest_spot(p.global_position) if p != null else null
+			return s.global_position.distance_to(p.global_position) if s != null else NO_TARGET_DISTANCE
+		"free_slots":
+			var inv: Inventory = _player_inventory()
+			return float(inv.capacity - inv.get_count()) if inv != null else 0.0
+		"deliverable":
+			return float(_deliverable_count())
+		"sell_dist":
+			var p: Node3D = _player()
+			var sp: SellPoint = _nearest_sell_point()
+			if p == null or sp == null:
+				return NO_TARGET_DISTANCE
+			var d: Vector3 = sp.global_position - p.global_position
+			return Vector2(d.x, d.z).length()
 	var state: Dictionary = collect_state()
 	match var_name:
 		"money": return float(state["game_state"].get("team_money", 0))
@@ -465,10 +955,28 @@ func _open_run_dir(script_path: String) -> void:
 	print("[DebugBridge] saida em %s" % _run_dir)
 
 
+func _build_metrics() -> Dictionary:
+	var m: Dictionary = _m.duplicate()
+	var elapsed: float = _elapsed()
+	var money: int = int(_condition_value("money"))
+	m["final_money"] = money
+	m["money_earned"] = money - int(_m["start_money"])
+	m["elapsed"] = elapsed
+	m["money_per_min"] = snappedf(float(m["money_earned"]) / maxf(elapsed / 60.0, 0.001), 0.1)
+	# Tempo até à meta: o primeiro loop cumprido (tempo absoluto desde o início).
+	m["time_to_goal"] = -1.0
+	for l: Dictionary in _loops:
+		if l["ok"]:
+			m["time_to_goal"] = l["ended_at"]
+			m["goal"] = l["until"]
+			break
+	return m
+
+
 func _describe(step: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	for k: String in step:
-		if k != "kind" and k != "t":
+		if k != "kind" and k != "t" and k != "body":
 			parts.append("%s=%s" % [k, step[k]])
 	return " ".join(parts)
 
@@ -494,8 +1002,11 @@ func _finish(code: int) -> void:
 		"screenshots": _screenshots,
 		"dumps": _dumps,
 		"waits": _waits,
+		"loops": _loops,
 		"errors": _errors,
 	}
+	if _monitoring:
+		summary["metrics"] = _build_metrics()
 	var f: FileAccess = FileAccess.open(_run_dir.path_join("summary.json"), FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(summary, "\t"))

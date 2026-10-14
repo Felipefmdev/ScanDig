@@ -72,3 +72,50 @@ func test_conditions() -> void:
 	assert_true(Bridge.compare(300, ">=", 300))
 	assert_false(Bridge.compare(299, ">=", 300))
 	assert_true(Bridge.compare(1, "<", 2))
+
+
+func test_loop_and_high_level_steps() -> void:
+	var r: Dictionary = Bridge.parse_script({
+		"dump_every": 60,
+		"screenshot_every": 120,
+		"steps": [
+			{"loop": [
+				{"goto_sell": true, "if": ["deliverable>=1", "free_slots<=0"]},
+				{"sell": true, "timeout": 5},
+				{"goto_spot": "nearest", "walk": true},
+				{"dig_spot": true, "mode": "smart"},
+				{"pickup": true, "radius": 4},
+				{"wait_until": "nearest_spot<9000"},
+			], "until": "money>=300", "timeout": 1200},
+		],
+	})
+	assert_true(r["ok"], str(r["errors"]))
+	assert_eq(r["periodic"], {"dump_every": 60.0, "screenshot_every": 120.0})
+	var loop: Dictionary = (r["steps"] as Array)[0]
+	assert_eq(loop["until"], {"var": "money", "op": ">=", "value": 300.0})
+	assert_eq(loop["timeout"], 1200.0)
+	var body: Array = loop["body"]
+	assert_eq(body.size(), 6)
+	assert_eq((body[0]["if"] as Array).size(), 2)
+	assert_eq(body[1]["timeout"], 5.0)
+	assert_true(body[2]["walk"])
+	assert_eq(body[3]["mode"], "smart")
+	assert_eq(body[4]["radius"], 4.0)
+
+
+func test_invalid_high_level_steps() -> void:
+	var bad: Array = [
+		{"loop": [], "until": "money>=1", "timeout": 10},
+		{"loop": [{"sell": true}], "timeout": 10},
+		{"loop": [{"sell": true}], "until": "money>=1"},
+		{"loop": [{"quit": true}], "until": "money>=1", "timeout": 10},
+		{"loop": [{"tap": "voar"}], "until": "money>=1", "timeout": 10},
+		{"t": 1, "dig_spot": true, "mode": "lento"},
+		{"t": 1, "pickup": true, "radius": 0},
+		{"t": 1, "sell": true, "if": "ouro>1"},
+		{"t": 1, "sell": true, "if": []},
+		{"sell": true},
+	]
+	for raw: Variant in bad:
+		assert_true(Bridge.parse_step(raw) is String, "deveria falhar: %s" % str(raw))
+	assert_false(Bridge.parse_script({"steps": [], "dump_every": 0})["ok"])

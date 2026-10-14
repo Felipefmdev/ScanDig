@@ -35,8 +35,24 @@ tem exatamente uma ação:
 | `{"t":5,"goto_spot":"nearest"}` | põe o jogador a 1 m do spot mais próximo, virado para ele |
 | `{"wait_until":"money>=300","timeout":900}` | espera pela condição (`t` opcional); regista o tempo |
 | `{"t":60,"quit":true}` | termina (também termina após o último passo) |
+| `{"loop":[...],"until":"money>=300","timeout":1200}` | repete o corpo até à condição ou timeout (passos internos sem `t`; regista em `loops`) |
+| `{"goto_spot":"nearest","walk":true,"timeout":40}` | **caminha** (move_forward + rumo) até 1 m do spot; salta se encravar e, se avançar < 1 m em 5 s, teleport de recurso (contado em `teleport_fallbacks`) |
+| `{"dig_spot":true,"mode":"smart","timeout":30}` | cava (botão direito real) o spot ao alcance até revelar. `fast` = sem Shift, `careful` = Shift, `smart` = Shift só nas 2 últimas camadas |
+| `{"pickup":true,"radius":6,"timeout":10}` | aproxima-se do item no chão mais próximo, olha e carrega E |
+| `{"goto_sell":true}` | caminha até ao SellPoint mais próximo |
+| `{"sell":true}` | carrega E dentro do raio do SellPoint (mesmo caminho do jogador: `Player._interact` → `SellPoint.deliver`) |
+
+Qualquer passo aceita `"if"`: condição ou lista de condições (todas verdadeiras) — senão é saltado.
+
+Raiz opcional: `"dump_every": 60` e `"screenshot_every": 120` (segundos) → `periodic_<s>.json/png`.
+
+Com passos de alto nível o `summary.json` ganha `metrics`: `time_to_goal`, `money_per_min`,
+`money_earned`, `items_sold`, `sold_value`, `sell_trips`, `spots_dug`, `items_picked`,
+`first_enemy_time`, `damage_taken`, `deaths`, `teleport_fallbacks`, `step_failures`
+(avisos de jogo, ex. "pickup: nenhum item" — não contam como erros). Exemplo: `praia_300.json`.
 
 Ações: `move_forward/backward/left/right`, `jump`, `interact`, `use_tool`, `careful_dig`
-(botão direito = cavar; Shift não é simulado, logo cava sempre em modo rápido).
-Variáveis de `wait_until`: `money`, `inventory`, `enemies`, `spots`, `time`, `health`;
+(botão direito = cavar; `tap` não simula Shift — usa `dig_spot` com `mode`).
+Variáveis de `wait_until`/`until`/`if`: `money`, `inventory`, `enemies`, `spots`, `time`, `health`,
+`nearest_spot` (m; 9999 sem spots), `free_slots`, `deliverable` (itens vendáveis), `sell_dist` (m);
 operadores `>= <= == != > <`.

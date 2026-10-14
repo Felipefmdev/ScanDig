@@ -53,3 +53,32 @@ upgrade da loja (4 → 5 → 6 slots).
 2. Se o primeiro upgrade (300) demorar menos de 8 min ou mais de 15 min, ajustem os pesos
    do `item_pool` ou os valores do catálogo.
 3. Registem aqui os resultados de cada teste (data, mapa, tempo, notas).
+
+## Teste por bot 2026-10-14
+
+> **É um bot, não um humano.** Não sente pressão nem se distrai, não explora, não compra
+> nada e conhece sempre o spot mais próximo (não usa o detetor). Usa os mesmos inputs do
+> jogador (andar, botão direito para cavar, E para apanhar/entregar), com Shift só nas 2
+> últimas camadas (`mode: smart`), o que dá sempre integridade 100 %. Os tempos são um
+> **limite inferior** do que um jogador real faz.
+
+Roteiro `tools/bot/praia_300.json` (DebugBridge): ciclo spot mais próximo → cavar → apanhar →
+entregar na base quando a mochila (3) enche → repetir, até `money>=300` (dinheiro inicial
+100, logo +200 de lucro). Saída em `.bot_runs/`.
+
+| corrida | tempo até 300 | R$/min | itens vendidos | 1.º inimigo | dano | mortes | teleports |
+|---|---|---|---|---|---|---|---|
+| `praia_300_2026-10-14_15-51-14` (janela) | 1 min 10 s | 222 | 9 | nenhum | 0 | 0 | 0 |
+| `praia_300_2026-10-14_19-01-59` (headless) | 48 s | 319 | 6 | nenhum | 0 | 0 | 0 |
+| `praia_300_2026-10-14_19-02-00` (headless) | 3 min 29 s | 65 | 23 | nenhum | 0 | 0 | 0 |
+
+Observações:
+- **Muito abaixo da meta de 8–15 min**, mesmo descontando a eficiência do bot. Um ciclo
+  (3 spots + entrega) leva ~25 s.
+- O tempo depende quase só de sair uma **Moeda Antiga** (R$ 188 perfeita): numa entrega
+  ela vale mais do que 10 latas (R$ 6, ou 19 com bónus). Sem moeda, ~R$ 65/min.
+- O museu absorve parte do valor (vendido 385–457 vs. lucro 226–258) — previsto.
+- **Nenhum inimigo apareceu** em 3,5 min: com Shift nas últimas camadas a Ameaça do
+  Subsolo nunca chega ao limiar. Cavar "inteligente" anula a pressão dos caranguejos.
+- Sugestões: baixar o peso/valor da Moeda Antiga ou o bónus de perfeição na Praia, e/ou
+  dar ruído também à escavação cuidadosa; repetir o teste com humanos.
