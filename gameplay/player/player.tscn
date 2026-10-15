@@ -130,14 +130,17 @@ mouse_filter = 2
 color = Color(1, 1, 1, 0.75)
 
 [node name="FeedbackLabel" type="Label" parent="HUD"]
-anchors_preset = 5
+anchors_preset = 8
 anchor_left = 0.5
+anchor_top = 0.5
 anchor_right = 0.5
+anchor_bottom = 0.5
 offset_left = -350.0
-offset_top = 45.0
+offset_top = 70.0
 offset_right = 350.0
-offset_bottom = 125.0
+offset_bottom = 150.0
 grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.95)
 theme_override_constants/outline_size = 8
 theme_override_font_sizes/font_size = 22

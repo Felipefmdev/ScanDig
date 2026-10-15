@@ -24,6 +24,9 @@ const SWEEP_TRAIL_ANGLE: float = 0.7
 const BLIP_RADIUS: float = 5.0
 const ENEMY_BLIP_RADIUS: float = 6.0
 const SCREEN_BG_COLOR: Color = Color(0.015, 0.07, 0.04, 1.0)
+const RARE_COLOR: Color = Color(1.0, 0.85, 0.3)
+const PIN_COLOR: Color = Color(0.4, 0.95, 1.0)
+## Linhas do rodapé: 4 até ao Nv.3, 5 com a faixa de valor (Nv.4+).
 const FOOTER_LINES: int = 4
 const FOOTER_LINE_HEIGHT: float = 17.0
 const FOOTER_FONT_SIZE: int = 14
@@ -72,7 +75,8 @@ func _draw() -> void:
 	if fill_background:
 		draw_rect(Rect2(Vector2.ZERO, vsize), SCREEN_BG_COLOR)
 
-	var footer_h: float = FOOTER_LINE_HEIGHT * float(FOOTER_LINES) + 4.0
+	var lines: PackedStringArray = detector.get_footer_lines()
+	var footer_h: float = FOOTER_LINE_HEIGHT * float(maxi(lines.size(), FOOTER_LINES)) + 4.0
 	var radius: float = minf(vsize.x, vsize.y - footer_h) * 0.5 - 3.0
 	if radius <= 4.0:
 		return
@@ -82,11 +86,18 @@ func _draw() -> void:
 	_draw_background(center, radius)
 	_draw_sweep(center, radius)
 
-	var scale_px: float = radius / maxf(detector.max_detection_distance, 0.1)
+	var view_dist: float = detector.get_radar_view_distance()
+	var scale_px: float = radius / maxf(view_dist, 0.1)
+	var pinpointing: bool = detector.is_pinpointing()
 	for blip: MetalDetector.RadarBlip in detector.get_blips():
 		var radar_pos: Vector2 = detector.world_to_radar(blip.world_pos)
-		if radar_pos.length() > detector.max_detection_distance * 1.05:
-			continue
+		if radar_pos.length() > view_dist * 1.05:
+			# Inimigos fora da escala (Nv.6 a 1.5× o alcance, ou zoom do pinpointer) ficam na borda.
+			if not blip.is_enemy:
+				continue
+			radar_pos = radar_pos.normalized() * view_dist
+		if pinpointing and not blip.is_enemy and blip.world_pos.is_equal_approx(detector.get_current_target().global_position):
+			continue  # o alvo do pinpointer é desenhado ao vivo por _draw_pinpoint
 		var p: Vector2 = center + Vector2(radar_pos.x, -radar_pos.y) * scale_px
 		var alpha: float = detector.get_blip_alpha(blip)
 		if blip.is_enemy:
@@ -100,7 +111,13 @@ func _draw() -> void:
 	])
 	draw_colored_polygon(tri, TEXT_COLOR)
 
-	_draw_footer(center, radius, level, vsize.x)
+	if pinpointing:
+		_draw_pinpoint(center, scale_px)
+	var compass: Vector2 = detector.get_rare_compass()
+	if compass != Vector2.ZERO:
+		_draw_rare_compass(center, radius, compass)
+
+	_draw_footer(center, radius, lines, vsize.x)
 
 
 func _draw_background(center: Vector2, radius: float) -> void:
@@ -173,26 +190,41 @@ func _draw_enemy_blip(p: Vector2, alpha: float) -> void:
 	]), c)
 
 
-## Texto por baixo do círculo: nível/alcance/inimigos, sinal, material (Nv2+), profundidade (Nv3).
-func _draw_footer(center: Vector2, radius: float, level: int, width: float) -> void:
-	var lines: PackedStringArray = PackedStringArray()
-	var enemies: int = detector.get_enemy_count()
-	var head: String = "Nv.%d  %dm" % [level, int(round(detector.max_detection_distance))]
-	if enemies > 0:
-		head += "  ⚠%d" % enemies
-	lines.append(head)
-
-	var bars_count: int = int(round(detector.get_signal_strength() * 6.0))
-	var bars: String = ""
-	for i: int in range(6):
-		bars += "█" if i < bars_count else "░"
-	lines.append("Sinal " + bars)
-
+## Pinpointer: anel do alcance da pá (dourado quando o alvo está dentro) e o alvo ao vivo
+## com mira, para o jogador acertar o ponto exato.
+func _draw_pinpoint(center: Vector2, scale_px: float) -> void:
 	var target: BuriedSpot = detector.get_current_target()
-	var item: ItemData = target.item if target != null else null
-	lines.append("Mat: " + (MetalDetector.get_material_name(item.material_type) if item != null and level >= 2 else "---"))
-	lines.append("Prof: " + (MetalDetector.get_depth_range_text(item) if item != null and level >= 3 else "---"))
+	if target == null:
+		return
+	var in_reach: bool = detector.get_target_distance() <= MetalDetector.PINPOINT_DIG_DISTANCE
+	var ring: Color = RARE_COLOR if in_reach else PIN_COLOR
+	draw_arc(center, MetalDetector.PINPOINT_DIG_DISTANCE * scale_px, 0.0, TAU, 40, Color(ring, 0.8), 1.5, true)
+	var radar_pos: Vector2 = detector.world_to_radar(target.global_position)
+	var p: Vector2 = center + Vector2(radar_pos.x, -radar_pos.y) * scale_px
+	var pulse: float = 0.5 + 0.5 * sin(_time * 12.0)
+	var color: Color = get_material_color(target.item.material_type) if target.item != null and detector.get_detector_level() >= 2 else LEVEL1_COLOR
+	draw_circle(p, 9.0 + pulse * 3.0, Color(color, 0.25))
+	draw_circle(p, 5.0, color)
+	var arm: float = 11.0
+	draw_line(p + Vector2(-arm, 0.0), p + Vector2(-6.0, 0.0), PIN_COLOR, 1.5)
+	draw_line(p + Vector2(6.0, 0.0), p + Vector2(arm, 0.0), PIN_COLOR, 1.5)
+	draw_line(p + Vector2(0.0, -arm), p + Vector2(0.0, -6.0), PIN_COLOR, 1.5)
+	draw_line(p + Vector2(0.0, 6.0), p + Vector2(0.0, arm), PIN_COLOR, 1.5)
 
+
+## Pinpointer Nv.2: triângulo dourado na borda a apontar para a variante rara mais próxima.
+func _draw_rare_compass(center: Vector2, radius: float, compass: Vector2) -> void:
+	var dir: Vector2 = Vector2(compass.x, -compass.y).normalized()
+	var side: Vector2 = Vector2(-dir.y, dir.x)
+	var tip: Vector2 = center + dir * (radius + 1.0)
+	var base: Vector2 = center + dir * (radius - 9.0)
+	var pulse: float = 0.7 + 0.3 * sin(_time * 6.0)
+	draw_colored_polygon(PackedVector2Array([tip, base + side * 5.0, base - side * 5.0]), Color(RARE_COLOR, pulse))
+
+
+## Texto por baixo do círculo (MetalDetector.get_footer_lines: nível/alcance/inimigos/raro,
+## sinal ou pinpointer, material ou nome, profundidade, valor).
+func _draw_footer(center: Vector2, radius: float, lines: PackedStringArray, width: float) -> void:
 	var font: Font = ThemeDB.fallback_font
 	var y: float = center.y + radius + FOOTER_LINE_HEIGHT
 	for line: String in lines:

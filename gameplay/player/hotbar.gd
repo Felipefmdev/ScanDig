@@ -5,6 +5,10 @@ extends HBoxContainer
 ## (acompanha melhorias de capacidade) e destaca o slot selecionado.
 
 const SLOT_SIZE: Vector2 = Vector2(92, 92)
+## Com muitos slots (mochila até 8) encolhem até aqui para não tapar a vida (canto inferior esquerdo).
+const MIN_SLOT_SIZE: float = 64.0
+## Largura reservada em cada lado do ecrã (painel de vida: 24 + 280 px + margem).
+const SIDE_RESERVED: float = 320.0
 const COLOR_BG: Color = Color(0.05, 0.05, 0.06, 0.6)
 const COLOR_BORDER: Color = Color(0.0, 0.0, 0.0, 0.85)
 const COLOR_SELECTED: Color = Color(1.0, 0.85, 0.3, 1.0)
@@ -13,6 +17,7 @@ const COLOR_TOOL: Color = Color(0.32, 0.8, 1.0)
 
 var inventory: Inventory = null
 var _slot_panels: Array[PanelContainer] = []
+var _slot_size: Vector2 = SLOT_SIZE
 
 
 func bind(inv: Inventory) -> void:
@@ -29,6 +34,7 @@ func _rebuild() -> void:
 		for p: PanelContainer in _slot_panels:
 			p.queue_free()
 		_slot_panels.clear()
+		_slot_size = get_slot_size(inventory.capacity)
 		for i: int in inventory.capacity:
 			var panel: PanelContainer = _make_slot_panel()
 			add_child(panel)
@@ -38,9 +44,18 @@ func _rebuild() -> void:
 	_on_selected_slot_changed(inventory.selected_slot)
 
 
+## Quadrado por slot: SLOT_SIZE se couber entre as margens laterais, senão mais pequeno.
+func get_slot_size(count: int) -> Vector2:
+	var view_w: float = get_viewport_rect().size.x if is_inside_tree() else 1280.0
+	var sep: float = float(get_theme_constant("separation"))
+	var avail: float = view_w - 2.0 * SIDE_RESERVED - sep * float(maxi(count - 1, 0))
+	var side: float = clampf(floorf(avail / float(maxi(count, 1))), MIN_SLOT_SIZE, SLOT_SIZE.x)
+	return Vector2(side, side)
+
+
 func _make_slot_panel() -> PanelContainer:
 	var panel: PanelContainer = PanelContainer.new()
-	panel.custom_minimum_size = SLOT_SIZE
+	panel.custom_minimum_size = _slot_size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var box: VBoxContainer = VBoxContainer.new()
@@ -74,7 +89,7 @@ func _make_label(label_name: String, size: int, color: Color) -> Label:
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.clip_text = true
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	l.custom_minimum_size = Vector2(SLOT_SIZE.x - 10.0, 0.0)
+	l.custom_minimum_size = Vector2(_slot_size.x - 10.0, 0.0)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)

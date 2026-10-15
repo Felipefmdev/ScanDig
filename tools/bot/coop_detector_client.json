@@ -1,0 +1,20 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{"t": 1.5, "join": "127.0.0.1", "port": 7797, "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 1.0},
+		{"t": 0, "teleport": [3.0, 0.4, 5.0]},
+		{"t": 0, "look_at": [3.6, 0.0, 3.6]},
+		{"sleep": 0.5},
+		{"t": 0, "screenshot": "c1_dois_detetores"},
+		{"t": 0, "pickup": true, "radius": 6, "timeout": 4},
+		{"sleep": 0.8},
+		{"t": 0, "dump": "c2_um_detetor"},
+		{"t": 0, "pickup": true, "radius": 6, "timeout": 3},
+		{"sleep": 0.5},
+		{"t": 0, "screenshot": "c3_recusa_segundo"},
+		{"t": 0, "dump": "c3_final"},
+		{"t": 0, "quit": true}
+	]
+}

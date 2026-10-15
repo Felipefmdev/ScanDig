@@ -11,7 +11,9 @@ signal target_lost()
 signal blip_lit(blip: RadarBlip)
 
 ## Nível usado quando não existe GameState na cena (só leitura de core/).
-@export_range(1, 3) var detector_level: int = 1
+@export_range(1, 7) var detector_level: int = 1
+## Nível do pinpointer quando não existe GameState (0 = sem pinpointer).
+@export_range(0, 2) var pinpointer_level: int = 0
 ## Alcance no nível 1; cada nível acima soma range_bonus_per_level.
 @export var base_detection_distance: float = 8.0
 @export var range_bonus_per_level: float = 2.5
@@ -26,7 +28,30 @@ signal blip_lit(blip: RadarBlip)
 @onready var model: DetectorModel = $Model
 @onready var radar_viewport: SubViewport = $RadarViewport
 
-const MAX_LEVEL: int = 3
+const MAX_LEVEL: int = 7
+## Nv.4+: o visor mostra a faixa de valor estimado do alvo.
+const VALUE_RANGE_LEVEL: int = 4
+## Nv.5+: a variante rara é anunciada a qualquer distância (antes só com sinal forte).
+const RARE_ALERT_LEVEL: int = 5
+## Nv.6+: inimigos aparecem até ENEMY_RANGE_MULTIPLIER × o alcance (na borda do radar).
+const LONG_ENEMY_LEVEL: int = 6
+const ENEMY_RANGE_MULTIPLIER: float = 1.5
+## Nv.7: identifica o item pelo nome e avisa se ainda falta no museu.
+const IDENTIFY_LEVEL: int = 7
+
+# Pinpointer (upgrade "pinpointer"): Nv.1 = bip direcional e zoom nos últimos metros;
+# Nv.2 = bússola para a variante rara mais próxima (em todo o mapa).
+const PINPOINT_RANGE: float = 2.0
+## Abaixo disto o visor diz "CAVE" (dig_range do jogador é 1.8 m, medido dos pés).
+const PINPOINT_DIG_DISTANCE: float = 1.5
+## Intervalo entre bips a PINPOINT_RANGE e em cima do alvo (s).
+const PINPOINT_TICK_FAR: float = 0.45
+const PINPOINT_TICK_NEAR: float = 0.08
+const PINPOINT_TICK_HZ: float = 2600.0
+const PINPOINT_TICK_LENGTH: float = 0.04
+const RARE_COMPASS_LEVEL: int = 2
+## Escala do radar (m até à borda) enquanto o pinpointer guia.
+const PINPOINT_VIEW_DISTANCE: float = 2.5
 ## Ruído médio que o radar gera enquanto há alvos no alcance; cada ping reporta NOISE_PER_SECOND * sweep_period.
 const NOISE_PER_SECOND: float = 1.5
 ## A partir desta força de sinal, uma variante rara ganha brilho no som e anel no radar.
@@ -84,6 +109,10 @@ var _ping_rare: bool = false
 var _ping_gain: float = 1.0
 var _ping_t: float = -1.0
 
+var _pin_audio: AudioStreamPlayer3D = null
+var _pin_tick_timer: float = 0.0
+static var _tick_stream: AudioStreamWAV = null
+
 # Fases dos osciladores (radianos)
 var _phase: float = 0.0
 var _lfo_phase: float = 0.0
@@ -103,6 +132,7 @@ func _ready() -> void:
 	_initial_rot = rotation
 	_refresh_level_stats()
 	_setup_audio_generator()
+	_setup_pinpointer_audio()
 	_setup_screen()
 	# O detetor é uma ferramenta de inventário: começa guardado até o jogador o equipar.
 	set_active(false)
@@ -127,6 +157,7 @@ func set_active(active: bool) -> void:
 	else:
 		_blips.clear()
 		_ping_t = -1.0
+		_pin_tick_timer = 0.0
 		_pinged_this_turn = false
 		if _current_target != null:
 			_current_target = null
@@ -193,6 +224,7 @@ func _process(delta: float) -> void:
 	_update_sweep(delta)
 	_age_blips(delta)
 	_fill_audio_buffer()
+	_update_pinpointer(delta)
 
 
 ## Nível efetivo: GameState (upgrade comprado) tem prioridade sobre o @export local.
@@ -205,6 +237,28 @@ func get_detector_level() -> int:
 
 func _refresh_level_stats() -> void:
 	max_detection_distance = base_detection_distance + range_bonus_per_level * float(get_detector_level() - 1)
+
+
+## Alcance para inimigos: igual ao dos itens, ou 1.5× a partir do Nv.6.
+func get_enemy_detection_distance() -> float:
+	if get_detector_level() >= LONG_ENEMY_LEVEL:
+		return max_detection_distance * ENEMY_RANGE_MULTIPLIER
+	return max_detection_distance
+
+
+## Nível do pinpointer (0 a 2): GameState (upgrade comprado) tem prioridade sobre o @export.
+func get_pinpointer_level() -> int:
+	var level: int = pinpointer_level
+	if GameState.instance != null:
+		level = GameState.instance.get_pinpointer_level()
+	return clampi(level, 0, 2)
+
+
+## A variante rara deste spot já aparece no radar/visor? Sinal forte, ou detector Nv.5+.
+func is_rare_revealed(spot: BuriedSpot, signal_strength: float) -> bool:
+	if spot == null or not spot.is_rare_variant:
+		return false
+	return signal_strength >= RARE_SIGNAL_THRESHOLD or get_detector_level() >= RARE_ALERT_LEVEL
 
 
 func get_signal_strength() -> float:
@@ -323,7 +377,7 @@ func _update_sweep(delta: float) -> void:
 func _sweep_check(node: Node3D, is_enemy: bool, prev_angle: float, step: float) -> void:
 	var radar_pos: Vector2 = world_to_radar(node.global_position)
 	var dist: float = radar_pos.length()
-	if dist > max_detection_distance:
+	if dist > (get_enemy_detection_distance() if is_enemy else max_detection_distance):
 		return
 	if fposmod(_radar_angle(radar_pos) - prev_angle, TAU) > step:
 		return
@@ -343,7 +397,7 @@ func _sweep_check(node: Node3D, is_enemy: bool, prev_angle: float, step: float) 
 		blip.has_item = spot.item != null
 		blip.material = spot.item.material_type if spot.item != null else ItemData.MaterialType.FERRO
 		blip.depth_cm = spot.item.depth_cm if spot.item != null else 0
-		blip.is_rare = spot.is_rare_variant and blip.strength >= RARE_SIGNAL_THRESHOLD
+		blip.is_rare = is_rare_revealed(spot, blip.strength)
 		if spot == _current_target and not _pinged_this_turn:
 			_pinged_this_turn = true
 			_start_ping(spot, blip.strength)
@@ -402,7 +456,7 @@ func _start_ping(spot: BuriedSpot, signal_strength: float) -> void:
 	var item: ItemData = spot.item
 	_ping_material = item.material_type if item != null else ItemData.MaterialType.FERRO
 	_ping_freq = _get_frequency_for_item(item)
-	_ping_rare = spot.is_rare_variant and signal_strength >= RARE_SIGNAL_THRESHOLD
+	_ping_rare = is_rare_revealed(spot, signal_strength)
 	_ping_gain = lerpf(0.45, 1.0, signal_strength)
 	_ping_t = 0.0
 	_reset_oscillators()
@@ -498,6 +552,115 @@ func _synth_sample() -> float:
 
 
 # ---------------------------------------------------------------------------
+# Pinpointer: Nv.1 bip direcional (som 3D no ponto) + zoom do radar nos últimos
+# PINPOINT_RANGE m; Nv.2 bússola para a variante rara mais próxima.
+# ---------------------------------------------------------------------------
+
+func _setup_pinpointer_audio() -> void:
+	_pin_audio = AudioStreamPlayer3D.new()
+	_pin_audio.name = "PinpointerAudio"
+	# Fica no mundo, em cima do alvo: o bip vem da direção do ponto exato.
+	_pin_audio.top_level = true
+	_pin_audio.stream = get_tick_stream()
+	_pin_audio.bus = SFX.BUS
+	_pin_audio.volume_db = -8.0
+	_pin_audio.unit_size = 3.0
+	_pin_audio.max_distance = 10.0
+	add_child(_pin_audio)
+
+
+## Bip curto e agudo gerado uma vez (seno com decaimento rápido).
+static func get_tick_stream() -> AudioStreamWAV:
+	if _tick_stream != null:
+		return _tick_stream
+	var rate: int = 22050
+	var frames: int = int(float(rate) * PINPOINT_TICK_LENGTH)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(frames * 2)
+	for i: int in frames:
+		var t: float = float(i) / float(rate)
+		var s: float = sin(TAU * PINPOINT_TICK_HZ * t) * minf(t / 0.002, 1.0) * exp(-t / 0.012) * 0.7
+		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+	_tick_stream = AudioStreamWAV.new()
+	_tick_stream.format = AudioStreamWAV.FORMAT_16_BITS
+	_tick_stream.mix_rate = rate
+	_tick_stream.stereo = false
+	_tick_stream.data = data
+	return _tick_stream
+
+
+## Distância (m, no plano do radar) ao alvo atual; INF sem alvo.
+func get_target_distance() -> float:
+	return _current_distance if get_current_target() != null else INF
+
+
+## O pinpointer está a guiar? Nv.1+ e o alvo a ≤ PINPOINT_RANGE m.
+func is_pinpointing() -> bool:
+	return get_pinpointer_level() >= 1 and get_target_distance() <= PINPOINT_RANGE
+
+
+## Metros do centro à borda do radar: zoom de PINPOINT_VIEW_DISTANCE enquanto o pinpointer guia.
+func get_radar_view_distance() -> float:
+	return PINPOINT_VIEW_DISTANCE if is_pinpointing() else max_detection_distance
+
+
+## Segundos entre bips: PINPOINT_TICK_FAR a PINPOINT_RANGE m, PINPOINT_TICK_NEAR em cima do alvo.
+static func get_pinpoint_tick_interval(distance: float) -> float:
+	return lerpf(PINPOINT_TICK_NEAR, PINPOINT_TICK_FAR, clampf(distance / PINPOINT_RANGE, 0.0, 1.0))
+
+
+## Seta (8 rumos) para um vetor no plano do radar (x = direita, y = frente).
+static func get_direction_arrow(radar_pos: Vector2) -> String:
+	if radar_pos.length_squared() < 0.0001:
+		return "•"
+	var arrows: Array[String] = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
+	var sector: int = int(round(fposmod(atan2(radar_pos.x, radar_pos.y), TAU) / (TAU / 8.0))) % 8
+	return arrows[sector]
+
+
+## Linha do pinpointer no visor ("" quando não está a guiar).
+func get_pinpoint_text() -> String:
+	if not is_pinpointing():
+		return ""
+	if _current_distance <= PINPOINT_DIG_DISTANCE:
+		return "PIN ✔ CAVE"
+	var dir: Vector2 = world_to_radar(get_current_target().global_position)
+	return "PIN %s %.1fm" % [get_direction_arrow(dir), _current_distance]
+
+
+## Pinpointer Nv.2: vetor (plano do radar) até à variante rara mais próxima, a qualquer
+## distância; Vector2.ZERO se não houver nenhuma ou sem o Nv.2.
+func get_rare_compass() -> Vector2:
+	if get_pinpointer_level() < RARE_COMPASS_LEVEL or not is_inside_tree():
+		return Vector2.ZERO
+	var best: Vector2 = Vector2.ZERO
+	var best_len: float = INF
+	for node: Node in get_tree().get_nodes_in_group("buried_spots"):
+		var spot: BuriedSpot = node as BuriedSpot
+		if spot == null or not spot.is_inside_tree() or not spot.is_rare_variant or spot.item == null:
+			continue
+		var v: Vector2 = world_to_radar(spot.global_position)
+		if v.length() < best_len:
+			best_len = v.length()
+			best = v
+	return best
+
+
+func _update_pinpointer(delta: float) -> void:
+	if not is_pinpointing():
+		_pin_tick_timer = 0.0
+		return
+	_pin_tick_timer -= delta
+	if _pin_tick_timer > 0.0:
+		return
+	_pin_tick_timer = get_pinpoint_tick_interval(_current_distance)
+	if _pin_audio != null and _pin_audio.is_inside_tree():
+		_pin_audio.global_position = get_current_target().global_position
+		_pin_audio.pitch_scale = 1.35 if _current_distance <= PINPOINT_DIG_DISTANCE else 1.0
+		_pin_audio.play()
+
+
+# ---------------------------------------------------------------------------
 # Visor (Label3D no aparelho) — resumo coerente com o radar
 # ---------------------------------------------------------------------------
 
@@ -523,39 +686,90 @@ static func get_depth_range_text(item: ItemData) -> String:
 	return "%d-%d cm" % [maxi(5, item.depth_cm - 8), item.depth_cm + 8]
 
 
-## Visor: nível 1 só sinal; nível 2 + material; nível 3 + profundidade e tamanho.
-func get_readout_text() -> String:
-	var level: int = get_detector_level()
-	var enemies: int = get_enemy_count()
-	var threat_text: String = "  ⚠%d" % enemies if enemies > 0 else ""
-	var target: BuriedSpot = get_current_target()
-	if target == null or _current_distance > max_detection_distance:
-		return "RADAR Nv.%d%s\nSinal: ---\nProf: ---\nMat: ---\nTam: ---" % [level, threat_text]
+## Faixa de valor (R$) do Nv.4 em diante: do pior caso (pazadas rápidas nas 2 últimas
+## camadas, mesma conta do BuriedSpot.dig) à escavação perfeita; × 3 se for variante rara.
+static func get_value_range(item: ItemData, rare: bool) -> Vector2i:
+	if item == null:
+		return Vector2i.ZERO
+	var mult: float = BuriedSpot.RARE_VALUE_MULTIPLIER if rare else 1.0
+	var crack: float = clampf(item.fragility * 0.45, 0.08, 0.90)
+	var worst: float = clampf(1.0 - 2.0 * crack, 0.05, 1.0)
+	var lo: int = int(round(float(item.calculate_value(worst)) * mult))
+	var hi: int = int(round(float(item.base_value) * mult * BuriedSpot.PERFECT_BONUS_MULTIPLIER))
+	return Vector2i(lo, hi)
 
-	var signal_strength: float = get_signal_strength()
-	var bars_count: int = int(round(signal_strength * 6.0))
+
+## Nv.7: nome do item; "Novo: " se a equipa ainda não o descobriu (falta no museu).
+static func get_identify_text(item: ItemData) -> String:
+	if item == null:
+		return "---"
+	var item_name: String = item.display_name if not item.display_name.is_empty() else item.id
+	if GameState.instance != null and not GameState.instance.discovered_items.has(item.id):
+		return "Novo: " + item_name
+	return item_name
+
+
+static func get_size_name(size: ItemData.SizeCategory) -> String:
+	match size:
+		ItemData.SizeCategory.PEQUENO:
+			return "Pequeno"
+		ItemData.SizeCategory.MEDIO:
+			return "Médio"
+		ItemData.SizeCategory.GRANDE:
+			return "Grande"
+		ItemData.SizeCategory.COLOSSAL:
+			return "Colossal"
+	return "---"
+
+
+func _signal_bars() -> String:
+	var bars_count: int = int(round(get_signal_strength() * 6.0))
 	var bars_text: String = ""
 	for i: int in range(6):
 		bars_text += "█" if i < bars_count else "░"
+	return bars_text
 
-	var item: ItemData = target.item
-	var prof_text: String = "---"
-	var mat_text: String = "---"
-	var size_text: String = "---"
 
-	if item != null and level >= 2:
-		mat_text = get_material_name(item.material_type)
+## Linhas por baixo do radar (DetectorRadar) por nível:
+## Nv.1 sinal · Nv.2 + material · Nv.3 + profundidade · Nv.4 + faixa de valor ·
+## Nv.5 raro a qualquer distância (★x3) · Nv.6 inimigos a 1.5× · Nv.7 nome do item.
+## Pinpointer: "PIN ↗ 1.3m" no lugar do sinal (Nv.1) e "★12m" até ao raro mais próximo (Nv.2).
+func get_footer_lines() -> PackedStringArray:
+	var level: int = get_detector_level()
+	var lines: PackedStringArray = PackedStringArray()
+	var head: String = "Nv.%d  %dm" % [level, int(round(max_detection_distance))]
+	var enemies: int = get_enemy_count()
+	if enemies > 0:
+		head += "  ⚠%d" % enemies
+	var compass: Vector2 = get_rare_compass()
+	if compass != Vector2.ZERO:
+		head += "  ★%dm" % int(round(compass.length()))
+	lines.append(head)
 
-	if item != null and level >= 3:
-		prof_text = get_depth_range_text(item)
-		match item.size_category:
-			ItemData.SizeCategory.PEQUENO:
-				size_text = "Pequeno"
-			ItemData.SizeCategory.MEDIO:
-				size_text = "Médio"
-			ItemData.SizeCategory.GRANDE:
-				size_text = "Grande"
-			ItemData.SizeCategory.COLOSSAL:
-				size_text = "Colossal"
+	var pin: String = get_pinpoint_text()
+	lines.append(pin if not pin.is_empty() else "Sinal " + _signal_bars())
 
-	return "RADAR Nv.%d%s [%s]\nProf: %s\nMat: %s\nTam: %s" % [level, threat_text, bars_text, prof_text, mat_text, size_text]
+	var target: BuriedSpot = get_current_target()
+	var item: ItemData = target.item if target != null else null
+	if level >= IDENTIFY_LEVEL and item != null:
+		lines.append(get_identify_text(item))
+	else:
+		lines.append("Mat: " + (get_material_name(item.material_type) if item != null and level >= 2 else "---"))
+	lines.append("Prof: " + (get_depth_range_text(item) if item != null and level >= 3 else "---"))
+	if level >= VALUE_RANGE_LEVEL:
+		var val_text: String = "---"
+		if item != null:
+			var rare: bool = is_rare_revealed(target, get_signal_strength())
+			var r: Vector2i = get_value_range(item, rare)
+			val_text = "R$%d-%d%s" % [r.x, r.y, " ★x3" if rare else ""]
+		lines.append("Val: " + val_text)
+	return lines
+
+
+## Visor de texto (debug/legado): o mesmo que o rodapé do radar, mais o tamanho (Nv.3+).
+func get_readout_text() -> String:
+	var lines: PackedStringArray = get_footer_lines()
+	var target: BuriedSpot = get_current_target()
+	if target != null and target.item != null and get_detector_level() >= 3:
+		lines.append("Tam: " + get_size_name(target.item.size_category))
+	return "\n".join(lines)

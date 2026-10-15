@@ -16,10 +16,13 @@ func after_each() -> void:
 	GameState.instance.apply_snapshot(_saved)
 
 
-func _set_progress(unlocked: Array, bosses: Array) -> void:
+## detector_upgrade: níveis comprados (0 = detector Nv.1). O Campo vai exigir Nv.2 (#26/#27).
+func _set_progress(unlocked: Array, bosses: Array, detector_upgrade: int = 1) -> void:
 	var snap: Dictionary = GameState.instance.get_snapshot()
 	snap["unlocked_maps"] = unlocked
 	snap["defeated_bosses"] = bosses
+	var levels: Dictionary = snap["upgrade_levels"]
+	levels["detector"] = detector_upgrade
 	GameState.instance.apply_snapshot(snap)
 
 
@@ -53,6 +56,20 @@ func test_can_start_only_when_unlocked() -> void:
 	assert_true(status["has_scene"])
 	assert_true(status["playable"])
 	assert_ne(status["reason"], "Em breve.")
+
+
+## Com o detector mínimo do campo.tres (Nv.1 hoje, Nv.2 depois da #26) dá para entrar;
+## abaixo dele, não.
+func test_requires_minimum_detector() -> void:
+	var sm: SessionManager = SessionManager.instance
+	var required_upgrade: int = CAMPO.required_detector_level - 1
+	_set_progress(["campo"], ["king_crab"], required_upgrade)
+	assert_true(sm.can_start_map("campo"), "detector Nv.%d chega" % CAMPO.required_detector_level)
+	if required_upgrade > 0:
+		_set_progress(["campo"], ["king_crab"], required_upgrade - 1)
+		assert_false(sm.can_start_map("campo"), "detector abaixo do mínimo")
+	_set_progress(["campo"], ["king_crab"], 1)
+	assert_true(sm.can_start_map("campo"), "detector Nv.2 (300) chega sempre")
 
 
 func test_economy_above_praia() -> void:

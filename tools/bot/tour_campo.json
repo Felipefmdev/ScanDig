@@ -1,7 +1,7 @@
 {
 	"scene": "res://world/map_campo.tscn",
 	"steps": [
-		{"t": 0.2, "set_state": {"unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"]}},
+		{"t": 0.2, "set_state": {"unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "upgrade_levels": {"detector": 1}}},
 		{"t": 1.2, "look_at": [-18, 1.0, -18]},
 		{"t": 1.6, "screenshot": "01_spawn_circulo"},
 		{"t": 1.7, "dump": "01_spawn"},

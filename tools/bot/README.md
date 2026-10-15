@@ -63,6 +63,11 @@ Com passos de alto nível o `summary.json` ganha `metrics`: `time_to_goal`, `mon
 (avisos de jogo, ex. "pickup: nenhum item" — não contam como erros), `fight_swings`.
 Exemplos: `praia_300.json` (economia da Praia), `campo_rate.json` (economia do Campo),
 `campo_boss.json` (cava o altar do círculo de pedras e luta com a Toupeira Gigante).
+Upgrades (#27): `praia_300_detector2/detector3/shovel/pinpointer/backpack/all/kit.json` = `praia_300.json` com
+`set_state` do upgrade e o raio do bot igual ao alcance do radar (8 / 10,5 / 13 m);
+`upgrades_visor.json` (com janela) tira capturas do visor Nv.7 + pinpointer Nv.2 e da hotbar de 8.
+Os roteiros do Campo (`tour_campo`, `campo_rate`, `campo_boss`) compram o detector Nv.2 no
+`set_state` (o Campo vai exigi-lo, #26); `campo_rate` usa raio 10,5 m.
 Coop dos inimigos (#24, `run_coop.sh <godot> <host.json> <client.json>`): `coop_enemies_host/client.json`
 (o host acorda um caranguejo e afasta-se; persegue e fere o convidado, que o mata por request_hit)
 e `coop_boss_host/client.json` (o convidado cava o altar do Campo; o host cria a Toupeira Gigante;
@@ -84,6 +89,8 @@ tools/bot/run_coop.sh "<godot>" tools/bot/coop_host.json tools/bot/coop_client.j
 
 `coop_host.json` hospeda na porta 7791 e entra na Praia; `coop_client.json` liga-se a ela
 (Fase 1: cada um vê o outro andar).
+`coop_detector_host/client.json` (porta 7797): o convidado apanha um dos 2 detetores do spawn e
+o segundo é recusado (cada jogador só leva um detetor).
 `coop2_host.json` / `coop2_client.json` (porta 7792, Fase 2): os dois veem os mesmos spots
 (`h1_spots` vs `c1_spots`), o convidado cava (o host executa o `dig`), os dois veem o item,
 correm para o apanhar (só um o leva) e quem o tem entrega-o na base: o dinheiro e o museu

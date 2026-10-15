@@ -9,6 +9,7 @@ signal died
 @export var mouse_sensitivity: float = 0.0025
 @export var dig_range: float = 1.8
 ## Nível da pá: cada nível reduz o cooldown de escavação e o dano à integridade dos itens.
+## Com GameState vem do upgrade "shovel" (1 a 4, ver _apply_shovel_level).
 @export_range(1, 10) var shovel_level: int = 1
 
 @export_group("Vida")
@@ -53,6 +54,8 @@ const TOOL_SLINGSHOT: StringName = &"estilingue"
 const TOOL_REPELLENT: StringName = &"repelente"
 const TOOL_NET_TRAP: StringName = &"armadilha_rede"
 const TOOL_MEDKIT: StringName = &"kit_medico"
+## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
+const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
 const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
 const SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL: float = 0.25
 const SHOVEL_DAMAGE_REDUCTION_PER_LEVEL: float = 0.15
@@ -185,6 +188,7 @@ func _ready() -> void:
 	_setup_threat_hud()
 
 	_apply_backpack_capacity()
+	_apply_shovel_level()
 	inventory.inventory_changed.connect(_on_inventory_changed)
 	inventory.selected_slot_changed.connect(_on_selected_slot_changed)
 	hotbar.bind(inventory)
@@ -241,6 +245,12 @@ func _ensure_default_input_mappings() -> void:
 	_add_key_if_empty("slot_1", KEY_1)
 	_add_key_if_empty("slot_2", KEY_2)
 	_add_key_if_empty("slot_3", KEY_3)
+	# Mochila Reforçada até 8 slots.
+	_add_key_if_empty("slot_4", KEY_4)
+	_add_key_if_empty("slot_5", KEY_5)
+	_add_key_if_empty("slot_6", KEY_6)
+	_add_key_if_empty("slot_7", KEY_7)
+	_add_key_if_empty("slot_8", KEY_8)
 
 
 func _add_key_if_empty(action: StringName, keycode: Key) -> void:
@@ -543,17 +553,26 @@ func _on_team_money_changed(_new_amount: int) -> void:
 	_update_session_hud()
 
 
-## Mochila Reforçada: slots = CoreGameState.get_backpack_capacity() (3 a 6).
+## Mochila Reforçada: slots = CoreGameState.get_backpack_capacity() (3 a 8).
 ## Cada peer lê o seu próprio GameState (o host sincroniza-o por snapshot).
 func _apply_backpack_capacity() -> void:
 	if GameState.instance != null:
 		inventory.capacity = GameState.instance.get_backpack_capacity()
 
 
-## Snapshot tardio (coop) pode trazer o nível da mochila depois do _ready.
-## Só cresce: encolher a meio da expedição deitaria itens fora.
+## Pá de Fibra: shovel_level = CoreGameState.get_shovel_level() (1 = pá básica, até 4).
+func _apply_shovel_level() -> void:
+	if GameState.instance != null:
+		shovel_level = GameState.instance.get_shovel_level()
+
+
+## Snapshot tardio (coop) pode trazer os níveis depois do _ready.
+## A mochila só cresce: encolher a meio da expedição deitaria itens fora.
 func _on_upgrades_changed(_levels: Dictionary) -> void:
-	if GameState.instance != null and GameState.instance.get_backpack_capacity() > inventory.capacity:
+	if GameState.instance == null:
+		return
+	_apply_shovel_level()
+	if GameState.instance.get_backpack_capacity() > inventory.capacity:
 		_apply_backpack_capacity()
 
 
@@ -813,6 +832,11 @@ func _interact() -> void:
 		SFX.play_ui(SFX.ERROR, -4.0)
 		_show_temporary_message("🎒 Mochila cheia! Entregue na base ou largue um item [Q].", Color(1.0, 0.6, 0.3), 1.8)
 		return
+	if _already_has_unique_tool(_target_pickup.carried):
+		SFX.play_ui(SFX.ERROR, -4.0)
+		_show_temporary_message("Já tem um %s (deixe-o para outro jogador)." % _target_pickup.carried.get_display_name(),
+			Color(0.9, 0.9, 0.9), 1.6)
+		return
 	var root: PickupsRoot = PickupsRoot.find(get_tree())
 	if root != null and not multiplayer.is_server():
 		# Coop (#5 E): pede ao host; o item chega por receive_granted_item.
@@ -825,6 +849,15 @@ func _interact() -> void:
 	var c: CarriedItem = root.take(_target_pickup) if root != null else _target_pickup.take()
 	_target_pickup = null
 	_add_picked_item(c)
+
+
+func _already_has_unique_tool(c: CarriedItem) -> bool:
+	if c == null or not c.is_tool() or not UNIQUE_TOOLS.has(c.tool_id):
+		return false
+	for slot: CarriedItem in inventory.slots:
+		if slot != null and slot.tool_id == c.tool_id:
+			return true
+	return false
 
 
 func _add_picked_item(c: CarriedItem) -> void:
@@ -931,6 +964,8 @@ func _update_interaction_target() -> void:
 	elif _target_pickup != null and _target_pickup.carried != null:
 		var aimed: CarriedItem = _target_pickup.carried
 		var suffix: String = "  — mochila cheia!" if inventory.is_full() else ""
+		if _already_has_unique_tool(aimed):
+			suffix = "  — já tem um"
 		var value: String = "" if aimed.is_tool() else " (R$ %d)" % aimed.final_value
 		interact_prompt.text = "[E] Apanhar %s%s%s" % [aimed.get_display_name(), value, suffix]
 	else:
