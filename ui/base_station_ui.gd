@@ -49,7 +49,7 @@ var _pending_unlock: bool = false
 var _unlock_timer: SceneTreeTimer = null
 
 ## Cor das linhas de mapas que ainda não podem ser jogados.
-const MAP_LOCKED_COLOR: Color = Color(0.6, 0.6, 0.6)
+const MAP_LOCKED_COLOR: Color = UiPalette.METAL
 
 
 func _resolve_node(unique_id: String, rel_path: String) -> Node:

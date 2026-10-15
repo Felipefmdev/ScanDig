@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://d3basestationscandig01"]
+[gd_scene load_steps=3 format=3 uid="uid://d3basestationscandig01"]
 
 [ext_resource type="Script" path="res://ui/base_station_ui.gd" id="1_base_ui"]
+[ext_resource type="Theme" path="res://ui/theme/scandig_theme.tres" id="2_scandig_theme"]
 
 [node name="BaseStationUI" type="Control"]
 layout_mode = 3
@@ -16,6 +17,7 @@ offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_base_ui")
+theme = ExtResource("2_scandig_theme")
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
 layout_mode = 1
@@ -24,22 +26,24 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_type_variation = &"WornPanel"
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_bottom = 8
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 6
 
 [node name="HeaderLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Base de Operações — Tenda de Pesquisa"
 horizontal_alignment = 1
+theme_type_variation = &"TitleLabel"
 
 [node name="TabContainer" type="TabContainer" parent="PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -49,7 +53,7 @@ current_tab = 0
 
 [node name="Loja de Equipamentos" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 metadata/_tab_index = 0
 
 [node name="ShopInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
@@ -106,7 +110,7 @@ autowrap_mode = 3
 [node name="Museu de Achados" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer"]
 visible = false
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 metadata/_tab_index = 1
 
 [node name="MuseumInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
@@ -130,6 +134,7 @@ layout_mode = 2
 [node name="SimLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
 layout_mode = 2
 text = "Simulação de Achado em Campo (Testes Dev B):"
+theme_type_variation = &"HintLabel"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
 layout_mode = 2
@@ -139,6 +144,7 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+fit_to_longest_item = false
 
 [node name="SellItemButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer"]
 unique_name_in_owner = true
@@ -159,7 +165,7 @@ autowrap_mode = 3
 [node name="Expedições" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer"]
 visible = false
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 metadata/_tab_index = 2
 
 [node name="ExpeditionInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
@@ -186,6 +192,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 disabled = true
 text = "Partir"
+theme_type_variation = &"PrimaryButton"
 
 [node name="ExpeditionFeedbackLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
 unique_name_in_owner = true

@@ -93,6 +93,8 @@ func _ready() -> void:
 		new_game_button.pressed.connect(_on_new_game_pressed)
 	if new_game_dialog != null:
 		new_game_dialog.confirmed.connect(_on_new_game_confirmed)
+		# Apagar o progresso é ação de perigo (theme ScanDig, #51).
+		new_game_dialog.get_ok_button().theme_type_variation = &"DangerButton"
 
 	_resolve_network_manager()
 	_setup_name_field()

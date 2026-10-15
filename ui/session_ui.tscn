@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://c5sessionuiscandig01"]
+[gd_scene load_steps=3 format=3 uid="uid://c5sessionuiscandig01"]
 
 [ext_resource type="Script" path="res://ui/session_ui.gd" id="1_session_ui"]
+[ext_resource type="Theme" path="res://ui/theme/scandig_theme.tres" id="2_scandig_theme"]
 
 [node name="SessionUI" type="CanvasLayer"]
 process_mode = 3
@@ -17,6 +18,7 @@ offset_top = 80.0
 offset_right = 320.0
 offset_bottom = 124.0
 grow_horizontal = 2
+theme = ExtResource("2_scandig_theme")
 
 [node name="HBox" type="HBoxContainer" parent="ExpeditionBar"]
 layout_mode = 2
@@ -42,6 +44,7 @@ visible = false
 layout_mode = 2
 focus_mode = 0
 text = "Sair da sessão"
+theme_type_variation = &"DangerButton"
 
 [node name="ToastPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -55,16 +58,17 @@ offset_right = 240.0
 offset_bottom = 172.0
 grow_horizontal = 2
 mouse_filter = 2
+theme = ExtResource("2_scandig_theme")
+theme_type_variation = &"ToastPanel"
 
 [node name="ToastLabel" type="Label" parent="ToastPanel"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.86, 0.4, 1)
-theme_override_font_sizes/font_size = 18
 text = "Aviso"
 horizontal_alignment = 1
 vertical_alignment = 1
 text_overrun_behavior = 3
+theme_type_variation = &"ToastLabel"
 
 [node name="LoadingScreen" type="ColorRect" parent="."]
 unique_name_in_owner = true
@@ -73,7 +77,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.05, 0.05, 0.07, 1)
+color = Color(0.243137, 0.164706, 0.105882, 1)
+theme = ExtResource("2_scandig_theme")
 
 [node name="LoadingLabel" type="Label" parent="LoadingScreen"]
 unique_name_in_owner = true
@@ -83,10 +88,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 28
 text = "Carregando..."
 horizontal_alignment = 1
 vertical_alignment = 1
+theme_type_variation = &"LoadingLabel"
 
 [node name="SummaryPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -101,6 +106,8 @@ offset_right = 280.0
 offset_bottom = 200.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_scandig_theme")
+theme_type_variation = &"WornPanel"
 
 [node name="Margin" type="MarginContainer" parent="SummaryPanel"]
 layout_mode = 2
@@ -116,10 +123,10 @@ theme_override_constants/separation = 10
 [node name="SummaryTitleLabel" type="Label" parent="SummaryPanel/Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
 text = "Resumo do Dia"
 horizontal_alignment = 1
 autowrap_mode = 3
+theme_type_variation = &"TitleLabel"
 
 [node name="SummaryList" type="ItemList" parent="SummaryPanel/Margin/VBox"]
 unique_name_in_owner = true
@@ -139,6 +146,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Fechar"
+theme_type_variation = &"PrimaryButton"
 
 [node name="HostLostPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -153,6 +161,7 @@ offset_right = 220.0
 offset_bottom = 80.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_scandig_theme")
 
 [node name="Margin" type="MarginContainer" parent="HostLostPanel"]
 layout_mode = 2
@@ -192,6 +201,7 @@ offset_right = 240.0
 offset_bottom = 90.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_scandig_theme")
 
 [node name="Margin" type="MarginContainer" parent="LeaveConfirmPanel"]
 layout_mode = 2
@@ -220,6 +230,7 @@ theme_override_constants/separation = 12
 unique_name_in_owner = true
 layout_mode = 2
 text = "Sair"
+theme_type_variation = &"DangerButton"
 
 [node name="LeaveCancelButton" type="Button" parent="LeaveConfirmPanel/Margin/VBox/HBox"]
 unique_name_in_owner = true
