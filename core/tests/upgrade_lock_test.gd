@@ -33,25 +33,27 @@ func _run() -> void:
 	gs.purchase_result.connect(_on_purchase_result)
 	gs.load_snapshot({"team_money": 100000, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 
-	# Sem mapas desbloqueados: detector 1 e 2 passam, o 3 pede o Campo.
+	# Sem mapas desbloqueados: detector 1, 2 e 3 passam (#46: o 3 custa 700 e saiu da trava do Campo).
 	for i in range(2):
 		var ok: Dictionary = await _buy(gs, "detector")
 		_check(ok.get("success", false) == true, "detector nível %d sem trava" % (i + 1))
-	_check(gs.equipped_detector_level == 3, "detector equipado Nv.3: %d" % gs.equipped_detector_level)
-	_check(gs.get_next_upgrade_required_map("detector") == "campo", "próximo detector exige campo: %s" % gs.get_next_upgrade_required_map("detector"))
-	_check(gs.get_upgrade_block_reason("detector") == "Desbloqueie Campo Antigo primeiro.", "motivo do Campo: %s" % gs.get_upgrade_block_reason("detector"))
-	var money_before: int = gs.team_money
-	var locked: Dictionary = await _buy(gs, "detector")
-	_check(locked.get("success", true) == false and locked.get("message", "") == "Desbloqueie Campo Antigo primeiro.", "compra 3 falha pelo Campo: %s" % str(locked.get("message", "")))
-	_check(gs.team_money == money_before and gs.get_upgrade_level("detector") == 2, "trava não muda saldo nem nível")
-
-	# Campo aberto: o 3 passa, o 4 pede as Ruínas.
-	gs.load_snapshot({"unlocked_maps": ["campo"]})
+	_check(gs.get_next_upgrade_cost("detector") == 700, "detector nível 3 custa 700: %d" % gs.get_next_upgrade_cost("detector"))
+	_check(gs.get_next_upgrade_required_map("detector") == "", "detector nível 3 sem mapa: %s" % gs.get_next_upgrade_required_map("detector"))
+	_check(gs.get_upgrade_block_reason("detector") == "", "detector nível 3 sem motivo de bloqueio: %s" % gs.get_upgrade_block_reason("detector"))
+	var money_third: int = gs.team_money
 	var third: Dictionary = await _buy(gs, "detector")
-	_check(third.get("success", false) == true, "detector nível 3 com Campo: %s" % str(third.get("message", "")))
+	_check(third.get("success", false) == true, "detector nível 3 sem Campo: %s" % str(third.get("message", "")))
+	_check(money_third - gs.team_money == 700, "custo do nível 3: %d" % (money_third - gs.team_money))
 	_check(gs.equipped_detector_level == 4, "detector equipado Nv.4: %d" % gs.equipped_detector_level)
+
+	# O 4 pede as Ruínas, mesmo com o Campo aberto.
+	gs.load_snapshot({"unlocked_maps": ["campo"]})
 	_check(gs.get_next_upgrade_required_map("detector") == "ruinas", "próximo detector exige ruinas: %s" % gs.get_next_upgrade_required_map("detector"))
 	_check(gs.get_upgrade_block_reason("detector") == "Desbloqueie Ruínas primeiro.", "motivo das Ruínas: %s" % gs.get_upgrade_block_reason("detector"))
+	var money_before: int = gs.team_money
+	var locked: Dictionary = await _buy(gs, "detector")
+	_check(locked.get("success", true) == false and locked.get("message", "") == "Desbloqueie Ruínas primeiro.", "compra 4 falha pelas Ruínas: %s" % str(locked.get("message", "")))
+	_check(gs.team_money == money_before and gs.get_upgrade_level("detector") == 3, "trava não muda saldo nem nível")
 
 	# Tudo aberto: detector até o nível 6 (equipado 7) e depois máximo.
 	gs.load_snapshot({"unlocked_maps": ["campo", "ruinas", "cratera"]})
@@ -62,7 +64,7 @@ func _run() -> void:
 	var maxed: Dictionary = await _buy(gs, "detector")
 	_check(maxed.get("success", true) == false and maxed.get("message", "") == "Detector já está no nível máximo.", "detector no máximo: %s" % str(maxed.get("message", "")))
 	_check(gs.get_next_upgrade_required_map("detector") == "", "required_map vazio no máximo")
-	_check(gs.team_money == 100000 - (300 + 600 + 1200 + 2000 + 15000 + 25000), "saldo após 6 níveis: %d" % gs.team_money)
+	_check(gs.team_money == 100000 - (300 + 600 + 700 + 2000 + 15000 + 25000), "saldo após 6 níveis: %d" % gs.team_money)
 
 	# Trava aberta e saldo baixo: o motivo é o saldo (a trava vem antes, mas está satisfeita).
 	gs.load_snapshot({"team_money": 100})

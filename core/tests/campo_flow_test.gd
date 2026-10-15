@@ -47,7 +47,7 @@ func _run() -> void:
 		return
 	gs.map_unlock_result.connect(_on_map_unlock_result)
 	sm.peer_scene_ready.connect(_on_peer_scene_ready)
-	gs.load_snapshot({"team_money": 2500, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
+	gs.load_snapshot({"team_money": 1700, "current_day": 1, "discovered_items": [], "upgrade_levels": {"detector": 1}, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(3)
 
 	gs.request_report_boss_defeated("king_crab")

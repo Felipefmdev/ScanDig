@@ -8,7 +8,7 @@ com testes reais e atualizem a tabela.
 | Mapa | Tempo alvo | Inimigos | Chefe | Desbloqueia com |
 | :--- | :--- | :--- | :--- | :--- |
 | 1. Praia | 60–80 min | Caranguejo | Caranguejo-Rei | Início |
-| 2. Campo Antigo | 80–100 min | Cobra, Toupeira | Toupeira Gigante | R$ 2.000 + vencer o chefe da Praia |
+| 2. Campo Antigo | 80–100 min | Cobra, Toupeira | Toupeira Gigante | R$ 1.200 + detector Nv.2 + vencer o chefe da Praia |
 | 3. Ruínas | 90–110 min | Guardião de pedra, Morcegos | Guardião Ancestral | R$ 8.000 + chefe do Campo |
 | 4. Cratera | 90–120 min | Criaturas "estranhas" | O Que Dorme Lá Em Baixo | R$ 25.000 + chefe das Ruínas |
 | Final / museu 100% | +30–60 min | — | — | Opcional (completistas) |
@@ -22,13 +22,14 @@ Um "ciclo" = detetar + cavar 3 itens + voltar à base ≈ **3 min** na Praia.
 
 | Mapa | Valor médio/item | R$ por minuto | Detector mínimo | Gasto total no mapa (upgrades + desbloqueio do seguinte) |
 | :--- | :--- | :--- | :--- | :--- |
-| Praia | ~50 | ~50 | Nv.1 | 3.400 + 2.000 = 5.400 (≈ 70 min + tempo a explorar) |
-| Campo | ~150 | ~130 | Nv.2 (falta o `campo.tres`, Dev B) | 2.800 + 8.000 = 10.800 |
+| Praia | ~50 | ~50 | Nv.1 | upgrades opcionais + 1.200 (alvo: 70–80 min até o Campo) |
+| Campo | ~150 | ~130 | Nv.2 | 2.800 + 8.000 = 10.800 |
 | Ruínas | ~468 | ~350 | Nv.4 | 5.000 + 25.000 = 30.000 |
 | Cratera | ~1.248 | ~900 | Nv.5 | 80.000 |
 
-Os upgrades seguem a tabela aprovada na #25. Cada nível exige o mapa da linha onde aparece
-(ex.: detector Nv.4 e mochila de 6 slots só com o Campo desbloqueado).
+Os upgrades seguem a tabela aprovada na #25, com o ajuste da #46. Cada nível exige o mapa
+da linha onde aparece (ex.: mochila de 6 slots só com o Campo desbloqueado). Exceção da #46:
+o detector Nv.4 (upgrade nível 3, R$ 700) já se compra na Praia.
 
 Estado atual (Praia, `items/maps/praia.tres`): lata x5, chave x4, moeda x2, aliança x1
 (média ≈ 53 R$). **O Relógio de Ouro (2.500) saiu da Praia** — passa para as Ruínas.
@@ -40,16 +41,16 @@ Variante rara (x3, 5%) e escavação perfeita (+25%) são bónus por habilidade.
   x6, liga desconhecida x5, engrenagem alienígena x2 (média ≈ 1.248 R$). Variante rara 7%.
   O Orbe Vibrante (10.000) fica fora do pool: é o prémio do chefe final.
 - **Detector mínimo** (`required_detector_level`): Ruínas Nv.4 (comprado no Campo) e
-  Cratera Nv.5 (comprado nas Ruínas). Campo Nv.2: o lado do Dev A já está pronto (#27:
-  `test_map_campo` e os roteiros do Campo compram o detector Nv.2); falta o Dev B mudar o `campo.tres`.
+  Cratera Nv.5 (comprado nas Ruínas). Campo Nv.2 (`campo.tres`, #46; os testes e roteiros do Campo
+  compram o detector Nv.2 desde a #27).
 - **Ritmo da Praia:** a #19 mediu 20–24 R$/min, abaixo dos ~50 da tabela. Pela decisão B
   da #25/#27, os preços não caem: a renda da Praia sobe com os upgrades (detector, pá e
   pinpointer com efeito no gameplay).
 
-**Pedido ao Dev B:** com estes valores, os custos atuais da loja
-(detector 300/600/1200, pinpointer 500, pá 800 = 3.400) encaixam na Praia. Os níveis
-seguintes (mapa 2+) devem seguir a tabela acima. A capacidade da mochila (3) deve ser um
-upgrade da loja (4 → 5 → 6 slots).
+**Custos atuais (#25, ajustados na #46):** Campo por R$ 1.200 com detector Nv.2 (upgrade
+nível 1, R$ 300); detector 300 / 600 / **700** (o nível 3 saiu da trava do Campo); pinpointer
+500, pá 800 e mochila 400 / 800 continuam opcionais na Praia. **Alvo: 70–80 min da Praia até
+o Campo**, a medir de novo pelo Dev A com `tools/bot/praia_300_*.json`.
 
 ## 3. Ritmo dentro de uma sessão
 

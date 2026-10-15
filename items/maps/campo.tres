@@ -12,8 +12,8 @@
 script = ExtResource("1_map")
 id = "campo"
 display_name = "Campo Antigo"
-unlock_cost = 2000
-required_detector_level = 1
+unlock_cost = 1200
+required_detector_level = 2
 item_pool = Array[ExtResource("2_item")]([ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i0_ferradura_velha"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i1_colher_prata"), ExtResource("i2_ponta_lanca_ferro"), ExtResource("i2_ponta_lanca_ferro"), ExtResource("i3_medalha_militar"), ExtResource("i4_anel_sinete")])
 rare_variant_chance = 0.04
 noise_multiplier = 1.3

@@ -85,17 +85,22 @@ func _run() -> void:
 	_check(gs.defeated_bosses.size() == 1, "king_crab não duplica: %s" % str(gs.defeated_bosses))
 
 	result = await _unlock(gs, "campo")
-	_check(result.get("success", true) == false and result.get("message", "") == "Saldo insuficiente para desbloquear Campo Antigo (R$ 2000).", "desbloqueio sem saldo falha: %s" % str(result.get("message", "")))
+	_check(result.get("success", true) == false and result.get("message", "") == "Saldo insuficiente para desbloquear Campo Antigo (R$ 1200).", "desbloqueio sem saldo falha: %s" % str(result.get("message", "")))
 
-	gs.load_snapshot({"team_money": 2500})
+	gs.load_snapshot({"team_money": 1700})
 	result = await _unlock(gs, "campo")
 	_check(result.get("success", false) == true and result.get("message", "") == "Campo Antigo desbloqueado!", "desbloqueio campo ok: %s" % str(result.get("message", "")))
 	_check(gs.team_money == 500, "dinheiro 500: %d" % gs.team_money)
 	_check(gs.is_map_unlocked("campo"), "campo desbloqueado")
 
+	# #46: o Campo pede o detector Nv.2 (upgrade nível 1).
+	campo = sm.get_map_status("campo")
+	_check(campo["unlocked"] and not campo["playable"] and campo["reason"] == "Requer detector nível 2.", "status campo pede detector Nv.2: %s" % str(campo["reason"]))
+	_check(not sm.can_start_map("campo"), "can_start_map campo false com detector Nv.1")
+	gs.load_snapshot({"upgrade_levels": {"detector": 1}})
 	campo = sm.get_map_status("campo")
 	_check(campo["unlocked"] and campo["playable"] and campo["reason"] == "", "status campo jogável: %s" % str(campo["reason"]))
-	_check(sm.can_start_map("campo"), "can_start_map campo true")
+	_check(sm.can_start_map("campo"), "can_start_map campo true com detector Nv.2")
 
 	result = await _unlock(gs, "campo")
 	_check(result.get("success", true) == false and result.get("message", "") == "Campo Antigo já está desbloqueado.", "desbloqueio repetido falha: %s" % str(result.get("message", "")))

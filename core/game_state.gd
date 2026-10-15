@@ -35,10 +35,11 @@ const MAP_UNLOCK_BOSSES: Dictionary = {
 }
 
 ## Definição da loja: custo de cada nível, mapa que precisa estar desbloqueado para
-## comprar cada nível ("" = sem trava) e nível máximo. Tabela aprovada na #25.
+## comprar cada nível ("" = sem trava) e nível máximo. Tabela aprovada na #25;
+## o nível 3 do detector (700, sem trava) veio da #46.
 const UPGRADES: Dictionary = {
-	"detector": {"name": "Detector", "costs": [300, 600, 1200, 2000, 15000, 25000],
-		"required_maps": ["", "", "campo", "ruinas", "cratera", "cratera"], "max_level": 6},
+	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 15000, 25000],
+		"required_maps": ["", "", "", "ruinas", "cratera", "cratera"], "max_level": 6},
 	"pinpointer": {"name": "Pinpointer de Precisão", "costs": [500, 18000],
 		"required_maps": ["", "cratera"], "max_level": 2},
 	"shovel": {"name": "Pá de Fibra", "costs": [800, 1200, 12000],

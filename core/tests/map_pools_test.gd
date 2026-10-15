@@ -70,6 +70,7 @@ func _run() -> void:
 	var cratera_avg: float = _pool_average(cratera)
 	_check(ruinas_avg >= 400.0 and ruinas_avg <= 520.0, "média ruinas 400–520: %.1f" % ruinas_avg)
 	_check(cratera_avg >= 1100.0 and cratera_avg <= 1400.0, "média cratera 1100–1400: %.1f" % cratera_avg)
+	_check(_load_map("campo").required_detector_level == 2, "campo exige detector Nv.2: %d" % _load_map("campo").required_detector_level)
 	_check(ruinas.required_detector_level == 4, "ruinas exige detector Nv.4: %d" % ruinas.required_detector_level)
 	_check(cratera.required_detector_level == 5, "cratera exige detector Nv.5: %d" % cratera.required_detector_level)
 	_check(gs.get_total_catalog_items() == 20, "catálogo com 20 itens: %d" % gs.get_total_catalog_items())

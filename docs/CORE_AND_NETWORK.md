@@ -58,7 +58,7 @@ Tabela aprovada na #25. Cada nível tem um custo e um mapa que precisa estar des
 
 | Upgrade | Nome | Nível comprado: custo (mapa exigido) | Nível máx. |
 | :--- | :--- | :--- | :--- |
-| `detector` | Detector | 1: 300 · 2: 600 · 3: 1.200 (`campo`) · 4: 2.000 (`ruinas`) · 5: 15.000 (`cratera`) · 6: 25.000 (`cratera`) | 6 (equipado Nv.7) |
+| `detector` | Detector | 1: 300 · 2: 600 · 3: 700 · 4: 2.000 (`ruinas`) · 5: 15.000 (`cratera`) · 6: 25.000 (`cratera`) | 6 (equipado Nv.7) |
 | `pinpointer` | Pinpointer de Precisão | 1: 500 · 2: 18.000 (`cratera`) | 2 |
 | `shovel` | Pá de Fibra | 1: 800 · 2: 1.200 (`ruinas`) · 3: 12.000 (`cratera`) | 3 (pá Nv.4) |
 | `backpack` | Mochila Reforçada | 1: 400 · 2: 800 · 3: 1.600 (`campo`) · 4: 1.800 (`ruinas`) · 5: 10.000 (`cratera`) | 5 (8 espaços) |
@@ -90,7 +90,7 @@ Regras em `docs/PACING.md` §1. Ordem: `praia` → `campo` → `ruinas` → `cra
 | Mapa | Nome | `unlock_cost` | Chefe exigido (`MAP_UNLOCK_BOSSES`) |
 | :--- | :--- | :--- | :--- |
 | `praia` | Praia | 0 (sempre desbloqueada) | — |
-| `campo` | Campo Antigo | 2.000 | `king_crab` (Caranguejo-Rei) |
+| `campo` | Campo Antigo | 1.200 | `king_crab` (Caranguejo-Rei) |
 | `ruinas` | Ruínas | 8.000 | `giant_mole` (Toupeira Gigante) |
 | `cratera` | Cratera | 25.000 | `ancient_guardian` (Guardião Ancestral) |
 
