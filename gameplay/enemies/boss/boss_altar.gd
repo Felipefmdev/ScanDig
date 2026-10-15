@@ -47,9 +47,12 @@ func _wake_boss() -> void:
 	SFX.play_at(SFX.EMERGE_SAND, global_position, 6.0)
 	var boss: Node3D = boss_scene.instantiate() as Node3D
 	var parent: Node = get_parent()
-	parent.add_child(boss)
-	boss.global_position = global_transform * boss_offset
+	var world_pos: Vector3 = global_transform * boss_offset
+	# Posiciona antes de entrar na árvore: o _ready do chefe guarda a posição de partida.
+	boss.position = (parent as Node3D).global_transform.affine_inverse() * world_pos if parent is Node3D else world_pos
 	boss.rotation.y = global_rotation.y
+	parent.add_child(boss)
+	boss.global_position = world_pos
 	boss_spawned.emit(boss)
 
 

@@ -1,6 +1,6 @@
-[gd_scene load_steps=45 format=3]
+[gd_scene load_steps=46 format=3]
 
-[ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
+[ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
 [ext_resource type="Resource" path="res://items/maps/campo.tres" id="3_campo"]
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
@@ -29,6 +29,7 @@
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallA.glb" id="nat_rock_smallA"]
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallC.glb" id="nat_rock_smallC"]
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallFlatA.glb" id="nat_rock_smallFlatA"]
+[ext_resource type="Script" path="res://gameplay/enemies/boss/mole_altar.gd" id="b_mole_altar"]
 
 [sub_resource type="CylinderShape3D" id="Shape_trunk"]
 height = 3.0
@@ -1505,6 +1506,9 @@ area_size = Vector2(54, 54)
 
 [node name="EnemySpawner" type="Node3D" parent="."]
 script = ExtResource("5_enemy_spawner")
+primary_kind = &"snake"
+secondary_kind = &"mole"
+ambient_kinds = Array[StringName]([&"snake", &"snake", &"mole"])
 seagulls_per_level = Array[int]([0, 0, 0])
 seagull_interval_min = 100000.0
 seagull_interval_max = 100000.0
@@ -1568,9 +1572,17 @@ text = "ENTREGA [E]"
 font_size = 56
 outline_size = 14
 
-[node name="Player" parent="." instance=ExtResource("1_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.1, 0)
+[node name="Players" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+script = ExtResource("1_players")
+
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="Players"]
+spawn_path = NodePath("..")
 
 [node name="DetectorSpawn" type="Marker3D" parent="."]
 transform = Transform3D(0.70739, 0, -0.70683, 0, 1, 0, 0.70683, 0, 0.70739, 3.6, 0.05, 3.6)
 script = ExtResource("d_detector_spawn")
+
+[node name="MoleAltar" type="Area3D" parent="."]
+transform = Transform3D(-0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, -0.707107, -18, 0, -18)
+script = ExtResource("b_mole_altar")

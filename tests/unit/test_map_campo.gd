@@ -39,7 +39,7 @@ func test_scene_exists_and_loads() -> void:
 	var names: Array[String] = []
 	for i: int in state.get_node_count():
 		names.append(String(state.get_node_name(i)))
-	for required: String in ["SpotSpawner", "DisturbanceMeter", "BaseEntrega", "Player", "EnemySpawner", "Bounds"]:
+	for required: String in ["SpotSpawner", "DisturbanceMeter", "BaseEntrega", "Players", "PlayerSpawner", "EnemySpawner", "Bounds"]:
 		assert_has(names, required)
 
 
@@ -60,7 +60,9 @@ func test_economy_above_praia() -> void:
 	assert_gt(CAMPO.item_pool.size(), 0)
 	var ratio: float = _pool_average(CAMPO) / _pool_average(PRAIA)
 	assert_gt(ratio, 1.5, "Campo paga mais por item do que a Praia (%.2fx)" % ratio)
-	assert_gt(CAMPO.spot_count, PRAIA.spot_count)
+	# #20: o Campo tem menos spots ativos do que a Praia (4 vs 5), mas cada um vale ~5x mais;
+	# com mais spots o bot passava os ~200 R$/min (alvo 90-110, ver docs/PACING.md).
+	assert_between(CAMPO.spot_count, 3, PRAIA.spot_count)
 	assert_gt(CAMPO.noise_multiplier, PRAIA.noise_multiplier)
 	for entry: Variant in CAMPO.item_pool:
 		var item: ItemData = entry as ItemData

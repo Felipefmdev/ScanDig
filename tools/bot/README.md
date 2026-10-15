@@ -41,8 +41,14 @@ tem exatamente uma ação:
 | `{"pickup":true,"radius":6,"timeout":10}` | aproxima-se do item no chão mais próximo, olha e carrega E |
 | `{"goto_spot":"nearest","walk":true,"radius":8}` | igual, mas só aceita spots a ≤ `radius` m (alcance do radar nível 1); senão regista aviso |
 | `{"explore":10,"bounds":[-23,-23,23,23],"stop_near_spot":8}` | procura como um jogador: caminha 10 m numa direção aleatória dentro dos limites e pára se um spot ficar a ≤ 8 m |
+| `{"fight":30,"radius":12}` | luta como o jogador durante 30 s: aproxima-se do inimigo vivo mais próximo, olha e carrega `attack` (pá, F); contorna obstáculos se encravar; acaba antes se ficar 2 s sem inimigos |
 | `{"goto_sell":true}` | caminha até ao SellPoint mais próximo |
 | `{"t":0,"set_state":{"upgrade_levels":{"backpack":3},"unlocked_maps":["campo"],"team_money":5000}}` | atalho de debug: funde estes campos no snapshot do `CoreGameState` e reaplica-o (`team_money`, `upgrade_levels`, `unlocked_maps`, `defeated_bosses`) |
+| `{"t":0,"host":7791}` | coop: hospeda (`CoreNetwork.host_game`; `true` = porta 7777) |
+| `{"t":0,"join":"127.0.0.1","port":7791,"timeout":20}` | coop: liga-se ao host e espera pela ligação (o `CoreSession` leva o cliente para o mapa) |
+| `{"t":0,"start_expedition":"praia"}` | host: inicia a expedição pelo fluxo normal e espera o mapa carregar |
+| `{"sleep":1.5}` | espera N segundos a partir de agora (`t` opcional; útil depois de `wait_until`) |
+| `{"t":0,"face_player":"remote"}` | vira o jogador local para o jogador remoto mais próximo |
 | `{"sell":true}` | carrega E dentro do raio do SellPoint (mesmo caminho do jogador: `Player._interact` → `SellPoint.deliver`) |
 
 Qualquer passo aceita `"if"`: condição ou lista de condições (todas verdadeiras) — senão é saltado.
@@ -53,11 +59,26 @@ Com passos de alto nível o `summary.json` ganha `metrics`: `time_to_goal`, `mon
 `money_earned`, `items_sold`, `sold_value`, `sell_trips`, `spots_dug`, `items_picked`,
 `first_enemy_time`, `damage_taken`, `deaths`, `teleport_fallbacks`, `explore_steps`,
 `max_threat_level`, `threat_level_times`, `step_failures`
-(avisos de jogo, ex. "pickup: nenhum item" — não contam como erros). Exemplo: `praia_300.json`.
+(avisos de jogo, ex. "pickup: nenhum item" — não contam como erros), `fight_swings`.
+Exemplos: `praia_300.json` (economia da Praia), `campo_rate.json` (economia do Campo),
+`campo_boss.json` (cava o altar do círculo de pedras e luta com a Toupeira Gigante).
 
-Ações: `move_forward/backward/left/right`, `jump`, `interact`, `use_tool`, `careful_dig`
+Ações: `move_forward/backward/left/right`, `jump`, `interact`, `use_tool`, `careful_dig`, `attack`
 (botão direito = cavar; `tap` não simula Shift — usa `dig_spot` com `mode`).
 Variáveis de `wait_until`/`until`/`if`: `money`, `inventory`, `enemies`, `spots`, `time`, `health`,
 `nearest_spot` (m; 9999 sem spots), `free_slots`, `deliverable` (itens vendáveis), `sell_dist` (m),
 `pickup_dist` (m até ao item no chão mais próximo);
 operadores `>= <= == != > <`.
+
+## Coop (2 instâncias)
+
+```bash
+tools/bot/run_coop.sh "<godot console exe>"              # 2 janelas 960x540 lado a lado
+tools/bot/run_coop.sh "<godot>" tools/bot/coop_host.json tools/bot/coop_client.json --headless
+```
+
+`coop_host.json` hospeda na porta 7791 e entra na Praia; `coop_client.json` liga-se a ela.
+Cada instância escreve o seu run em `.bot_runs/` (logs do Godot em `.bot_runs/coop_*.log`).
+Os dumps trazem `net` (peer_id, is_server, peers) e `players` (todos os jogadores, com
+`local`, posição e ferramenta na mão); a variável `players` conta-os em `wait_until`.
+O jogador "local" (grupo `player`) é sempre o desta instância.

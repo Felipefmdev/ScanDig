@@ -146,3 +146,32 @@ func test_explore_and_radar_radius() -> void:
 	]
 	for raw: Variant in bad:
 		assert_true(Bridge.parse_step(raw, true) is String, "deveria falhar: %s" % str(raw))
+
+
+func test_fight_step() -> void:
+	var ok: Variant = Bridge.parse_step({"t": 1, "fight": 30, "radius": 10})
+	assert_true(ok is Dictionary, str(ok))
+	assert_eq(ok["for"], 30.0)
+	assert_eq(ok["radius"], 10.0)
+	assert_true(Bridge.parse_step({"fight": 0}, true) is String)
+	assert_true(Bridge.parse_step({"fight": 5, "radius": 0}, true) is String)
+	assert_true(Bridge.parse_step({"t": 1, "tap": "attack"}) is Dictionary)
+	assert_eq(Bridge.parse_condition("enemy_dist<4"), {"var": "enemy_dist", "op": "<", "value": 4.0})
+
+
+func test_coop_steps() -> void:
+	var host: Variant = Bridge.parse_step({"t": 0, "host": 7791})
+	assert_eq((host as Dictionary)["port"], 7791)
+	assert_eq((Bridge.parse_step({"t": 0, "host": true}) as Dictionary)["port"], Bridge.DEFAULT_NET_PORT)
+	var join: Variant = Bridge.parse_step({"t": 0, "join": "127.0.0.1", "port": 7791, "timeout": 20})
+	assert_eq((join as Dictionary)["ip"], "127.0.0.1")
+	assert_eq((join as Dictionary)["port"], 7791)
+	assert_eq((Bridge.parse_step({"t": 0, "start_expedition": "praia"}) as Dictionary)["map_id"], "praia")
+	assert_eq((Bridge.parse_step({"sleep": 1.5}) as Dictionary)["seconds"], 1.5, "sleep dispensa 't'")
+	assert_true(Bridge.parse_step({"t": 0, "face_player": "remote"}) is Dictionary)
+	assert_eq(Bridge.parse_condition("players>=2"), {"var": "players", "op": ">=", "value": 2.0})
+	for bad: Dictionary in [
+		{"t": 0, "host": 80}, {"t": 0, "host": "x"}, {"t": 0, "join": ""}, {"t": 0, "join": "1.2.3.4", "port": 99999},
+		{"t": 0, "start_expedition": "../x"}, {"sleep": -1}, {"t": 0, "face_player": "1"},
+	]:
+		assert_true(Bridge.parse_step(bad) is String, "deveria falhar: %s" % str(bad))

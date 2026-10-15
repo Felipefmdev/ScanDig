@@ -136,3 +136,50 @@ Leitura:
   (decay 1.5) chegava ao nível 3 em ~1,5 min e era demais.
 - As mortes do bot (1–5) vêm de não se defender; um humano mata/foge dos caranguejos, por
   isso deve morrer menos, mas perde tempo a lutar. Falta o **teste com humanos**.
+
+## Campo Antigo por bot 2026-10-14 (issue #20)
+
+> Bot (`tools/bot/campo_rate.json`), igual ao da Praia (detetor, radar a 8 m, explora,
+> cava `smart`), mas agora **defende-se** (`fight` quando um inimigo está a ≤ 5 m), porque
+> as cobras e toupeiras do Campo matavam-no 5-6 vezes por corrida. Início 100 R$, meta
+> `money>=1000` (+900).
+
+**Revisão do alvo:** o pedido inicial era 35-45 R$/min (1,5-2x a Praia), mas isso contradiz
+a tabela da secção 2 e o custo das Ruínas (R$ 8.000 = ~3h20 a 40/min). Alvo revisto pelo
+Lead: **~90-110 R$/min** (a tabela diz ~130; fica um pouco abaixo porque a Praia também
+ficou abaixo do previsto depois da #19). Ameaça: nível 1 por volta de 1 min; nível 3 só
+abusando da escavação rápida. Só `items/maps/campo.tres` mudou (catálogo intacto).
+
+| configuração | spots | pool ferr/colher/lança/medalha/anel | raro | ruído ×/decay | R$/min (3 corridas) | 1.º nível de ameaça | ameaça máx. | mortes |
+|---|---|---|---|---|---|---|---|---|
+| original (#18) | 10 | 8/6/4/2/1 | 6% | 1.3 / 2.2 | **~500** (1 corrida, +400 em 53 s) | 11 s | 3 | 0 |
+| iteração 1 (bot sem se defender) | 3 | 18/4/2/1/1 | 4% | 1.2 / 2.0 | 33 / 63 / 120 | 4-6 min | 1 | 5-6 |
+| iteração 2 (bot defende-se) | 6 | 30/6/2/1/1 | 4% | 1.4 / 2.0 | 168 / 199 / 236 | 51-90 s | 2-3 | 0-1 |
+| **final** | **4** | **30/6/2/1/1** | **4%** | **1.3 / 2.0** | **91 / 116 / 127** | **14-93 s** | **1** | **0** |
+
+Final: +900 R$ em 7 min 14 s a 11 min 2 s (`.bot_runs/campo_rate_2026-10-14_22-12-25`
+(janela), `-27`, `-29`); 13-16 itens; 38-67 de dano por corrida.
+
+Leitura:
+- Com 6+ spots o bot faz ~2,7 itens/min e só a ferradura perfeita (~R$ 41) já dá ~110
+  R$/min; por isso o Campo tem **menos spots do que a Praia** (4 vs 5), mas cada spot vale
+  ~5x mais. `tests/unit/test_map_campo.gd` passou a aceitar isso (3 ≤ spots ≤ Praia).
+- O **anel (R$ 400 perfeito)** e a medalha ainda dão picos (uma entrega de R$ 438), mas
+  com peso 1/40 já não decidem a corrida.
+
+### Inimigos e chefe do Campo
+
+- **Cobra** (`snake`): 30 de vida, 3 m/s (jogador 4,5), enrola-se ~0,45 s (aviso) e dá
+  um bote de 2,4 m (8 de dano). Atordoada → foge 4 s e some na erva.
+- **Toupeira** (`mole`): viaja debaixo de terra (imune; só se vê o monte), pára debaixo do
+  jogador, marca vermelha 0,8 s e irrompe (14 de dano). Fica 2,5 s exposta (45 de vida).
+- Spawner do Campo: primário cobra, secundário toupeira (nível 2+), ambiente
+  cobra/cobra/toupeira, sem gaivotas.
+- **Toupeira Gigante** (`giant_mole`, 800 de vida): garras (círculo 2,6 m, 18) quando
+  perto; túnel até debaixo do jogador → marca 1,1 s → irrompe (círculo 3 m, 25) → **tonta
+  2,4 s com dano x2**. Reforços de 2 toupeiras a 66%/33%. Fase 2 (<50%): túnel mais rápido e
+  irrompe 2x seguidas. Trela de 13 m à volta do círculo de pedras.
+- Bot (`campo_boss.json`, golpe sempre que pode, sem se desviar) vs. o mesmo bot contra o
+  Caranguejo-Rei: **Toupeira Gigante 36 s, 164 de dano, 1 morte**; Caranguejo-Rei 21-22 s,
+  72-84 de dano, 0 mortes, ou seja ~1,7x mais difícil. Um humano demora mais (desvia-se,
+  falha golpes). Falta o teste com humanos.

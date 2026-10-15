@@ -8,13 +8,37 @@ extends Node3D
 ##    ambient_interval_min..max s, e uma gaivota a cada seagull_interval_min..max s se o
 ##    jogador tiver itens escavados na mochila (player.has_loot()).
 ## Nunca passa de max_alive inimigos vivos criados por este spawner.
+##
+## Os inimigos são criados por dados {"kind", "pos", "level"} (spawn_from_data), o mesmo
+## formato que o MultiplayerSpawner vai usar na fase 3 do coop (#5 bloco F, #24). Cada mapa
+## escolhe os kinds: primary_kind (o "caranguejo" do mapa), secondary_kind (o "ermitão")
+## e ambient_kinds. As tabelas por nível do DifficultyProfile continuam a contar
+## primário/secundário/gaivota.
 
 signal enemy_spawned(enemy: Node3D)
 
 const DEFAULT_CRAB_SCENE: PackedScene = preload("res://gameplay/enemies/crab/crab.tscn")
 const DEFAULT_HERMIT_SCENE: PackedScene = preload("res://gameplay/enemies/crab/hermit_crab.tscn")
 const DEFAULT_SEAGULL_SCENE: PackedScene = preload("res://gameplay/enemies/seagull/seagull.tscn")
+## kind -> cena. Carregadas a pedido (load), para não criar ciclos de preload com os chefes.
+const KIND_SCENES: Dictionary = {
+	&"crab": "res://gameplay/enemies/crab/crab.tscn",
+	&"hermit_crab": "res://gameplay/enemies/crab/hermit_crab.tscn",
+	&"seagull": "res://gameplay/enemies/seagull/seagull.tscn",
+	&"king_crab": "res://gameplay/enemies/boss/king_crab.tscn",
+	&"snake": "res://gameplay/enemies/snake/snake.tscn",
+	&"mole": "res://gameplay/enemies/mole/mole.tscn",
+	&"giant_mole": "res://gameplay/enemies/boss/giant_mole.tscn",
+}
 
+## Inimigo base do mapa (níveis de ameaça e ambiente) e o "resistente" a partir do nível 2.
+@export var primary_kind: StringName = &"crab"
+@export var secondary_kind: StringName = &"hermit_crab"
+## Kinds sorteados nos spawns ambiente; vazio = só primary_kind.
+@export var ambient_kinds: Array[StringName] = []
+## Coop fase 3: com true, num cliente o spawner não cria nada (o host replica).
+@export var replicate_spawns: bool = false
+## Sobrepõem a cena de primary/secondary/gaivota (compatibilidade e testes).
 @export var crab_scene: PackedScene = null
 @export var hermit_scene: PackedScene = null
 @export var seagull_scene: PackedScene = null
@@ -64,9 +88,9 @@ var _elapsed: float = 0.0
 
 func _ready() -> void:
 	if crab_scene == null:
-		crab_scene = DEFAULT_CRAB_SCENE
+		crab_scene = scene_for_kind(primary_kind)
 	if hermit_scene == null:
-		hermit_scene = DEFAULT_HERMIT_SCENE
+		hermit_scene = scene_for_kind(secondary_kind)
 	if seagull_scene == null:
 		seagull_scene = DEFAULT_SEAGULL_SCENE
 	# O primeiro caranguejo ambiente chega mais cedo (pressão logo no 1.º minuto)
@@ -98,9 +122,9 @@ func _on_threshold_reached(level: int, origin: Vector3) -> void:
 	if level <= 0:
 		return
 	for i: int in range(_count_for_level(_crab_table(), level)):
-		_spawn_ground(crab_scene, origin, min_spawn_radius, max_spawn_radius, level)
+		_spawn_ground(primary_kind, origin, min_spawn_radius, max_spawn_radius, level)
 	for i: int in range(_count_for_level(_hermit_table(), level)):
-		_spawn_ground(hermit_scene, origin, min_spawn_radius, max_spawn_radius, level)
+		_spawn_ground(secondary_kind, origin, min_spawn_radius, max_spawn_radius, level)
 	for i: int in range(_count_for_level(_seagull_table(), level)):
 		var player: Node3D = _find_player()
 		_spawn_seagull(player.global_position if player != null else origin)
@@ -127,7 +151,8 @@ func _process_ambient(delta: float) -> void:
 		var player: Node3D = _find_player()
 		if player != null:
 			# spawn_level 0: não volta para a areia quando a ameaça baixa
-			_spawn_ground(crab_scene, player.global_position, ambient_radius_min, ambient_radius_max, 0)
+			var kind: StringName = primary_kind if ambient_kinds.is_empty() else ambient_kinds.pick_random()
+			_spawn_ground(kind, player.global_position, ambient_radius_min, ambient_radius_max, 0)
 
 	_seagull_timer -= delta
 	if _seagull_timer <= 0.0:
@@ -159,31 +184,71 @@ func get_alive_count() -> int:
 	return _alive.size()
 
 
-## Inimigo de chão (caranguejo/ermitão) num ponto válido a r_min..r_max de center.
-func _spawn_ground(scene: PackedScene, center: Vector3, r_min: float, r_max: float, level: int) -> Node3D:
-	if scene == null or get_alive_count() >= get_max_alive():
+## Inimigo de chão do `kind` num ponto válido a r_min..r_max de center.
+func _spawn_ground(kind: StringName, center: Vector3, r_min: float, r_max: float, level: int) -> Node3D:
+	if not can_spawn() or get_alive_count() >= get_max_alive():
 		return null
 	var pos: Vector3 = _pick_ground_position(center, r_min, r_max)
 	if not pos.is_finite():
 		return null
-	var enemy: Node3D = scene.instantiate() as Node3D
-	if enemy == null:
-		return null
-	if enemy is Crab:
-		(enemy as Crab).spawn_level = level
-	return _add_enemy(enemy, pos)
+	return spawn_from_data(make_spawn_data(kind, pos, level))
 
 
 func _spawn_seagull(player_pos: Vector3) -> Node3D:
-	if seagull_scene == null or get_alive_count() >= get_max_alive():
+	if not can_spawn() or get_alive_count() >= get_max_alive():
 		return null
 	var angle: float = randf() * TAU
 	var pos: Vector3 = player_pos + Vector3(cos(angle), 0.0, sin(angle)) * seagull_spawn_distance
 	pos.y = player_pos.y + seagull_spawn_height
-	var gull: Node3D = seagull_scene.instantiate() as Node3D
-	if gull == null:
+	return spawn_from_data(make_spawn_data(&"seagull", pos, 0))
+
+
+## Dados de criação de um inimigo (formato do MultiplayerSpawner da fase 3).
+static func make_spawn_data(kind: StringName, pos: Vector3, level: int) -> Dictionary:
+	return {"kind": String(kind), "pos": pos, "level": level}
+
+
+static func scene_for_kind(kind: StringName) -> PackedScene:
+	if not KIND_SCENES.has(kind):
 		return null
-	return _add_enemy(gull, pos)
+	return load(KIND_SCENES[kind]) as PackedScene
+
+
+## Cria o inimigo descrito por {"kind", "pos", "level"} como filho deste spawner.
+## Não verifica max_alive (quem chama decide). Devolve null se os dados forem inválidos.
+func spawn_from_data(data: Dictionary) -> Node3D:
+	var kind: StringName = StringName(str(data.get("kind", "")))
+	var scene: PackedScene = _scene_override(kind)
+	if scene == null:
+		scene = scene_for_kind(kind)
+	var pos: Variant = data.get("pos")
+	if scene == null or not pos is Vector3:
+		push_warning("[EnemySpawner] dados de spawn invalidos: %s" % str(data))
+		return null
+	var enemy: Node3D = scene.instantiate() as Node3D
+	if enemy == null:
+		return null
+	if "spawn_level" in enemy:
+		enemy.set("spawn_level", int(data.get("level", 0)))
+	return _add_enemy(enemy, pos)
+
+
+## As cenas exportadas sobrepõem o kind primário/secundário/gaivota.
+func _scene_override(kind: StringName) -> PackedScene:
+	if kind == primary_kind and crab_scene != null:
+		return crab_scene
+	if kind == secondary_kind and hermit_scene != null:
+		return hermit_scene
+	if kind == &"seagull" and seagull_scene != null:
+		return seagull_scene
+	return null
+
+
+## Num cliente com spawns replicados, só o host cria inimigos.
+func can_spawn() -> bool:
+	if not replicate_spawns or not is_inside_tree():
+		return true
+	return not multiplayer.has_multiplayer_peer() or multiplayer.is_server()
 
 
 func _add_enemy(enemy: Node3D, world_pos: Vector3) -> Node3D:

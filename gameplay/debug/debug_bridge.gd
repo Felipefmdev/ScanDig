@@ -5,19 +5,20 @@ extends Node
 
 const ACTIONS: PackedStringArray = [
 	"move_forward", "move_backward", "move_left", "move_right",
-	"jump", "interact", "use_tool", "careful_dig",
+	"jump", "interact", "use_tool", "careful_dig", "attack",
 ]
 const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
-	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore",
+	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore", "fight",
+	"host", "join", "start_expedition", "sleep", "face_player",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
 ## Passos sem 't' obrigatório (dentro de um loop o tempo absoluto não faz sentido).
-const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop"]
+const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop", "sleep"]
 const CONDITION_VARS: PackedStringArray = [
 	"money", "inventory", "enemies", "spots", "time", "health",
-	"nearest_spot", "free_slots", "deliverable", "sell_dist", "pickup_dist",
+	"nearest_spot", "free_slots", "deliverable", "sell_dist", "pickup_dist", "enemy_dist", "players",
 ]
 const DIG_MODES: PackedStringArray = ["fast", "careful", "smart"]
 ## Distância "infinita" usada pelas variáveis nearest_spot/sell_dist quando não há alvo.
@@ -31,7 +32,11 @@ const PICKUP_GROUP: StringName = &"pickups"
 const CONDITION_OPS: PackedStringArray = [">=", "<=", "==", "!=", ">", "<"]
 const TAP_SECONDS: float = 0.1
 const DEFAULT_WAIT_TIMEOUT: float = 60.0
+## Só o jogador local (Player.LOCAL_GROUP); todos os jogadores estão em PLAYERS_GROUP.
 const PLAYER_GROUP: StringName = &"player"
+const PLAYERS_GROUP: StringName = &"players"
+## Porta por omissão dos passos host/join (a do CoreNetwork é 7777).
+const DEFAULT_NET_PORT: int = 7777
 const ENEMY_GROUP: StringName = &"enemies"
 const SPOT_GROUP: StringName = &"buried_spots"
 ## Distância a que goto_spot deixa o jogador do spot (dig_range do jogador = 1.8).
@@ -65,6 +70,7 @@ var _m: Dictionary = {
 	"items_picked": 0,
 	"step_failures": 0,
 	"explore_steps": 0,
+	"fight_swings": 0,
 	"max_threat_level": 0,
 	"threat_level_times": [],
 }
@@ -152,7 +158,7 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			return "'if' invalido '%s'" % str(d["if"])
 		step["if"] = conds
 	var timeout_default: float = DEFAULT_WAIT_TIMEOUT
-	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot", "explore"]:
+	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot", "explore", "fight"]:
 		timeout_default = 30.0
 	if d.has("timeout"):
 		if not _is_number(d["timeout"]) or float(d["timeout"]) <= 0.0:
@@ -207,6 +213,14 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 				return "'radius' deve ser >= 0"
 			step["radius"] = float(sense)
 			step["timeout"] = timeout
+		"fight":
+			if not _is_number(value) or float(value) <= 0.0:
+				return "'fight' deve ser a duracao (s) > 0"
+			step["for"] = float(value)
+			var fr: Variant = d.get("radius", 12.0)
+			if not _is_number(fr) or float(fr) <= 0.0:
+				return "'radius' deve ser > 0"
+			step["radius"] = float(fr)
 		"explore":
 			if not _is_number(value) or float(value) <= 0.0:
 				return "'explore' deve ser a distancia (m) > 0"
@@ -278,6 +292,34 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 				if st.has(key) and not st[key] is Array:
 					return "'%s' deve ser uma lista" % key
 			step["state"] = st
+		"host":
+			var port: Variant = DEFAULT_NET_PORT if value is bool and value == true else value
+			if not port is int and not (port is float and is_equal_approx(port, roundf(port))):
+				return "'host' deve ser true ou uma porta"
+			if int(port) < 1024 or int(port) > 65535:
+				return "porta invalida %s" % str(port)
+			step["port"] = int(port)
+		"join":
+			if not value is String or (value as String).is_empty():
+				return "'join' deve ser o IP do host"
+			var jport: Variant = d.get("port", DEFAULT_NET_PORT)
+			if not _is_number(jport) or int(jport) < 1024 or int(jport) > 65535:
+				return "'port' invalida"
+			step["ip"] = value
+			step["port"] = int(jport)
+			step["timeout"] = timeout
+		"start_expedition":
+			if not value is String or not (value as String).is_valid_filename() or (value as String).is_empty():
+				return "'start_expedition' deve ser o id do mapa"
+			step["map_id"] = value
+			step["timeout"] = timeout
+		"sleep":
+			if not _is_number(value) or float(value) < 0.0:
+				return "'sleep' deve ser um numero >= 0"
+			step["seconds"] = float(value)
+		"face_player":
+			if value != "remote":
+				return "'face_player' so aceita \"remote\""
 	return step
 
 
@@ -509,10 +551,22 @@ func _execute(step: Dictionary) -> void:
 				await _walk_to(sp.global_position, 1.2, step["timeout"], 0.5)
 		"sell":
 			await _sell(step["timeout"])
+		"fight":
+			await _fight(step["for"], step["radius"])
 		"explore":
 			await _explore(step["distance"], step["bounds"], step["stop_near_spot"], step["timeout"])
 		"set_state":
 			_set_state(step["state"])
+		"host":
+			_host(step["port"])
+		"join":
+			await _join(step["ip"], step["port"], step["timeout"])
+		"start_expedition":
+			await _start_expedition(step["map_id"], step["timeout"])
+		"sleep":
+			await _sleep(step["seconds"])
+		"face_player":
+			_face_remote_player()
 		"screenshot":
 			await _screenshot(step["label"])
 		"dump":
@@ -689,6 +743,59 @@ func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float, s
 		await get_tree().physics_frame
 	Input.action_release("move_forward")
 	return walked
+
+
+## Luta como o jogador: aproxima-se do inimigo vivo mais próximo (a ≤ radius), olha para
+## ele e carrega "attack" (golpe de pá, F). Termina ao fim de `seconds` ou se ficar 2 s sem
+## inimigos ao alcance.
+func _fight(seconds: float, radius: float) -> void:
+	var player: Node3D = _player()
+	if player == null:
+		_fail("fight: jogador nao encontrado")
+		return
+	var reach: float = float(player.get("attack_range")) * 0.75 if "attack_range" in player else 1.6
+	var t0: float = _elapsed()
+	var idle_since: float = t0
+	var swings: int = 0
+	var check_t: float = t0
+	var check_pos: Vector3 = player.global_position
+	while _elapsed() - t0 < seconds and is_instance_valid(player):
+		var target: EnemyBase = null
+		var best: float = radius
+		for n: Node in get_tree().get_nodes_in_group(ENEMY_GROUP):
+			var e: EnemyBase = n as EnemyBase
+			if e == null or not is_instance_valid(e) or not e.is_alive():
+				continue
+			var d3: Vector3 = e.global_position - player.global_position
+			var dist: float = Vector2(d3.x, d3.z).length()
+			if dist < best:
+				best = dist
+				target = e
+		if target == null:
+			Input.action_release("move_forward")
+			if _elapsed() - idle_since > 2.0:
+				break
+			await get_tree().physics_frame
+			continue
+		idle_since = _elapsed()
+		_look_at(target.global_position + Vector3.UP * 0.4)
+		if best > reach:
+			Input.action_press("move_forward")
+			# Encravado (pedra, árvore): salta e contorna para o lado durante meio segundo.
+			if _elapsed() - check_t >= 1.0:
+				if player.global_position.distance_to(check_pos) < 0.3:
+					_hold_action("jump", TAP_SECONDS)
+					_hold_action("move_left" if randf() < 0.5 else "move_right", 0.5)
+				check_t = _elapsed()
+				check_pos = player.global_position
+		else:
+			Input.action_release("move_forward")
+			await _tap("attack")
+			swings += 1
+		await get_tree().physics_frame
+	Input.action_release("move_forward")
+	_m["fight_swings"] = int(_m["fight_swings"]) + swings
+	_log("  fight: %d golpes em %.1fs" % [swings, _elapsed() - t0])
 
 
 ## Procura como um jogador com radar: caminha `distance` m numa direção aleatória (dentro de
@@ -939,6 +1046,16 @@ func _condition_value(var_name: String) -> float:
 			return float(inv.capacity - inv.get_count()) if inv != null else 0.0
 		"deliverable":
 			return float(_deliverable_count())
+		"enemy_dist":
+			var pe: Node3D = _player()
+			var nearest: float = NO_TARGET_DISTANCE
+			if pe != null:
+				for n: Node in get_tree().get_nodes_in_group(ENEMY_GROUP):
+					var en: EnemyBase = n as EnemyBase
+					if en != null and is_instance_valid(en) and en.is_alive():
+						var de: Vector3 = en.global_position - pe.global_position
+						nearest = minf(nearest, Vector2(de.x, de.z).length())
+			return nearest
 		"pickup_dist":
 			var pl: Node3D = _player()
 			var best: float = NO_TARGET_DISTANCE
@@ -955,6 +1072,8 @@ func _condition_value(var_name: String) -> float:
 				return NO_TARGET_DISTANCE
 			var d: Vector3 = sp.global_position - p.global_position
 			return Vector2(d.x, d.z).length()
+		"players":
+			return float(get_tree().get_nodes_in_group(PLAYERS_GROUP).size())
 	var state: Dictionary = collect_state()
 	match var_name:
 		"money": return float(state["game_state"].get("team_money", 0))
@@ -979,7 +1098,28 @@ func collect_state() -> Dictionary:
 		"enemies": [],
 		"spots": [],
 		"threat": {},
+		"net": {},
+		"players": [],
 	}
+	state["net"] = {
+		"peer_id": multiplayer.get_unique_id(),
+		"is_server": multiplayer.is_server(),
+		"peers": Array(multiplayer.get_peers()),
+	}
+	var players: Array = []
+	for n: Node in get_tree().get_nodes_in_group(PLAYERS_GROUP):
+		var pl: Node3D = n as Node3D
+		if pl == null or not is_instance_valid(pl):
+			continue
+		players.append({
+			"name": String(pl.name),
+			"authority": pl.get_multiplayer_authority(),
+			"local": pl.is_multiplayer_authority(),
+			"position": _vec(pl.global_position),
+			"yaw_deg": snappedf(rad_to_deg(pl.global_rotation.y), 0.1),
+			"held_tool": String(pl.get("held_tool_id")) if "held_tool_id" in pl else "",
+		})
+	state["players"] = players
 	if DisturbanceMeter.instance != null:
 		state["threat"] = {
 			"noise": snappedf(DisturbanceMeter.instance.current_noise, 0.1),
@@ -1042,10 +1182,82 @@ func collect_state() -> Dictionary:
 	return state
 
 
-## O BossAltar também é um BuriedSpot; goto_spot ignora-o.
+# --- Coop (CoreNetwork / CoreSession) ------------------------------------------
+
+func _host(port: int) -> void:
+	if NetworkManager.instance == null:
+		_error("host: CoreNetwork indisponivel")
+		return
+	var err: Error = NetworkManager.instance.host_game(port)
+	if err != OK:
+		_error("host: host_game(%d) = %s" % [port, error_string(err)])
+	else:
+		_log("  a hospedar na porta %d" % port)
+
+
+## Liga-se ao host e espera pela ligação (o SessionManager leva o cliente para o mapa).
+func _join(ip: String, port: int, timeout: float) -> void:
+	if NetworkManager.instance == null:
+		_error("join: CoreNetwork indisponivel")
+		return
+	var err: Error = NetworkManager.instance.join_game(ip, port)
+	if err != OK:
+		_error("join: join_game(%s:%d) = %s" % [ip, port, error_string(err)])
+		return
+	var t0: float = _elapsed()
+	while multiplayer.multiplayer_peer == null 			or multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		if _elapsed() - t0 > timeout:
+			_error("join: sem ligacao a %s:%d em %.0fs" % [ip, port, timeout])
+			return
+		await get_tree().process_frame
+	_log("  ligado como peer %d" % multiplayer.get_unique_id())
+
+
+## Host: inicia a expedição pelo fluxo normal e espera que o mapa carregue.
+func _start_expedition(map_id: String, timeout: float) -> void:
+	var sm: SessionManager = SessionManager.instance
+	if sm == null:
+		_error("start_expedition: CoreSession indisponivel")
+		return
+	if not sm.can_start_map(map_id):
+		_error("start_expedition: '%s' indisponivel (bloqueado ou sem cena)" % map_id)
+		return
+	sm.request_start_expedition(map_id)
+	var t0: float = _elapsed()
+	while not sm.is_peer_scene_ready(multiplayer.get_unique_id()):
+		if _elapsed() - t0 > timeout:
+			_error("start_expedition: mapa '%s' nao carregou em %.0fs" % [map_id, timeout])
+			return
+		await get_tree().process_frame
+	_log("  expedicao em %s" % get_tree().current_scene.scene_file_path)
+
+
+## Vira o jogador local para o jogador remoto mais próximo (para capturas em coop).
+func _face_remote_player() -> void:
+	var me: Node3D = _player()
+	if me == null:
+		_fail("face_player: jogador local nao encontrado")
+		return
+	var best: Node3D = null
+	var best_dist: float = INF
+	for n: Node in get_tree().get_nodes_in_group(PLAYERS_GROUP):
+		var pl: Node3D = n as Node3D
+		if pl == null or pl == me or pl.is_multiplayer_authority():
+			continue
+		var dist: float = pl.global_position.distance_to(me.global_position)
+		if dist < best_dist:
+			best_dist = dist
+			best = pl
+	if best == null:
+		_fail("face_player: nenhum jogador remoto")
+		return
+	_look_at(best.global_position + Vector3.UP * 1.2)
+	_log("  a olhar para o jogador %s (%.1f m)" % [best.name, best_dist])
+
+
+## Os altares de chefe (BossAltar e subclasses) também são BuriedSpot; goto_spot ignora-os.
 static func _is_altar(n: Node) -> bool:
-	var scr: Script = n.get_script() as Script
-	return scr != null and scr.resource_path.ends_with("boss_altar.gd")
+	return n is BossAltar
 
 
 func _player() -> Node3D:

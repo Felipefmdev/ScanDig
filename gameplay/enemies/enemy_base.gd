@@ -10,6 +10,11 @@ extends CharacterBody3D
 ##   stun(seconds)                            — parado e sem atacar, com estrelas por cima
 ##   flee_from(origin, seconds)               — foge e depois vai-se embora
 ##   is_alive()
+##
+## Coop (#5, bloco F): a IA e a física só correm com autoridade de simulação (o host).
+## Com `replicated = false` (hoje: solo e coop sem MultiplayerSpawner) cada peer simula os
+## seus. O estado a replicar são campos simples: `state` (int, nas subclasses), `health`,
+## `stunned` e `fleeing`; o dano entra sempre por take_damage().
 
 signal died()
 signal damaged(amount: float, health_left: float)
@@ -28,6 +33,25 @@ const BLOCK_FLASH_COLOR: Color = Color(0.55, 0.65, 1.0)
 @export var stun_fx_height: float = 0.6
 
 var health: float = 50.0
+## Posto a true pelo MultiplayerSpawner (fase 3, #24): só o host simula; os clientes só
+## recebem position/rotation/state/health/stunned/fleeing.
+var replicated: bool = false
+
+## Campos simples para o MultiplayerSynchronizer. No host refletem o estado real; num
+## cliente replicado, escrever neles só liga/desliga o efeito visual.
+var stunned: bool:
+	get:
+		return _stun_left > 0.0
+	set(value):
+		if value == (_stun_left > 0.0):
+			return
+		_stun_left = 0.25 if value else 0.0
+		_set_stun_fx(value)
+var fleeing: bool:
+	get:
+		return _flee_left > 0.0
+	set(value):
+		_flee_left = maxf(_flee_left, 0.25) if value else 0.0
 
 var _gravity: float = 9.8
 var _target: Node3D = null
@@ -49,7 +73,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _dead:
+	if _dead or not has_simulation_authority():
 		return
 	if _flee_left > 0.0:
 		_flee_left -= delta
@@ -67,6 +91,13 @@ func _physics_process(delta: float) -> void:
 # ---------------------------------------------------------------------------
 # API pública
 # ---------------------------------------------------------------------------
+
+## Verdadeiro onde a IA deve correr: sempre, salvo num cliente com o inimigo replicado.
+func has_simulation_authority() -> bool:
+	if not replicated or not is_inside_tree():
+		return true
+	return not multiplayer.has_multiplayer_peer() or multiplayer.is_server()
+
 
 func is_alive() -> bool:
 	return not _dead and health > 0.0 and not is_queued_for_deletion()
@@ -175,6 +206,28 @@ func _apply_gravity(delta: float) -> void:
 		velocity.y -= _gravity * delta
 	else:
 		velocity.y = 0.0
+
+
+## Altura do chão (layer 1) por baixo de (pos.x, pos.z); `fallback` se não houver chão.
+## Para inimigos que andam debaixo de terra (sem colisão) em mapas com relevo.
+func _ground_height(pos: Vector3, fallback: float) -> float:
+	if not is_inside_tree():
+		return fallback
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+		Vector3(pos.x, pos.y + 6.0, pos.z), Vector3(pos.x, pos.y - 20.0, pos.z), 1, [get_rid()])
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+	return (hit["position"] as Vector3).y if not hit.is_empty() else fallback
+
+
+## Jogadores (grupo 'player') a menos de `radius` m de `center` no plano.
+func _players_within(center: Vector3, radius: float) -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	for n: Node in get_tree().get_nodes_in_group("player"):
+		if n is Node3D and n.has_method("take_damage"):
+			var p: Vector3 = (n as Node3D).global_position
+			if Vector2(p.x - center.x, p.z - center.z).length() <= radius:
+				out.append(n as Node3D)
+	return out
 
 
 ## Roda no eixo Y para que o -Z local aponte para dir, mais um desvio angular.
