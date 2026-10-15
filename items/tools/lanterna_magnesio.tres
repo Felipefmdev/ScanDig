@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"lanterna_magnesio"
+display_name = "Lanterna de Magnésio"
+description = "Flash em cone que atordoa; os morcegos fogem. Banca das Ruínas."
+price = 2500
+category = 0
+charges = -1
+color = Color(0.95, 0.95, 0.8, 1)

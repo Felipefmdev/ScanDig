@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"forcado"
+display_name = "Forcado"
+description = "Arma corpo a corpo de alcance: empurra os inimigos. Banca do Campo Antigo."
+price = 600
+category = 0
+charges = -1
+color = Color(0.6, 0.45, 0.25, 1)

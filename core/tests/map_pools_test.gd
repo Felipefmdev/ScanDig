@@ -72,8 +72,23 @@ func _run() -> void:
 	_check(cratera_avg >= 1100.0 and cratera_avg <= 1400.0, "média cratera 1100–1400: %.1f" % cratera_avg)
 	_check(_load_map("campo").required_detector_level == 2, "campo exige detector Nv.2: %d" % _load_map("campo").required_detector_level)
 	_check(ruinas.required_detector_level == 4, "ruinas exige detector Nv.4: %d" % ruinas.required_detector_level)
-	_check(cratera.required_detector_level == 5, "cratera exige detector Nv.5: %d" % cratera.required_detector_level)
-	_check(gs.get_total_catalog_items() == 20, "catálogo com 20 itens: %d" % gs.get_total_catalog_items())
+	_check(cratera.required_detector_level == 6, "cratera exige detector Nv.6: %d" % cratera.required_detector_level)
+	_check(cratera.unlock_cost == 55000, "cratera custa 55000: %d" % cratera.unlock_cost)
+	# Geleira (#45): pool vazio até o Dev A preencher; custo e detector já valem.
+	var geleira: MapData = _load_map("geleira")
+	_check(geleira != null and geleira.id == "geleira" and geleira.display_name == "Geleira Eterna", "geleira carregada")
+	if geleira != null:
+		_check(geleira.unlock_cost == 20000, "geleira custa 20000: %d" % geleira.unlock_cost)
+		_check(geleira.required_detector_level == 5, "geleira exige detector Nv.5: %d" % geleira.required_detector_level)
+	# Troféus de chefe ficam fora de qualquer item_pool.
+	var trophy_in_pool: bool = false
+	for map_id: String in MAP_IDS + ["geleira"]:
+		var map_data: MapData = _load_map(map_id)
+		for item: ItemData in (map_data.item_pool if map_data != null else []):
+			trophy_in_pool = trophy_in_pool or (item != null and item.id in ["coroa_caranguejo_rei", "garra_toupeira"])
+	_check(not trophy_in_pool, "troféus fora dos pools")
+	_check(ResourceLoader.exists(CATALOG_DIR + "garra_toupeira.tres"), "garra_toupeira no catálogo")
+	_check(gs.get_total_catalog_items() == 21, "catálogo com 21 itens: %d" % gs.get_total_catalog_items())
 
 	# Ordem dos motivos em get_map_status: bloqueado → "Em breve." (sem cena) → detector.
 	# Com radar Nv.3 (< 4) e Ruínas desbloqueadas, falta a cena, então o motivo é "Em breve.".

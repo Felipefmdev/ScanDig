@@ -51,7 +51,7 @@ func _run() -> void:
 	var ids: Array[String] = []
 	for map_data: MapData in sm.get_available_maps():
 		ids.append(map_data.id)
-	_check(ids == ["praia", "campo", "ruinas", "cratera"], "ordem dos mapas: %s" % str(ids))
+	_check(ids == ["praia", "campo", "ruinas", "geleira", "cratera"], "ordem dos mapas: %s" % str(ids))
 	_check(gs.is_map_unlocked("praia"), "praia desbloqueada")
 	_check(not gs.is_map_unlocked("campo"), "campo bloqueado")
 
@@ -62,6 +62,13 @@ func _run() -> void:
 	_check(not campo["unlocked"] and campo["has_scene"] and not campo["playable"], "status campo bloqueado, com cena: %s" % str(campo))
 	_check(campo["required_boss_name"] == "Caranguejo-Rei" and not campo["boss_defeated"], "status campo exige Caranguejo-Rei")
 	_check(campo["reason"] == "Vença o chefe Caranguejo-Rei primeiro.", "status campo reason: %s" % str(campo["reason"]))
+
+	# #45: Geleira entre Ruínas e Cratera; cada mapa pede o chefe do anterior.
+	var geleira: Dictionary = sm.get_map_status("geleira")
+	_check(not geleira["unlocked"] and not geleira["playable"] and geleira["unlock_cost"] == 20000, "status geleira bloqueada: %s" % str(geleira))
+	_check(geleira["required_boss_id"] == "ancient_guardian" and geleira["reason"] == "Vença o chefe Guardião Ancestral primeiro.", "geleira exige Guardião Ancestral: %s" % str(geleira["reason"]))
+	var cratera: Dictionary = sm.get_map_status("cratera")
+	_check(cratera["required_boss_id"] == "frozen_mammoth" and cratera["required_boss_name"] == "Mamute Congelado" and cratera["unlock_cost"] == 55000, "cratera exige Mamute Congelado: %s" % str(cratera))
 
 	var unknown: Dictionary = sm.get_map_status("xyz")
 	var has_all_keys: bool = true

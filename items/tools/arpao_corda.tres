@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"arpao_corda"
+display_name = "Arpão de Corda"
+description = "Puxa inimigos e itens. Banca da Geleira Eterna."
+price = 6000
+category = 0
+charges = -1
+color = Color(0.45, 0.6, 0.75, 1)

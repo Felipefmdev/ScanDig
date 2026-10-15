@@ -78,6 +78,7 @@ Consultas de equipamento (só leitura, qualquer peer; clientes leem o valor do s
 - `get_backpack_capacity()` → `BASE_BACKPACK_CAPACITY` (3) + nível de `backpack` (3 a 8).
 - `get_shovel_level()` → 1 + nível de `shovel` (escala do `player.shovel_level`; 1 = pá básica).
 - `has_pinpointer()` → nível de `pinpointer` > 0. `get_pinpointer_level()` → 0 a 2.
+- Armas em `res://items/tools/` (preços provisórios, #45): `estilingue` 250, `forcado` 600, `lanterna_magnesio` 2.500, `arpao_corda` 6.000, `pulso_magnetico` 15.000. A banca de cada mapa (cena) escolhe quais vende.
 - `get_tool_data(item_id)` → `ToolData` de `TOOLS_DIR/<id>.tres` (`res://items/tools`), ou `null` se o id for inválido (vazio, com `/`, `\` ou `..`), não existir ou não bater com `ToolData.id`.
 - `get_max_item_value(item_data)` → teto anti-trapaça de venda/doação: `ceil(base_value × BuriedSpot.RARE_VALUE_MULTIPLIER × BuriedSpot.PERFECT_BONUS_MULTIPLIER)` (ex.: base 250 → 938).
 
@@ -89,12 +90,19 @@ Mensagens: `"Comprado: <nome>"`, `"Saldo insuficiente para <nome> (R$ <preço>).
 ### Progressão de mapas
 Regras em `docs/PACING.md` §1. Ordem: `praia` → `campo` → `ruinas` → `cratera` (`SessionManager.MAP_ORDER`; ids fora da lista vão para o fim, em ordem alfabética). `MapData` em `GameState.MAPS_DIR` (`res://items/maps/<id>.tres`, `id` == nome do arquivo).
 
-| Mapa | Nome | `unlock_cost` | Chefe exigido (`MAP_UNLOCK_BOSSES`) |
-| :--- | :--- | :--- | :--- |
-| `praia` | Praia | 0 (sempre desbloqueada) | — |
-| `campo` | Campo Antigo | 1.200 | `king_crab` (Caranguejo-Rei) |
-| `ruinas` | Ruínas | 8.000 | `giant_mole` (Toupeira Gigante) |
-| `cratera` | Cratera | 25.000 | `ancient_guardian` (Guardião Ancestral) |
+Ordem e chefes do `docs/GAME_DESIGN.md` §3 (#45): cada mapa pede o chefe principal do anterior.
+
+| Mapa | Nome | `unlock_cost` | Detector mínimo | Chefe exigido (`MAP_UNLOCK_BOSSES`) | Chefe principal do mapa |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `praia` | Praia | 0 (sempre desbloqueada) | Nv.1 | — | `king_crab` |
+| `campo` | Campo Antigo | 1.200 | Nv.2 | `king_crab` (Caranguejo-Rei) | `giant_mole` |
+| `ruinas` | Ruínas | 8.000 | Nv.4 | `giant_mole` (Toupeira Gigante) | `ancient_guardian` |
+| `geleira` | Geleira Eterna | 20.000 | Nv.5 | `ancient_guardian` (Guardião Ancestral) | `frozen_mammoth` |
+| `cratera` | Cratera | 55.000 | Nv.6 | `frozen_mammoth` (Mamute Congelado) | (chefe final) |
+
+O `item_pool` da Geleira está vazio e a cena `world/map_geleira.tscn` ainda não existe (Dev A, #45): a Geleira aparece na lista, travada pelo chefe, e depois de paga mostra "Em breve.". Os `required_maps` dos `UPGRADES` ainda não citam a Geleira; a redistribuição espera a nova medição por bot.
+
+Troféus de chefe ficam no catálogo, fora de qualquer `item_pool`: `coroa_caranguejo_rei` (Caranguejo-Rei) e `garra_toupeira` (Toupeira Gigante, R$ 900).
 
 Desbloquear é uma compra única, só depois de vencer o chefe exigido. Um mapa desbloqueado só é jogável se `res://world/map_<id>.tscn` existir (senão a UI mostra "Em breve").
 

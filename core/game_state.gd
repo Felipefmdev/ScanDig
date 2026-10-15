@@ -31,7 +31,8 @@ const MAPS_DIR: String = "res://items/maps"
 const MAP_UNLOCK_BOSSES: Dictionary = {
 	"campo": {"boss_id": "king_crab", "boss_name": "Caranguejo-Rei"},
 	"ruinas": {"boss_id": "giant_mole", "boss_name": "Toupeira Gigante"},
-	"cratera": {"boss_id": "ancient_guardian", "boss_name": "Guardião Ancestral"},
+	"geleira": {"boss_id": "ancient_guardian", "boss_name": "Guardião Ancestral"},
+	"cratera": {"boss_id": "frozen_mammoth", "boss_name": "Mamute Congelado"},
 }
 
 ## Definição da loja: custo de cada nível, mapa que precisa estar desbloqueado para
