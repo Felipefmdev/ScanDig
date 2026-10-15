@@ -281,7 +281,10 @@ func _refresh_players_list() -> void:
 			return a == 1 and b != 1
 		return a < b
 	)
-	var my_id: int = multiplayer.get_unique_id()
+	# Ao fechar a janela o multiplayer/peer pode já não existir.
+	var my_id: int = 0
+	if is_inside_tree() and multiplayer != null and multiplayer.multiplayer_peer != null:
+		my_id = multiplayer.get_unique_id()
 	for peer_id: int in ids:
 		var line: String = str(_net_manager.call(&"get_player_name", peer_id))
 		if peer_id == 1:
