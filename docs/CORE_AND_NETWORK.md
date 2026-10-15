@@ -38,19 +38,29 @@ Só o host (peer 1) altera o estado. Qualquer peer chama `request_*`; `_send_to_
 | `request_purchase_item(item_id)` | `_host_purchase_item` → `item_purchase_result` só para quem comprou |
 | `request_unlock_map(map_id)` | `_host_unlock_map` → `map_unlock_result` só para quem pediu |
 | `request_report_boss_defeated(boss_id)` | `_host_report_boss_defeated` (**só do host**, ver abaixo) |
+| `request_complete_quest(quest_id)` | `_host_complete_quest` (**só do host**) → `quest_completed` em todos |
+| `request_report_secret(secret_id)` | `_host_report_secret` (**só do host**) → `secret_found` em todos |
 
 Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
 
-**Chefe vencido só vem do host (Fase 4, #5).** O chefe só morre na simulação do host, e o `_process_dying` dele chama `request_report_boss_defeated` fora de qualquer RPC. Por isso `_host_report_boss_defeated` só aceita `multiplayer.get_remote_sender_id()` igual a `0` (chamada local) ou `1`; o pedido de qualquer outro peer é ignorado com `push_warning`, sem mexer em `defeated_bosses`. Compras, entregas (`_host_report_discovery`/`_sell`/`_donate`) e desbloqueio de mapa continuam aceitos de qualquer peer. Teste: `core/tests/boss_authority_test.gd`.
+**Chefe, missão e segredo só vêm do host (Fase 4, #5; #45).** Chefes, NPCs e interativos rodam na simulação do host, e o `_process_dying` do chefe chama `request_report_boss_defeated` fora de qualquer RPC. Por isso `_host_report_boss_defeated`, `_host_complete_quest` e `_host_report_secret` só aceitam `multiplayer.get_remote_sender_id()` igual a `0` (chamada local) ou `1` (`_is_host_sender`); o pedido de qualquer outro peer é ignorado com `push_warning`, sem mexer no estado. O gameplay deve chamar esses `request_*` no host, nunca a partir de um RPC de cliente. Compras, entregas (`_host_report_discovery`/`_sell`/`_donate`) e desbloqueio de mapa continuam aceitos de qualquer peer. Teste: `core/tests/boss_authority_test.gd`.
+
+### Missões e segredos (#45)
+- `QUESTS: Dictionary` → `{"ze_anzol": {"name": "O anzol de ouro", "reward": 600}}`. `request_complete_quest(id)` paga `reward` **uma vez por save** e acrescenta o id a `completed_quests`; id desconhecido ou repetido é ignorado. O item de recompensa (ex.: `concha_dourada`) o gameplay larga no chão e vai ao museu pelo caminho normal.
+- `SECRETS: Array[String]` → `praia_reliquia_navio`, `praia_reliquia_pedra`, `praia_reliquia_mare`, `praia_polvo`, `praia_ovo_pato`, `praia_ovo_castelo`. `request_report_secret(id)` só registra em `found_secrets` (sem dinheiro).
+- `EXTRA_BOSSES: Array[String]` → `["octopus"]`. `request_report_boss_defeated` aceita estes ids e os de `MAP_UNLOCK_BOSSES`; os extras só entram em `defeated_bosses`, sem desbloquear nada.
+- Consulta: `is_quest_completed(id)`, `is_secret_found(id)`, `completed_quests`, `found_secrets`.
+- Sinais: `quest_completed(quest_id, reward)` e `secret_found(secret_id)`, emitidos pelo `apply_snapshot` em **todos os peers** para cada id que não estava na lista anterior. Atenção: carregar um save ou entrar numa sessão também traz ids "novos" para aquele peer e dispara os sinais; quem mostra aviso na tela deve ignorar o que chega junto com `game_loaded` ou com a primeira sincronização.
+- Novos ids entram nessas constantes, no core (pedir ao Dev B).
 
 ### Sinais do `GameState`
-`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `progression_changed(unlocked_maps, defeated_bosses)`, `map_unlock_result(map_id, success, message)`, `state_synced()`.
+`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `progression_changed(unlocked_maps, defeated_bosses)`, `map_unlock_result(map_id, success, message)`, `quest_completed(quest_id, reward)`, `secret_found(secret_id)`, `state_synced()`.
 
 ### Snapshot
 Após cada mudança o host envia a todos `_receive_snapshot` com:
 
 ```
-{ "team_money": int, "current_day": int, "discovered_items": Array[String], "upgrade_levels": { "detector": int, "pinpointer": int, "shovel": int, "backpack": int }, "unlocked_maps": Array[String], "defeated_bosses": Array[String] }
+{ "team_money": int, "current_day": int, "discovered_items": Array[String], "upgrade_levels": { "detector": int, "pinpointer": int, "shovel": int, "backpack": int }, "unlocked_maps": Array[String], "defeated_bosses": Array[String], "completed_quests": Array[String], "found_secrets": Array[String] }
 ```
 
 Quem entra recebe o snapshot em `peer_connected` (e o cliente pede de novo com `_request_full_state`). `apply_snapshot` valida tipos e limita níveis.
@@ -112,7 +122,7 @@ Desbloquear é uma compra única, só depois de vencer o chefe exigido. Um mapa 
 - `is_boss_defeated(boss_id)`.
 - `get_map_unlock_block_reason(map_id)` → `""` se pode desbloquear agora; senão o motivo pronto para a UI.
 - `request_unlock_map(map_id)` → o host revalida com `get_map_unlock_block_reason`, debita `unlock_cost`, adiciona a `unlocked_maps` e sincroniza. Resposta em `map_unlock_result` só para quem pediu.
-- `request_report_boss_defeated(boss_id)` → o host aceita só os `boss_id` de `MAP_UNLOCK_BOSSES`, só da própria simulação (nunca de um cliente), sem duplicar e sem dar dinheiro. O gameplay liga o `boss_defeated` de cada chefe a isso.
+- `request_report_boss_defeated(boss_id)` → o host aceita só os `boss_id` de `MAP_UNLOCK_BOSSES` e `EXTRA_BOSSES`, só da própria simulação (nunca de um cliente), sem duplicar e sem dar dinheiro. O gameplay liga o `boss_defeated` de cada chefe a isso.
 - `map_id` vazio, com `/`, `\` ou `..`, inválido como nome de arquivo ou com `MapData.id` diferente é tratado como mapa desconhecido.
 
 Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado."`, `"Vença o chefe <chefe> primeiro."`, `"Saldo insuficiente para desbloquear <nome> (R$ <custo>)."`, sucesso `"<nome> desbloqueado!"`.
@@ -187,13 +197,13 @@ Sinais: `players_changed()` (a lista mudou: entrada, saída ou nome; em todos os
 - Os outros peers não mudam: se um cliente sai, o host recebe `peer_disconnected`; se o host sai, os clientes recebem `server_disconnected` → `host_lost`.
 - O botão "Sair da sessão" da UI deve chamar `disconnect_game()`.
 
-## 3. Save (`user://scandig_save.json`, versão 3)
+## 3. Save (`user://scandig_save.json`, versão 4)
 
 ```json
-{ "version": 3, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"] }
+{ "version": 4, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"] }
 ```
 
-Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
+Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo e agora libera a Geleira (antes liberava a Cratera). No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
 
 ## 4. Testes headless (Git Bash)
 
@@ -215,7 +225,8 @@ $G --headless --path . --script res://core/tests/map_unlock_test.gd    # progres
 $G --headless --path . --script res://core/tests/scene_ready_test.gd   # peer_scene_ready no solo: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/expedition_ending_test.gd  # ordem do expedition_ending e reentrada (grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/leave_session_test.gd # sair da sessão (porta 7792, grava o save): "RESULT fails=0"
-$G --headless --path . --script res://core/tests/boss_authority_test.gd # chefe só do host; abre o próprio cliente (porta 7798, grava o save): "RESULT fails=0"
+$G --headless --path . --script res://core/tests/quest_secret_test.gd   # missões, segredos, octopus e save v3/v4 (grava o save): "RESULT fails=0"
+$G --headless --path . --script res://core/tests/boss_authority_test.gd # chefe, missão e segredo só do host; abre o próprio cliente (porta 7798, grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/net_errors_test.gd    # sanitize, IP inválido, porta em uso, timeout e thread do UPnP com UPnP falso: "UPNP skipped" + "RESULT fails=0"
 # Só com autorização do dono da rede: "-- upnp" abre de verdade a porta 7797 (UDP) no roteador e fecha logo depois.
 # $G --headless --path . --script res://core/tests/net_errors_test.gd -- upnp

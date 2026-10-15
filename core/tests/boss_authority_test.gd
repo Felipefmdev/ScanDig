@@ -1,5 +1,5 @@
 ## Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://core/tests/boss_authority_test.gd
-## Fase 4 (#5): chefe vencido só é aceito do host. O host abre o próprio cliente
+## Fase 4 (#5) e #45: chefe, missão e segredo só são aceitos do host. O host abre o próprio cliente
 ## (o mesmo script com "-- client") na porta 7798. Grava o save: faça backup.
 extends SceneTree
 const PORT: int = 7798
@@ -50,12 +50,15 @@ func _run_host() -> void:
 	_check(bought, "a compra do cliente não chegou em 20 s")
 	_check(gs.defeated_bosses.is_empty(), "chefe do cliente foi aceito: %s" % str(gs.defeated_bosses))
 	_check(not gs.is_boss_defeated(BOSS_ID), "king_crab não pode vir do cliente")
+	_check(gs.completed_quests.is_empty() and gs.found_secrets.is_empty(), "missão/segredo do cliente aceitos: %s / %s" % [str(gs.completed_quests), str(gs.found_secrets)])
 
 	# Chamada local do host (como o chefe faz no _process_dying): aceita e sincroniza.
 	gs.request_report_boss_defeated(BOSS_ID)
 	_check(gs.is_boss_defeated(BOSS_ID), "host direto não marcou king_crab: %s" % str(gs.defeated_bosses))
+	gs.request_complete_quest("ze_anzol")
+	_check(gs.is_quest_completed("ze_anzol"), "host direto não concluiu ze_anzol")
 
-	# O cliente confirma que recebeu o snapshot comprando o pinpointer.
+	# O cliente confirma que recebeu o snapshot e o quest_completed comprando o pinpointer.
 	var acked: bool = await _wait_until(func() -> bool: return gs.get_upgrade_level("pinpointer") == 1, 10.0)
 	_check(acked, "o cliente não recebeu king_crab em 10 s")
 	_check(gs.defeated_bosses == [BOSS_ID], "defeated_bosses final: %s" % str(gs.defeated_bosses))
@@ -89,8 +92,12 @@ func _run_client() -> void:
 	# Os dois caminhos: rpc_id direto e o request_* (que no cliente também vira rpc_id(1)).
 	gs.rpc_id(1, &"_host_report_boss_defeated", BOSS_ID)
 	gs.request_report_boss_defeated("giant_mole")
+	gs.rpc_id(1, &"_host_complete_quest", "ze_anzol")
+	gs.request_report_secret("praia_polvo")
 	gs.request_buy_upgrade("detector")
-	var synced: bool = await _wait_until(func() -> bool: return gs.is_boss_defeated(BOSS_ID), 10.0)
+	var quest_signals: Array[String] = []
+	gs.quest_completed.connect(func(quest_id: String, reward: int) -> void: quest_signals.append("%s:%d" % [quest_id, reward]))
+	var synced: bool = await _wait_until(func() -> bool: return gs.is_boss_defeated(BOSS_ID) and quest_signals == ["ze_anzol:600"], 10.0)
 	if synced:
 		gs.request_buy_upgrade("pinpointer")
 		await _w(1.0)

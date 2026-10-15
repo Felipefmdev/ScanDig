@@ -17,6 +17,10 @@ signal item_purchase_result(item_id: String, success: bool, message: String)
 signal progression_changed(unlocked_maps: Array, defeated_bosses: Array)
 ## Só o peer que pediu recebe.
 signal map_unlock_result(map_id: String, success: bool, message: String)
+## Em todos os peers, uma vez por entrada nova em completed_quests (reward vem de QUESTS).
+signal quest_completed(quest_id: String, reward: int)
+## Em todos os peers, uma vez por entrada nova em found_secrets.
+signal secret_found(secret_id: String)
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
@@ -38,6 +42,14 @@ const MAP_UNLOCK_BOSSES: Dictionary = {
 ## Definição da loja: custo de cada nível, mapa que precisa estar desbloqueado para
 ## comprar cada nível ("" = sem trava) e nível máximo. Tabela aprovada na #25;
 ## o nível 3 do detector (700, sem trava) veio da #46.
+## Missões de NPC (#45): recompensa em dinheiro paga uma só vez por save.
+const QUESTS: Dictionary = {"ze_anzol": {"name": "O anzol de ouro", "reward": 600}}
+## Relíquias escondidas e easter eggs (#45): só ficam registrados no save.
+const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", "praia_reliquia_mare",
+	"praia_polvo", "praia_ovo_pato", "praia_ovo_castelo"]
+## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
+const EXTRA_BOSSES: Array[String] = ["octopus"]
+
 const UPGRADES: Dictionary = {
 	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 15000, 25000],
 		"required_maps": ["", "", "", "ruinas", "cratera", "cratera"], "max_level": 6},
@@ -63,6 +75,8 @@ var upgrade_levels: Dictionary = {}
 ## Mapas pagos; mapas com unlock_cost <= 0 (a Praia) não precisam estar aqui.
 var unlocked_maps: Array[String] = []
 var defeated_bosses: Array[String] = []
+var completed_quests: Array[String] = []
+var found_secrets: Array[String] = []
 
 
 func _enter_tree() -> void:
@@ -196,6 +210,14 @@ func is_boss_defeated(boss_id: String) -> bool:
 	return defeated_bosses.has(boss_id)
 
 
+func is_quest_completed(quest_id: String) -> bool:
+	return completed_quests.has(quest_id)
+
+
+func is_secret_found(secret_id: String) -> bool:
+	return found_secrets.has(secret_id)
+
+
 ## "" se pode desbloquear agora; senão o motivo, em português, pronto para a UI.
 func get_map_unlock_block_reason(map_id: String) -> String:
 	var map_data: MapData = _load_map(map_id)
@@ -247,6 +269,16 @@ func request_unlock_map(map_id: String) -> void:
 ## Chamado pelo gameplay quando um chefe morre.
 func request_report_boss_defeated(boss_id: String) -> void:
 	_send_to_host(&"_host_report_boss_defeated", [boss_id])
+
+
+## Chamado pelo gameplay (no host) quando uma missão termina; paga QUESTS[id].reward uma vez.
+func request_complete_quest(quest_id: String) -> void:
+	_send_to_host(&"_host_complete_quest", [quest_id])
+
+
+## Chamado pelo gameplay (no host) quando um segredo de SECRETS é encontrado.
+func request_report_secret(secret_id: String) -> void:
+	_send_to_host(&"_host_report_secret", [secret_id])
 
 
 ## Compra de ferramenta (ToolData). A resposta chega por item_purchase_result.
@@ -383,21 +415,57 @@ func _host_unlock_map(map_id: String) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _host_report_boss_defeated(boss_id: String) -> void:
-	if not is_authority():
-		return
-	# O chefe só morre na simulação do host: aceita a chamada local (sender 0) ou do
-	# próprio host. Compras, entregas e desbloqueios continuam aceitos de qualquer peer.
-	var sender: int = multiplayer.get_remote_sender_id()
-	if sender != 0 and sender != HOST_PEER_ID:
-		push_warning("GameState: chefe '%s' reportado pelo peer %d ignorado (só o host)." % [boss_id, sender])
+	if not is_authority() or not _is_host_sender("chefe", boss_id):
 		return
 	if defeated_bosses.has(boss_id):
 		return
+	var known: bool = EXTRA_BOSSES.has(boss_id)
 	for entry: Dictionary in MAP_UNLOCK_BOSSES.values():
-		if str(entry["boss_id"]) == boss_id:
-			defeated_bosses.append(boss_id)
-			_broadcast_snapshot()
-			return
+		known = known or str(entry["boss_id"]) == boss_id
+	if known:
+		defeated_bosses.append(boss_id)
+		_broadcast_snapshot()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_complete_quest(quest_id: String) -> void:
+	if not is_authority() or not _is_host_sender("missão", quest_id):
+		return
+	if not QUESTS.has(quest_id) or completed_quests.has(quest_id):
+		return
+	# Aplica pelo snapshot para o host também emitir quest_completed (diff em apply_snapshot).
+	var data: Dictionary = get_snapshot()
+	# Cópia: Array(typed) do snapshot divide a lista com o estado e anularia a comparação.
+	var quests: Array = Array(completed_quests).duplicate()
+	quests.append(quest_id)
+	data["completed_quests"] = quests
+	data["team_money"] = team_money + int(QUESTS[quest_id]["reward"])
+	apply_snapshot(data)
+	_broadcast_snapshot()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_report_secret(secret_id: String) -> void:
+	if not is_authority() or not _is_host_sender("segredo", secret_id):
+		return
+	if not SECRETS.has(secret_id) or found_secrets.has(secret_id):
+		return
+	var data: Dictionary = get_snapshot()
+	var secrets: Array = Array(found_secrets).duplicate()
+	secrets.append(secret_id)
+	data["found_secrets"] = secrets
+	apply_snapshot(data)
+	_broadcast_snapshot()
+
+
+## Chefes, missões e segredos acontecem só no mundo do host: aceita a chamada local
+## (sender 0) ou do próprio host. Compras, entregas e desbloqueios aceitam qualquer peer.
+func _is_host_sender(kind: String, id: String) -> bool:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != HOST_PEER_ID:
+		push_warning("GameState: %s '%s' reportado pelo peer %d ignorado (só o host)." % [kind, id, sender])
+		return false
+	return true
 
 
 # --- Sincronização -------------------------------------------------------------
@@ -411,6 +479,8 @@ func get_snapshot() -> Dictionary:
 		"upgrade_levels": upgrade_levels.duplicate(),
 		"unlocked_maps": Array(unlocked_maps),
 		"defeated_bosses": Array(defeated_bosses),
+		"completed_quests": Array(completed_quests),
+		"found_secrets": Array(found_secrets),
 	}
 
 
@@ -425,6 +495,17 @@ func apply_snapshot(data: Dictionary) -> void:
 		unlocked_maps = _to_id_list(data["unlocked_maps"])
 	if data.get("defeated_bosses") is Array:
 		defeated_bosses = _to_id_list(data["defeated_bosses"])
+	# Compara com a lista anterior: cada entrada nova vira um sinal, em qualquer peer.
+	var new_quests: Array[String] = []
+	if data.get("completed_quests") is Array:
+		var quests: Array[String] = _to_id_list(data["completed_quests"])
+		new_quests = _new_ids(completed_quests, quests)
+		completed_quests = quests
+	var new_secrets: Array[String] = []
+	if data.get("found_secrets") is Array:
+		var secrets: Array[String] = _to_id_list(data["found_secrets"])
+		new_secrets = _new_ids(found_secrets, secrets)
+		found_secrets = secrets
 	if data.get("upgrade_levels") is Dictionary:
 		# JSON devolve números como float e pode conter chaves obsoletas.
 		var source: Dictionary = data["upgrade_levels"]
@@ -438,6 +519,11 @@ func apply_snapshot(data: Dictionary) -> void:
 	collection_updated.emit(discovered_items.size(), get_total_catalog_items())
 	upgrades_changed.emit(upgrade_levels.duplicate())
 	progression_changed.emit(Array(unlocked_maps), Array(defeated_bosses))
+	for quest_id: String in new_quests:
+		var quest: Dictionary = QUESTS.get(quest_id, {})
+		quest_completed.emit(quest_id, int(quest.get("reward", 0)))
+	for secret_id: String in new_secrets:
+		secret_found.emit(secret_id)
 	state_synced.emit()
 
 
@@ -538,6 +624,8 @@ func reset_state() -> void:
 	upgrade_levels.clear()
 	unlocked_maps.clear()
 	defeated_bosses.clear()
+	completed_quests.clear()
+	found_secrets.clear()
 	_broadcast_snapshot()
 
 
@@ -592,6 +680,15 @@ func _to_id_list(source: Array) -> Array[String]:
 		if not id.is_empty() and not ids.has(id):
 			ids.append(id)
 	return ids
+
+
+## Ids de `current` que não estavam em `previous`, na ordem de `current`.
+func _new_ids(previous: Array[String], current: Array[String]) -> Array[String]:
+	var added: Array[String] = []
+	for id: String in current:
+		if not previous.has(id):
+			added.append(id)
+	return added
 
 
 func _load_item(item_id: String) -> ItemData:

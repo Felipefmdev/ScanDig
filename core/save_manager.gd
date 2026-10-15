@@ -91,13 +91,15 @@ func save_game(target_state: GameState = null) -> Error:
 		return ERR_UNAUTHORIZED
 	
 	var save_data: Dictionary = {
-		"version": 3,
+		"version": 4,
 		"team_money": state.team_money,
 		"current_day": state.current_day,
 		"discovered_items": Array(state.discovered_items),
 		"upgrade_levels": state.upgrade_levels.duplicate(),
 		"unlocked_maps": Array(state.unlocked_maps),
 		"defeated_bosses": Array(state.defeated_bosses),
+		"completed_quests": Array(state.completed_quests),
+		"found_secrets": Array(state.found_secrets),
 	}
 	
 	var error: Error = save_to_file(save_data)
@@ -143,6 +145,12 @@ func load_game(target_state: GameState = null) -> Error:
 		save_data["unlocked_maps"] = []
 	if not save_data.has("defeated_bosses"):
 		save_data["defeated_bosses"] = []
+	# Saves v1–v3 não têm missões nem segredos. Um ancient_guardian vindo de um save v3
+	# continua em defeated_bosses e agora libera a Geleira (#45).
+	if not save_data.has("completed_quests"):
+		save_data["completed_quests"] = []
+	if not save_data.has("found_secrets"):
+		save_data["found_secrets"] = []
 	
 	state.load_snapshot(save_data)
 	game_loaded.emit()
