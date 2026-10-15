@@ -560,15 +560,15 @@ func _refresh_museum_display() -> void:
 		discovered = _game_state.discovered_items
 	
 	for item in _catalog_items:
-		var is_found: bool = discovered.has(item.id)
-		var status_str: String = "[DESCOBERTO]" if is_found else "[NÃO DESCOBERTO]"
-		var text: String = "%s %s (Valor: %s | Profundidade: %d cm)" % [
-			status_str,
-			item.display_name,
-			UiFormat.money(item.base_value),
-			item.depth_cm
-		]
-		museum_item_list.add_item(text)
+		museum_item_list.add_item(museum_line(item, discovered.has(item.id)))
+
+
+## Linha do Museu. Itens que não são escavados (missão, relíquia escondida, troféu de chefe,
+## easter egg) têm depth_cm 0: mostram "Achado especial" no lugar da profundidade.
+static func museum_line(item: ItemData, is_found: bool) -> String:
+	var status_str: String = "[DESCOBERTO]" if is_found else "[NÃO DESCOBERTO]"
+	var detail: String = "Profundidade: %d cm" % item.depth_cm if item.depth_cm > 0 else "Achado especial"
+	return "%s %s (Valor: %s | %s)" % [status_str, item.display_name, UiFormat.money(item.base_value), detail]
 
 
 func _refresh_secrets_label() -> void:

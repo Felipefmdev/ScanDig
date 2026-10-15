@@ -21,6 +21,20 @@ func _initialize() -> void:
 	_check(UiFormat.fix_money_spaces("Saldo insuficiente (R$ 300). Custo: R$ 1200") == "Saldo insuficiente (R$\u00a0300). Custo: R$\u00a01200", "fix_money_spaces")
 	_check(UiFormat.fix_money_spaces("Sem valor.") == "Sem valor.", "fix_money_spaces sem R$")
 
+	# Museu: item sem profundidade (não escavado) mostra "Achado especial".
+	var special: ItemData = ItemData.new()
+	special.display_name = "Anel do Poço"
+	special.base_value = 600
+	special.depth_cm = 0
+	var special_line: String = BaseStationUI.museum_line(special, false)
+	_check(special_line == "[NÃO DESCOBERTO] Anel do Poço (Valor: R$ 600 | Achado especial)" and not special_line.contains("Profundidade"), "museu especial: '%s'" % special_line)
+	var dug: ItemData = ItemData.new()
+	dug.display_name = "Aliança de Ouro"
+	dug.base_value = 250
+	dug.depth_cm = 18
+	var dug_line: String = BaseStationUI.museum_line(dug, true)
+	_check(dug_line == "[DESCOBERTO] Aliança de Ouro (Valor: R$ 250 | Profundidade: 18 cm)", "museu escavado: '%s'" % dug_line)
+
 	# Nenhum "R$ %d"/"R$ %s" em ui/*.gd e nenhum "R$ " com espaço comum nas .tscn de ui/.
 	var leftovers: Array[String] = []
 	for file: String in DirAccess.get_files_at("res://ui"):
