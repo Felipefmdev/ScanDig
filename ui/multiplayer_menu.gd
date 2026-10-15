@@ -1,10 +1,13 @@
 class_name MultiplayerMenu
 extends Control
 
-## Menu de gerenciamento de sessão de rede (Nome / Host / Join / Lista de Jogadores).
+## Menu de gerenciamento de sessão de rede (Nome / Progresso / Host / Join / Lista de Jogadores).
 ## Dois modos: "Online (código)" (sala no noray, #30) e "Rede local (IP)" (ENet direto
 ## + UPnP). As APIs da #28 e da #30 são acessadas de forma dinâmica: com um core antigo
 ## o menu funciona como antes.
+
+const SAVE_PATH: NodePath = ^"/root/CoreSave"
+const SESSION_PATH: NodePath = ^"/root/CoreSession"
 
 ## Texto de cada etapa de online_join_progress (cliente).
 const JOIN_STAGE_TEXTS: Dictionary = {
@@ -14,6 +17,13 @@ const JOIN_STAGE_TEXTS: Dictionary = {
 }
 
 @onready var name_line_edit: LineEdit = _resolve_node("NameLineEdit", "PanelContainer/MarginContainer/VBoxContainer/NameLineEdit") as LineEdit
+@onready var progress_box: Control = _resolve_node("ProgressBox", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox") as Control
+@onready var continue_button: Button = _resolve_node("ContinueButton", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ContinueButton") as Button
+@onready var progress_label: Label = _resolve_node("ProgressLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressRow/ProgressLabel") as Label
+@onready var progress_info_label: Label = _resolve_node("ProgressInfoLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressRow/ProgressInfoLabel") as Label
+@onready var new_game_button: Button = _resolve_node("NewGameButton", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressRow/NewGameButton") as Button
+@onready var progress_warning_label: Label = _resolve_node("ProgressWarningLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressWarningLabel") as Label
+@onready var new_game_dialog: ConfirmationDialog = _resolve_node("NewGameDialog", "NewGameDialog") as ConfirmationDialog
 @onready var mode_tabs: TabContainer = _resolve_node("ModeTabs", "PanelContainer/MarginContainer/VBoxContainer/ModeTabs") as TabContainer
 @onready var host_online_button: Button = _resolve_node("HostOnlineButton", "PanelContainer/MarginContainer/VBoxContainer/ModeTabs/Online (código)/HostOnlineButton") as Button
 @onready var code_line_edit: LineEdit = _resolve_node("CodeLineEdit", "PanelContainer/MarginContainer/VBoxContainer/ModeTabs/Online (código)/CodeHBox/CodeLineEdit") as LineEdit
@@ -37,6 +47,10 @@ var _net_manager: NetworkManager = null
 var _online_attempt: String = ""
 ## Código normalizado (sem hífen) exibido na caixa da sala; "" = caixa oculta.
 var _shown_room_code: String = ""
+## SaveManager (ou um falso nos testes); APIs do pacote do save acessadas por has_method.
+var _save_manager: Object = null
+## Último save_load_failed / erro de continuar/novo jogo; some no próximo sucesso.
+var _progress_message: String = ""
 
 
 func _resolve_node(unique_id: String, rel_path: String) -> Node:
@@ -73,9 +87,17 @@ func _ready() -> void:
 		code_line_edit.text_changed.connect(_on_code_text_changed)
 		code_line_edit.text_submitted.connect(_on_code_submitted)
 
+	if continue_button != null:
+		continue_button.pressed.connect(_on_continue_pressed)
+	if new_game_button != null:
+		new_game_button.pressed.connect(_on_new_game_pressed)
+	if new_game_dialog != null:
+		new_game_dialog.confirmed.connect(_on_new_game_confirmed)
+
 	_resolve_network_manager()
 	_setup_name_field()
 	_setup_online_mode()
+	_connect_progress_sources.call_deferred()
 	_hide_share()
 	_refresh_session_buttons()
 
@@ -104,6 +126,10 @@ func _resolve_network_manager() -> void:
 		_connect_net_signal(&"upnp_finished", _on_upnp_finished)
 		_connect_net_signal(&"room_code_ready", _on_room_code_ready)
 		_connect_net_signal(&"online_join_progress", _on_online_join_progress)
+		# O papel na rede decide se o painel de progresso aparece.
+		_connect_net_signal(&"connection_succeeded", _refresh_progress_panel)
+		_connect_net_signal(&"server_disconnected", _refresh_progress_panel)
+		_connect_net_signal(&"players_changed", _refresh_progress_panel)
 		_refresh_players_list()
 
 
@@ -190,6 +216,170 @@ func _on_leave_pressed() -> void:
 	_hide_share()
 	_refresh_players_list()
 	_refresh_session_buttons()
+
+
+# --- Progresso salvo (Continuar / Novo jogo) ------------------------------------
+
+## Deferido: os autoloads (CoreSave, CoreGameState) já estão na árvore.
+func _connect_progress_sources() -> void:
+	if _save_manager == null:
+		var save: Object = SaveManager.instance if SaveManager.instance != null else get_node_or_null(SAVE_PATH)
+		set_save_manager(save)
+	if GameState.instance != null and not GameState.instance.state_synced.is_connected(_refresh_progress_panel):
+		GameState.instance.state_synced.connect(_refresh_progress_panel)
+	_refresh_progress_panel()
+
+
+## Troca a fonte do painel (o SaveManager real ou um falso nos testes).
+func set_save_manager(save: Object) -> void:
+	_save_manager = save
+	if save != null:
+		_connect_save_signal(&"save_state_changed", _refresh_progress_panel)
+		_connect_save_signal(&"new_game_started", _refresh_progress_panel)
+		_connect_save_signal(&"save_load_failed", _on_save_load_failed)
+	_refresh_progress_panel()
+
+
+func _connect_save_signal(signal_name: StringName, callable: Callable) -> void:
+	if _save_manager.has_signal(signal_name) and not _save_manager.is_connected(signal_name, callable):
+		_save_manager.connect(signal_name, callable)
+
+
+func _has_save_panel_api() -> bool:
+	return _save_manager != null and _save_manager.has_method(&"get_save_summary") \
+		and _save_manager.has_method(&"is_progress_applied") \
+		and _save_manager.has_method(&"continue_game") and _save_manager.has_method(&"start_new_game")
+
+
+## Offline ou host, fora de expedição: o cliente nunca vê o painel.
+func _can_manage_progress() -> bool:
+	if not _has_save_panel_api() or not is_inside_tree():
+		return false
+	var session: Node = get_node_or_null(SESSION_PATH)
+	if session != null and session.has_method(&"is_in_expedition") and bool(session.call(&"is_in_expedition")):
+		return false
+	if not _is_online():
+		return true
+	return multiplayer.multiplayer_peer != null and multiplayer.is_server()
+
+
+func _get_save_summary() -> Dictionary:
+	var raw: Variant = _save_manager.call(&"get_save_summary")
+	return raw as Dictionary if raw is Dictionary else {}
+
+
+func _refresh_progress_panel() -> void:
+	if progress_box == null:
+		return
+	if not _can_manage_progress():
+		progress_box.visible = false
+		return
+	progress_box.visible = true
+	var summary: Dictionary = _get_save_summary()
+	var exists: bool = bool(summary.get("exists", false))
+	var valid: bool = bool(summary.get("valid", false))
+	var applied: bool = bool(_save_manager.call(&"is_progress_applied"))
+	var unreadable: bool = exists and not valid
+	var can_continue: bool = valid and not applied and not unreadable
+
+	continue_button.visible = can_continue
+	continue_button.disabled = false
+	if can_continue:
+		continue_button.text = "Continuar (%s)" % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
+	progress_label.visible = applied and not unreadable
+	if progress_label.visible:
+		progress_label.text = "Progresso: %s" % _format_day_money(_current_day(summary), _current_money(summary))
+
+	var info: Array[String] = []
+	if can_continue:
+		info.append("Museu: %d/%d" % [int(summary.get("museum_found", 0)), int(summary.get("museum_total", 0))])
+		var saved_at: int = int(summary.get("saved_at", 0))
+		if saved_at > 0:
+			info.append("Salvo em %s" % _format_saved_at(saved_at))
+	progress_info_label.text = "  •  ".join(info)
+	progress_info_label.visible = not progress_label.visible
+	new_game_button.disabled = false
+
+	var warning: String = _progress_message
+	if warning.is_empty() and unreadable:
+		warning = "Save ilegível: %s" % str(summary.get("error", "erro desconhecido"))
+	progress_warning_label.text = warning
+	progress_warning_label.visible = not warning.is_empty()
+
+
+## Depois de aplicado, o estado vivo vale mais que o resumo do arquivo.
+func _current_day(summary: Dictionary) -> int:
+	return GameState.instance.current_day if GameState.instance != null else int(summary.get("day", 1))
+
+
+func _current_money(summary: Dictionary) -> int:
+	return GameState.instance.team_money if GameState.instance != null else int(summary.get("money", 0))
+
+
+func _format_day_money(day: int, money: int) -> String:
+	return "Dia %d • R$ %s" % [day, format_money(money)]
+
+
+## 3200 -> "3.200"; -1500 -> "-1.500".
+static func format_money(amount: int) -> String:
+	var digits: String = str(absi(amount))
+	var groups: Array[String] = []
+	while digits.length() > 3:
+		groups.push_front(digits.right(3))
+		digits = digits.left(digits.length() - 3)
+	groups.push_front(digits)
+	return ("-" if amount < 0 else "") + ".".join(groups)
+
+
+## Unix (UTC) -> "dd/mm hh:mm" no fuso do sistema.
+func _format_saved_at(unix_time: int) -> String:
+	var bias_minutes: int = int(Time.get_time_zone_from_system().get("bias", 0))
+	var d: Dictionary = Time.get_datetime_dict_from_unix_time(unix_time + bias_minutes * 60)
+	return "%02d/%02d %02d:%02d" % [int(d["day"]), int(d["month"]), int(d["hour"]), int(d["minute"])]
+
+
+func _save_error_text(err: Error) -> String:
+	match err:
+		ERR_UNAUTHORIZED:
+			return "Só o host pode mudar o progresso."
+		ERR_BUSY:
+			return "Termine a expedição primeiro."
+	return "Não foi possível mudar o progresso (erro %d)." % err
+
+
+func _on_continue_pressed() -> void:
+	if not _has_save_panel_api():
+		return
+	continue_button.disabled = true
+	var err: Error = _save_manager.call(&"continue_game")
+	_progress_message = "" if err == OK else _save_error_text(err)
+	_refresh_progress_panel()
+
+
+func _on_new_game_pressed() -> void:
+	if not _has_save_panel_api() or new_game_dialog == null:
+		return
+	var summary: Dictionary = _get_save_summary()
+	if bool(summary.get("valid", false)):
+		new_game_dialog.dialog_text = "Apagar o progresso salvo (%s)? Um backup será guardado." % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
+		new_game_dialog.ok_button_text = "Apagar e começar"
+	else:
+		new_game_dialog.dialog_text = "Começar do zero?"
+		new_game_dialog.ok_button_text = "Começar"
+	new_game_dialog.popup_centered()
+
+
+func _on_new_game_confirmed() -> void:
+	if not _has_save_panel_api():
+		return
+	var err: Error = _save_manager.call(&"start_new_game")
+	_progress_message = "" if err == OK else _save_error_text(err)
+	_refresh_progress_panel()
+
+
+func _on_save_load_failed(message: String) -> void:
+	_progress_message = message
+	_refresh_progress_panel()
 
 
 # --- Sala online (código, #30) ---------------------------------------------------
@@ -405,6 +595,7 @@ func _on_server_disconnected() -> void:
 
 func _on_session_left(was_host: bool) -> void:
 	_set_status("Você encerrou a sessão (host)." if was_host else "Você saiu da sessão.")
+	_refresh_progress_panel()
 	_online_attempt = ""
 	_hide_room_code()
 	_hide_share()
