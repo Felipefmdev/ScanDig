@@ -33,6 +33,12 @@ layout_mode = 2
 text = "Rede / Multiplayer"
 horizontal_alignment = 1
 
+[node name="NameLineEdit" type="LineEdit" parent="PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Seu nome"
+max_length = 16
+
 [node name="HostButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -68,6 +74,18 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Modo Solo (Não conectado)"
 autowrap_mode = 2
+
+[node name="ShareLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="CopyIPButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Copiar IP"
 
 [node name="PlayersHeader" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
