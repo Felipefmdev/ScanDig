@@ -69,6 +69,15 @@ const THREAT_COLORS: Array[Color] = [
 	Color(1.0, 0.55, 0.15),
 	Color(0.95, 0.15, 0.15),
 ]
+## #34: o que sai de uma pazada fora de um sinal, pelo chão de cada mapa (MapData.id).
+const EMPTY_DIG_GROUND: Dictionary = {"praia": "Só areia...", "campo": "Só terra..."}
+const EMPTY_DIG_DEFAULT: String = "Nada aqui..."
+const MAX_MESSAGES: int = 3
+## Linhas no total (uma descoberta tem 3-4): a pilha não desce até à mira em janelas pequenas.
+const MAX_MESSAGE_LINES: int = 4
+const MESSAGE_FONT_SIZE: int = 22
+const THREAT_MESSAGE_FONT_SIZE: int = 30
+const THREAT_MESSAGE_COLOR: Color = Color(1, 0.32, 0.2, 1)
 const THREAT_MESSAGES: Array[String] = [
 	"O chão treme...",
 	"O chão treme... algo se mexe lá em baixo.",
@@ -85,11 +94,12 @@ const THREAT_MESSAGES: Array[String] = [
 @onready var slingshot_model: SlingshotModel = $Head/Camera3D/ToolView/Slingshot
 
 # HUD Elements
-@onready var feedback_label: Label = $HUD/FeedbackLabel
+## Pilha de mensagens temporárias (#32): no topo, por baixo do nome/barra do chefe (BossHud,
+## y 70-125); o prompt [E] fica sozinho por baixo da mira.
+@onready var message_stack: VBoxContainer = $HUD/MessageStack
 @onready var session_info_label: Label = $HUD/SessionInfoLabel
 @onready var threat_panel: Control = $HUD/ThreatPanel
 @onready var threat_bar: ProgressBar = $HUD/ThreatPanel/ThreatBar
-@onready var threat_message_label: Label = $HUD/ThreatMessageLabel
 @onready var health_label: Label = $HUD/HealthPanel/HealthLabel
 @onready var health_bar: ProgressBar = $HUD/HealthPanel/HealthBar
 @onready var hotbar: Hotbar = $HUD/Hotbar
@@ -116,8 +126,6 @@ var held_tool_id: StringName = &"":
 
 var _dig_cooldown: float = 0.0
 var _attack_cooldown: float = 0.0
-var _feedback_tween: Tween = null
-var _threat_tween: Tween = null
 var _shake_tween: Tween = null
 var _threat_fill_style: StyleBoxFlat = null
 var _spawn_transform: Transform3D = Transform3D.IDENTITY
@@ -180,10 +188,6 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_ensure_default_input_mappings()
 	_update_session_hud()
-	if feedback_label != null:
-		feedback_label.modulate.a = 0.0
-	if threat_message_label != null:
-		threat_message_label.modulate.a = 0.0
 
 	_spawn_transform = global_transform
 	health = max_health
@@ -437,7 +441,7 @@ func _on_shovel_impact(ground_point: Vector3) -> void:
 		var res: Dictionary = spot.dig(_dig_is_careful, get_dig_damage_multiplier())
 		_show_dig_feedback(res, _dig_is_careful)
 	else:
-		_show_temporary_message("❌ Só areia... nenhum sinal aqui (aproxime-se de um sinal)", Color(0.95, 0.4, 0.4), 1.2)
+		_show_temporary_message(get_empty_dig_message(), Color(0.95, 0.4, 0.4), 1.2)
 
 
 func _on_shovel_throw_dirt(blade_position: Vector3, side: Vector3) -> void:
@@ -530,19 +534,89 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 
 
 func _show_temporary_message(text: String, color: Color = Color.WHITE, duration: float = 2.0) -> void:
-	if feedback_label == null:
+	_push_message(text, color, duration, MESSAGE_FONT_SIZE, 8)
+
+
+## Mete uma mensagem na pilha do HUD. A mesma mensagem repetida só renova o tempo (ex.: cavar
+## várias vezes fora de um sinal); com mais de MAX_MESSAGES sai a mais antiga.
+func _push_message(text: String, color: Color, duration: float, font_size: int, outline: int) -> void:
+	if message_stack == null:
 		return
+	for child: Node in message_stack.get_children():
+		var existing: Label = child as Label
+		if existing != null and not existing.is_queued_for_deletion() and existing.text == text:
+			_fade_message(existing, duration)
+			return
+	var label: Label = Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	label.add_theme_constant_override("outline_size", outline)
+	label.modulate.a = 0.0
+	message_stack.add_child(label)
+	var live: Array[Label] = []
+	for child: Node in message_stack.get_children():
+		if child is Label and not child.is_queued_for_deletion():
+			live.append(child as Label)
+	while live.size() > 1 and (live.size() > MAX_MESSAGES or _line_count(live) > MAX_MESSAGE_LINES):
+		live.pop_front().queue_free()
+	_fade_message(label, duration)
 
-	feedback_label.text = text
-	feedback_label.modulate = color
 
-	if _feedback_tween != null and _feedback_tween.is_valid():
-		_feedback_tween.kill()
+static func _line_count(labels: Array[Label]) -> int:
+	var lines: int = 0
+	for l: Label in labels:
+		lines += l.text.count("\n") + 1
+	return lines
 
-	_feedback_tween = create_tween()
-	_feedback_tween.tween_property(feedback_label, "modulate:a", 1.0, 0.08)
-	_feedback_tween.tween_interval(duration)
-	_feedback_tween.tween_property(feedback_label, "modulate:a", 0.0, 0.4)
+
+func _fade_message(label: Label, duration: float) -> void:
+	var old: Tween = label.get_meta(&"fade", null) as Tween
+	if old != null and old.is_valid():
+		old.kill()
+	var tween: Tween = label.create_tween()
+	tween.tween_property(label, "modulate:a", 1.0, 0.08)
+	tween.tween_interval(duration)
+	tween.tween_property(label, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(label.queue_free)
+	label.set_meta(&"fade", tween)
+
+
+## Mensagem de uma pazada sem sinal por perto, com o chão do mapa atual.
+func get_empty_dig_message() -> String:
+	return empty_dig_message_for(_current_map_id())
+
+
+static func empty_dig_message_for(map_id: String) -> String:
+	var ground: String = str(EMPTY_DIG_GROUND.get(map_id, EMPTY_DIG_DEFAULT))
+	return "❌ %s nenhum sinal aqui (aproxime-se de um sinal)" % ground
+
+
+## Mapa atual: o da sessão (CoreSession) ou, em cenas abertas diretamente (bot, testes), o do
+## SpotSpawner do mapa. "" se não houver nenhum.
+func _current_map_id() -> String:
+	var sm: SessionManager = SessionManager.instance
+	if sm != null and sm.get_current_map() != null:
+		return sm.get_current_map().id
+	var scene: Node = get_tree().current_scene if is_inside_tree() else null
+	var spawner: SpotSpawner = scene.get_node_or_null(^"SpotSpawner") as SpotSpawner if scene != null else null
+	if spawner != null and spawner.map_data != null:
+		return spawner.map_data.id
+	return ""
+
+
+## Textos que a pilha do HUD mostra agora (testes e dumps do bot).
+func get_hud_messages() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	if message_stack != null:
+		for child: Node in message_stack.get_children():
+			if child is Label and not child.is_queued_for_deletion():
+				out.append((child as Label).text)
+	return out
 
 
 func _update_session_hud() -> void:
@@ -645,16 +719,9 @@ func _update_threat_color() -> void:
 	_threat_fill_style.bg_color = THREAT_COLORS[clampi(level, 0, THREAT_COLORS.size() - 1)]
 
 
+## Aviso da ameaça do subsolo: na mesma pilha, maior e a vermelho.
 func _show_threat_message(text: String, duration: float) -> void:
-	if threat_message_label == null:
-		return
-	threat_message_label.text = text
-	if _threat_tween != null and _threat_tween.is_valid():
-		_threat_tween.kill()
-	_threat_tween = create_tween()
-	_threat_tween.tween_property(threat_message_label, "modulate:a", 1.0, 0.15)
-	_threat_tween.tween_interval(duration)
-	_threat_tween.tween_property(threat_message_label, "modulate:a", 0.0, 0.8)
+	_push_message(text, THREAT_MESSAGE_COLOR, duration, THREAT_MESSAGE_FONT_SIZE, 10)
 
 
 func _shake_camera(strength: float, duration: float) -> void:
