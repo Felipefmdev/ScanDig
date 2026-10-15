@@ -1,6 +1,7 @@
 # Capturas do theme (precisa de janela):
 # "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 960x540 --windowed --script res://ui/tests/theme_snapshots.gd
 # Grava PNGs em .bot_runs/theme/ (no .gitignore) e imprime os retângulos dos painéis.
+# Prefixo opcional nos arquivos (comparar variantes do theme): acrescente "-- --prefix=A_".
 extends SceneTree
 
 const OUT_DIR: String = "res://.bot_runs/theme/"
@@ -23,6 +24,7 @@ class FakeSave extends Node:
 		return OK
 
 var _tag: String = ""
+var _prefix: String = ""
 
 
 func _initialize() -> void:
@@ -33,7 +35,7 @@ func _shot(shot_name: String) -> void:
 	for i in range(4):
 		await process_frame
 	await RenderingServer.frame_post_draw
-	var path: String = ProjectSettings.globalize_path(OUT_DIR + "%s_%s.png" % [shot_name, _tag])
+	var path: String = ProjectSettings.globalize_path(OUT_DIR + "%s%s_%s.png" % [_prefix, shot_name, _tag])
 	var err: Error = root.get_texture().get_image().save_png(path)
 	print("SHOT %s (%d)" % [path, err])
 
@@ -51,6 +53,9 @@ func _run() -> void:
 	for i in range(20):
 		await process_frame
 	_tag = "%dx%d" % [root.size.x, root.size.y]
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--prefix="):
+			_prefix = arg.trim_prefix("--prefix=")
 	var base: BaseStationUI = current_scene.get_node("UILayer/BaseStationUI") as BaseStationUI
 	var menu: MultiplayerMenu = current_scene.get_node("UILayer/MultiplayerMenu") as MultiplayerMenu
 	var hud: Node = current_scene.find_child("HUD", true, false)

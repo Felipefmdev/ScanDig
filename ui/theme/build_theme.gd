@@ -1,6 +1,8 @@
 # Gera ui/theme/scandig_theme.tres a partir de UiPalette (rodar de novo depois de mudar a paleta):
 # "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://ui/theme/build_theme.gd
-# Precisa de ui/theme/paper_worn.png já importado (gen_paper_worn.gd + --editor --quit-after).
+# Precisa de ui/theme/paper_worn.png e das fontes já importados (--editor --quit-after).
+# Fonte: Patrick Hand (código da sala em Kalam Bold); "-- --font=none" gera com a fonte padrão.
+# Comparação feita na #51: Kalam em tudo e Kalam só em títulos/botões estouravam a Loja (> 390 px).
 extends SceneTree
 
 const OUT_PATH: String = "res://ui/theme/scandig_theme.tres"
@@ -8,12 +10,21 @@ const WORN_TEXTURE: String = "res://ui/theme/paper_worn.png"
 ## Margem do 9-patch da textura (igual a gen_paper_worn.gd TEX_MARGIN).
 const TEX_MARGIN: int = 14
 const FONT_SIZE: int = 16
+const FONT_VARIANT: String = "patrick_hand"
+const FONT_DIR: String = "res://ui/theme/fonts/"
+## Fallback dos glifos que as fontes não têm (→ ★ ✔ 🔒): fontes de símbolos/emoji do sistema.
+const SYMBOL_FONTS: PackedStringArray = ["Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans Symbols", "DejaVu Sans"]
+const EMOJI_FONTS: PackedStringArray = ["Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji"]
 const P = preload("res://ui/theme/ui_palette.gd")
 
 var _theme: Theme = Theme.new()
+var _font_variant: String = FONT_VARIANT
 
 
 func _initialize() -> void:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--font="):
+			_font_variant = arg.trim_prefix("--font=")
 	_theme.default_font_size = FONT_SIZE
 	_labels()
 	_panels()
@@ -24,9 +35,49 @@ func _initialize() -> void:
 	_popups()
 	_scroll_and_separators()
 	_windows()
+	_fonts()
+	# Preserva o UID do .tres (e dos ext_resource) para o editor não reescrever a cada build.
+	var uid: int = ResourceLoader.get_resource_uid(OUT_PATH)
 	var err: Error = ResourceSaver.save(_theme, OUT_PATH)
-	print("theme: %s (%d)" % [OUT_PATH, err])
+	if err == OK:
+		err = _stabilize_file(uid)
+	print("theme: %s fonte %s (%d)" % [OUT_PATH, _font_variant, err])
 	quit(err)
+
+
+## Cabeçalho com o UID antigo, UID nos ext_resource e ids de sub_resource sequenciais
+## (o build fica reprodutível: mesmo theme -> mesmo arquivo).
+func _stabilize_file(uid: int) -> Error:
+	var text: String = FileAccess.get_file_as_string(OUT_PATH)
+	if text.is_empty():
+		return ERR_FILE_CANT_READ
+	var lines: PackedStringArray = text.split("\n")
+	var ext_re: RegEx = RegEx.create_from_string('^\\[ext_resource type="([^"]+)" path="([^"]+)" id="([^"]+)"\\]$')
+	for i in range(lines.size()):
+		var line: String = lines[i]
+		if i == 0 and uid != ResourceUID.INVALID_ID and not line.contains(" uid="):
+			lines[i] = line.trim_suffix("]") + ' uid="%s"]' % ResourceUID.id_to_text(uid)
+			continue
+		var m: RegExMatch = ext_re.search(line)
+		if m != null:
+			var ext_uid: int = ResourceLoader.get_resource_uid(m.get_string(2))
+			if ext_uid != ResourceUID.INVALID_ID:
+				lines[i] = '[ext_resource type="%s" uid="%s" path="%s" id="%s"]' % [m.get_string(1), ResourceUID.id_to_text(ext_uid), m.get_string(2), m.get_string(3)]
+	text = "\n".join(lines)
+	var sub_re: RegEx = RegEx.create_from_string('\\[sub_resource type="([^"]+)" id="([^"]+)"\\]')
+	var counters: Dictionary = {}
+	for m: RegExMatch in sub_re.search_all(text):
+		var type: String = m.get_string(1)
+		counters[type] = int(counters.get(type, 0)) + 1
+		var old_id: String = m.get_string(2)
+		var new_id: String = "%s_%d" % [type, counters[type]]
+		text = text.replace('id="%s"]' % old_id, 'id="%s"]' % new_id).replace('SubResource("%s")' % old_id, 'SubResource("%s")' % new_id)
+	var f: FileAccess = FileAccess.open(OUT_PATH, FileAccess.WRITE)
+	if f == null:
+		return FileAccess.get_open_error()
+	f.store_string(text)
+	f.close()
+	return OK
 
 
 # --- StyleBoxes ---------------------------------------------------------------------------
@@ -348,3 +399,33 @@ func _windows() -> void:
 	var dialog_panel: StyleBoxFlat = _flat(P.PAPER, 0, 0, 10, 8)
 	_theme.set_stylebox("panel", "AcceptDialog", dialog_panel)
 	_theme.set_constant("buttons_separation", "AcceptDialog", 10)
+
+
+# --- Fonte desenhada à mão (#51) ---------------------------------------------------------
+
+func _hand_font(file: String, embolden: float = 0.0) -> FontVariation:
+	var font: FontVariation = FontVariation.new()
+	font.base_font = load(FONT_DIR + file) as FontFile
+	font.variation_embolden = embolden
+	var symbols: SystemFont = SystemFont.new()
+	symbols.font_names = SYMBOL_FONTS
+	var emoji: SystemFont = SystemFont.new()
+	emoji.font_names = EMOJI_FONTS
+	font.fallbacks = [symbols, emoji]
+	return font
+
+
+func _fonts() -> void:
+	if _font_variant == "none":
+		return
+	# Patrick Hand no texto todo: traço de caneta, dígitos claros e cabe no layout de 960x540.
+	_theme.default_font = _hand_font("PatrickHand-Regular.ttf")
+	var strong: FontVariation = _hand_font("PatrickHand-Regular.ttf", 0.6)
+	_theme.set_font("font", "TitleLabel", strong)
+	_theme.set_font("title_font", "Window", strong)
+	# Código da sala: no Patrick Hand o "M" parece "H" (os dois estão no alfabeto do código);
+	# Kalam Bold separa bem os caracteres do alfabeto (sem 0/O/1/I).
+	var code: FontVariation = _hand_font("Kalam-Bold.ttf")
+	_theme.set_font("font", "CodeLabel", code)
+	_variation("CodeLineEdit", "LineEdit")
+	_theme.set_font("font", "CodeLineEdit", code)

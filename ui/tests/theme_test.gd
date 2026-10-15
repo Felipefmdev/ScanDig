@@ -29,6 +29,7 @@ func _run() -> void:
 	_check(_theme != null, "theme carregado")
 	_check_overrides()
 	_check_contrast()
+	_check_fonts()
 	root.size = Vector2i(960, 540)
 	change_scene_to_file("res://world/lobby_base.tscn")
 	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
@@ -74,6 +75,7 @@ func _check_scenes(base: BaseStationUI, menu: MultiplayerMenu, hud: Node, ui: Se
 	_check(_same_color(menu.progress_warning_label, "font_color", "WarningLabel") and menu.progress_warning_label.get_theme_color("font_color").is_equal_approx(UiPalette.RED_BURNT), "menu: WarningLabel em RED_BURNT")
 	_check(_same_color(menu.room_code_label, "font_color", "CodeLabel") and menu.room_code_label.get_theme_color("font_color").is_equal_approx(UiPalette.GOLD), "menu: CodeLabel em GOLD")
 	_check(_same_box(menu.code_line_edit, "normal", "LineEdit"), "menu: LineEdit do theme")
+	_check(menu.code_line_edit.get_theme_font("font") == _theme.get_font("font", "CodeLineEdit"), "menu: campo do código com a fonte do código")
 	_check(_same_box(menu.mode_tabs, "panel", "TabContainer"), "menu: TabContainer do theme")
 	# O ConfirmationDialog (Window) herda o theme da raiz do menu.
 	var dialog: ConfirmationDialog = menu.new_game_dialog
@@ -111,6 +113,43 @@ func _check_overrides() -> void:
 		var found: int = text.count("theme_override_colors") + text.count("theme_override_font_sizes")
 		_check(found == 0, "%s: %d overrides de cor/fonte" % [path, found])
 		_check(text.contains("res://ui/theme/scandig_theme.tres"), "%s: usa o theme" % path)
+
+
+# --- Fonte (Patrick Hand; código da sala em Kalam Bold) ----------------------------------
+
+## Todos os caracteres não ASCII que a UI mostra, mais dígitos e o alfabeto do código da sala.
+const UI_GLYPHS: String = "ãçéêíóôõúáàâÃÇÉÊÍÓÔÕÚÁÀÂ•—→★✔🔒 R$ 0123456789 23456789ABCDEFGHJKLMNPQRSTUVWXYZ-"
+
+
+func _base_path(font: Font) -> String:
+	var variation: FontVariation = font as FontVariation
+	return variation.base_font.resource_path if variation != null and variation.base_font != null else font.resource_path
+
+
+func _missing_glyphs(font: Font) -> String:
+	var missing: String = ""
+	for i in range(UI_GLYPHS.length()):
+		var c: int = UI_GLYPHS.unicode_at(i)
+		if c == 32 or font.has_char(c):
+			continue
+		var found: bool = false
+		for fallback: Font in font.fallbacks:
+			if fallback.has_char(c):
+				found = true
+				break
+		if not found:
+			missing += String.chr(c)
+	return missing
+
+
+func _check_fonts() -> void:
+	var main: Font = _theme.default_font
+	_check(main != null and _base_path(main).ends_with("PatrickHand-Regular.ttf"), "fonte principal Patrick Hand: %s" % (_base_path(main) if main != null else "nenhuma"))
+	var code: Font = _theme.get_font("font", "CodeLabel")
+	_check(_base_path(code).ends_with("Kalam-Bold.ttf") and _theme.get_font("font", "CodeLineEdit") == code, "código da sala em Kalam Bold")
+	if main != null:
+		_check(_missing_glyphs(main) == "", "glifos da UI na fonte principal ou no fallback (faltando: '%s')" % _missing_glyphs(main))
+	_check(_missing_glyphs(code) == "", "glifos na fonte do código ou no fallback (faltando: '%s')" % _missing_glyphs(code))
 
 
 # --- 3. Contraste WCAG ----------------------------------------------------------------------
@@ -199,7 +238,7 @@ func _check_layout(base: BaseStationUI, menu: MultiplayerMenu, hud: Node) -> voi
 		await _wait(3)
 		var r: Rect2 = base_panel.get_global_rect()
 		var min_h: float = base_panel.get_combined_minimum_size().y
-		var limit: float = 390.0 if i == 0 else r.size.y
+		var limit: float = 390.0 if i == 0 else 399.0
 		_check(is_equal_approx(r.position.x, 16) and is_equal_approx(r.end.x, 592) and min_h <= limit and _inside_screen(r, screen),
 			"Base aba %s: %s, altura mínima %.0f (<= %.0f)" % [tabs.get_tab_title(i), r, min_h, limit])
 		_buttons_fit(base_panel, "Base aba %s" % tabs.get_tab_title(i))
