@@ -2,13 +2,16 @@ class_name SessionUI
 extends CanvasLayer
 
 ## Overlay global do fluxo de sessão (autoload "CoreSessionUI").
-## Tela de carregamento, barra de expedição (mapa/dia + "Voltar à base" para o host),
-## resumo do dia e aviso de queda do host. Acessa o SessionManager de forma dinâmica
-## (autoload "CoreSession") para funcionar mesmo antes dele existir.
+## Tela de carregamento, barra de expedição (mapa/dia + "Voltar à base" para o host
+## e "Sair da sessão" online), resumo do dia e aviso de queda do host. Acessa o
+## SessionManager de forma dinâmica (autoload "CoreSession") para funcionar mesmo
+## antes dele existir.
 
 const SESSION_PATH: NodePath = ^"/root/CoreSession"
 ## Tempo mínimo da tela de carregamento, para não piscar.
 const LOADING_MIN_SEC: float = 0.4
+const LEAVE_HOST_TEXT: String = "Você é o host: todos os jogadores voltarão à base.\nO dinheiro e o museu até agora ficam salvos, mas o dia não avança."
+const LEAVE_CLIENT_TEXT: String = "Sair da sessão e voltar à base?\nO que estiver na sua mochila será perdido."
 
 static var instance: SessionUI = null
 
@@ -17,6 +20,7 @@ static var instance: SessionUI = null
 @onready var expedition_bar: Control = %ExpeditionBar
 @onready var expedition_info_label: Label = %ExpeditionInfoLabel
 @onready var return_button: Button = %ReturnButton
+@onready var leave_button: Button = %LeaveButton
 @onready var summary_panel: Control = %SummaryPanel
 @onready var summary_title_label: Label = %SummaryTitleLabel
 @onready var summary_list: ItemList = %SummaryList
@@ -24,6 +28,10 @@ static var instance: SessionUI = null
 @onready var summary_close_button: Button = %SummaryCloseButton
 @onready var host_lost_panel: Control = %HostLostPanel
 @onready var host_lost_close_button: Button = %HostLostCloseButton
+@onready var leave_confirm_panel: Control = %LeaveConfirmPanel
+@onready var leave_confirm_label: Label = %LeaveConfirmLabel
+@onready var leave_confirm_button: Button = %LeaveConfirmButton
+@onready var leave_cancel_button: Button = %LeaveCancelButton
 
 var _session: Node = null
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
@@ -47,8 +55,12 @@ func _ready() -> void:
 	loading_screen.visible = false
 	summary_panel.visible = false
 	host_lost_panel.visible = false
+	leave_confirm_panel.visible = false
 	expedition_bar.visible = false
 	return_button.pressed.connect(_on_return_pressed)
+	leave_button.pressed.connect(_on_leave_pressed)
+	leave_confirm_button.pressed.connect(_on_leave_confirm_pressed)
+	leave_cancel_button.pressed.connect(_on_leave_cancel_pressed)
 	summary_close_button.pressed.connect(_on_summary_close_pressed)
 	host_lost_close_button.pressed.connect(_on_host_lost_close_pressed)
 	multiplayer.connected_to_server.connect(_refresh_expedition_bar)
@@ -61,6 +73,8 @@ func _connect_session() -> void:
 	_session = get_node_or_null(SESSION_PATH)
 	if GameState.instance != null and not GameState.instance.state_synced.is_connected(_refresh_expedition_bar):
 		GameState.instance.state_synced.connect(_refresh_expedition_bar)
+	if NetworkManager.instance != null:
+		_connect_if_has(NetworkManager.instance, &"session_left", _on_session_left)
 	if _session == null:
 		push_warning("SessionUI: CoreSession não encontrado; overlay de sessão inativo.")
 		return
@@ -73,7 +87,7 @@ func _connect_session() -> void:
 
 func _connect_if_has(source: Object, signal_name: StringName, callable: Callable) -> void:
 	if not source.has_signal(signal_name):
-		push_warning("SessionUI: sinal '%s' ausente no SessionManager." % signal_name)
+		push_warning("SessionUI: sinal '%s' ausente em %s." % [signal_name, source.get_class()])
 		return
 	if not source.is_connected(signal_name, callable):
 		source.connect(signal_name, callable)
@@ -91,11 +105,22 @@ func _is_host() -> bool:
 	return multiplayer.is_server()
 
 
+## Mesmo critério de GameState._is_online() (privado).
+func _is_online() -> bool:
+	return multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer)
+
+
 # --- Barra de expedição -------------------------------------------------------
 
 func _refresh_expedition_bar() -> void:
 	var in_expedition: bool = bool(_session_call(&"is_in_expedition", false))
 	expedition_bar.visible = in_expedition and not loading_screen.visible
+	var can_leave: bool = in_expedition and _is_online()
+	# Solo/offline: "Voltar à base" é o caminho; online, host e clientes podem sair.
+	leave_button.visible = can_leave
+	if not can_leave and leave_confirm_panel.visible:
+		leave_confirm_panel.visible = false
+		_update_mouse()
 	if not in_expedition:
 		return
 	var map_name: String = "Mapa desconhecido"
@@ -106,6 +131,7 @@ func _refresh_expedition_bar() -> void:
 	expedition_info_label.text = "Expedição: %s  •  Dia %d" % [map_name, day]
 	return_button.visible = _is_host()
 	return_button.disabled = false
+	leave_button.disabled = false
 
 
 func _on_return_pressed() -> void:
@@ -113,6 +139,34 @@ func _on_return_pressed() -> void:
 		return
 	return_button.disabled = true
 	_session_call(&"request_end_expedition")
+
+
+func _on_leave_pressed() -> void:
+	leave_confirm_label.text = LEAVE_HOST_TEXT if _is_host() else LEAVE_CLIENT_TEXT
+	leave_confirm_panel.visible = true
+	_update_mouse()
+
+
+func _on_leave_cancel_pressed() -> void:
+	leave_confirm_panel.visible = false
+	_update_mouse()
+
+
+func _on_leave_confirm_pressed() -> void:
+	leave_confirm_panel.visible = false
+	_update_mouse()
+	if NetworkManager.instance == null:
+		push_warning("SessionUI: NetworkManager ausente; não foi possível sair da sessão.")
+		return
+	leave_button.disabled = true
+	NetworkManager.instance.disconnect_game()
+
+
+## O próprio peer saiu: o SessionManager volta ao lobby sozinho, sem host_lost nem resumo.
+func _on_session_left(_was_host: bool) -> void:
+	leave_confirm_panel.visible = false
+	expedition_bar.visible = false
+	_update_mouse()
 
 
 # --- Sinais do SessionManager -------------------------------------------------
@@ -149,6 +203,7 @@ func _on_expedition_ended(summary: Dictionary) -> void:
 func _on_host_lost() -> void:
 	expedition_bar.visible = false
 	summary_panel.visible = false
+	leave_confirm_panel.visible = false
 	host_lost_panel.visible = true
 	_update_mouse()
 
@@ -193,7 +248,7 @@ func _on_host_lost_close_pressed() -> void:
 # --- Mouse --------------------------------------------------------------------
 
 func _update_mouse() -> void:
-	var any_open: bool = summary_panel.visible or host_lost_panel.visible
+	var any_open: bool = summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible
 	if any_open and not _mouse_released:
 		_previous_mouse_mode = Input.mouse_mode
 		_mouse_released = true

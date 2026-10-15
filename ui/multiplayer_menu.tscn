@@ -57,6 +57,12 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Entrar (Join)"
 
+[node name="LeaveButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Sair da sessão"
+
 [node name="StatusLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2

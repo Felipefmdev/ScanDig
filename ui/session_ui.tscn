@@ -12,9 +12,9 @@ unique_name_in_owner = true
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -260.0
+offset_left = -320.0
 offset_top = 10.0
-offset_right = 260.0
+offset_right = 320.0
 offset_bottom = 54.0
 grow_horizontal = 2
 
@@ -35,6 +35,13 @@ unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Voltar à base"
+
+[node name="LeaveButton" type="Button" parent="ExpeditionBar/HBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Sair da sessão"
 
 [node name="LoadingScreen" type="ColorRect" parent="."]
 unique_name_in_owner = true
@@ -147,3 +154,51 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 text = "OK"
+
+[node name="LeaveConfirmPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -90.0
+offset_right = 240.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="LeaveConfirmPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="LeaveConfirmPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="LeaveConfirmLabel" type="Label" parent="LeaveConfirmPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Sair da sessão?"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="HBox" type="HBoxContainer" parent="LeaveConfirmPanel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 12
+
+[node name="LeaveConfirmButton" type="Button" parent="LeaveConfirmPanel/Margin/VBox/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Sair"
+
+[node name="LeaveCancelButton" type="Button" parent="LeaveConfirmPanel/Margin/VBox/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancelar"
