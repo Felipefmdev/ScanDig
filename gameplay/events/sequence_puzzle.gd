@@ -17,6 +17,8 @@ signal solved()
 @export var success_flag: StringName = &""
 ## Mensagem dita pelo interativo ao errar / acertar (vazio = nada).
 @export var fail_text: String = ""
+## Acende os interativos já acertados (state 1) e apaga-os todos ao errar (menires).
+@export var light_inputs: bool = false
 @export var success_text: String = ""
 
 var progress: int = 0
@@ -42,6 +44,7 @@ func _on_input(peer_id: int, index: int) -> void:
 			_fail(peer_id, index)
 			return
 		progress += 1
+		_light(index, true)
 	else:
 		if not _used.has(index):
 			_used.append(index)
@@ -55,9 +58,16 @@ func _on_input(peer_id: int, index: int) -> void:
 func _fail(peer_id: int, index: int) -> void:
 	# O erro só recomeça; se este input for o primeiro da solução, conta já como passo 1.
 	progress = 1 if solution.size() > 0 and index == solution[0] else 0
+	for i: int in _nodes.size():
+		_light(i, progress == 1 and i == index)
 	failed.emit()
 	if not fail_text.is_empty() and _nodes[index] != null:
 		_nodes[index].say_to(peer_id, fail_text, 2.5)
+
+
+func _light(index: int, on: bool) -> void:
+	if light_inputs and index >= 0 and index < _nodes.size() and _nodes[index] != null:
+		_nodes[index].set_state(1 if on else 0)
 
 
 func _solve(index: int) -> void:

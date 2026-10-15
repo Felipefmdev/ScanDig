@@ -186,15 +186,15 @@ func test_octopus_weak_point_and_reinforcements() -> void:
 	world.add_child(oct)
 	assert_true(oct.is_in_group("bosses"))
 	oct.take_damage(50.0)
-	assert_eq(oct.health, 450.0, "imune a sair da água")
+	assert_eq(oct.health, 600.0, "imune a sair da água")
 	oct.wake_immediately()
 	oct.take_damage(10.0)
-	assert_eq(oct.health, 440.0)
+	assert_eq(oct.health, 590.0)
 	oct.call("_enter_state", Octopus.State.STUCK)
 	oct.take_damage(10.0)
-	assert_eq(oct.health, 420.0, "tentáculo preso: cabeça exposta, dano a dobrar")
+	assert_eq(oct.health, 570.0, "tentáculo preso: cabeça exposta, dano a dobrar")
 	oct.call("_enter_state", Octopus.State.IDLE)
-	oct.take_damage(140.0)  # passa os 66 %
+	oct.take_damage(200.0)  # passa os 66 % (396)
 	var crabs: int = 0
 	for c: Node in world.get_children():
 		if c is Crab:

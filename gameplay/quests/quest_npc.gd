@@ -18,6 +18,8 @@ enum QuestState { OFFER, ACTIVE, READY, EVENT, DONE }
 @export var npc_name: String = "NPC"
 @export var quest_id: String = ""
 @export var objective_flag: StringName = &""
+## Bandeira ligada quando a missão é aceite (ex.: o sino passa a chamar os corvos das chaves).
+@export var accept_flag: StringName = &""
 ## Nó do evento (WaveEvent, BossTrigger...) com start() e finished(success: bool).
 @export var event_path: NodePath = NodePath("")
 ## Item do catálogo largado ao concluir (ex. concha_dourada).
@@ -83,6 +85,10 @@ func _on_interact(peer_id: int) -> void:
 		QuestState.OFFER:
 			say_to(peer_id, line_offer, 7.0)
 			_set_quest_state(QuestState.READY if _objective_done() else QuestState.ACTIVE)
+			if accept_flag != &"":
+				var flags: WorldFlags = WorldFlags.find(get_tree())
+				if flags != null:
+					flags.set_flag(accept_flag)
 		QuestState.ACTIVE:
 			say_to(peer_id, line_active, 5.0)
 		QuestState.READY:

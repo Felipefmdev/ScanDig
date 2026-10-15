@@ -37,6 +37,8 @@ const SAY_COLOR: Color = Color(0.1, 0.08, 0.06)
 var state: int = 0
 var active: bool = true
 
+## Host: já foi movido por place_at (a posição vai também para quem entra tarde).
+var _placed: bool = false
 var _prompt_label: Label3D = null
 var _say_label: Label3D = null
 var _say_left: float = 0.0
@@ -115,6 +117,15 @@ func set_active(on: bool) -> void:
 	active = on
 	_apply_visibility()
 	HostSync.broadcast(self, &"_rpc_state", [state, active])
+
+
+## Host: põe o interativo noutro sítio (ex.: a chave que um corvo largou ao morrer) e replica.
+func place_at(world_pos: Vector3) -> void:
+	if not HostSync.is_host(self):
+		return
+	_placed = true
+	global_position = world_pos
+	HostSync.broadcast(self, &"_rpc_place", [world_pos])
 
 
 ## Host: mostra um texto por cima deste nó só ao jogador `peer_id`.
@@ -203,7 +214,14 @@ func _rpc_say(text: String, seconds: float) -> void:
 	show_say(text, seconds)
 
 
+@rpc("authority", "call_remote", "reliable")
+func _rpc_place(world_pos: Vector3) -> void:
+	global_position = world_pos
+
+
 func _send_full_state(peer_id: int) -> void:
+	if _placed:
+		HostSync.send_to(self, peer_id, &"_rpc_place", [global_position])
 	HostSync.send_to(self, peer_id, &"_rpc_state", [state, active])
 
 

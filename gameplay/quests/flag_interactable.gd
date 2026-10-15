@@ -10,7 +10,8 @@ extends Interactable
 ##   secret_id      — reporta o segredo (QuestRewards.report_secret);
 ##   say_text       — texto mostrado a quem usou (mensagem da garrafa, fala);
 ##   use_offset/use_rotation — o filho "Model" desliza/roda ao usar (pedra empurrada);
-##   repeatable     — pode usar-se várias vezes (garrafas, pato) sem mudar de estado.
+##   repeatable     — pode usar-se várias vezes (garrafas, pato) sem mudar de estado;
+##   start_path     — chama start() nesse nó ao usar (ex.: o sino chama os corvos: WaveEvent).
 ## state: 0 = por usar, 1 = usado.
 
 const STATE_UNUSED: int = 0
@@ -33,6 +34,10 @@ const STATE_USED: int = 1
 @export var drop_offset: Vector3 = Vector3(0.0, 0.6, 0.0)
 ## Som tocado em todos os peers ao usar (lista de caminhos do SFX ou caminho).
 @export var use_sound: String = ""
+## Nota sintetizada (Hz) tocada ao usar, em vez de/além de use_sound (ex.: o sino, ~196 Hz).
+@export var use_note_hz: float = 0.0
+## Nó com start() chamado ao usar (WaveEvent, BossTrigger...).
+@export var start_path: NodePath = NodePath("")
 
 var _model: Node3D = null
 var _model_rest: Transform3D = Transform3D.IDENTITY
@@ -78,7 +83,7 @@ func _on_interact(peer_id: int) -> void:
 	if state == STATE_USED and not repeatable:
 		super._on_interact(peer_id)
 		return
-	if not use_sound.is_empty():
+	if not use_sound.is_empty() or use_note_hz > 0.0:
 		_play_use_sound()
 		HostSync.broadcast(self, &"_rpc_use_sound")
 	if not repeatable:
@@ -91,6 +96,10 @@ func _on_interact(peer_id: int) -> void:
 			flags.set_flag(sets_flag)
 	if not item_id.is_empty():
 		QuestRewards.drop_item(get_tree(), item_id, global_transform * drop_offset)
+	if not start_path.is_empty():
+		var target: Node = get_node_or_null(start_path)
+		if target != null and target.has_method(&"start"):
+			target.call(&"start")
 	if not secret_id.is_empty():
 		QuestRewards.report_secret(secret_id)
 	super._on_interact(peer_id)
@@ -117,4 +126,7 @@ func _rpc_use_sound() -> void:
 
 
 func _play_use_sound() -> void:
-	SFX.play_at(use_sound, global_position)
+	if not use_sound.is_empty():
+		SFX.play_at(use_sound, global_position)
+	if use_note_hz > 0.0:
+		SFX.play_at(MusicShell.make_note(use_note_hz), get_focus_point(), 4.0, 0.0)

@@ -1,58 +1,56 @@
-[gd_scene load_steps=48 format=3]
+[gd_scene load_steps=46 format=3 uid="uid://djlnpnnc3081a"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
-[ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
-[ext_resource type="Resource" path="res://items/maps/campo.tres" id="3_campo"]
+[ext_resource type="Resource" uid="uid://5ykwn3yl2yht" path="res://items/maps/campo.tres" id="3_campo"]
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
-[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
-[ext_resource type="Environment" path="res://world/environment_campo.tres" id="w_env_campo"]
-[ext_resource type="Script" path="res://gameplay/environment/field_terrain.gd" id="env_terrain"]
-[ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
-[ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="env_snap"]
-[ext_resource type="Script" path="res://gameplay/environment/field_tree_model.gd" id="env_tree"]
-[ext_resource type="Script" path="res://gameplay/environment/menhir_model.gd" id="env_menhir"]
-[ext_resource type="Script" path="res://gameplay/environment/fence_line.gd" id="env_fence"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/rocks-a.glb" id="k_rocks_a"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/rocks-b.glb" id="k_rocks_b"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_bush.glb" id="nat_plant_bush"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_bushDetailed.glb" id="nat_plant_bushDetailed"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_bushLarge.glb" id="nat_plant_bushLarge"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/plant_flatTall.glb" id="nat_plant_flatTall"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/flower_yellowA.glb" id="nat_flower_yellowA"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/flower_purpleB.glb" id="nat_flower_purpleB"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/flower_redA.glb" id="nat_flower_redA"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallA.glb" id="nat_rock_smallA"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallC.glb" id="nat_rock_smallC"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallFlatA.glb" id="nat_rock_smallFlatA"]
-[ext_resource type="Script" path="res://gameplay/enemies/boss/mole_altar.gd" id="b_mole_altar"]
 [ext_resource type="Script" path="res://gameplay/art/toon_override.gd" id="art_toon_override"]
+[ext_resource type="Script" path="res://gameplay/enemies/boss/mole_altar.gd" id="b_mole_altar"]
+[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
+[ext_resource type="Script" path="res://gameplay/environment/fence_line.gd" id="env_fence"]
+[ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
+[ext_resource type="Script" path="res://gameplay/environment/menhir_model.gd" id="env_menhir"]
+[ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="env_snap"]
+[ext_resource type="Script" path="res://gameplay/environment/field_terrain.gd" id="env_terrain"]
+[ext_resource type="Script" path="res://gameplay/environment/field_tree_model.gd" id="env_tree"]
+[ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
+[ext_resource type="PackedScene" uid="uid://3q1pqo6818cx" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
+[ext_resource type="PackedScene" uid="uid://tpyunr7h3idb" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
+[ext_resource type="PackedScene" uid="uid://c3tqp60rmx0uv" path="res://assets/models/kenney_nature/flower_purpleB.glb" id="nat_flower_purpleB"]
+[ext_resource type="PackedScene" uid="uid://djk00ewlu3lep" path="res://assets/models/kenney_nature/flower_redA.glb" id="nat_flower_redA"]
+[ext_resource type="PackedScene" uid="uid://gnqnwns3mpip" path="res://assets/models/kenney_nature/flower_yellowA.glb" id="nat_flower_yellowA"]
+[ext_resource type="PackedScene" uid="uid://bd5mbnejgjpb4" path="res://assets/models/kenney_nature/plant_bush.glb" id="nat_plant_bush"]
+[ext_resource type="PackedScene" uid="uid://blul0t0dsgm3f" path="res://assets/models/kenney_nature/plant_bushDetailed.glb" id="nat_plant_bushDetailed"]
+[ext_resource type="PackedScene" uid="uid://f2781omvhni0" path="res://assets/models/kenney_nature/plant_bushLarge.glb" id="nat_plant_bushLarge"]
+[ext_resource type="PackedScene" uid="uid://cqyfg8sg8tq1w" path="res://assets/models/kenney_nature/plant_flatTall.glb" id="nat_plant_flatTall"]
+[ext_resource type="PackedScene" uid="uid://d0osvneqpe1od" path="res://assets/models/kenney_nature/rock_smallA.glb" id="nat_rock_smallA"]
+[ext_resource type="PackedScene" uid="uid://k1a6mv4cebem" path="res://assets/models/kenney_nature/rock_smallC.glb" id="nat_rock_smallC"]
+[ext_resource type="PackedScene" uid="uid://s80skhvbmkp2" path="res://assets/models/kenney_nature/rock_smallFlatA.glb" id="nat_rock_smallFlatA"]
+[ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
+[ext_resource type="PackedScene" path="res://gameplay/quests/campo/campo_secrets.tscn" id="q_campo_secrets"]
+[ext_resource type="Environment" uid="uid://4chyvbdu60mc" path="res://world/environment_campo.tres" id="w_env_campo"]
 
 [sub_resource type="CylinderShape3D" id="Shape_trunk"]
 height = 3.0
 radius = 0.3
 
 [sub_resource type="BoxShape3D" id="Shape_menhir"]
-size = Vector3(1.0, 2.4, 0.7)
-
-[sub_resource type="BoxShape3D" id="Shape_wall_stone"]
-size = Vector3(0.9, 1.0, 0.6)
+size = Vector3(1, 2.4, 0.7)
 
 [sub_resource type="BoxShape3D" id="Shape_altar"]
 size = Vector3(2.2, 0.6, 1.4)
 
+[sub_resource type="BoxShape3D" id="Shape_wall_stone"]
+size = Vector3(0.9, 1, 0.6)
+
+[sub_resource type="CylinderShape3D" id="Shape_hay"]
+height = 1.1
+radius = 0.55
+
 [sub_resource type="StandardMaterial3D" id="Mat_hay"]
 albedo_color = Color(0.83, 0.7, 0.36, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="Mat_hay_end"]
-albedo_color = Color(0.72, 0.58, 0.28, 1)
-roughness = 1.0
 
 [sub_resource type="CylinderMesh" id="Mesh_hay"]
 material = SubResource("Mat_hay")
@@ -61,10 +59,6 @@ bottom_radius = 0.55
 height = 1.1
 radial_segments = 10
 rings = 1
-
-[sub_resource type="CylinderShape3D" id="Shape_hay"]
-height = 1.1
-radius = 0.55
 
 [sub_resource type="BoxShape3D" id="Shape_wall_x"]
 size = Vector3(1, 6, 62)
@@ -100,19 +94,15 @@ size = Vector3(0.62, 0.45, 0.76)
 environment = ExtResource("w_env_campo")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
-position = Vector3(0, 20, 0)
-rotation = Vector3(-0.68, 0.9, 0)
+transform = Transform3D(0.62161, -0.49255, 0.609094, 0, 0.777573, 0.628793, -0.783327, -0.390864, 0.483347, 0, 20, 0)
 light_color = Color(1, 0.9, 0.74, 1)
 light_energy = 1.3
 shadow_enabled = true
 shadow_bias = 0.04
 shadow_blur = 1.4
-directional_shadow_mode = 2
 directional_shadow_max_distance = 70.0
 
 [node name="Terrain" type="Node3D" parent="."]
-
-[node name="Decor" type="Node3D" parent="."]
 
 [node name="Ground" type="StaticBody3D" parent="Terrain"]
 script = ExtResource("env_terrain")
@@ -128,6 +118,8 @@ terrain = 1
 color_dark = Color(0.16, 0.28, 0.07, 1)
 color_light = Color(0.66, 0.64, 0.24, 1)
 
+[node name="Decor" type="Node3D" parent="."]
+
 [node name="Trees" type="Node3D" parent="Decor"]
 script = ExtResource("env_snap")
 sink = 0.1
@@ -137,7 +129,7 @@ terrain = 1
 transform = Transform3D(-0.095502, 0, 0.99543, 0, 1, 0, -0.99543, 0, -0.095502, -3.416, 0, -25.722)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree1"]
@@ -153,7 +145,7 @@ seed_value = 101
 transform = Transform3D(-0.54709, 0, -0.83707, 0, 1, 0, 0.83707, 0, -0.54709, 24.747, 0, 16.192)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree2"]
@@ -161,15 +153,13 @@ script = ExtResource("env_tree")
 height = 3.3534
 canopy_radius = 1.77
 blobs = 4
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 102
 
 [node name="Tree3" type="StaticBody3D" parent="Decor/Trees" groups=["spot_blockers"]]
 transform = Transform3D(0.98251, 0, -0.18619, 0, 1, 0, 0.18619, 0, 0.98251, -20.395, 0, 14.466)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree3"]
@@ -185,7 +175,7 @@ seed_value = 103
 transform = Transform3D(0.83075, 0, -0.55664, 0, 1, 0, 0.55664, 0, 0.83075, -9.7803, 0, 21.76)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree4"]
@@ -201,14 +191,13 @@ seed_value = 104
 transform = Transform3D(-0.92605, 0, -0.3774, 0, 1, 0, 0.3774, 0, -0.92605, 2.2765, 0, -8.5059)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree5"]
 script = ExtResource("env_tree")
 height = 3.0124
 canopy_radius = 1.7407
-blobs = 5
 leaf_dark = Color(0.22, 0.32, 0.09, 1)
 leaf_light = Color(0.5, 0.55, 0.18, 1)
 seed_value = 105
@@ -217,7 +206,7 @@ seed_value = 105
 transform = Transform3D(-0.96743, 0, 0.25314, 0, 1, 0, -0.25314, 0, -0.96743, 3.2866, 0, 11.971)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree6"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree6"]
@@ -233,23 +222,20 @@ seed_value = 106
 transform = Transform3D(-0.87455, 0, -0.48494, 0, 1, 0, 0.48494, 0, -0.87455, -20.92, 0, 6.4244)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree7"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree7"]
 script = ExtResource("env_tree")
 height = 2.79
 canopy_radius = 1.8874
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 107
 
 [node name="Tree8" type="StaticBody3D" parent="Decor/Trees" groups=["spot_blockers"]]
 transform = Transform3D(0.7855, 0, -0.61886, 0, 1, 0, 0.61886, 0, 0.7855, -7.8818, 0, 7.9862)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree8"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree8"]
@@ -265,23 +251,20 @@ seed_value = 108
 transform = Transform3D(-0.83865, 0, 0.54467, 0, 1, 0, -0.54467, 0, -0.83865, -6.2583, 0, -14.077)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree9"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree9"]
 script = ExtResource("env_tree")
 height = 3.3669
 canopy_radius = 1.6589
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 109
 
 [node name="Tree10" type="StaticBody3D" parent="Decor/Trees" groups=["spot_blockers"]]
 transform = Transform3D(-0.95721, 0, -0.28938, 0, 1, 0, 0.28938, 0, -0.95721, 8.7244, 0, 23.472)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree10"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree10"]
@@ -297,14 +280,13 @@ seed_value = 110
 transform = Transform3D(-0.97804, 0, -0.20842, 0, 1, 0, 0.20842, 0, -0.97804, 9.9226, 0, -5.5696)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree11"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree11"]
 script = ExtResource("env_tree")
 height = 3.2989
 canopy_radius = 2.0008
-blobs = 5
 leaf_dark = Color(0.3, 0.3, 0.1, 1)
 leaf_light = Color(0.62, 0.5, 0.17, 1)
 seed_value = 111
@@ -313,7 +295,7 @@ seed_value = 111
 transform = Transform3D(-0.73147, 0, 0.68188, 0, 1, 0, -0.68188, 0, -0.73147, -25.738, 0, -12.051)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree12"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree12"]
@@ -329,23 +311,20 @@ seed_value = 112
 transform = Transform3D(0.79046, 0, 0.61252, 0, 1, 0, -0.61252, 0, 0.79046, 5.0571, 0, 18.336)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree13"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree13"]
 script = ExtResource("env_tree")
 height = 3.4791
 canopy_radius = 1.8335
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 113
 
 [node name="Tree14" type="StaticBody3D" parent="Decor/Trees" groups=["spot_blockers"]]
 transform = Transform3D(-0.37058, 0, 0.9288, 0, 1, 0, -0.9288, 0, -0.37058, 24.91, 0, 0.75852)
 
 [node name="Trunk" type="CollisionShape3D" parent="Decor/Trees/Tree14"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("Shape_trunk")
 
 [node name="Model" type="Node3D" parent="Decor/Trees/Tree14"]
@@ -388,8 +367,6 @@ script = ExtResource("env_tree")
 height = 3.2316
 canopy_radius = 2.0256
 blobs = 4
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 502
 
 [node name="Far4" type="Node3D" parent="Decor/TreeLine"]
@@ -397,7 +374,6 @@ transform = Transform3D(0.10545, 0, -0.99443, 0, 1, 0, 0.99443, 0, 0.10545, 37.7
 script = ExtResource("env_tree")
 height = 4.3471
 canopy_radius = 2.0572
-blobs = 5
 leaf_dark = Color(0.3, 0.3, 0.1, 1)
 leaf_light = Color(0.62, 0.5, 0.17, 1)
 seed_value = 503
@@ -417,7 +393,6 @@ transform = Transform3D(-0.078905, 0, 0.99688, 0, 1, 0, -0.99688, 0, -0.078905, 
 script = ExtResource("env_tree")
 height = 3.4824
 canopy_radius = 2.1058
-blobs = 5
 leaf_dark = Color(0.22, 0.32, 0.09, 1)
 leaf_light = Color(0.5, 0.55, 0.18, 1)
 seed_value = 505
@@ -438,8 +413,6 @@ script = ExtResource("env_tree")
 height = 4.2447
 canopy_radius = 2.2388
 blobs = 6
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 507
 
 [node name="Far9" type="Node3D" parent="Decor/TreeLine"]
@@ -457,9 +430,6 @@ transform = Transform3D(0.32994, 0, 0.944, 0, 1, 0, -0.944, 0, 0.32994, 19.148, 
 script = ExtResource("env_tree")
 height = 3.7408
 canopy_radius = 2.7789
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 509
 
 [node name="Far11" type="Node3D" parent="Decor/TreeLine"]
@@ -477,7 +447,6 @@ transform = Transform3D(0.51253, 0, -0.85867, 0, 1, 0, 0.85867, 0, 0.51253, 11.3
 script = ExtResource("env_tree")
 height = 3.5121
 canopy_radius = 2.7571
-blobs = 5
 leaf_dark = Color(0.22, 0.32, 0.09, 1)
 leaf_light = Color(0.5, 0.55, 0.18, 1)
 seed_value = 511
@@ -527,7 +496,6 @@ transform = Transform3D(-0.013659, 0, 0.99991, 0, 1, 0, -0.99991, 0, -0.013659, 
 script = ExtResource("env_tree")
 height = 3.5344
 canopy_radius = 2.5799
-blobs = 5
 leaf_dark = Color(0.3, 0.3, 0.1, 1)
 leaf_light = Color(0.62, 0.5, 0.17, 1)
 seed_value = 516
@@ -547,7 +515,6 @@ transform = Transform3D(0.99376, 0, 0.11153, 0, 1, 0, -0.11153, 0, 0.99376, -18.
 script = ExtResource("env_tree")
 height = 3.3348
 canopy_radius = 2.4114
-blobs = 5
 leaf_dark = Color(0.22, 0.32, 0.09, 1)
 leaf_light = Color(0.5, 0.55, 0.18, 1)
 seed_value = 518
@@ -577,7 +544,6 @@ transform = Transform3D(-0.84748, 0, -0.53083, 0, 1, 0, 0.53083, 0, -0.84748, -3
 script = ExtResource("env_tree")
 height = 3.2132
 canopy_radius = 2.0255
-blobs = 5
 leaf_dark = Color(0.3, 0.3, 0.1, 1)
 leaf_light = Color(0.62, 0.5, 0.17, 1)
 seed_value = 521
@@ -597,7 +563,6 @@ transform = Transform3D(-0.78393, 0, -0.62085, 0, 1, 0, 0.62085, 0, -0.78393, -3
 script = ExtResource("env_tree")
 height = 3.4086
 canopy_radius = 2.7949
-blobs = 5
 leaf_dark = Color(0.22, 0.32, 0.09, 1)
 leaf_light = Color(0.5, 0.55, 0.18, 1)
 seed_value = 523
@@ -607,9 +572,6 @@ transform = Transform3D(-0.99264, 0, 0.1211, 0, 1, 0, -0.1211, 0, -0.99264, -32.
 script = ExtResource("env_tree")
 height = 3.5859
 canopy_radius = 2.7529
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 524
 
 [node name="Far26" type="Node3D" parent="Decor/TreeLine"]
@@ -617,7 +579,6 @@ transform = Transform3D(-0.80874, 0, 0.58816, 0, 1, 0, -0.58816, 0, -0.80874, -3
 script = ExtResource("env_tree")
 height = 3.3493
 canopy_radius = 2.0488
-blobs = 5
 leaf_dark = Color(0.3, 0.3, 0.1, 1)
 leaf_light = Color(0.62, 0.5, 0.17, 1)
 seed_value = 525
@@ -627,7 +588,6 @@ transform = Transform3D(-0.52966, 0, -0.84821, 0, 1, 0, 0.84821, 0, -0.52966, -3
 script = ExtResource("env_tree")
 height = 4.0913
 canopy_radius = 2.6893
-blobs = 5
 leaf_dark = Color(0.3, 0.3, 0.1, 1)
 leaf_light = Color(0.62, 0.5, 0.17, 1)
 seed_value = 526
@@ -658,8 +618,6 @@ script = ExtResource("env_tree")
 height = 4.5673
 canopy_radius = 2.026
 blobs = 4
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 529
 
 [node name="Far31" type="Node3D" parent="Decor/TreeLine"]
@@ -698,8 +656,6 @@ script = ExtResource("env_tree")
 height = 3.4789
 canopy_radius = 2.7377
 blobs = 4
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 533
 
 [node name="Far35" type="Node3D" parent="Decor/TreeLine"]
@@ -727,9 +683,6 @@ transform = Transform3D(-0.97679, 0, 0.21422, 0, 1, 0, -0.21422, 0, -0.97679, -2
 script = ExtResource("env_tree")
 height = 4.1954
 canopy_radius = 2.1395
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 536
 
 [node name="Far38" type="Node3D" parent="Decor/TreeLine"]
@@ -757,9 +710,6 @@ transform = Transform3D(0.055761, 0, 0.99844, 0, 1, 0, -0.99844, 0, 0.055761, -1
 script = ExtResource("env_tree")
 height = 4.0586
 canopy_radius = 2.4451
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 539
 
 [node name="Far41" type="Node3D" parent="Decor/TreeLine"]
@@ -788,8 +738,6 @@ script = ExtResource("env_tree")
 height = 4.0864
 canopy_radius = 2.6191
 blobs = 4
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 542
 
 [node name="Far44" type="Node3D" parent="Decor/TreeLine"]
@@ -798,8 +746,6 @@ script = ExtResource("env_tree")
 height = 4.5453
 canopy_radius = 2.3851
 blobs = 6
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 543
 
 [node name="Far45" type="Node3D" parent="Decor/TreeLine"]
@@ -887,7 +833,6 @@ transform = Transform3D(-0.20441, 0, -0.97889, 0, 1, 0, 0.97889, 0, -0.20441, 35
 script = ExtResource("env_tree")
 height = 3.4913
 canopy_radius = 2.4237
-blobs = 5
 leaf_dark = Color(0.22, 0.32, 0.09, 1)
 leaf_light = Color(0.5, 0.55, 0.18, 1)
 seed_value = 552
@@ -897,9 +842,6 @@ transform = Transform3D(-0.80916, 0, 0.58759, 0, 1, 0, -0.58759, 0, -0.80916, 34
 script = ExtResource("env_tree")
 height = 3.8225
 canopy_radius = 2.7636
-blobs = 5
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 553
 
 [node name="Far55" type="Node3D" parent="Decor/TreeLine"]
@@ -908,8 +850,6 @@ script = ExtResource("env_tree")
 height = 4.2301
 canopy_radius = 2.5295
 blobs = 6
-leaf_dark = Color(0.17, 0.33, 0.1, 1)
-leaf_light = Color(0.36, 0.52, 0.16, 1)
 seed_value = 554
 
 [node name="Far56" type="Node3D" parent="Decor/TreeLine"]
@@ -917,7 +857,6 @@ transform = Transform3D(0.94181, 0, -0.33615, 0, 1, 0, 0.33615, 0, 0.94181, 36.9
 script = ExtResource("env_tree")
 height = 3.6156
 canopy_radius = 2.0306
-blobs = 5
 leaf_dark = Color(0.22, 0.32, 0.09, 1)
 leaf_light = Color(0.5, 0.55, 0.18, 1)
 seed_value = 555
@@ -931,7 +870,7 @@ terrain = 1
 transform = Transform3D(0.11437, 0, 0.99344, 0, 1, 0, -0.99344, 0, 0.11437, -12.512, 0, -16.887)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir1"]
@@ -944,7 +883,7 @@ seed_value = 10
 transform = Transform3D(0.81572, 0, 0.57845, 0, 1, 0, -0.57845, 0, 0.81572, -14.511, 0, -13.62)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir2"]
@@ -957,7 +896,7 @@ seed_value = 11
 transform = Transform3D(1, 0, -0.0013638, 0, 1, 0, 0.0013638, 0, 1, -18.143, 0, -12.402)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir3"]
@@ -970,7 +909,7 @@ seed_value = 12
 transform = Transform3D(0.67952, 0, -0.73366, 0, 1, 0, 0.73366, 0, 0.67952, -21.708, 0, -13.803)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir4"]
@@ -983,7 +922,7 @@ seed_value = 13
 transform = Transform3D(0.2385, 0, -0.97114, 0, 1, 0, 0.97114, 0, 0.2385, -23.538, 0, -17.168)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir5"]
@@ -996,7 +935,7 @@ seed_value = 14
 transform = Transform3D(-0.53278, 0, -0.84626, 0, 1, 0, 0.84626, 0, -0.53278, -22.777, 0, -20.923)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir6"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir6"]
@@ -1009,7 +948,7 @@ seed_value = 15
 transform = Transform3D(-0.96023, 0, 0.27921, 0, 1, 0, -0.27921, 0, -0.96023, -15.951, 0, -23.212)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir8"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir8"]
@@ -1022,7 +961,7 @@ seed_value = 17
 transform = Transform3D(-0.40906, 0, 0.91251, 0, 1, 0, -0.91251, 0, -0.40906, -13.081, 0, -20.676)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Menhir9"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("Shape_menhir")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Menhir9"]
@@ -1049,14 +988,12 @@ seed_value = 77
 transform = Transform3D(0.70739, 0, 0.70683, 0, 1, 0, -0.70683, 0, 0.70739, -18, 0, -18)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/StoneCircle/Altar"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
 shape = SubResource("Shape_altar")
 
 [node name="Model" type="Node3D" parent="Decor/StoneCircle/Altar"]
-transform = Transform3D(2, 0, 0, 0, 0.28, 0, -0, 0, 2.2, 0, 0, 0)
+transform = Transform3D(2, 0, 0, 0, 0.28, 0, 0, 0, 2.2, 0, 0, 0)
 script = ExtResource("env_menhir")
-height = 2.2
-width = 0.55
 seed_value = 5
 
 [node name="RuinWall" type="Node3D" parent="Decor"]
@@ -1068,7 +1005,7 @@ terrain = 1
 transform = Transform3D(0.71629, 0, -0.6978, 0, 1, 0, 0.6978, 0, 0.71629, -24.895, 0, 6.8359)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone1"]
@@ -1082,7 +1019,7 @@ seed_value = 201
 transform = Transform3D(0.78154, 0, -0.62386, 0, 1, 0, 0.62386, 0, 0.78154, -24.104, 0, 7.4924)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone2"]
@@ -1096,7 +1033,7 @@ seed_value = 202
 transform = Transform3D(0.78446, 0, -0.62018, 0, 1, 0, 0.62018, 0, 0.78446, -23.398, 0, 8.1029)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone3"]
@@ -1110,7 +1047,7 @@ seed_value = 203
 transform = Transform3D(0.83928, 0, -0.54371, 0, 1, 0, 0.54371, 0, 0.83928, -22.604, 0, 8.5505)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone4"]
@@ -1124,7 +1061,7 @@ seed_value = 204
 transform = Transform3D(0.73804, 0, -0.67476, 0, 1, 0, 0.67476, 0, 0.73804, -21.851, 0, 9.2054)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone5"]
@@ -1138,7 +1075,7 @@ seed_value = 205
 transform = Transform3D(0.92885, 0, -0.37046, 0, 1, 0, 0.37046, 0, 0.92885, -19.847, 0, 10.086)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone6"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone6"]
@@ -1152,7 +1089,7 @@ seed_value = 206
 transform = Transform3D(0.95484, 0, -0.29711, 0, 1, 0, 0.29711, 0, 0.95484, -18.651, 0, 10.384)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone7"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone7"]
@@ -1166,7 +1103,7 @@ seed_value = 207
 transform = Transform3D(0.94025, 0, -0.34049, 0, 1, 0, 0.34049, 0, 0.94025, -17.511, 0, 10.819)
 
 [node name="Collision" type="CollisionShape3D" parent="Decor/RuinWall/Stone8"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("Shape_wall_stone")
 
 [node name="Model" type="Node3D" parent="Decor/RuinWall/Stone8"]
@@ -1181,7 +1118,6 @@ seed_value = 208
 [node name="Perimeter" type="Node3D" parent="Decor/Fences"]
 script = ExtResource("env_fence")
 points = PackedVector2Array(-29.6, -29.6, 29.6, -29.6, 29.6, 29.6, -29.6, 29.6)
-closed = true
 missing_rails = 0.2
 seed_value = 11
 
@@ -1482,19 +1418,19 @@ transform = Transform3D(-0.65981, 0, 0.97876, 0, 1.1804, 0, -0.97876, 0, -0.6598
 [node name="Bounds" type="StaticBody3D" parent="."]
 
 [node name="WallEast" type="CollisionShape3D" parent="Bounds"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 30.5, 2.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.5, 2.5, 0)
 shape = SubResource("Shape_wall_x")
 
 [node name="WallWest" type="CollisionShape3D" parent="Bounds"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -30.5, 2.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30.5, 2.5, 0)
 shape = SubResource("Shape_wall_x")
 
 [node name="WallNorth" type="CollisionShape3D" parent="Bounds"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 2.5, -30.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -30.5)
 shape = SubResource("Shape_wall_z")
 
 [node name="WallSouth" type="CollisionShape3D" parent="Bounds"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 2.5, 30.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 30.5)
 shape = SubResource("Shape_wall_z")
 
 [node name="DisturbanceMeter" type="Node" parent="."]
@@ -1510,45 +1446,45 @@ area_size = Vector2(54, 54)
 script = ExtResource("5_enemy_spawner")
 primary_kind = &"snake"
 secondary_kind = &"mole"
-ambient_kinds = Array[StringName]([&"snake", &"snake", &"mole"])
+ambient_kinds = Array[StringName]([&"snake", &"snake", &"mole", &"crow"])
 seagulls_per_level = Array[int]([0, 0, 0])
 seagull_interval_min = 100000.0
 seagull_interval_max = 100000.0
 
 [node name="BaseEntrega" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.5, 0, 3.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, 3.5)
 script = ExtResource("8_sell_point")
 
 [node name="Ring" type="MeshInstance3D" parent="BaseEntrega"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.012, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.012, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_sell_ring")
 
 [node name="SpotBlocker" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
 
 [node name="Collision" type="CollisionShape3D" parent="BaseEntrega/SpotBlocker"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.13, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
 shape = SubResource("Shape_sell_blocker")
 
 [node name="Chest" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
 transform = Transform3D(-0.70697, 0, -0.70724, 0, 1, 0, 0.70724, 0, -0.70697, 0.75, 0, 0.75)
 
 [node name="Collision" type="CollisionShape3D" parent="BaseEntrega/Chest"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.34, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.34, 0)
 shape = SubResource("Shape_sell_chest")
 
 [node name="Model" parent="BaseEntrega/Chest" instance=ExtResource("k_chest")]
-transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, -0, 0, 0.6, 0, 0, 0)
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
 
 [node name="Crate" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
 transform = Transform3D(0.93937, 0, -0.3429, 0, 1, 0, 0.3429, 0, 0.93937, 1.55, 0, -0.15)
 
 [node name="Collision" type="CollisionShape3D" parent="BaseEntrega/Crate"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.225, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.225, 0)
 shape = SubResource("Shape_sell_crate")
 
 [node name="Model" parent="BaseEntrega/Crate" instance=ExtResource("k_crate")]
-transform = Transform3D(0.58, 0, 0, 0, 0.58, 0, -0, 0, 0.58, 0, 0, 0)
+transform = Transform3D(0.58, 0, 0, 0, 0.58, 0, 0, 0, 0.58, 0, 0, 0)
 
 [node name="Hay" type="StaticBody3D" parent="BaseEntrega" groups=["spot_blockers"]]
 transform = Transform3D(0.95534, 0, 0.29552, 0, 1, 0, -0.29552, 0, 0.95534, -0.6, 0.5, 1.7)
@@ -1565,7 +1501,7 @@ mesh = SubResource("Mesh_hay")
 transform = Transform3D(0.43879, 0, 0.23971, 0, 0.5, 0, -0.23971, 0, 0.43879, -1.4, 0, 0.6)
 
 [node name="Label" type="Label3D" parent="BaseEntrega"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.75, 2, 0.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 2, 0.75)
 pixel_size = 0.008
 billboard = 1
 modulate = Color(1, 0.88, 0.35, 1)
@@ -1593,3 +1529,5 @@ script = ExtResource("b_mole_altar")
 
 [node name="ToonOverride" type="Node" parent="."]
 script = ExtResource("art_toon_override")
+
+[node name="CampoSecrets" parent="." instance=ExtResource("q_campo_secrets")]

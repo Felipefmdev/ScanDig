@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://gameplay/enemies/crow/crow.gd" id="1_crow"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_crow"]
+size = Vector3(1.0, 0.3, 0.8)
+
+[node name="Crow" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 0
+script = ExtResource("1_crow")
+peck_damage = 6.0
+max_dives = 4
+max_health = 30.0
+death_color = Color(0.1, 0.1, 0.13, 1)
+stun_fx_height = 0.35
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_crow")

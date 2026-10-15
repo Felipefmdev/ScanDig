@@ -58,7 +58,7 @@ var _body_root: Node3D = null
 var _tentacles: Array[Node3D] = []
 var _slam_tentacles: Array[Node3D] = []
 var _warnings: Array[GroundWarning] = []
-var _hud: CanvasLayer = null
+var _hud: BossHud = null
 var _health_bar: ProgressBar = null
 var _anim_time: float = 0.0
 
@@ -157,7 +157,8 @@ func _start_attack() -> void:
 		_state_time = 0.0
 		return
 	_attack_points.clear()
-	_attack_points.append(_ground_point(target.global_position))
+	# Os pés do jogador (um raio ao chão bateria no próprio jogador, que está na camada 1).
+	_attack_points.append(target.global_position)
 	if phase == 2:
 		# Segundo golpe a cortar a fuga: um pouco à frente do jogador, para o lado.
 		var side: Vector3 = (target.global_position - global_position).cross(Vector3.UP).normalized()
@@ -463,35 +464,6 @@ func _commit(st: SurfaceTool, part_name: String, mat: Material) -> MeshInstance3
 
 
 func _build_hud() -> void:
-	_hud = CanvasLayer.new()
-	_hud.name = "BossHud"
-	_hud.layer = 2
-	_hud.visible = false
-	var panel: VBoxContainer = VBoxContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	panel.position = Vector2(-260.0, 70.0)
-	panel.custom_minimum_size = Vector2(520.0, 0.0)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hud.add_child(panel)
-	var name_label: Label = Label.new()
-	name_label.text = "🐙 " + BOSS_NAME
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_color_override(&"font_color", Color(1.0, 0.82, 0.25))
-	name_label.add_theme_color_override(&"font_outline_color", Color.BLACK)
-	name_label.add_theme_constant_override(&"outline_size", 6)
-	name_label.add_theme_font_size_override(&"font_size", 22)
-	panel.add_child(name_label)
-	_health_bar = ProgressBar.new()
-	_health_bar.custom_minimum_size = Vector2(0.0, 18.0)
-	_health_bar.show_percentage = false
-	_health_bar.max_value = max_health
-	_health_bar.value = health
-	_health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var fill: StyleBoxFlat = StyleBoxFlat.new()
-	fill.bg_color = Color(0.62, 0.22, 0.48)
-	var bg: StyleBoxFlat = StyleBoxFlat.new()
-	bg.bg_color = Color(0.1, 0.06, 0.08, 0.85)
-	_health_bar.add_theme_stylebox_override(&"fill", fill)
-	_health_bar.add_theme_stylebox_override(&"background", bg)
-	panel.add_child(_health_bar)
+	_hud = BossHud.create("🐙 " + BOSS_NAME, max_health, Color(0.62, 0.22, 0.48))
+	_health_bar = _hud.bar
 	add_child(_hud)

@@ -13,6 +13,8 @@ extends Node3D
 
 signal started()
 signal round_started(round_number: int)
+## Host: cada inimigo criado pelo evento (ex.: DropOnDeath liga-se ao died dele).
+signal enemy_spawned(enemy: Node3D)
 signal finished(success: bool)
 
 enum Phase { IDLE, BREAK, FIGHT, WON, LOST }
@@ -143,6 +145,7 @@ func _process_fight(delta: float) -> void:
 		var enemy: Node3D = _spawn(kind)
 		if enemy != null:
 			_alive.append(enemy)
+			enemy_spawned.emit(enemy)
 			var goal: Node3D = _defend_target()
 			if goal != null and enemy is EnemyBase:
 				(enemy as EnemyBase).objective_target = goal

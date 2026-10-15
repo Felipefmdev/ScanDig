@@ -34,6 +34,9 @@ const KIND_SCENES: Dictionary = {
 	&"mole": "res://gameplay/enemies/mole/mole.tscn",
 	&"giant_mole": "res://gameplay/enemies/boss/giant_mole.tscn",
 	&"octopus": "res://gameplay/enemies/boss/octopus.tscn",
+	&"crow": "res://gameplay/enemies/crow/crow.tscn",
+	&"crow_king": "res://gameplay/enemies/boss/crow_king.tscn",
+	&"scarecrow": "res://gameplay/enemies/boss/scarecrow.tscn",
 }
 
 ## Inimigo base do mapa (níveis de ameaça e ambiente) e o "resistente" a partir do nível 2.
