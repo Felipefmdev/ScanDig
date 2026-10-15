@@ -57,14 +57,14 @@ const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", 
 const EXTRA_BOSSES: Array[String] = ["octopus", "crow_king", "scarecrow"]
 
 const UPGRADES: Dictionary = {
-	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 15000, 25000],
-		"required_maps": ["", "", "", "ruinas", "cratera", "cratera"], "max_level": 6},
+	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 12000, 25000],
+		"required_maps": ["", "", "", "ruinas", "geleira", "cratera"], "max_level": 6},
 	"pinpointer": {"name": "Pinpointer de Precisão", "costs": [500, 18000],
 		"required_maps": ["", "cratera"], "max_level": 2},
 	"shovel": {"name": "Pá de Fibra", "costs": [800, 1200, 12000],
 		"required_maps": ["", "ruinas", "cratera"], "max_level": 3},
-	"backpack": {"name": "Mochila Reforçada", "costs": [400, 800, 1600, 1800, 10000],
-		"required_maps": ["", "", "campo", "ruinas", "cratera"], "max_level": 5},
+	"backpack": {"name": "Mochila Reforçada", "costs": [400, 800, 1600, 1800, 6000],
+		"required_maps": ["", "", "campo", "ruinas", "geleira"], "max_level": 5},
 }
 
 static var instance: GameState = null

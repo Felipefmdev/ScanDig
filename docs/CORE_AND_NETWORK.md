@@ -70,14 +70,14 @@ Quem entra recebe o snapshot em `peer_connected` (e o cliente pede de novo com `
 **Valores nas mensagens:** as mensagens do core com valor (`R$ <custo>`/`R$ <preço>` abaixo) usam `MoneyFormat.money` (`core/money_format.gd`: milhar com ponto e NBSP depois de "R$", como o `UiFormat`), então a UI pode exibi-las direto: `"Saldo insuficiente para desbloquear Campo Antigo (R$ 1.200)."`.
 
 ### Loja (`GameState.UPGRADES`)
-Tabela aprovada na #25. Cada nível tem um custo e um mapa que precisa estar desbloqueado (`required_maps`, `—` = sem trava).
+Tabela aprovada na #25; travas da Geleira na #49 (valores provisórios até a medição por bot, #46). Cada nível tem um custo e um mapa que precisa estar desbloqueado (`required_maps`, `—` = sem trava).
 
 | Upgrade | Nome | Nível comprado: custo (mapa exigido) | Nível máx. |
 | :--- | :--- | :--- | :--- |
-| `detector` | Detector | 1: 300 · 2: 600 · 3: 700 · 4: 2.000 (`ruinas`) · 5: 15.000 (`cratera`) · 6: 25.000 (`cratera`) | 6 (equipado Nv.7) |
+| `detector` | Detector | 1: 300 · 2: 600 · 3: 700 · 4: 2.000 (`ruinas`) · 5: 12.000 (`geleira`) · 6: 25.000 (`cratera`) | 6 (equipado Nv.7) |
 | `pinpointer` | Pinpointer de Precisão | 1: 500 · 2: 18.000 (`cratera`) | 2 |
 | `shovel` | Pá de Fibra | 1: 800 · 2: 1.200 (`ruinas`) · 3: 12.000 (`cratera`) | 3 (pá Nv.4) |
-| `backpack` | Mochila Reforçada | 1: 400 · 2: 800 · 3: 1.600 (`campo`) · 4: 1.800 (`ruinas`) · 5: 10.000 (`cratera`) | 5 (8 espaços) |
+| `backpack` | Mochila Reforçada | 1: 400 · 2: 800 · 3: 1.600 (`campo`) · 4: 1.800 (`ruinas`) · 5: 6.000 (`geleira`) | 5 (8 espaços) |
 
 `get_next_upgrade_cost` devolve -1 no máximo. `equipped_detector_level = 1 + nível do detector` (1 a 7, lido pelo `MetalDetector`; o gameplay limita em 3 até a #27).
 
@@ -102,7 +102,7 @@ A banca da Praia (`ShopOffer`) deve comprar só por esta API, nunca debitando `t
 Mensagens: `"Comprado: <nome>"`, `"Saldo insuficiente para <nome> (R$ <preço>)."`, `"Produto indisponível."`.
 
 ### Progressão de mapas
-Regras em `docs/PACING.md` §1. Ordem: `praia` → `campo` → `ruinas` → `cratera` (`SessionManager.MAP_ORDER`; ids fora da lista vão para o fim, em ordem alfabética). `MapData` em `GameState.MAPS_DIR` (`res://items/maps/<id>.tres`, `id` == nome do arquivo).
+Regras em `docs/PACING.md` §1. Ordem: `praia` → `campo` → `ruinas` → `geleira` → `cratera` (`SessionManager.MAP_ORDER`; ids fora da lista vão para o fim, em ordem alfabética). `MapData` em `GameState.MAPS_DIR` (`res://items/maps/<id>.tres`, `id` == nome do arquivo).
 
 Ordem e chefes do `docs/GAME_DESIGN.md` §3 (#45): cada mapa pede o chefe principal do anterior.
 
@@ -114,7 +114,7 @@ Ordem e chefes do `docs/GAME_DESIGN.md` §3 (#45): cada mapa pede o chefe princi
 | `geleira` | Geleira Eterna | 20.000 | Nv.5 | `ancient_guardian` (Guardião Ancestral) | `frozen_mammoth` |
 | `cratera` | Cratera | 55.000 | Nv.6 | `frozen_mammoth` (Mamute Congelado) | (chefe final) |
 
-O `item_pool` da Geleira está vazio e a cena `world/map_geleira.tscn` ainda não existe (Dev A, #45): a Geleira aparece na lista, travada pelo chefe, e depois de paga mostra "Em breve.". Os `required_maps` dos `UPGRADES` ainda não citam a Geleira; a redistribuição espera a nova medição por bot.
+O `item_pool` da Geleira é preenchido na #49 (Dev_UI_Economy); a cena `world/map_geleira.tscn` ainda não existe (Dev A, #45): a Geleira aparece na lista, travada pelo chefe, e depois de paga mostra "Em breve.". Na #49 a Geleira passa a vender o detector nível 5 (equipado Nv.6, que a Cratera exige) e a mochila nível 5 (8 espaços); valores provisórios até a medição por bot (#46).
 
 Troféus de chefe ficam no catálogo, fora de qualquer `item_pool`: `coroa_caranguejo_rei` (Caranguejo-Rei) e `garra_toupeira` (Toupeira Gigante, R$ 900).
 

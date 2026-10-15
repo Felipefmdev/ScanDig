@@ -135,6 +135,16 @@ func _run() -> void:
 	_check(ruinas["reason"] == "Em breve.", "status ruinas Em breve: %s" % str(ruinas["reason"]))
 	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem cena")
 
+	# #49: Geleira paga com o detector equipado Nv.5; sem world/map_geleira.tscn fica "Em breve".
+	await _report_boss(gs, "ancient_guardian")
+	gs.load_snapshot({"team_money": 20000, "upgrade_levels": {"detector": 4}})
+	result = await _unlock(gs, "geleira")
+	_check(result.get("success", false) == true and result.get("message", "") == "Geleira Eterna desbloqueado!", "desbloqueio geleira ok: %s" % str(result.get("message", "")))
+	geleira = sm.get_map_status("geleira")
+	_check(geleira["unlocked"] and not geleira["has_scene"] and not geleira["playable"], "status geleira desbloqueada e sem cena: %s" % str(geleira))
+	_check(geleira["reason"] == "Em breve.", "status geleira Em breve: %s" % str(geleira["reason"]))
+	_check(not sm.can_start_map("geleira"), "can_start_map geleira false sem cena")
+
 	gs.reset_state()
 	gs.load_snapshot({"team_money": 300, "current_day": 4, "discovered_items": [], "upgrade_levels": {"detector": 1}})
 	_check(gs.unlocked_maps.is_empty() and gs.defeated_bosses.is_empty(), "save v2 carrega listas vazias")

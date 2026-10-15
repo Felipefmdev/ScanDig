@@ -8,7 +8,7 @@ const CAMPO_SECRETS: Array[String] = ["campo_reliquia_poco", "campo_reliquia_far
 ## id -> base_value do catálogo.
 const CAMPO_ITEMS: Dictionary = {"sino_bronze": 700, "anel_do_poco": 600, "moeda_celta": 480,
 	"fibula_romana": 520, "pena_corvo_rei": 650, "lanterna_espantalho": 900}
-const CATALOG_TOTAL: int = 33
+const CATALOG_TOTAL: int = 38
 
 var _fails: int = 0
 var _quest_signals: Array[String] = []
@@ -70,7 +70,7 @@ func _run() -> void:
 	_check(gs.unlocked_maps == ["campo"], "chefes extras não desbloqueiam mapa: %s" % str(gs.unlocked_maps))
 	_check(gs.get_map_unlock_block_reason("ruinas") == "Vença o chefe Toupeira Gigante primeiro.", "ruínas continua pedindo a Toupeira: %s" % gs.get_map_unlock_block_reason("ruinas"))
 
-	# Museu: os 6 itens viram descoberta com 50% do valor base; o total passa a 33.
+	# Museu: os 6 itens viram descoberta com 50% do valor base; o total do catálogo é 38 (#49: +5 da Geleira).
 	_check(gs.get_total_catalog_items() == CATALOG_TOTAL, "max_items = %d: %d" % [CATALOG_TOTAL, gs.get_total_catalog_items()])
 	var money_before: int = gs.team_money
 	var expected_rewards: int = 0
