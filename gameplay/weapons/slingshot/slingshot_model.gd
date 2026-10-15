@@ -2,18 +2,25 @@
 class_name SlingshotModel
 extends Node3D
 
-## Estilingue low-poly facetado (SurfaceTool, normais por face, cores por vértice).
-## Espaço local: o cabo vai ao longo de Y com o centro da pega na origem (onde a HandModel
-## agarra); a forquilha abre para cima; -Z = para onde dispara; o elástico fica em +Z.
+## Estilingue low-poly facetado (docs/art/reference/estilingue.jpg, #37): forquilha em Y de um
+## ramo com nós (madeira toon), pega enrolada em tiras de couro, elásticos amarelos atados nas
+## pontas e bolsa de couro. Espaço local: o cabo vai ao longo de Y com o centro da pega na
+## origem (onde a HandModel agarra); a forquilha abre para cima; -Z = para onde dispara; o
+## elástico fica em +Z.
 
-const WOOD: Color = Color(0.55, 0.35, 0.2)
-const WOOD_DARK: Color = Color(0.42, 0.26, 0.15)
-const RUBBER: Color = Color(0.85, 0.2, 0.15)
-const LEATHER: Color = Color(0.3, 0.2, 0.14)
+const ToolMesh = preload("res://gameplay/weapons/tool_mesh.gd")
+
+const WOOD: Color = Color(1.0, 1.0, 1.0)
+const WOOD_KNOT: Color = Color(0.78, 0.72, 0.68)
+const LEATHER: Color = Color(0.34, 0.21, 0.13)
+const LEATHER_DARK: Color = Color(0.26, 0.16, 0.1)
+const RUBBER: Color = Color(0.72, 0.58, 0.22)
+const RUBBER_DARK: Color = Color(0.56, 0.43, 0.14)
 
 ## Topo das duas pontas da forquilha (o elástico prende aqui).
 const TIP_LEFT: Vector3 = Vector3(-0.055, 0.15, 0.0)
 const TIP_RIGHT: Vector3 = Vector3(0.055, 0.15, 0.0)
+const FORK: Vector3 = Vector3(0.0, 0.03, 0.0)
 
 ## 0 = elástico em repouso, 1 = puxado ao máximo (animação de tiro).
 @export_range(0.0, 1.0) var pull: float = 0.0:
@@ -26,113 +33,64 @@ var _band: MeshInstance3D = null
 
 
 func _ready() -> void:
-	for child: Node in get_children():
-		child.queue_free()
-	var mat: StandardMaterial3D = _make_material()
-
-	var st: SurfaceTool = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Cabo (pega) e base da forquilha
-	_prism(st, Vector3(0.0, -0.075, 0.0), Vector3(0.0, 0.035, 0.0), 0.017, 0.019, 6, WOOD)
-	_prism(st, Vector3(0.0, -0.085, 0.0), Vector3(0.0, -0.075, 0.0), 0.012, 0.017, 6, WOOD_DARK)
-	# Braços da forquilha
-	_prism(st, Vector3(0.0, 0.03, 0.0), TIP_LEFT + Vector3(0.0, -0.01, 0.0), 0.016, 0.012, 6, WOOD)
-	_prism(st, Vector3(0.0, 0.03, 0.0), TIP_RIGHT + Vector3(0.0, -0.01, 0.0), 0.016, 0.012, 6, WOOD)
-	# Pontas mais escuras (onde o elástico prende)
-	_prism(st, TIP_LEFT + Vector3(0.0, -0.015, 0.0), TIP_LEFT + Vector3(0.0, 0.008, 0.0), 0.014, 0.012, 6, WOOD_DARK)
-	_prism(st, TIP_RIGHT + Vector3(0.0, -0.015, 0.0), TIP_RIGHT + Vector3(0.0, 0.008, 0.0), 0.014, 0.012, 6, WOOD_DARK)
-	var body: MeshInstance3D = MeshInstance3D.new()
-	body.name = "Body"
-	body.mesh = st.commit()
-	body.material_override = mat
-	add_child(body)
-
+	ToolMesh.clear(self)
+	_build_wood()
+	_build_wraps()
 	_band = MeshInstance3D.new()
 	_band.name = "Band"
-	_band.material_override = mat
+	_band.material_override = ToonKit.vertex_material()
 	add_child(_band)
 	_rebuild_band()
+
+
+func _build_wood() -> void:
+	var st: SurfaceTool = ToolMesh.begin()
+	# Cabo: um pouco mais grosso em baixo, ponta mais escura.
+	LowPolyMesh.prism(st, Vector3(0.0, -0.09, 0.0), Vector3(0.0, FORK.y + 0.008, 0.0), 0.021, 0.022, 7, WOOD)
+	LowPolyMesh.prism(st, Vector3(0.0, -0.1, 0.0), Vector3(0.0, -0.09, 0.0), 0.017, 0.021, 7, WOOD_KNOT)
+	# Braços da forquilha (o esquerdo mais direito, o direito mais aberto, como um ramo).
+	var left_bend: Vector3 = Vector3(-0.03, 0.085, 0.0)
+	var right_bend: Vector3 = Vector3(0.034, 0.08, 0.0)
+	LowPolyMesh.prism(st, FORK, left_bend, 0.02, 0.017, 6, WOOD)
+	LowPolyMesh.prism(st, left_bend, TIP_LEFT + Vector3(0.0, 0.014, 0.0), 0.017, 0.014, 6, WOOD)
+	LowPolyMesh.prism(st, FORK, right_bend, 0.02, 0.017, 6, WOOD)
+	LowPolyMesh.prism(st, right_bend, TIP_RIGHT + Vector3(0.0, 0.014, 0.0), 0.017, 0.014, 6, WOOD)
+	# Nós do ramo.
+	LowPolyMesh.prism(st, left_bend + Vector3(-0.008, -0.01, 0.0), left_bend + Vector3(-0.022, -0.016, 0.0), 0.008, 0.004, 5, WOOD_KNOT)
+	LowPolyMesh.prism(st, right_bend + Vector3(0.008, -0.012, 0.004), right_bend + Vector3(0.02, -0.02, 0.01), 0.008, 0.004, 5, WOOD_KNOT)
+	var mat: ShaderMaterial = ToolMesh.prop_material(&"wood", Color(0.38, 0.23, 0.13))
+	mat.set_shader_parameter(&"grain_scale", 30.0)
+	ToolMesh.part(self, "Body", st, mat)
+
+
+func _build_wraps() -> void:
+	var st: SurfaceTool = ToolMesh.begin()
+	# Tiras de couro enroladas na pega: anéis ligeiramente inclinados, alternando o tom.
+	for i: int in 6:
+		var y: float = -0.072 + float(i) * 0.016
+		var tilt: Basis = Basis(Vector3.BACK, 0.28 if i % 2 == 0 else -0.18)
+		var axis: Vector3 = tilt * Vector3.UP
+		var c: Vector3 = Vector3(0.0, y, 0.0)
+		LowPolyMesh.prism(st, c - axis * 0.0065, c + axis * 0.0065, 0.0255, 0.0255, 7,
+			LEATHER if i % 2 == 0 else LEATHER_DARK)
+	# Nós do elástico à volta de cada ponta.
+	for tip: Vector3 in [TIP_LEFT, TIP_RIGHT]:
+		LowPolyMesh.prism(st, tip + Vector3(0.0, -0.012, 0.0), tip + Vector3(0.0, 0.002, 0.0), 0.0185, 0.0185, 6, RUBBER)
+		LowPolyMesh.box(st, tip + Vector3(0.0, -0.005, 0.016), Vector3(0.012, 0.012, 0.01), Basis(Vector3.BACK, 0.6), RUBBER_DARK)
+	ToolMesh.part(self, "Wraps", st, ToonKit.vertex_material())
 
 
 func _rebuild_band() -> void:
 	if _band == null:
 		return
-	var st: SurfaceTool = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var st: SurfaceTool = ToolMesh.begin()
 	var pouch: Vector3 = Vector3(0.0, 0.135, 0.035 + pull * 0.16)
-	_prism(st, TIP_LEFT, pouch + Vector3(-0.014, 0.0, 0.0), 0.005, 0.005, 4, RUBBER)
-	_prism(st, TIP_RIGHT, pouch + Vector3(0.014, 0.0, 0.0), 0.005, 0.005, 4, RUBBER)
-	_box(st, pouch, Vector3(0.032, 0.02, 0.016), Basis.IDENTITY, LEATHER)
-	_band.mesh = st.commit()
-
-
-func _make_material() -> StandardMaterial3D:
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.85
-	return mat
-
-
-# --- Primitivas (iguais às da HandModel/DetectorModel) ----------------------
-
-func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, inside: Vector3, color: Color) -> void:
-	var cr: Vector3 = (b - a).cross(c - a)
-	if cr.length_squared() < 1e-12:
-		return
-	var outward: Vector3 = (a + b + c) / 3.0 - inside
-	if cr.dot(outward) > 0.0:
-		var tmp: Vector3 = b
-		b = c
-		c = tmp
-		cr = -cr
-	var n: Vector3 = -cr.normalized()
-	for v: Vector3 in [a, b, c]:
-		st.set_color(color)
-		st.set_normal(n)
-		st.add_vertex(v)
-
-
-func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, inside: Vector3, color: Color) -> void:
-	_tri(st, a, b, c, inside, color)
-	_tri(st, a, c, d, inside, color)
-
-
-func _prism(st: SurfaceTool, p0: Vector3, p1: Vector3, r0: float, r1: float, sides: int, color: Color) -> void:
-	var axis: Vector3 = p1 - p0
-	if axis.length_squared() < 1e-10:
-		return
-	var n: Vector3 = axis.normalized()
-	var ref: Vector3 = Vector3.UP if absf(n.dot(Vector3.UP)) < 0.9 else Vector3.RIGHT
-	var u: Vector3 = n.cross(ref).normalized()
-	var v: Vector3 = n.cross(u).normalized()
-	var mid: Vector3 = (p0 + p1) * 0.5
-	var ring0: PackedVector3Array = PackedVector3Array()
-	var ring1: PackedVector3Array = PackedVector3Array()
-	for i: int in range(sides):
-		var ang: float = TAU * float(i) / float(sides)
-		var off: Vector3 = u * cos(ang) + v * sin(ang)
-		ring0.append(p0 + off * r0)
-		ring1.append(p1 + off * r1)
-	for i: int in range(sides):
-		var j: int = (i + 1) % sides
-		_quad(st, ring0[i], ring0[j], ring1[j], ring1[i], mid, color)
-		_tri(st, p0, ring0[i], ring0[j], mid, color)
-		_tri(st, p1, ring1[j], ring1[i], mid, color)
-
-
-func _box(st: SurfaceTool, center: Vector3, size: Vector3, basis: Basis, color: Color) -> void:
-	var h: Vector3 = size * 0.5
-	var c: Array[Vector3] = []
-	for k: int in range(8):
-		var local: Vector3 = Vector3(
-			h.x if (k & 1) != 0 else -h.x,
-			h.y if (k & 2) != 0 else -h.y,
-			h.z if (k & 4) != 0 else -h.z
-		)
-		c.append(center + basis * local)
-	_quad(st, c[0], c[1], c[3], c[2], center, color)
-	_quad(st, c[4], c[5], c[7], c[6], center, color)
-	_quad(st, c[0], c[1], c[5], c[4], center, color)
-	_quad(st, c[2], c[3], c[7], c[6], center, color)
-	_quad(st, c[0], c[2], c[6], c[4], center, color)
-	_quad(st, c[1], c[3], c[7], c[5], center, color)
+	for tip: Vector3 in [TIP_LEFT, TIP_RIGHT]:
+		var start: Vector3 = tip + Vector3(0.0, -0.005, 0.016)
+		var end: Vector3 = pouch + Vector3(signf(tip.x) * 0.016, 0.0, 0.0)
+		# Elástico achatado (4 lados) com uma atadura perto da bolsa.
+		LowPolyMesh.prism(st, start, end, 0.0055, 0.005, 4, RUBBER)
+		LowPolyMesh.prism(st, end.lerp(start, 0.18), end.lerp(start, 0.1), 0.0075, 0.0075, 4, RUBBER_DARK)
+	LowPolyMesh.box(st, pouch, Vector3(0.036, 0.024, 0.012), Basis.IDENTITY, LEATHER)
+	LowPolyMesh.box(st, pouch + Vector3(0.0, 0.0, 0.004), Vector3(0.026, 0.016, 0.008), Basis.IDENTITY, LEATHER_DARK)
+	_band.mesh = ToonKit.commit(st)

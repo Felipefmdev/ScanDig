@@ -1,0 +1,11 @@
+{
+	"scene": "res://gameplay/debug/tools_showcase.tscn",
+	"steps": [
+		{"t": 1.0, "screenshot": "01_pa"},
+		{"t": 2.2, "screenshot": "02_kit_medico"},
+		{"t": 3.4, "screenshot": "03_repelente"},
+		{"t": 4.6, "screenshot": "04_estilingue"},
+		{"t": 5.8, "screenshot": "05_no_chao"},
+		{"t": 6.1, "quit": true}
+	]
+}

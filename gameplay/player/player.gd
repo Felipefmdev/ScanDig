@@ -54,6 +54,9 @@ const TOOL_SLINGSHOT: StringName = &"estilingue"
 const TOOL_REPELLENT: StringName = &"repelente"
 const TOOL_NET_TRAP: StringName = &"armadilha_rede"
 const TOOL_MEDKIT: StringName = &"kit_medico"
+## Modelos na mão (#37) das ferramentas sem nó próprio no player.tscn (o estilingue tem).
+const MEDKIT_MODEL: Script = preload("res://gameplay/weapons/medkit/medkit_model.gd")
+const REPELLENT_MODEL: Script = preload("res://gameplay/weapons/repellent/repellent_model.gd")
 ## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
 const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
 const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
@@ -122,6 +125,8 @@ var _target_pickup: ItemPickup = null
 var _target_offer: ShopOffer = null
 var _use_cooldown: float = 0.0
 var _tool_view_rest: Vector3 = Vector3.ZERO
+## tool_id -> modelo no ToolView (só um visível: o da ferramenta selecionada).
+var _held_models: Dictionary = {}
 ## Distância percorrida desde o último passo (sons de passos na areia).
 var _step_distance: float = 0.0
 const STEP_LENGTH: float = 1.15
@@ -203,6 +208,7 @@ func _ready() -> void:
 
 	if tool_view != null:
 		_tool_view_rest = tool_view.position
+		_setup_held_models()
 	if GameState.instance != null:
 		GameState.instance.money_changed.connect(_on_team_money_changed)
 		GameState.instance.upgrades_changed.connect(_on_upgrades_changed)
@@ -898,6 +904,16 @@ func _drop_selected() -> void:
 	SFX.play_at(SFX.DROP, pos, -3.0)
 
 
+## Interactable (#39/#40): o [E] fica com o jogador quando ele tem alvo próprio (produto da
+## banca, item no chão ou entrega possível na base).
+func has_own_interact_target() -> bool:
+	if _target_offer != null and is_instance_valid(_target_offer):
+		return true
+	if _target_pickup != null and is_instance_valid(_target_pickup):
+		return true
+	return _get_sell_point_in_range() != null and _count_deliverable() > 0
+
+
 func _get_sell_point_in_range() -> SellPoint:
 	for n: Node in get_tree().get_nodes_in_group(SellPoint.GROUP):
 		var sp: SellPoint = n as SellPoint
@@ -1002,7 +1018,34 @@ func _update_tool_in_hand() -> void:
 	else:
 		detector.visible = active
 	if tool_view != null:
-		tool_view.visible = c != null and c.tool_id == TOOL_SLINGSHOT
+		var tool_id: StringName = c.tool_id if c != null else &""
+		tool_view.visible = _held_models.has(tool_id)
+		for id: StringName in _held_models:
+			(_held_models[id] as Node3D).visible = id == tool_id
+
+
+## O estilingue já está no player.tscn; o kit e o repelente são criados aqui, sem owner (o
+## editor não os grava, #47). A mão (ToolHand) agarra na origem do ToolView.
+func _setup_held_models() -> void:
+	if slingshot_model != null:
+		_held_models[TOOL_SLINGSHOT] = slingshot_model
+	# Kit erguido à frente da mão, a cruz virada para a câmara (inteiro no ecrã).
+	_held_models[TOOL_MEDKIT] = _add_held_model(MEDKIT_MODEL,
+		Transform3D(Basis(Vector3.UP, -0.35).scaled(Vector3.ONE * 0.5), Vector3(-0.06, 0.01, -0.03)))
+	# Lata agarrada a meio, o rótulo meio virado para a câmara.
+	_held_models[TOOL_REPELLENT] = _add_held_model(REPELLENT_MODEL,
+		Transform3D(Basis(Vector3.UP, -PI * 0.25).scaled(Vector3.ONE * 0.85), Vector3(0.0, -0.09, 0.0)))
+	_update_tool_in_hand()
+
+
+func _add_held_model(model_script: Script, pose: Transform3D) -> Node3D:
+	var model: Node3D = Node3D.new()
+	model.set_script(model_script)
+	model.name = "Held" + model_script.resource_path.get_file().get_basename().to_pascal_case()
+	model.transform = pose
+	model.visible = false
+	tool_view.add_child(model)
+	return model
 
 
 # ---------------------------------------------------------------------------

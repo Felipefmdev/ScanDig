@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://gameplay/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://gameplay/detector/metal_detector.tscn" id="2_detector"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/tool-shovel.glb" id="3_shovel"]
+[ext_resource type="Script" path="res://gameplay/player/shovel_model.gd" id="3_shovel"]
 [ext_resource type="Script" path="res://gameplay/player/inventory.gd" id="4_inventory"]
 [ext_resource type="Script" path="res://gameplay/player/hotbar.gd" id="5_hotbar"]
 [ext_resource type="Script" path="res://gameplay/player/shovel_dig_animator.gd" id="6_dig_anim"]
@@ -82,8 +82,8 @@ current = true
 [node name="ShovelRig" type="Node3D" parent="Head/Camera3D"]
 visible = false
 
-[node name="Shovel" parent="Head/Camera3D/ShovelRig" instance=ExtResource("3_shovel")]
-transform = Transform3D(0.42, 0, 0, 0, 0.42, 0, 0, 0, 0.42, 0, 0, 0)
+[node name="Shovel" type="Node3D" parent="Head/Camera3D/ShovelRig"]
+script = ExtResource("3_shovel")
 
 [node name="ShovelHand" type="Node3D" parent="Head/Camera3D/ShovelRig"]
 transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0.5, 0)

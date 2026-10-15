@@ -1,0 +1,14 @@
+{
+	"scene": "res://world/map_praia.tscn",
+	"steps": [
+		{"t": 0.2, "set_state": {"team_money": 5000}},
+		{"t": 1.0, "teleport": [8.3, 0.5, -0.85]},
+		{"t": 1.05, "look_at": [7.05, 0.62, -0.85]},
+		{"t": 1.6, "tap": "interact"},
+		{"t": 1.8, "dump": "01_comprado"},
+		{"t": 2.0, "teleport": [3.0, 0.5, -8.0]},
+		{"t": 2.05, "look_at": [3.0, 0.9, -14.0]},
+		{"t": 2.6, "screenshot": "02_mao_kit"},
+		{"t": 3.0, "quit": true}
+	]
+}

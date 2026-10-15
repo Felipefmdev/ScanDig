@@ -1,0 +1,30 @@
+{
+	"scene": "res://world/map_praia.tscn",
+	"steps": [
+		{"t": 0.2, "set_state": {"team_money": 5000}},
+		{"t": 1.0, "teleport": [9.9, 0.5, 0.5]},
+		{"t": 1.05, "look_at": [7.0, 0.55, 0.5]},
+		{"t": 1.6, "screenshot": "01_banca"},
+		{"t": 1.8, "teleport": [8.3, 0.5, 1.85]},
+		{"t": 1.85, "look_at": [7.05, 0.62, 1.85]},
+		{"t": 2.3, "screenshot": "02_banca_estilingue"},
+		{"t": 2.4, "tap": "interact"},
+		{"t": 2.8, "teleport": [8.3, 0.5, 0.95]},
+		{"t": 2.85, "look_at": [7.05, 0.62, 0.95]},
+		{"t": 3.3, "screenshot": "03_banca_repelente"},
+		{"t": 3.4, "tap": "interact"},
+		{"t": 3.8, "teleport": [8.3, 0.5, -0.85]},
+		{"t": 3.85, "look_at": [7.05, 0.62, -0.85]},
+		{"t": 4.3, "screenshot": "04_banca_kit"},
+		{"t": 4.4, "tap": "interact"},
+		{"t": 4.6, "dump": "05_comprado"},
+		{"t": 5.0, "teleport": [3.0, 0.5, -8.0]},
+		{"t": 5.05, "look_at": [3.0, 0.9, -14.0]},
+		{"t": 5.6, "screenshot": "06_mao_estilingue"},
+		{"t": 5.7, "tap": "use_tool"},
+		{"t": 5.76, "screenshot": "07_estilingue_a_puxar"},
+		{"t": 6.4, "tap": "careful_dig"},
+		{"t": 6.58, "screenshot": "08_pa_a_cavar"},
+		{"t": 7.2, "quit": true}
+	]
+}
