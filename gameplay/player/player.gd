@@ -88,8 +88,22 @@ const THREAT_MESSAGES: Array[String] = [
 @onready var health_bar: ProgressBar = $HUD/HealthPanel/HealthBar
 @onready var hotbar: Hotbar = $HUD/Hotbar
 @onready var interact_prompt: Label = $HUD/InteractPrompt
+@onready var avatar: PlayerAvatar = $Avatar
+@onready var net_sync: MultiplayerSynchronizer = $NetSync
+
+## Grupo com SÓ o jogador local (o desta máquina). Inimigos, DebugBridge e testes usam-no
+## como "o jogador". Fase 1 do coop: os inimigos ainda correm em cada peer (#5 bloco F).
+const LOCAL_GROUP: StringName = &"player"
+## Grupo com todos os jogadores da cena (local + remotos).
+const ALL_GROUP: StringName = &"players"
 
 var health: float = 100.0
+## Ferramenta na mão (replicada para o avatar que os outros veem).
+var held_tool_id: StringName = &"":
+	set(value):
+		held_tool_id = value
+		if avatar != null:
+			avatar.set_tool(value)
 
 var _dig_cooldown: float = 0.0
 var _attack_cooldown: float = 0.0
@@ -113,8 +127,42 @@ var session_money: int = 0
 var session_items_count: int = 0
 
 
+## O PlayersRoot dá ao nó o nome do peer dono (str(peer_id)); fora do coop (testes,
+## cenas antigas) o nome não é um número e a autoridade fica no peer local.
+func _enter_tree() -> void:
+	var owner_id: int = peer_id_from_name(name)
+	if owner_id > 0:
+		set_multiplayer_authority(owner_id)
+	var local: bool = is_multiplayer_authority()
+	# Antes de os filhos entrarem: um jogador remoto nunca rouba a câmara nem mostra HUD.
+	var cam: Camera3D = get_node_or_null(^"Head/Camera3D") as Camera3D
+	if cam != null:
+		cam.current = local
+		cam.visible = local  # mãos/pá/detector em 1.ª pessoa
+	var hud: CanvasLayer = get_node_or_null(^"HUD") as CanvasLayer
+	if hud != null:
+		hud.visible = local
+	var body: Node3D = get_node_or_null(^"Avatar") as Node3D
+	if body != null:
+		body.visible = not local
+
+
+static func peer_id_from_name(node_name: StringName) -> int:
+	var s: String = String(node_name)
+	return s.to_int() if s.is_valid_int() else 0
+
+
+func is_local() -> bool:
+	return is_multiplayer_authority()
+
+
 func _ready() -> void:
-	add_to_group("player")
+	add_to_group(ALL_GROUP)
+	net_sync.add_visibility_filter(_sync_visible_to)
+	if not is_local():
+		_setup_remote()
+		return
+	add_to_group(LOCAL_GROUP)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_ensure_default_input_mappings()
 	_update_session_hud()
@@ -148,6 +196,29 @@ func _ready() -> void:
 	if GameState.instance != null:
 		GameState.instance.money_changed.connect(_on_team_money_changed)
 		GameState.instance.upgrades_changed.connect(_on_upgrades_changed)
+
+
+## Jogador de outro peer: só corpo + nome; posição/rotação chegam pelo NetSync.
+func _setup_remote() -> void:
+	set_physics_process(false)
+	set_process_unhandled_input(false)
+	var owner_id: int = get_multiplayer_authority()
+	avatar.setup(owner_id, "Anfitrião" if owner_id == 1 else "Convidado")
+	avatar.set_tool(held_tool_id)
+
+
+## Visibilidade da replicação (spawn + sync) deste jogador para `peer_id`:
+## - no host: só para peers com o mapa carregado (CoreSession.peer_scene_ready), senão o
+##   cliente recebe "Node not found" a meio do carregamento;
+## - num cliente (dono do seu jogador): para o host e para quem já tem um jogador na
+##   cena (o host só cria o jogador de um peer depois de ele estar pronto).
+func _sync_visible_to(peer_id: int) -> bool:
+	if multiplayer.is_server():
+		var sm: SessionManager = SessionManager.instance
+		if sm == null or not sm.is_in_expedition():
+			return true
+		return sm.is_peer_scene_ready(peer_id)
+	return peer_id == 1 or (get_parent() != null and get_parent().has_node(str(peer_id)))
 
 
 func _ensure_default_input_mappings() -> void:
@@ -245,6 +316,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(_delta: float) -> void:
+	if not is_local():
+		avatar.set_pitch(head.rotation.x)
+		return
 	_update_interaction_target()
 
 
@@ -556,8 +630,17 @@ func _shake_camera(strength: float, duration: float) -> void:
 # Vida
 # ---------------------------------------------------------------------------
 
+## Dano vindo de outro peer (contrato #5 B): `apply_damage.rpc_id(dono, amount, from)`.
+## A vida é do dono; o `from` fica para efeitos futuros (empurrão, direção do golpe).
+@rpc("any_peer", "call_local", "reliable")
+func apply_damage(amount: float, _from: Vector3 = Vector3.INF) -> void:
+	if is_local():
+		take_damage(amount)
+
+
 func take_damage(amount: float) -> void:
-	if amount <= 0.0 or health <= 0.0:
+	# Num jogador remoto a vida não é nossa: quem acerta usa apply_damage.rpc_id(dono).
+	if not is_local() or amount <= 0.0 or health <= 0.0:
 		return
 	health = clampf(health - amount, 0.0, max_health)
 	health_changed.emit(health, max_health)
@@ -825,6 +908,7 @@ func _update_tool_in_hand() -> void:
 	if detector == null:
 		return
 	var c: CarriedItem = inventory.get_selected()
+	held_tool_id = c.tool_id if c != null else &""
 	var active: bool = c != null and c.tool_id == &"detector"
 	if detector.has_method("set_active"):
 		detector.call("set_active", active)

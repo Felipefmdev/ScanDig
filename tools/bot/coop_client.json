@@ -1,0 +1,21 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{"t": 1.5, "join": "127.0.0.1", "port": 7791, "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 1.0},
+		{"t": 0, "face_player": "remote"},
+		{"sleep": 0.3},
+		{"t": 0, "screenshot": "c1_ve_anfitriao"},
+		{"t": 0, "dump": "c1"},
+		{"sleep": 0.2},
+		{"t": 0, "press": "move_left", "for": 2.0},
+		{"sleep": 5.2},
+		{"t": 0, "face_player": "remote"},
+		{"sleep": 0.6},
+		{"t": 0, "screenshot": "c2_anfitriao_andou"},
+		{"t": 0, "dump": "c2_final"},
+		{"sleep": 1.0},
+		{"t": 0, "quit": true}
+	]
+}

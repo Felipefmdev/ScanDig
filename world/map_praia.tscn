@@ -1,6 +1,6 @@
 [gd_scene load_steps=71 format=3 uid="uid://b78rqvgonlc6u"]
 
-[ext_resource type="PackedScene" path="res://gameplay/player/player.tscn" id="1_player"]
+[ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
 [ext_resource type="Resource" uid="uid://cwxp3whloc4wf" path="res://items/maps/praia.tres" id="3_praia"]
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
@@ -925,8 +925,12 @@ text = "LOJA"
 font_size = 64
 outline_size = 14
 
-[node name="Player" parent="." instance=ExtResource("1_player")]
+[node name="Players" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+script = ExtResource("1_players")
+
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="Players"]
+spawn_path = NodePath("..")
 
 [node name="DetectorSpawn" type="Marker3D" parent="."]
 transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 3.6, 0.05, 3.6)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://gameplay/detector/metal_detector.tscn" id="2_detector"]
@@ -8,6 +8,21 @@
 [ext_resource type="Script" path="res://gameplay/player/shovel_dig_animator.gd" id="6_dig_anim"]
 [ext_resource type="Script" path="res://gameplay/player/hand_model.gd" id="7_hand_model"]
 [ext_resource type="Script" path="res://gameplay/weapons/slingshot/slingshot_model.gd" id="8_slingshot"]
+[ext_resource type="Script" path="res://gameplay/player/player_avatar.gd" id="9_avatar"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath("Head:rotation")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+properties/3/path = NodePath(".:held_tool_id")
+properties/3/spawn = true
+properties/3/replication_mode = 2
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.4
@@ -249,3 +264,11 @@ theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="Avatar" type="Node3D" parent="."]
+visible = false
+script = ExtResource("9_avatar")
+
+[node name="NetSync" type="MultiplayerSynchronizer" parent="."]
+root_path = NodePath("..")
+replication_config = SubResource("SceneReplicationConfig_player")

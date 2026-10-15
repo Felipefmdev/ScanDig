@@ -42,6 +42,83 @@ static func create_from_tool_data(td: ToolData) -> CarriedItem:
 	return c
 
 
+## Formato de rede (contrato #5, bloco C). Só ids e números: nada de recursos ou cenas.
+func to_dict() -> Dictionary:
+	return {
+		"kind": "tool" if is_tool() else "item",
+		"item_id": item.id if item != null else "",
+		"final_value": final_value,
+		"integrity": integrity,
+		"rare": is_rare_variant,
+		"tool_id": String(tool_id),
+		"charges": charges,
+	}
+
+
+## Reconstrói um CarriedItem vindo da rede; null se o dicionário for inválido.
+## Revalida tudo: o item tem de existir no catálogo e o valor não pode passar do teto do
+## GameState; a ferramenta tem de existir (detetor ou res://items/tools/) e as cargas
+## não podem passar das iniciais.
+static func from_dict(d: Dictionary) -> CarriedItem:
+	var kind: Variant = d.get("kind")
+	if kind is String and kind == "item":
+		return _item_from_dict(d)
+	if kind is String and kind == "tool":
+		return _tool_from_dict(d)
+	return null
+
+
+static func _item_from_dict(d: Dictionary) -> CarriedItem:
+	var item_id: Variant = d.get("item_id")
+	var value: Variant = d.get("final_value")
+	var integ: Variant = d.get("integrity", 1.0)
+	var rare: Variant = d.get("rare", false)
+	if not item_id is String or not _is_safe_id(item_id):
+		return null
+	if not (value is int or value is float) or not (integ is int or integ is float) or not rare is bool:
+		return null
+	var path: String = "res://items/catalog/%s.tres" % item_id
+	if not ResourceLoader.exists(path):
+		return null
+	var data: ItemData = load(path) as ItemData
+	if data == null or data.id != item_id:
+		return null
+	var final: int = int(value)
+	if final < 0 or float(integ) < 0.0 or float(integ) > 1.0:
+		return null
+	if GameState.instance != null and final > GameState.instance.get_max_item_value(data):
+		return null
+	return create(data, final, float(integ), rare)
+
+
+static func _tool_from_dict(d: Dictionary) -> CarriedItem:
+	var id: Variant = d.get("tool_id")
+	var ch: Variant = d.get("charges", -1)
+	if not id is String or not _is_safe_id(id) or not (ch is int or ch is float):
+		return null
+	if id == String(DetectorSpawn.TOOL_ID):
+		return create_tool(DetectorSpawn.TOOL_ID, DetectorSpawn.TOOL_NAME, DetectorSpawn.WORLD_MODEL)
+	var td: ToolData = null
+	if GameState.instance != null:
+		td = GameState.instance.get_tool_data(id)
+	elif ResourceLoader.exists("res://items/tools/%s.tres" % id):
+		td = load("res://items/tools/%s.tres" % id) as ToolData
+	if td == null or String(td.id) != id:
+		return null
+	var c: CarriedItem = create_from_tool_data(td)
+	if td.charges >= 0:
+		var left: int = int(ch)
+		if left < 1 or left > td.charges:
+			return null
+		c.charges = left
+	return c
+
+
+static func _is_safe_id(id: String) -> bool:
+	return not id.is_empty() and id.is_valid_filename() and not id.contains("..") \
+		and not id.contains("/") and not id.contains("\\")
+
+
 ## Gasta uma carga. Devolve true se o item acabou (o chamador remove-o da mochila).
 func consume_charge() -> bool:
 	if charges < 0:

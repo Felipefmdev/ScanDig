@@ -1,0 +1,24 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{"t": 0.5, "host": 7791},
+		{"t": 0.6, "start_expedition": "praia", "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 1.0},
+		{"t": 0, "face_player": "remote"},
+		{"sleep": 0.3},
+		{"t": 0, "screenshot": "h1_ve_convidado"},
+		{"t": 0, "dump": "h1"},
+		{"sleep": 3.6},
+		{"t": 0, "face_player": "remote"},
+		{"sleep": 0.3},
+		{"t": 0, "screenshot": "h2_convidado_andou"},
+		{"t": 0, "dump": "h2"},
+		{"sleep": 0.4},
+		{"t": 0, "press": "move_right", "for": 2.0},
+		{"sleep": 5.0},
+		{"t": 0, "dump": "h3_final"},
+		{"sleep": 3.0},
+		{"t": 0, "quit": true}
+	]
+}
