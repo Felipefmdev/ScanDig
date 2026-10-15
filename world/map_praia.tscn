@@ -858,7 +858,7 @@ transform = Transform3D(0.43301, 0, 0.25, 0, 0.5, 0, -0.25, 0, 0.43301, -0.15, 0
 transform = Transform3D(-0.70711, 0, -0.70711, 0, 1, 0, 0.70711, 0, -0.70711, 0.2, 0, 1.25)
 
 [node name="Label" type="Label3D" parent="BaseEntrega"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 2, 0.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 2.9, 0.75)
 pixel_size = 0.008
 billboard = 1
 modulate = Color(1, 0.88, 0.35, 1)
