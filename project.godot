@@ -24,6 +24,11 @@ CoreSession="*res://core/session_manager.gd"
 CoreSessionUI="*res://ui/session_ui.tscn"
 DebugBridge="*res://gameplay/debug/debug_bridge.gd"
 
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
