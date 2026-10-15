@@ -73,6 +73,15 @@ func _run() -> void:
 	_check(not net._is_online() and not net.is_online_room(), "sem peer depois do erro")
 	net.noray_port = real_port
 
+	# Noray no ar mas sem NORAY_OID_LENGTH=6: OID de 21 caracteres. Injetado direto, sem rede.
+	var codes: Array[String] = []
+	net.room_code_ready.connect(func(code: String) -> void: codes.append(code))
+	_errors.clear()
+	net._open_host_room(7799, "-ULy5ouMvB5rz7UTQ5QzL")
+	_check(_errors == ["Servidor de salas mal configurado: código com 21 caracteres (esperado 6)."], "OID fora do formato: %s" % str(_errors))
+	_check(codes.is_empty(), "sem room_code_ready com OID inválido: %s" % str(codes))
+	_check(not net._is_online() and net.enet_peer == null and not net.is_online_room(), "ENet fechado com OID inválido")
+
 	# Sala inexistente: precisa do noray.
 	if not await _noray_up(net.noray_address, net.noray_port):
 		print("SKIP noray offline (sala inexistente)")

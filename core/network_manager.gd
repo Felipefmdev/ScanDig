@@ -258,10 +258,16 @@ func _run_host_online(generation: int, port: int) -> void:
 	if error != OK:
 		_fail_online("Servidor de salas fora do ar.")
 		return
-	var code: String = RoomCode.normalize(_noray.oid)
+	_open_host_room(port, _noray.oid)
+
+
+## Host registrado: valida o OID que o noray devolveu e só então abre o ENet em `port`.
+## Separado do _run_host_online para os testes injetarem um OID fora do formato.
+func _open_host_room(port: int, oid: String) -> void:
+	var code: String = RoomCode.normalize(oid)
 	if not RoomCode.is_valid(code):
-		push_error("NetworkManager: o noray devolveu o código '%s'; configure NORAY_OID_LENGTH=%d e NORAY_OID_CHARSET=%s." % [_noray.oid, RoomCode.LENGTH, RoomCode.CHARSET])
-		_fail_online("Servidor de salas fora do ar.")
+		push_error("NetworkManager: o noray devolveu o código '%s'; configure NORAY_OID_LENGTH=%d e NORAY_OID_CHARSET=%s." % [oid, RoomCode.LENGTH, RoomCode.CHARSET])
+		_fail_online("Servidor de salas mal configurado: código com %d caracteres (esperado %d)." % [oid.length(), RoomCode.LENGTH])
 		return
 	if host_game(port) != OK:
 		# host_game já emitiu connection_error.

@@ -218,6 +218,7 @@ func get_room_code() -> String                # "" se não houver
 - Erros (`connection_error`, texto exato):
   - `"Código de sala inválido."`: na hora, sem rede;
   - `"Servidor de salas fora do ar."`: ~5 s com o noray desligado;
+  - `"Servidor de salas mal configurado: código com <n> caracteres (esperado 6)."`: só no host, quando o noray está no ar mas devolve um código fora do formato (sem `NORAY_OID_LENGTH`/`NORAY_OID_CHARSET`); o ENet não chega a abrir;
   - `"Sala não encontrada."`: o noray não conhece o código;
   - `"Não foi possível conectar ao amigo."`: punch e relay falharam, ou o prazo de 15 s estourou;
   - `"Não foi possível hospedar: a porta <porta> já está em uso."`;
@@ -245,7 +246,8 @@ func get_room_code() -> String                # "" se não houver
   NORAY_OID_LENGTH=6
   NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ
   ```
-  Com outro formato, o host recusa o código: `push_error` e "Servidor de salas fora do ar.".
+  Com outro formato, o host recusa o código: `push_error` e "Servidor de salas mal configurado: código com <n> caracteres (esperado 6).".
+- **O noray 1.5.2 lê o `.env` da pasta onde é iniciado** (`dotenv`). Sem o `.env` (ou sem as duas variáveis no ambiente), ele volta ao padrão de 21 caracteres, e o jogo mostra "mal configurado" no host, não "fora do ar".
 - São 32⁶ ≈ 1,07 bilhão de códigos, e o noray não checa colisão. Com poucas salas abertas ao mesmo tempo, o risco é desprezível.
 - Portas: TCP 8890, UDP 8809 (registrador), HTTP 8891 (métricas) e a faixa UDP de relay (`NORAY_UDP_RELAY_PORTS`).
 - **Limites padrão do relay, ainda a medir com 4 jogadores:** 128 KiB/s por relay (`NORAY_UDP_RELAY_MAX_INDIVIDUAL_TRAFFIC`) e vida máxima de **4 h** ou 4 GB por relay (`NORAY_UDP_RELAY_MAX_LIFETIME_*`). No spike, 2 jogadores na Praia passaram ~300 pacotes/s pelo relay.
