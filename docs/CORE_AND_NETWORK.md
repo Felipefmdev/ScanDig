@@ -23,6 +23,7 @@ Existem em **todas** as cenas (lobby, mapas, sandbox). Nunca os instanciem como 
 | Godot gera UIDs (`uid="uid://..."`) em `.tres`/`.tscn` | Ficheiros aparecem modificados sem mudança de lógica | Commit separado `chore(editor): update Godot resource uids`; nunca commitar UIDs de ficheiros do Dev A |
 | Cache de classes desatualizado após pull | `Could not find type "X"` no headless | `--headless --path . --editor --quit-after 600` antes dos testes |
 | `multiplayer_peer = null` | `No multiplayer peer is assigned` em `is_server()` | Usar sempre `OfflineMultiplayerPeer.new()` |
+| `class_name` que começa com `_` (ex.: `_Noray` do addon netfox.noray) | A 4.3 não põe a classe no cache: `Could not find type "_X"` | Não usar `_` no início de `class_name`; para script de terceiros, `const X: GDScript = preload(...)` |
 
 ## 2. Estado e rede
 
@@ -190,6 +191,74 @@ Sinais: `players_changed()` (a lista mudou: entrada, saída ou nome; em todos os
 - Ao sair da sessão (`_cleanup_peer`), a thread remove o mapeamento e termina com `wait_to_finish`; a saída espera no máximo 3 s (se o roteador demorar mais, a thread é juntada no `_exit_tree`). Sair no meio da descoberta não emite `upnp_finished`.
 - `_upnp_factory` (Callable) é um ponto de injeção só para testes: troca o `UPNP` real por um falso.
 
+### Salas online (noray, #30)
+Código de sala de 6 caracteres para jogar pela internet sem abrir porta. O jogo continua no **ENet**: o servidor [noray](https://github.com/foxssake/noray) (MIT) só apresenta os dois lados, faz o *hole punch* e, se ele falhar, repassa o tráfego (*relay*). Cliente próprio em `core/noray_client.gd` (`NorayClient`, sem addon). LAN e IP direto (`host_game`/`join_game`) e UPnP continuam iguais.
+
+**Contrato (a UI programa contra ele)**
+```gdscript
+# core/room_code.gd (RoomCode): utilitário puro
+const LENGTH: int = 6
+const CHARSET: String = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"   # 32 caracteres, sem 0/O nem 1/I
+static func normalize(text: String) -> String           # "k7q-3mx " -> "K7Q3MX" (tira espaços e hífens, maiúsculas)
+static func is_valid(code: String) -> bool              # depois de normalize: 6 caracteres do CHARSET
+static func format_for_display(code: String) -> String  # "K7Q3MX" -> "K7Q-3MX"
+
+# core/network_manager.gd
+signal room_code_ready(code: String)          # host: código normalizado (sem hífen)
+signal online_join_progress(stage: String)    # "registrando" | "punch" | "relay" | "conectado"
+func host_online(port: int = DEFAULT_PORT) -> Error
+func join_code(code: String) -> Error
+func is_online_room() -> bool                 # sessão atual criada por código (host com sala ou cliente conectado)
+func get_room_code() -> String                # "" se não houver
+```
+- `host_online(port)` e `join_code(code)` voltam na hora (`OK`, ou `ERR_INVALID_PARAMETER` com código inválido). O resto chega por sinais: `room_code_ready` no host, `connection_succeeded` no cliente e `connection_error(message)` nos dois. Não precisa de `await`.
+- **Host:** "registrando" → registra no noray com a porta UDP `port` (é nela que o ENet abre, então o UPnP da mesma porta continua valendo) → `host_game(port)` → `room_code_ready(código)`. Mostre com `RoomCode.format_for_display`. O host mantém o TCP com o noray aberto para receber os pedidos de entrada e abrir o caminho (handshake) até cada cliente.
+- **Cliente:** aceita `k7q3mx`, `K7Q-3MX` ou `K7Q 3MX`. As etapas são "registrando" → "punch" → (se falhar) "relay" → "conectado". **Sucesso ou erro em até 15 s** (`ONLINE_JOIN_DEADLINE_SEC`).
+- `disconnect_game()` também fecha o noray. A queda do host (`server_disconnected`) também.
+- Erros (`connection_error`, texto exato):
+  - `"Código de sala inválido."`: na hora, sem rede;
+  - `"Servidor de salas fora do ar."`: ~5 s com o noray desligado;
+  - `"Sala não encontrada."`: o noray não conhece o código;
+  - `"Não foi possível conectar ao amigo."`: punch e relay falharam, ou o prazo de 15 s estourou;
+  - `"Não foi possível hospedar: a porta <porta> já está em uso."`;
+  - `"Servidor de salas caiu: novos jogadores não conseguem entrar."`: só no host, com a sala já criada. Quem já está jogando pelo punch **continua**; quem está pelo relay cai pelo caminho normal de "host perdido".
+- No cliente, `connection_failed` acompanha os erros de `join_code` (menos o código inválido).
+- Timeouts (constantes nomeadas):
+  - `NorayClient`: `CONNECT_TIMEOUT_SEC` 5, `REPLY_TIMEOUT_SEC` 5, `REGISTRAR_TIMEOUT_SEC` 3 e `HOST_HANDSHAKE_SEC` 5;
+  - `NetworkManager`: `PUNCH_TIMEOUT_SEC` 4, `RELAY_TIMEOUT_SEC` 4, `ONLINE_ENET_TIMEOUT_SEC` 3 e `ONLINE_JOIN_DEADLINE_SEC` 15.
+
+**Endereço do servidor**: padrão `127.0.0.1`, TCP `8890` e registrador UDP `8809`.
+- No jogo: `user://scandig_settings.cfg`, seção `[online]`, com `noray_address`, `noray_port` e `noray_registrar_port`.
+- Nos testes: `-- --noray=host:porta` e `-- --force-relay` (pula o punch).
+- A VPS pública ainda não existe; quando existir, basta trocar o `noray_address`.
+
+**Protocolo** (noray 1.5.x): TCP de texto, uma linha `comando dados` por mensagem.
+1. `register-host` → `set-oid <código>` + `set-pid <pid>`.
+2. O PID vai por UDP ao registrador, que responde `OK`: a porta de origem vira a porta pública do peer.
+3. `connect <código>` (punch) ou `connect-relay <código>`. **Os dois lados** recebem `connect ip:porta` ou `connect-relay porta` (no IP do noray). Sala inexistente volta sem dados.
+4. Handshake UDP de 3 estados (`$rwx`, como o addon netfox.noray) e depois o ENet na porta registrada.
+
+**Servidor**
+- Versão testada: **noray 1.5.2, commit `38a27e7`, em Node v24**. As versões mais novas (1.5.5+) exigem **Bun**; para a VPS, use a imagem Docker oficial ou fixe o commit.
+- Variáveis obrigatórias para o código de 6 caracteres:
+  ```
+  NORAY_OID_LENGTH=6
+  NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ
+  ```
+  Com outro formato, o host recusa o código: `push_error` e "Servidor de salas fora do ar.".
+- São 32⁶ ≈ 1,07 bilhão de códigos, e o noray não checa colisão. Com poucas salas abertas ao mesmo tempo, o risco é desprezível.
+- Portas: TCP 8890, UDP 8809 (registrador), HTTP 8891 (métricas) e a faixa UDP de relay (`NORAY_UDP_RELAY_PORTS`).
+- **Limites padrão do relay, ainda a medir com 4 jogadores:** 128 KiB/s por relay (`NORAY_UDP_RELAY_MAX_INDIVIDUAL_TRAFFIC`) e vida máxima de **4 h** ou 4 GB por relay (`NORAY_UDP_RELAY_MAX_LIFETIME_*`). No spike, 2 jogadores na Praia passaram ~300 pacotes/s pelo relay.
+- **Pendente:** testar em rede real (CGNAT ou hotspot do celular) quando houver VPS. Em localhost o punch sempre funciona, então a passagem do punch para o relay só foi coberta forçando o relay.
+
+**Noray local para os testes** (fora do repositório; Node v24, sem Docker):
+```bash
+git clone https://github.com/foxssake/noray.git noray-node && cd noray-node && git checkout 38a27e7
+npm install --ignore-scripts --omit=dev
+# .env opcional: NORAY_SOCKET_HOST=127.0.0.1, NORAY_UDP_RELAY_PORTS=49152-49200 (sobe mais rápido)
+NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/noray.mjs
+```
+
 ### Sair da sessão (`NetworkManager.session_left`)
 - `signal session_left(was_host: bool)`: o próprio peer saiu por `disconnect_game()`. `was_host` é capturado antes da limpeza (depois dela o peer é offline e `is_server()` dá true sempre). Não emite em queda de conexão nem no `_exit_tree`; `disconnect_game()` offline não emite nada.
 - O `SessionManager` ouve o sinal e volta ao lobby, limpando expedição, resumo pendente e `ready_peers`. **Não** emite `host_lost` nem `expedition_ended`; no lobby não troca de cena.
@@ -242,6 +311,11 @@ timeout 90 $G --headless --path . --script res://core/tests/net_names_client.gd 
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host_drop.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client_drop.gd   # "host_lost=true scene=LobbyBase"
+# Salas online (#30). room_code_test sempre roda; os outros pedem o noray local (sem ele: "SKIP noray offline" + fails=0).
+$G --headless --path . --script res://core/tests/room_code_test.gd        # "RESULT fails=0"
+(timeout 90 $G --headless --path . --script res://core/tests/net_room_host.gd > /tmp/rh.log 2>&1 &); sleep 4
+timeout 90 $G --headless --path . --script res://core/tests/net_room_client.gd   # punch: "CLIENT RESULT fails=0"; repita com "-- --force-relay"
+$G --headless --path . --script res://core/tests/net_room_errors_test.gd  # código inválido, noray fora (porta 8899) e sala inexistente: "RESULT fails=0"
 
 [ -f "$SAVE.bak" ] && mv "$SAVE.bak" "$SAVE"                       # restaura o save
 ```
