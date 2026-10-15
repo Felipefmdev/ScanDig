@@ -20,8 +20,10 @@ jobs:
           mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
           chmod +x godot
 
-      - name: Import project (registers class_name cache)
-        run: ./godot --headless --path . --editor --quit || true
+      # --import espera o import de todos os assets (.glb, fontes) e o cache de class_name.
+      # O antigo --editor --quit saía no 1º frame, antes disso, e as instâncias de .glb sumiam.
+      - name: Import project (assets + class_name cache)
+        run: ./godot --headless --path . --import
 
       - name: Parse-check every scene by loading it
         run: |
