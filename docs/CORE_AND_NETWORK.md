@@ -271,10 +271,67 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 ## 3. Save (`user://scandig_save.json`, versão 4)
 
 ```json
-{ "version": 4, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"] }
+{ "version": 4, "saved_at": 1792080000, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"] }
 ```
 
 Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo e agora libera a Geleira (antes liberava a Cratera). No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
+
+### Contrato do `SaveManager` (a UI programa contra ele)
+```gdscript
+const SAVE_VERSION: int = 4
+signal save_load_failed(message: String)   # corrompido/versão nova; texto pronto para a UI
+signal new_game_started()
+signal save_state_changed()                # depois de load/new/save/delete: a UI recalcula
+
+## Lê o arquivo SEM aplicar. Nunca dá erro.
+## {exists: bool, valid: bool, version: int, day: int, money: int,
+##  museum_found: int, museum_total: int, saved_at: int (unix, 0 se não houver), error: String}
+func get_save_summary() -> Dictionary
+func is_progress_applied() -> bool          # true depois de continue_game/start_new_game (ou sem save)
+func continue_game() -> Error               # host/offline, fora de expedição; aplica o save (idempotente)
+func start_new_game() -> Error              # host/offline, fora de expedição; backup, apaga, reset_state, grava já
+```
+- Continuam existindo: `save_game`, `load_game` (carga crua, para testes), `delete_save_file`, `save_to_file`, `load_from_file` e os sinais `game_saved`, `game_loaded` e `save_failed`.
+- `continue_game`/`start_new_game` devolvem `ERR_UNAUTHORIZED` em cliente online e `ERR_BUSY` durante a expedição.
+- `continue_game` em save corrompido devolve `ERR_FILE_CORRUPT`; em versão nova, `ERR_FILE_UNRECOGNIZED`. Nos dois casos o jogo segue do zero e emite `save_load_failed`.
+- `ensure_progress_applied()` é do core: aplica o save se ninguém escolheu. A UI usa `continue_game()`.
+- O `GameState` continua emitindo os sinais dele pelo `load_snapshot` (`money_changed` etc.); `quest_completed`/`secret_found` de um save carregado são filtrados pela UI fora da expedição.
+
+### Regras
+1. **Carregamento automático, sem perder nada.** Se ninguém escolheu "Continuar" ou "Novo jogo", o save é aplicado sozinho (como `continue_game()`):
+   - (a) ao abrir a sessão como host: `host_game` (IP) ou `host_online` (código), no `player_connected(1)`, antes de qualquer cliente receber o snapshot;
+   - (b) ao começar a primeira expedição: `request_start_expedition`, no solo ou no host, antes do `can_start_map` e do resumo.
+
+   Defesa extra: `save_game` devolve `ERR_UNAVAILABLE` (e `save_failed`) se existe um save no disco que ainda não foi aplicado (válido **ou** corrompido). Assim, nunca grava por cima de um progresso que não foi lido.
+2. **Cliente.**
+   - Ao entrar (`connection_succeeded`), `is_progress_applied()` vira `false`: o estado agora é do host.
+   - O cliente nunca grava. Os dois pontos de gravação do `SessionManager` (fim da expedição e saída do host no meio dela) só rodam no host/offline.
+   - Ao sair (`session_left(false)`) ou perder o host (`server_disconnected`), o cliente volta ao **próprio** save (`continue_game`) ou, sem save, ao `reset_state`.
+3. **Novo jogo** (`start_new_game`):
+   - copia o save atual para `user://scandig_save.backup.json` (sobrescreve o backup anterior);
+   - apaga o save, chama `GameState.reset_state()` (que já faz broadcast) e grava logo o estado novo;
+   - emite `new_game_started` e `save_state_changed`;
+   - libera a gravação se ela estava bloqueada por versão nova (o save novo guarda o antigo no backup).
+   - **A confirmação com o jogador fica na UI.**
+4. **Save corrompido.** Conta como corrompido: JSON inválido, raiz que não é objeto, `version` ou `team_money` que não são número, ou campos com tipo que o `apply_snapshot` rejeitaria (listas que não são `Array`, `upgrade_levels` que não é `Dictionary`, `current_day`/`saved_at` que não são número). Nesse caso:
+   - o arquivo é renomeado para `user://scandig_save.corrupt-<unix>.json`;
+   - emite `save_load_failed("O save estava corrompido e foi guardado como backup. Começando um jogo novo.")`;
+   - segue com o jogo novo e `is_progress_applied() = true`.
+   - `get_save_summary()` dá `valid=false` e o motivo em `error`.
+5. **Versão mais nova que 4.**
+   - Não aplica, e a gravação fica bloqueada nesta sessão (`save_game` → `ERR_UNAUTHORIZED`); o arquivo fica intacto.
+   - Emite `save_load_failed("Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar.")`.
+   - `get_save_summary()` dá `valid=false` e a versão lida. As versões 1 a 3 continuam sendo convertidas.
+6. **Gravação atômica.** Grava em `scandig_save.json.tmp` e renomeia por cima do `scandig_save.json` (`DirAccess.rename_absolute`; se o sistema não renomear por cima, apaga o antigo e renomeia). Grava também `"saved_at"` (unix, opcional); a versão continua 4.
+
+### Arquivos em `user://`
+| Arquivo | Quando |
+| :--- | :--- |
+| `scandig_save.json` | save atual |
+| `scandig_save.json.tmp` | só durante a gravação |
+| `scandig_save.backup.json` | save anterior, a cada `start_new_game()` |
+| `scandig_save.corrupt-<unix>.json` | save ilegível, guardado ao tentar carregar |
+| `test_saves/<teste>/` | saves isolados dos testes (`use_test_save_dir`), nunca o do jogador |
 
 ## 4. Testes headless (Git Bash)
 
@@ -310,6 +367,10 @@ grep HOST /tmp/h.log   # "HOST scene_ready=[1, <id do cliente>] ... ok=true" e "
 (timeout 90 $G --headless --path . --script res://core/tests/net_names_host.gd > /tmp/nh.log 2>&1 &); sleep 3
 (timeout 90 $G --headless --path . --script res://core/tests/net_names_client.gd -- A > /tmp/na.log 2>&1 &); sleep 2
 timeout 90 $G --headless --path . --script res://core/tests/net_names_client.gd -- B; sleep 6; grep HOST /tmp/nh.log
+# Save: política completa (isolado em user://test_saves/) e o par de rede na porta 7789.
+$G --headless --path . --script res://core/tests/save_flow_test.gd     # "RESULT fails=0"
+(timeout 90 $G --headless --path . --script res://core/tests/net_save_host.gd > /tmp/sh.log 2>&1 &); sleep 3
+timeout 60 $G --headless --path . --script res://core/tests/net_save_client.gd  # host com save dia 5/R$ 3200; cliente volta ao próprio save: "CLIENT RESULT fails=0"
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host_drop.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client_drop.gd   # "host_lost=true scene=LobbyBase"
