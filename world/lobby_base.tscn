@@ -1,6 +1,6 @@
 [gd_scene load_steps=10 format=3 uid="uid://dwiinrcl0r4yi"]
 
-[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" uid="uid://cunl1wbc8gk2w" path="res://ui/hud.tscn" id="4_hud"]
 [ext_resource type="PackedScene" uid="uid://bbtor7gnehadw" path="res://ui/multiplayer_menu.tscn" id="5_netmenu"]
 [ext_resource type="PackedScene" uid="uid://ci3ueg3kurhk3" path="res://ui/base_station_ui.tscn" id="6_baseui"]
 
@@ -119,7 +119,4 @@ offset_top = 125.0
 offset_right = 592.0
 offset_bottom = -16.0
 grow_horizontal = 1
-grow_vertical = 1
-
-[node name="PanelContainer" parent="UILayer/BaseStationUI" index="0"]
 grow_vertical = 1
