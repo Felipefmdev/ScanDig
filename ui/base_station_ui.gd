@@ -61,6 +61,9 @@ func _resolve_node(unique_id: String, rel_path: String) -> Node:
 
 
 func _ready() -> void:
+	if secrets_label != null:
+		# Segredos por mapa: quebra só entre mapas (NBSP dentro de cada um).
+		secrets_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_load_catalog()
 	_setup_shop_buttons()
 	_setup_museum_controls()
@@ -571,8 +574,16 @@ func _refresh_museum_display() -> void:
 func _refresh_secrets_label() -> void:
 	if secrets_label == null:
 		return
-	var found: int = _game_state.found_secrets.size() if _game_state != null else 0
-	secrets_label.text = "Segredos: %d/%d" % [found, GameState.SECRETS.size()]
+	# "Segredos — Praia 3/6 • Campo Antigo 0/6": contagem por mapa (prefixo do id do segredo).
+	# NBSP dentro de cada mapa e antes do "•": se não couber, a linha só quebra entre mapas.
+	var found: Array = Array(_game_state.found_secrets) if _game_state != null else []
+	var maps: Variant = _session_call(&"get_available_maps", [], [])
+	var map_list: Array = maps as Array if maps is Array else []
+	var counts: Dictionary = UiFormat.secret_counts_by_map(found)
+	var parts: PackedStringArray = []
+	for map_id: String in counts:
+		parts.append(UiFormat.secret_count_text(map_id, counts[map_id], map_list))
+	secrets_label.text = "Segredos —" + UiFormat.NBSP + (UiFormat.NBSP + "• ").join(parts)
 
 
 func _on_secret_found(_secret_id: String) -> void:

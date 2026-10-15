@@ -260,9 +260,14 @@ func _on_quest_completed(quest_id: String, reward: int) -> void:
 	_enqueue_toast("Missão concluída: %s (+%s)" % [quest_name, UiFormat.money(reward)])
 
 
-func _on_secret_found(_secret_id: String) -> void:
-	var found: int = GameState.instance.found_secrets.size() if GameState.instance != null else 0
-	_enqueue_toast("Segredo encontrado! (%d/%d)" % [found, GameState.SECRETS.size()])
+## "Segredo encontrado! (Praia 3/6)": a contagem é do mapa do segredo, não da expedição.
+func _on_secret_found(secret_id: String) -> void:
+	var found: Array = Array(GameState.instance.found_secrets) if GameState.instance != null else []
+	var map_id: String = UiFormat.secret_map_id(secret_id)
+	var counts: Dictionary = UiFormat.secret_counts_by_map(found)
+	var maps: Variant = _session_call(&"get_available_maps", [])
+	var map_list: Array = maps as Array if maps is Array else []
+	_enqueue_toast("Segredo encontrado! (%s)" % UiFormat.secret_count_text(map_id, counts.get(map_id, {}), map_list))
 
 
 func _enqueue_toast(text: String) -> void:
