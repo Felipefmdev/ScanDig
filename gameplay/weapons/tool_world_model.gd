@@ -1,4 +1,3 @@
-@tool
 extends Node3D
 
 ## Raiz das cenas `world_scene` das ferramentas (ToolData, #37): o mesmo modelo serve na banca

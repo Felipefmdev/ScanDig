@@ -1,13 +1,16 @@
 extends GutTest
 
-## #47: gravar um mapa no editor não pode embutir malhas geradas nem mudar alturas/propriedades.
-## Simula o Ctrl+S do editor: instancia a cena, deixa os @tool gerar, envia
-## NOTIFICATION_EDITOR_PRE_SAVE, volta a empacotar (PackedScene.pack, o mesmo do editor) e compara.
-## (Teste real feito no editor na #47: 2.ª gravação seguida com git diff vazio.)
+## #47/#53: gravar um mapa no editor não pode embutir malhas geradas nem mexer em transforms de
+## nós gravados na cena. Simula o Ctrl+S do editor: instancia a cena, deixa os @tool gerar, envia
+## NOTIFICATION_EDITOR_PRE_SAVE, volta a empacotar (PackedScene.pack, o mesmo do editor), envia
+## POST_SAVE e compara com o .tscn. Também com a cena FORA da árvore, como num separador de
+## fundo do editor (o caso do e67f0e9: filhos dos GroundSnap foram parar à origem).
+## (Teste real no editor na #47/#53: gravar duas vezes seguidas deixa o git diff vazio.)
 
-const MAPS: Array[String] = ["res://world/map_praia.tscn", "res://world/map_campo.tscn"]
+const SCENES: Array[String] = ["res://world/map_praia.tscn", "res://world/map_campo.tscn", "res://world/lobby_base.tscn"]
 ## Recursos que só existem se forem gerados (nunca escritos à mão nos mapas).
 const GENERATED_TYPES: Array[String] = ["ArrayMesh", "MultiMesh", "ConcavePolygonShape3D"]
+const EPS: float = 0.0005
 
 
 func _embedded(state: SceneState) -> Dictionary:
@@ -20,49 +23,126 @@ func _embedded(state: SceneState) -> Dictionary:
 	return out
 
 
-func _snap_heights(state: SceneState) -> Dictionary:
-	# Filhos de nós GroundSnap: o y gravado de cada um.
-	var snaps: Dictionary = {}
+## Caminhos dos nós com script GroundSnap.
+func _snap_parents(state: SceneState) -> Dictionary:
+	var out: Dictionary = {}
 	for i: int in state.get_node_count():
 		for p: int in state.get_node_property_count(i):
 			var v: Variant = state.get_node_property_value(i, p)
 			if state.get_node_property_name(i, p) == &"script" and v is Script and (v as Script).resource_path.ends_with("ground_snap.gd"):
-				snaps[str(state.get_node_path(i))] = true
-	var out: Dictionary = {}
-	for i: int in state.get_node_count():
-		if not snaps.has(str(state.get_node_path(i, true))):
-			continue
-		for p: int in state.get_node_property_count(i):
-			if state.get_node_property_name(i, p) == &"transform":
-				out[str(state.get_node_path(i))] = (state.get_node_property_value(i, p) as Transform3D).origin.y
+				out[str(state.get_node_path(i))] = true
 	return out
 
 
-func test_saving_maps_keeps_generated_meshes_out() -> void:
-	for path: String in MAPS:
+## caminho -> transform gravada (sem a propriedade = identidade, como o editor a omite).
+func _transforms(state: SceneState) -> Dictionary:
+	var out: Dictionary = {}
+	for i: int in state.get_node_count():
+		var props: Dictionary = {}
+		for p: int in state.get_node_property_count(i):
+			props[state.get_node_property_name(i, p)] = state.get_node_property_value(i, p)
+		if props.get(&"transform") is Transform3D:
+			out[str(state.get_node_path(i))] = props[&"transform"]
+		elif not props.has(&"transform"):
+			# Também se grava como position/rotation/scale (ex.: SunLight escrito à mão).
+			var pos: Vector3 = props.get(&"position", Vector3.ZERO)
+			var rot: Vector3 = props.get(&"rotation", Vector3.ZERO)
+			var scl: Vector3 = props.get(&"scale", Vector3.ONE)
+			out[str(state.get_node_path(i))] = Transform3D(Basis.from_euler(rot).scaled(scl), pos)
+	return out
+
+
+## Nós reais da cena. Fica de fora a entrada que só sobrepõe propriedades de um nó de uma cena
+## instanciada (sem tipo nem instância própria, ex.: BaseStationUI/PanelContainer no lobby): em
+## jogo o script da UI muda-lhe propriedades e a sobreposição deixa de ser gravada, mas não é @tool.
+func _paths(state: SceneState) -> Dictionary:
+	var out: Dictionary = {}
+	for i: int in state.get_node_count():
+		if state.get_node_type(i) == &"" and state.get_node_instance(i) == null:
+			continue
+		out[str(state.get_node_path(i))] = true
+	return out
+
+
+## Diferenças de transform entre o .tscn e o que seria gravado. Filhos de GroundSnap: em jogo o
+## y é assentado no chão (comportamento normal); basis, x e z têm de ficar iguais.
+func _changed(original: SceneState, saved: SceneState) -> Array[String]:
+	var snaps: Dictionary = _snap_parents(original)
+	var t0: Dictionary = _transforms(original)
+	var t1: Dictionary = _transforms(saved)
+	var parents: Dictionary = {}
+	for i: int in original.get_node_count():
+		parents[str(original.get_node_path(i))] = str(original.get_node_path(i, true))
+	var out: Array[String] = []
+	for key: String in t0:
+		if not t1.has(key):
+			continue
+		var a: Transform3D = t0[key]
+		var b: Transform3D = t1[key]
+		var same_basis: bool = a.basis.x.is_equal_approx(b.basis.x) and a.basis.y.is_equal_approx(b.basis.y) and a.basis.z.is_equal_approx(b.basis.z)
+		var same_xz: bool = absf(a.origin.x - b.origin.x) < EPS and absf(a.origin.z - b.origin.z) < EPS
+		var same_y: bool = absf(a.origin.y - b.origin.y) < EPS or snaps.has(parents.get(key, ""))
+		if not (same_basis and same_xz and same_y):
+			out.append("%s %s -> %s" % [key, a.origin, b.origin])
+	return out
+
+
+func _save(inst: Node) -> PackedScene:
+	inst.propagate_notification(Node.NOTIFICATION_EDITOR_PRE_SAVE)
+	var repacked: PackedScene = PackedScene.new()
+	assert_eq(repacked.pack(inst), OK)
+	inst.propagate_notification(Node.NOTIFICATION_EDITOR_POST_SAVE)
+	return repacked
+
+
+func test_saving_scenes_keeps_generated_meshes_and_transforms() -> void:
+	for path: String in SCENES:
 		var ps: PackedScene = load(path) as PackedScene
 		var inst: Node = ps.instantiate()
 		add_child_autofree(inst)
 		for f: int in 3:
 			await get_tree().physics_frame
-		inst.propagate_notification(Node.NOTIFICATION_EDITOR_PRE_SAVE)
-		var repacked: PackedScene = PackedScene.new()
-		assert_eq(repacked.pack(inst), OK)
-		inst.propagate_notification(Node.NOTIFICATION_EDITOR_POST_SAVE)
+		var repacked: PackedScene = _save(inst)
 		var before: Dictionary = _embedded(ps.get_state())
 		var after: Dictionary = _embedded(repacked.get_state())
 		for key: String in after:
 			assert_true(before.has(key), "%s: %s (%s) não pode ir para o .tscn" % [path.get_file(), key, after[key]])
-		assert_eq(repacked.get_state().get_node_count(), ps.get_state().get_node_count(),
-			"%s: mesmos nós depois de gravar" % path.get_file())
-		# Alturas dos filhos de GroundSnap: o valor gravado volta ao .tscn tal como estava.
-		var h0: Dictionary = _snap_heights(ps.get_state())
-		var h1: Dictionary = _snap_heights(repacked.get_state())
-		var moved: Array[String] = []
-		for key: String in h0:
-			if h1.has(key) and absf(float(h0[key]) - float(h1[key])) > 0.0005:
-				moved.append(key)
-		assert_eq(moved.size(), 0, "%s: transforms mudados ao gravar: %s" % [path.get_file(), str(moved.slice(0, 5))])
+		var p0: Dictionary = _paths(ps.get_state())
+		var p1: Dictionary = _paths(repacked.get_state())
+		var added: Array = p1.keys().filter(func(k: Variant) -> bool: return not p0.has(k))
+		var lost: Array = p0.keys().filter(func(k: Variant) -> bool: return not p1.has(k))
+		assert_eq(lost.size(), 0, "%s: nós perdidos ao gravar: %s" % [path.get_file(), str(lost.slice(0, 5))])
+		assert_eq(added.size(), 0, "%s: nós a mais ao gravar: %s" % [path.get_file(), str(added.slice(0, 5))])
+		var changed: Array[String] = _changed(ps.get_state(), repacked.get_state())
+		assert_eq(changed.size(), 0, "%s: transforms mudadas ao gravar (%d): %s" % [path.get_file(), changed.size(), str(changed.slice(0, 4))])
+
+
+func test_saving_a_background_tab_keeps_transforms() -> void:
+	# No editor só o separador ativo está na árvore; os outros mapas abertos ficam fora dela e
+	# também recebem PRE/POST_SAVE quando são gravados. Duas gravações seguidas, fora da árvore.
+	for path: String in SCENES:
+		var ps: PackedScene = load(path) as PackedScene
+		var inst: Node = ps.instantiate()
+		add_child_autofree(inst)
+		for f: int in 3:
+			await get_tree().physics_frame
+		remove_child(inst)
+		_save(inst)
+		var second: PackedScene = _save(inst)
+		add_child(inst)
+		var changed: Array[String] = _changed(ps.get_state(), second.get_state())
+		assert_eq(changed.size(), 0, "%s (fora da árvore): transforms mudadas (%d): %s" % [path.get_file(), changed.size(), str(changed.slice(0, 4))])
+
+
+func test_ground_snap_does_nothing_in_the_editor_tree_out() -> void:
+	# Fora da árvore o GroundSnap não lê global_position (dava a identidade).
+	var snap: GroundSnap = GroundSnap.new()
+	var child: Node3D = Node3D.new()
+	child.transform = Transform3D(Basis(Vector3.UP, 0.7), Vector3(5.0, 0.3, -7.0))
+	snap.add_child(child)
+	snap.snap()
+	assert_eq(child.transform, Transform3D(Basis(Vector3.UP, 0.7), Vector3(5.0, 0.3, -7.0)))
+	snap.free()
 
 
 func test_rebuild_keeps_children_saved_in_the_scene() -> void:
