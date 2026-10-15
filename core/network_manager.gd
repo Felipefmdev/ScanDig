@@ -140,6 +140,8 @@ func _get_multiplayer_api() -> MultiplayerAPI:
 
 func host_game(port: int = DEFAULT_PORT) -> Error:
 	_cleanup_peer()
+	if spike_peer_mode == "udp":
+		return _spike_host_udp(port)
 	enet_peer = ENetMultiplayerPeer.new()
 	var error: Error = enet_peer.create_server(port, MAX_PLAYERS)
 	if error != OK:
@@ -173,6 +175,8 @@ func join_game(ip_address: String, port: int = DEFAULT_PORT) -> Error:
 		return ERR_INVALID_PARAMETER
 
 	_cleanup_peer()
+	if spike_peer_mode == "udp":
+		return _spike_join_udp(port)
 	enet_peer = ENetMultiplayerPeer.new()
 	var error: Error = enet_peer.create_client(target_ip, port)
 	if error != OK:
@@ -400,6 +404,8 @@ func _cleanup_peer() -> void:
 		enet_peer = null
 
 	var mp: MultiplayerAPI = _get_multiplayer_api()
+	if mp != null and mp.multiplayer_peer is SteamPeer:
+		mp.multiplayer_peer.close()
 	if mp != null and mp.multiplayer_peer != null and not (mp.multiplayer_peer is OfflineMultiplayerPeer):
 		mp.multiplayer_peer = OfflineMultiplayerPeer.new()
 
@@ -707,6 +713,56 @@ func _read_online_args() -> void:
 				noray_port = target[1].to_int()
 		elif arg == "--force-relay":
 			noray_force_relay = true
+		elif arg.begins_with("--spike-peer="):
+			spike_peer_mode = arg.trim_prefix("--spike-peer=")
+
+
+# --- Spike #54: SteamPeer sobre UDP (mesmo protocolo da Steam, dois processos numa conta) ---
+
+## "" = ENet (normal); "udp" = SteamPeer + UdpTransport em 127.0.0.1.
+var spike_peer_mode: String = ""
+
+
+func _spike_host_udp(port: int) -> Error:
+	var peer: SteamPeer = SteamPeer.new()
+	peer.max_clients = MAX_PLAYERS - 1
+	peer.create_host(SteamPeer.UdpTransport.new(port))
+	return spike_install_host(peer)
+
+
+func _spike_join_udp(port: int) -> Error:
+	var peer: SteamPeer = SteamPeer.new()
+	peer.create_client(SteamPeer.UdpTransport.new(0), port)
+	return spike_install_client(peer)
+
+
+## Spike: instala um peer de host já criado (UDP ou Steam) como o host_game faz com o ENet.
+func spike_install_host(peer: MultiplayerPeer) -> Error:
+	_cleanup_peer()
+	var mp: MultiplayerAPI = _get_multiplayer_api()
+	if mp != null:
+		mp.multiplayer_peer = peer
+	connected_players.clear()
+	_registered_names.clear()
+	if not local_player_name.is_empty():
+		_registered_names[HOST_PEER_ID] = local_player_name
+	connected_players[HOST_PEER_ID] = {"peer_id": HOST_PEER_ID, "name": ""}
+	_rebuild_host_names()
+	player_connected.emit(HOST_PEER_ID)
+	players_changed.emit()
+	return OK
+
+
+## Spike: instala um peer de cliente já criado; connection_succeeded chega pelo connected_to_server.
+func spike_install_client(peer: MultiplayerPeer) -> Error:
+	_cleanup_peer()
+	var mp: MultiplayerAPI = _get_multiplayer_api()
+	if mp != null:
+		mp.multiplayer_peer = peer
+	connected_players.clear()
+	if _join_timer != null:
+		_join_timer.start(JOIN_TIMEOUT_SEC)
+	return OK
 
 
 func _save_settings() -> void:
