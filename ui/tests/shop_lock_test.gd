@@ -40,29 +40,26 @@ func _run() -> void:
 	var backpack: Button = ui.buy_backpack_btn
 	var shovel: Button = ui.buy_shovel_btn
 
-	# 1. Nenhum mapa aberto: níveis 3 do detector e da mochila travados pelo Campo.
+	# 1. Nenhum mapa aberto: detector Nv.3 sem trava; mochila Nv.3 travada pelo Campo.
 	gs.load_snapshot(_snapshot(100000, []))
 	await _wait(3)
-	_check(detector.text.contains("🔒 Requer Campo Antigo") and detector.text.contains("R$ 1200"), "detector travado: %s" % detector.text)
-	_check(detector.disabled, "detector desabilitado")
-	_check(detector.tooltip_text == "Desbloqueie Campo Antigo primeiro.", "tooltip detector: %s" % detector.tooltip_text)
+	_check(not detector.disabled, "detector habilitado sem mapas: %s" % detector.tooltip_text)
+	_check(not detector.text.contains("🔒"), "detector sem cadeado: %s" % detector.text)
+	_check(detector.text.contains("Comprar nível 3 — R$ 700") and detector.text.contains("radar Nv.3"), "detector compra 3: %s" % detector.text)
+	_check(detector.tooltip_text == "Radar: Nv.3 → Nv.4", "tooltip radar: %s" % detector.tooltip_text)
 	_check(backpack.text.contains("🔒 Requer Campo Antigo"), "mochila travada: %s" % backpack.text)
+	_check(backpack.disabled, "mochila desabilitada")
+	_check(backpack.tooltip_text == "Desbloqueie Campo Antigo primeiro.", "tooltip mochila: %s" % backpack.tooltip_text)
 	_check(not shovel.disabled and shovel.text.contains("Comprar nível 1 — R$ 800"), "pá liberada: %s" % shovel.text)
 
-	# 2. Campo aberto: detector liberado.
-	gs.load_snapshot(_snapshot(100000, ["campo"]))
-	await _wait(3)
-	_check(not detector.disabled, "detector habilitado com Campo: %s" % detector.tooltip_text)
-	_check(detector.text.contains("Comprar nível 3 — R$ 1200") and detector.text.contains("radar Nv.3"), "detector compra 3: %s" % detector.text)
-	_check(detector.tooltip_text == "Radar: Nv.3 → Nv.4", "tooltip radar: %s" % detector.tooltip_text)
-
-	# 3. Compra o nível 3: o 4 trava nas Ruínas.
+	# 2. Compra o nível 3: o 4 trava nas Ruínas.
 	detector.pressed.emit()
 	await _wait(5)
 	_check(gs.get_upgrade_level("detector") == 3, "detector nível 3: %d" % gs.get_upgrade_level("detector"))
 	_check(detector.text.contains("🔒 Requer Ruínas") and detector.text.contains("R$ 2000"), "detector travado em Ruínas: %s" % detector.text)
+	_check(detector.disabled, "detector desabilitado nas Ruínas")
 
-	# 4. Saldo baixo com o Campo aberto: bloqueio por saldo, sem cadeado.
+	# 3. Saldo baixo com o Campo aberto: bloqueio por saldo, sem cadeado.
 	gs.load_snapshot(_snapshot(100, ["campo"]))
 	await _wait(3)
 	_check(detector.disabled, "detector desabilitado sem saldo")
