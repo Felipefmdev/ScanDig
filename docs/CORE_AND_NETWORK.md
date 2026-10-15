@@ -261,6 +261,10 @@ npm install --ignore-scripts --omit=dev
 NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/noray.mjs
 ```
 
+**Atalhos** (noray em `../_ext/noray`, ou `NORAY_DIR`):
+- `tools/test_online.sh [godot]` (Git Bash): roda `room_code_test`, `net_room_errors_test` e o par `net_room_host`/`net_room_client`. Usa o noray que já estiver na 8890 (e não o desliga); senão sobe um com o código de 6 caracteres e desliga no fim. Sem noray: `SKIP` e código 0. Termina em `ONLINE OK` (0) ou `ONLINE FALHOU: <testes>` (1); os logs ficam num diretório temporário.
+- `tools/play_online.bat [janelas]` (duplo clique, teste manual): se a 8890 estiver livre, sobe o noray numa janela "noray" e abre 2 janelas do jogo (até 4). Na primeira: "Online (código)" → "Criar sala online"; nas outras, digite o código e clique em "Entrar". Fechar a janela "noray" desliga o servidor.
+
 ### Sair da sessão (`NetworkManager.session_left`)
 - `signal session_left(was_host: bool)`: o próprio peer saiu por `disconnect_game()`. `was_host` é capturado antes da limpeza (depois dela o peer é offline e `is_server()` dá true sempre). Não emite em queda de conexão nem no `_exit_tree`; `disconnect_game()` offline não emite nada.
 - O `SessionManager` ouve o sinal e volta ao lobby, limpando expedição, resumo pendente e `ready_peers`. **Não** emite `host_lost` nem `expedition_ended`; no lobby não troca de cena.
