@@ -68,7 +68,7 @@ func _run() -> void:
 
 	# Trava aberta e saldo baixo: o motivo é o saldo (a trava vem antes, mas está satisfeita).
 	gs.load_snapshot({"team_money": 100})
-	_check(gs.get_upgrade_block_reason("pinpointer") == "Saldo insuficiente para Pinpointer de Precisão (Custo: R$ 500).", "motivo de saldo: %s" % gs.get_upgrade_block_reason("pinpointer"))
+	_check(gs.get_upgrade_block_reason("pinpointer") == "Saldo insuficiente para Pinpointer de Precisão (Custo: R$" + MoneyFormat.NBSP + "500).", "motivo de saldo: %s" % gs.get_upgrade_block_reason("pinpointer"))
 	# Trava fechada e saldo baixo: a trava vem antes do saldo.
 	gs.load_snapshot({"unlocked_maps": [], "upgrade_levels": {"shovel": 1}})
 	_check(gs.get_upgrade_block_reason("shovel") == "Desbloqueie Ruínas primeiro.", "trava antes do saldo: %s" % gs.get_upgrade_block_reason("shovel"))

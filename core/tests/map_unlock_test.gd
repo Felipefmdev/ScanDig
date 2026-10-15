@@ -94,7 +94,7 @@ func _run() -> void:
 	_check(gs.defeated_bosses.size() == 1, "king_crab não duplica: %s" % str(gs.defeated_bosses))
 
 	result = await _unlock(gs, "campo")
-	_check(result.get("success", true) == false and result.get("message", "") == "Saldo insuficiente para desbloquear Campo Antigo (R$ 1200).", "desbloqueio sem saldo falha: %s" % str(result.get("message", "")))
+	_check(result.get("success", true) == false and result.get("message", "") == "Saldo insuficiente para desbloquear Campo Antigo (R$" + MoneyFormat.NBSP + "1.200).", "desbloqueio sem saldo falha: %s" % str(result.get("message", "")))
 
 	gs.load_snapshot({"team_money": 1700})
 	result = await _unlock(gs, "campo")

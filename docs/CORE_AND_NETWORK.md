@@ -66,6 +66,8 @@ Após cada mudança o host envia a todos `_receive_snapshot` com:
 
 Quem entra recebe o snapshot em `peer_connected` (e o cliente pede de novo com `_request_full_state`). `apply_snapshot` valida tipos e limita níveis.
 
+**Valores nas mensagens:** as mensagens do core com valor (`R$ <custo>`/`R$ <preço>` abaixo) usam `MoneyFormat.money` (`core/money_format.gd`: milhar com ponto e NBSP depois de "R$", como o `UiFormat`), então a UI pode exibi-las direto: `"Saldo insuficiente para desbloquear Campo Antigo (R$ 1.200)."`.
+
 ### Loja (`GameState.UPGRADES`)
 Tabela aprovada na #25. Cada nível tem um custo e um mapa que precisa estar desbloqueado (`required_maps`, `—` = sem trava).
 

@@ -146,7 +146,7 @@ func get_upgrade_block_reason(upgrade_id: String) -> String:
 			return "Desbloqueie %s primeiro." % required_map
 		return "Desbloqueie %s primeiro." % map_data.display_name
 	if team_money < cost:
-		return "Saldo insuficiente para %s (Custo: R$ %d)." % [upgrade_name, cost]
+		return "Saldo insuficiente para %s (Custo: %s)." % [upgrade_name, MoneyFormat.money(cost)]
 	return ""
 
 
@@ -230,7 +230,7 @@ func get_map_unlock_block_reason(map_id: String) -> String:
 		if not is_boss_defeated(str(boss["boss_id"])):
 			return "Vença o chefe %s primeiro." % str(boss["boss_name"])
 	if team_money < map_data.unlock_cost:
-		return "Saldo insuficiente para desbloquear %s (R$ %d)." % [map_data.display_name, map_data.unlock_cost]
+		return "Saldo insuficiente para desbloquear %s (%s)." % [map_data.display_name, MoneyFormat.money(map_data.unlock_cost)]
 	return ""
 
 
@@ -376,7 +376,7 @@ func _host_purchase_item(item_id: String) -> void:
 	if tool == null or tool.price <= 0:
 		message = "Produto indisponível."
 	elif team_money < tool.price:
-		message = "Saldo insuficiente para %s (R$ %d)." % [tool.display_name, tool.price]
+		message = "Saldo insuficiente para %s (%s)." % [tool.display_name, MoneyFormat.money(tool.price)]
 	else:
 		team_money -= tool.price
 		success = true
