@@ -66,7 +66,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "Detector  •  Nível 0/3
-Comprar nível 1 — R$ 300"
+Comprar nível 1 — R$ 300"
 alignment = 0
 text_overrun_behavior = 3
 clip_text = true
@@ -76,7 +76,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "Pinpointer de Precisão  •  Nível 0/1
-Comprar nível 1 — R$ 500"
+Comprar nível 1 — R$ 500"
 alignment = 0
 text_overrun_behavior = 3
 clip_text = true
@@ -86,7 +86,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "Pá de Fibra  •  Nível 0/1
-Comprar nível 1 — R$ 800"
+Comprar nível 1 — R$ 800"
 alignment = 0
 text_overrun_behavior = 3
 clip_text = true
@@ -96,7 +96,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "Mochila Reforçada  •  Nível 0/3
-Comprar nível 1 — R$ 400"
+Comprar nível 1 — R$ 400"
 alignment = 0
 text_overrun_behavior = 3
 clip_text = true

@@ -319,18 +319,12 @@ func _current_money(summary: Dictionary) -> int:
 
 
 func _format_day_money(day: int, money: int) -> String:
-	return "Dia %d • R$ %s" % [day, format_money(money)]
+	return "Dia %d • %s" % [day, UiFormat.money(money)]
 
 
 ## 3200 -> "3.200"; -1500 -> "-1.500".
 static func format_money(amount: int) -> String:
-	var digits: String = str(absi(amount))
-	var groups: Array[String] = []
-	while digits.length() > 3:
-		groups.push_front(digits.right(3))
-		digits = digits.left(digits.length() - 3)
-	groups.push_front(digits)
-	return ("-" if amount < 0 else "") + ".".join(groups)
+	return UiFormat.thousands(amount)
 
 
 ## Unix (UTC) -> "dd/mm hh:mm" no fuso do sistema.

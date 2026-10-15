@@ -52,7 +52,7 @@ func _run() -> void:
 
 	# 2. Missão concluída depois do sync.
 	gs.quest_completed.emit("ze_anzol", 600)
-	_check(ui.toast_panel.visible and ui.toast_label.text == "Missão concluída: O anzol de ouro (+R$ 600)", "aviso missão: %s" % ui.toast_label.text)
+	_check(ui.toast_panel.visible and ui.toast_label.text == "Missão concluída: O anzol de ouro (+R$\u00a0600)", "aviso missão: %s" % ui.toast_label.text)
 
 	# 3. Segredo novo entra na fila e aparece depois do aviso atual.
 	gs.load_snapshot({"found_secrets": [s0, s1, s2]})
@@ -67,7 +67,7 @@ func _run() -> void:
 
 	# 4. Id desconhecido usa nome padrão, sem erro.
 	gs.quest_completed.emit("missao_inexistente", 0)
-	_check(ui.toast_label.text == "Missão concluída: Missão (+R$ 0)", "missão desconhecida: %s" % ui.toast_label.text)
+	_check(ui.toast_label.text == "Missão concluída: Missão (+R$\u00a00)", "missão desconhecida: %s" % ui.toast_label.text)
 
 	# 5. Volta à base: nada aparece.
 	ui._clear_toasts()

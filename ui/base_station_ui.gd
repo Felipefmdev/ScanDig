@@ -116,7 +116,7 @@ func _refresh_map_list() -> void:
 			map_list.add_item(_format_map_details(map))
 			continue
 		var idx: int = map_list.add_item(_format_map_row(map, status))
-		map_list.set_item_tooltip(idx, str(status.get("reason", "")))
+		map_list.set_item_tooltip(idx, UiFormat.fix_money_spaces(str(status.get("reason", ""))))
 		if not bool(status.get("playable", false)):
 			# Continua selecionável para o jogador ver o motivo e poder desbloquear.
 			map_list.set_item_custom_fg_color(idx, MAP_LOCKED_COLOR)
@@ -141,7 +141,7 @@ func _format_map_row(map: MapData, status: Dictionary) -> String:
 	if bool(status.get("playable", false)):
 		return "✔ " + _format_map_details(map)
 	if not bool(status.get("unlocked", false)):
-		var row: String = "🔒 %s  •  R$ %d" % [_map_name(map), int(status.get("unlock_cost", 0))]
+		var row: String = "🔒 %s  •  %s" % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
 		var boss_name: String = str(status.get("required_boss_name", ""))
 		if not boss_name.is_empty():
 			row += "  •  Chefe: %s" % boss_name
@@ -210,9 +210,9 @@ func _refresh_unlock_button() -> void:
 		unlock_map_btn.visible = false
 		return
 	unlock_map_btn.visible = true
-	unlock_map_btn.text = "Desbloquear %s (R$ %d)" % [_map_name(map), int(status.get("unlock_cost", 0))]
+	unlock_map_btn.text = "Desbloquear %s (%s)" % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
 	unlock_map_btn.disabled = _pending_unlock or not bool(status.get("can_unlock", false))
-	unlock_map_btn.tooltip_text = str(status.get("reason", "")) if unlock_map_btn.disabled else ""
+	unlock_map_btn.tooltip_text = UiFormat.fix_money_spaces(str(status.get("reason", ""))) if unlock_map_btn.disabled else ""
 
 
 func _on_unlock_map_pressed() -> void:
@@ -262,7 +262,7 @@ func _refresh_depart_button() -> void:
 	var map: MapData = _get_selected_map()
 	var reason: String = _get_depart_block_reason(map)
 	depart_btn.disabled = not reason.is_empty()
-	depart_btn.tooltip_text = reason
+	depart_btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 	depart_btn.text = "Partir para %s" % _map_name(map) if map != null else "Partir"
 
 
@@ -279,7 +279,7 @@ func _on_depart_pressed() -> void:
 
 func _set_expedition_feedback(msg: String) -> void:
 	if expedition_feedback_label != null:
-		expedition_feedback_label.text = msg
+		expedition_feedback_label.text = UiFormat.fix_money_spaces(msg)
 
 
 func _resolve_game_state() -> void:
@@ -406,13 +406,13 @@ func _refresh_shop_buttons() -> void:
 		var reason: String = _get_upgrade_block_reason(upgrade_id, cost)
 		var required_map: String = _get_next_upgrade_required_map(upgrade_id)
 		if not required_map.is_empty() and reason.begins_with("Desbloqueie"):
-			btn.text = "%s\n🔒 Requer %s — R$ %d" % [header, _get_map_display_name(required_map), cost]
-			btn.tooltip_text = reason
+			btn.text = "%s\n🔒 Requer %s — %s" % [header, _get_map_display_name(required_map), UiFormat.money(cost)]
+			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 			btn.disabled = true
 			continue
-		btn.text = "%s\nComprar nível %d — R$ %d" % [header, level + 1, cost]
+		btn.text = "%s\nComprar nível %d — %s" % [header, level + 1, UiFormat.money(cost)]
 		if not reason.is_empty():
-			btn.tooltip_text = reason
+			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 		elif upgrade_id == "detector":
 			btn.tooltip_text = "Radar: Nv.%d → Nv.%d" % [level + 1, level + 2]
 		elif upgrade_id == "backpack":
@@ -428,7 +428,7 @@ func _get_upgrade_block_reason(upgrade_id: String, cost: int) -> String:
 	if _game_state.has_method(&"get_upgrade_block_reason"):
 		return str(_game_state.call(&"get_upgrade_block_reason", upgrade_id))
 	if _game_state.team_money < cost:
-		return "Saldo insuficiente (R$ %d)." % _game_state.team_money
+		return "Saldo insuficiente (%s)." % UiFormat.money(_game_state.team_money)
 	return ""
 
 
@@ -449,7 +449,7 @@ func _setup_museum_controls() -> void:
 		item_select_box.clear()
 		for i in range(_catalog_items.size()):
 			var item: ItemData = _catalog_items[i]
-			item_select_box.add_item("%s (R$ %d)" % [item.display_name, item.base_value], i)
+			item_select_box.add_item("%s (%s)" % [item.display_name, UiFormat.money(item.base_value)], i)
 	
 	if sell_item_btn != null:
 		sell_item_btn.pressed.connect(_on_sell_test_pressed)
@@ -535,10 +535,10 @@ func _refresh_museum_display() -> void:
 	for item in _catalog_items:
 		var is_found: bool = discovered.has(item.id)
 		var status_str: String = "[DESCOBERTO]" if is_found else "[NÃO DESCOBERTO]"
-		var text: String = "%s %s (Valor: R$ %d | Profundidade: %d cm)" % [
+		var text: String = "%s %s (Valor: %s | Profundidade: %d cm)" % [
 			status_str,
 			item.display_name,
-			item.base_value,
+			UiFormat.money(item.base_value),
 			item.depth_cm
 		]
 		museum_item_list.add_item(text)
@@ -566,18 +566,18 @@ func _on_collection_updated(_total_found: int, _max_items: int) -> void:
 
 
 func _on_item_sold(item_name: String, value: int) -> void:
-	_set_museum_feedback("Venda concluída: %s (+R$ %d)" % [item_name, value])
+	_set_museum_feedback("Venda concluída: %s (+%s)" % [item_name, UiFormat.money(value)])
 
 
 func _on_item_donated(item_name: String, reward: int) -> void:
-	_set_museum_feedback("%s doado ao Museu! (+R$ %d de recompensa)" % [item_name, reward])
+	_set_museum_feedback("%s doado ao Museu! (+%s de recompensa)" % [item_name, UiFormat.money(reward)])
 
 
 func _set_shop_feedback(msg: String) -> void:
 	if shop_feedback_label != null:
-		shop_feedback_label.text = msg
+		shop_feedback_label.text = UiFormat.fix_money_spaces(msg)
 
 
 func _set_museum_feedback(msg: String) -> void:
 	if museum_feedback_label != null:
-		museum_feedback_label.text = msg
+		museum_feedback_label.text = UiFormat.fix_money_spaces(msg)

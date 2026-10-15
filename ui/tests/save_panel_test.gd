@@ -74,7 +74,7 @@ func _run() -> void:
 
 	# 1. Save válido, ainda não aplicado.
 	_check(menu.progress_box.visible, "painel visível offline")
-	_check(menu.continue_button.visible and menu.continue_button.text == "Continuar (Dia 5 • R$ 3.200)", "continuar: '%s'" % menu.continue_button.text)
+	_check(menu.continue_button.visible and menu.continue_button.text == "Continuar (Dia 5 • R$\u00a03.200)", "continuar: '%s'" % menu.continue_button.text)
 	_check(menu.progress_info_label.text.begins_with("Museu: 3/27") and menu.progress_info_label.text.contains("Salvo em "), "info: '%s'" % menu.progress_info_label.text)
 	_check(not menu.progress_label.visible and not menu.progress_warning_label.visible, "sem texto de progresso nem aviso")
 	fake.summary["saved_at"] = 0
@@ -97,7 +97,7 @@ func _run() -> void:
 	await _wait(2)
 	_check(fake.continue_calls == 3, "continue_game chamado: %d" % fake.continue_calls)
 	_check(not menu.continue_button.visible, "aplicado: sem botão continuar")
-	_check(menu.progress_label.visible and menu.progress_label.text == "Progresso: Dia 5 • R$ 3.200", "aplicado: '%s'" % menu.progress_label.text)
+	_check(menu.progress_label.visible and menu.progress_label.text == "Progresso: Dia 5 • R$\u00a03.200", "aplicado: '%s'" % menu.progress_label.text)
 	_check(not menu.progress_warning_label.visible, "sucesso limpa o aviso")
 
 	# 4. Novo jogo pede confirmação antes de chamar start_new_game.
@@ -107,7 +107,7 @@ func _run() -> void:
 	await _wait(2)
 	_check(menu.new_game_dialog.visible, "confirmação aberta")
 	_check(fake.new_game_calls == 0, "start_new_game ainda não chamado")
-	_check(menu.new_game_dialog.dialog_text == "Apagar o progresso salvo (Dia 5 • R$ 3.200)? Um backup será guardado.", "texto: '%s'" % menu.new_game_dialog.dialog_text)
+	_check(menu.new_game_dialog.dialog_text == "Apagar o progresso salvo (Dia 5 • R$\u00a03.200)? Um backup será guardado.", "texto: '%s'" % menu.new_game_dialog.dialog_text)
 	menu.new_game_dialog.hide()
 	menu.new_game_dialog.confirmed.emit()
 	_check(fake.new_game_calls == 1, "start_new_game após confirmar: %d" % fake.new_game_calls)

@@ -257,7 +257,7 @@ func _should_show_toast() -> bool:
 func _on_quest_completed(quest_id: String, reward: int) -> void:
 	var quest: Dictionary = GameState.QUESTS.get(quest_id, {})
 	var quest_name: String = str(quest.get("name", "Missão"))
-	_enqueue_toast("Missão concluída: %s (+R$ %d)" % [quest_name, reward])
+	_enqueue_toast("Missão concluída: %s (+%s)" % [quest_name, UiFormat.money(reward)])
 
 
 func _on_secret_found(_secret_id: String) -> void:
@@ -305,11 +305,11 @@ func _show_summary(summary: Dictionary) -> void:
 			continue
 		var e: Dictionary = entry as Dictionary
 		var action_text: String = "Doado ao museu" if str(e.get("action", "")) == "donated" else "Vendido"
-		summary_list.add_item("%s — %s (+R$ %d)" % [str(e.get("name", "?")), action_text, int(e.get("value", 0))])
-	summary_total_label.text = "Total ganho: R$ %d  (saldo: R$ %d → R$ %d)" % [
-		int(summary.get("money_earned", 0)),
-		int(summary.get("money_start", 0)),
-		int(summary.get("money_end", 0)),
+		summary_list.add_item("%s — %s (+%s)" % [str(e.get("name", "?")), action_text, UiFormat.money(int(e.get("value", 0)))])
+	summary_total_label.text = "Total ganho: %s  (saldo: %s → %s)" % [
+		UiFormat.money(int(summary.get("money_earned", 0))),
+		UiFormat.money(int(summary.get("money_start", 0))),
+		UiFormat.money(int(summary.get("money_end", 0))),
 	]
 	summary_panel.visible = true
 	_update_mouse()

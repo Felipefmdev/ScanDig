@@ -47,18 +47,18 @@ func _run() -> void:
 	await _wait(3)
 	_check(not detector.disabled, "detector habilitado sem mapas: %s" % detector.tooltip_text)
 	_check(not detector.text.contains("🔒"), "detector sem cadeado: %s" % detector.text)
-	_check(detector.text.contains("Comprar nível 3 — R$ 700") and detector.text.contains("radar Nv.3"), "detector compra 3: %s" % detector.text)
+	_check(detector.text.contains("Comprar nível 3 — R$\u00a0700") and detector.text.contains("radar Nv.3"), "detector compra 3: %s" % detector.text)
 	_check(detector.tooltip_text == "Radar: Nv.3 → Nv.4", "tooltip radar: %s" % detector.tooltip_text)
 	_check(backpack.text.contains("🔒 Requer Campo Antigo"), "mochila travada: %s" % backpack.text)
 	_check(backpack.disabled, "mochila desabilitada")
 	_check(backpack.tooltip_text == "Desbloqueie Campo Antigo primeiro.", "tooltip mochila: %s" % backpack.tooltip_text)
-	_check(not shovel.disabled and shovel.text.contains("Comprar nível 1 — R$ 800"), "pá liberada: %s" % shovel.text)
+	_check(not shovel.disabled and shovel.text.contains("Comprar nível 1 — R$\u00a0800"), "pá liberada: %s" % shovel.text)
 
 	# 2. Compra o nível 3: o 4 trava nas Ruínas.
 	detector.pressed.emit()
 	await _wait(5)
 	_check(gs.get_upgrade_level("detector") == 3, "detector nível 3: %d" % gs.get_upgrade_level("detector"))
-	_check(detector.text.contains("🔒 Requer Ruínas") and detector.text.contains("R$ 2000"), "detector travado em Ruínas: %s" % detector.text)
+	_check(detector.text.contains("🔒 Requer Ruínas") and detector.text.contains("R$\u00a02.000"), "detector travado em Ruínas: %s" % detector.text)
 	_check(detector.disabled, "detector desabilitado nas Ruínas")
 
 	# 3. Saldo baixo com o Campo aberto: bloqueio por saldo, sem cadeado.

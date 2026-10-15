@@ -58,7 +58,7 @@ func _run() -> void:
 	gs.request_report_boss_defeated("king_crab")
 	await _wait(3)
 	_check(not unlock_btn.disabled, "desbloquear habilitado após chefe")
-	_check(unlock_btn.text == "Desbloquear Campo Antigo (R$ 1200)", "texto do botão: %s" % unlock_btn.text)
+	_check(unlock_btn.text == "Desbloquear Campo Antigo (R$\u00a01.200)", "texto do botão: %s" % unlock_btn.text)
 
 	unlock_btn.pressed.emit()
 	await _wait(5)
