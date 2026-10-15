@@ -206,6 +206,8 @@ func _process_leave() -> void:
 
 
 func _on_threshold_cleared(level: int) -> void:
+	if not has_simulation_authority():
+		return
 	if level <= spawn_level and is_alive() and state != State.LEAVE:
 		_enter_state(State.LEAVE)
 
@@ -220,6 +222,14 @@ func _can_take_damage() -> bool:
 
 func _can_be_stunned() -> bool:
 	return state != State.EMERGE and state != State.LEAVE
+
+
+## Cliente: colisão e cabeça levantada no bote (o resto chega pelo synchronizer).
+func _on_remote_state(new_state: int) -> void:
+	if _collision != null:
+		_collision.disabled = new_state == State.EMERGE or new_state == State.LEAVE
+	_segments[0].position.y = 0.3 if new_state == State.COIL else 0.12
+	_body_root.visible = new_state != State.LEAVE
 
 
 func _on_stunned() -> void:

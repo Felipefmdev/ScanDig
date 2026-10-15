@@ -1,0 +1,21 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 5,
+	"steps": [
+		{"t": 1.5, "join": "127.0.0.1", "port": 7793, "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 0.5},
+		{"t": 0, "dump": "c0_inicio"},
+		{"wait_until": "enemies>=1", "timeout": 150},
+		{"t": 0, "dump": "c1_inimigo"},
+		{"sleep": 4.0},
+		{"t": 0, "dump": "c2_persegue"},
+		{"t": 0, "screenshot": "c2_persegue"},
+		{"t": 0, "fight": 15, "radius": 40},
+		{"t": 0, "dump": "c3_depois_luta"},
+		{"t": 0, "screenshot": "c3_depois_luta"},
+		{"sleep": 6.0},
+		{"t": 0, "dump": "c4_final"},
+		{"t": 0, "quit": true}
+	]
+}

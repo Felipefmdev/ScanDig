@@ -9,8 +9,11 @@ extends Node3D
 ##    jogador tiver itens escavados na mochila (player.has_loot()).
 ## Nunca passa de max_alive inimigos vivos criados por este spawner.
 ##
-## Os inimigos são criados por dados {"kind", "pos", "level"} (spawn_from_data), o mesmo
-## formato que o MultiplayerSpawner vai usar na fase 3 do coop (#5 bloco F, #24). Cada mapa
+## Os inimigos são criados por dados {"kind", "pos", "level"[, "rot_y"]} (spawn_from_data).
+## Coop (#5 F, #24): só o host cria inimigos (e corre a IA). O spawner monta em código um
+## MultiplayerSpawner filho ("EnemyNetSpawner", spawn_path = este nó) com o mesmo nome em
+## todos os peers; os mesmos dados recriam o inimigo nos clientes, já com setup_network().
+## Chefes (BossAltar) e reforços também passam por aqui (EnemySpawner.find()). Cada mapa
 ## escolhe os kinds: primary_kind (o "caranguejo" do mapa), secondary_kind (o "ermitão")
 ## e ambient_kinds. As tabelas por nível do DifficultyProfile continuam a contar
 ## primário/secundário/gaivota.
@@ -36,8 +39,6 @@ const KIND_SCENES: Dictionary = {
 @export var secondary_kind: StringName = &"hermit_crab"
 ## Kinds sorteados nos spawns ambiente; vazio = só primary_kind.
 @export var ambient_kinds: Array[StringName] = []
-## Coop fase 3: com true, num cliente o spawner não cria nada (o host replica).
-@export var replicate_spawns: bool = false
 ## Sobrepõem a cena de primary/secondary/gaivota (compatibilidade e testes).
 @export var crab_scene: PackedScene = null
 @export var hermit_scene: PackedScene = null
@@ -78,15 +79,24 @@ const SPAWN_ATTEMPTS: int = 8
 const MAX_GROUND_STEP: float = 1.5
 ## Se não há loot quando a gaivota calha, volta a verificar passado este tempo.
 const SEAGULL_RETRY: float = 10.0
+const GROUP: StringName = &"enemy_spawners"
+const NET_SPAWNER_NAME: StringName = &"EnemyNetSpawner"
 
 var _alive: Array[Node3D] = []
 var _connected: bool = false
 var _ambient_timer: float = 0.0
 var _seagull_timer: float = 0.0
 var _elapsed: float = 0.0
+var _net_spawner: MultiplayerSpawner = null
 
 
 func _ready() -> void:
+	add_to_group(GROUP)
+	_net_spawner = MultiplayerSpawner.new()
+	_net_spawner.name = NET_SPAWNER_NAME
+	_net_spawner.spawn_function = _create_from_data
+	add_child(_net_spawner)
+	_net_spawner.spawn_path = _net_spawner.get_path_to(self)
 	if crab_scene == null:
 		crab_scene = scene_for_kind(primary_kind)
 	if hermit_scene == null:
@@ -100,6 +110,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if not can_spawn():
+		return
 	# O DisturbanceMeter pode entrar na árvore depois deste nó; tentamos até ligar.
 	if not _connected:
 		_try_connect()
@@ -148,7 +160,7 @@ func _process_ambient(delta: float) -> void:
 	_ambient_timer -= delta
 	if _ambient_timer <= 0.0:
 		_ambient_timer = randf_range(ambient_interval_min, ambient_interval_max) * _interval_multiplier()
-		var player: Node3D = _find_player()
+		var player: Node3D = _random_player()
 		if player != null:
 			# spawn_level 0: não volta para a areia quando a ameaça baixa
 			var kind: StringName = primary_kind if ambient_kinds.is_empty() else ambient_kinds.pick_random()
@@ -156,12 +168,37 @@ func _process_ambient(delta: float) -> void:
 
 	_seagull_timer -= delta
 	if _seagull_timer <= 0.0:
-		var player: Node3D = _find_player()
-		if player != null and player.has_method("has_loot") and bool(player.call("has_loot")):
+		var player: Node3D = _player_with_loot()
+		if player != null:
 			_spawn_seagull(player.global_position)
 			_seagull_timer = randf_range(seagull_interval_min, seagull_interval_max) * _interval_multiplier()
 		else:
 			_seagull_timer = SEAGULL_RETRY
+
+
+## Coop: o ambiente pressiona um jogador qualquer (local ou remoto).
+func _random_player() -> Node3D:
+	var all: Array[Node3D] = []
+	for group: StringName in EnemyBase.PLAYERS_GROUPS:
+		for n: Node in get_tree().get_nodes_in_group(group):
+			if n is Node3D and n.is_inside_tree() and not all.has(n):
+				all.append(n as Node3D)
+	return all.pick_random() if not all.is_empty() else null
+
+
+## Coop: um jogador (local ou remoto) com itens escavados na mochila, ou null.
+func _player_with_loot() -> Node3D:
+	var with_loot: Array[Node3D] = []
+	for group: StringName in EnemyBase.PLAYERS_GROUPS:
+		for n: Node in get_tree().get_nodes_in_group(group):
+			if n is Node3D and n.has_method("has_loot") and bool(n.call("has_loot")) and not with_loot.has(n):
+				with_loot.append(n as Node3D)
+	return with_loot.pick_random() if not with_loot.is_empty() else null
+
+
+## O spawner do mapa (o primeiro do grupo), para chefes e reforços.
+static func find(tree: SceneTree) -> EnemySpawner:
+	return tree.get_first_node_in_group(GROUP) as EnemySpawner if tree != null else null
 
 
 func _find_player() -> Node3D:
@@ -214,23 +251,52 @@ static func scene_for_kind(kind: StringName) -> PackedScene:
 	return load(KIND_SCENES[kind]) as PackedScene
 
 
-## Cria o inimigo descrito por {"kind", "pos", "level"} como filho deste spawner.
-## Não verifica max_alive (quem chama decide). Devolve null se os dados forem inválidos.
+## Host: cria o inimigo descrito por {"kind", "pos", "level"[, "rot_y"]} como filho deste
+## spawner e replica-o (MultiplayerSpawner). Não verifica max_alive (quem chama decide).
+## Devolve null num cliente ou se os dados forem inválidos.
 func spawn_from_data(data: Dictionary) -> Node3D:
-	var kind: StringName = StringName(str(data.get("kind", "")))
-	var scene: PackedScene = _scene_override(kind)
-	if scene == null:
-		scene = scene_for_kind(kind)
-	var pos: Variant = data.get("pos")
-	if scene == null or not pos is Vector3:
+	if not can_spawn():
+		return null
+	if _scene_for_data(data) == null:  # valida antes de replicar
 		push_warning("[EnemySpawner] dados de spawn invalidos: %s" % str(data))
 		return null
-	var enemy: Node3D = scene.instantiate() as Node3D
+	var enemy: Node3D = null
+	if _net_spawner != null and _net_spawner.is_inside_tree():
+		enemy = _net_spawner.spawn(data) as Node3D
+	else:
+		enemy = _create_from_data(data) as Node3D
+		if enemy != null:
+			add_child(enemy)
 	if enemy == null:
 		return null
+	_alive.append(enemy)
+	enemy_spawned.emit(enemy)
+	return enemy
+
+
+## spawn_function: corre no host e em cada cliente com os mesmos dados.
+func _create_from_data(data: Variant) -> Node:
+	var d: Dictionary = data as Dictionary
+	var scene: PackedScene = _scene_for_data(d)
+	if scene == null:
+		return null
+	var enemy: Node3D = scene.instantiate() as Node3D
+	enemy.position = global_transform.affine_inverse() * (d["pos"] as Vector3) if is_inside_tree() else d["pos"]
+	enemy.rotation.y = float(d.get("rot_y", 0.0))
 	if "spawn_level" in enemy:
-		enemy.set("spawn_level", int(data.get("level", 0)))
-	return _add_enemy(enemy, pos)
+		enemy.set("spawn_level", int(d.get("level", 0)))
+	if enemy is EnemyBase:
+		(enemy as EnemyBase).setup_network()
+	return enemy
+
+
+## Cena para os dados, ou null se o kind ou a posição forem inválidos.
+func _scene_for_data(data: Dictionary) -> PackedScene:
+	if not data.get("pos") is Vector3:
+		return null
+	var kind: StringName = StringName(str(data.get("kind", "")))
+	var scene: PackedScene = _scene_override(kind)
+	return scene if scene != null else scene_for_kind(kind)
 
 
 ## As cenas exportadas sobrepõem o kind primário/secundário/gaivota.
@@ -244,19 +310,11 @@ func _scene_override(kind: StringName) -> PackedScene:
 	return null
 
 
-## Num cliente com spawns replicados, só o host cria inimigos.
+## Só o host cria inimigos (em solo o jogador é o host).
 func can_spawn() -> bool:
-	if not replicate_spawns or not is_inside_tree():
+	if not is_inside_tree():
 		return true
 	return not multiplayer.has_multiplayer_peer() or multiplayer.is_server()
-
-
-func _add_enemy(enemy: Node3D, world_pos: Vector3) -> Node3D:
-	enemy.position = to_local(world_pos)
-	add_child(enemy)
-	_alive.append(enemy)
-	enemy_spawned.emit(enemy)
-	return enemy
 
 
 ## Ponto no chão a r_min..r_max de center. Rejeita pontos fora do mapa (o raio não acerta no

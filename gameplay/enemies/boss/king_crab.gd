@@ -231,11 +231,8 @@ func _do_slam_impact() -> void:
 		thud.pitch_scale *= 0.7
 	SFX.play_at(SFX.EMERGE_SAND, _slam_point, 6.0)
 	spawn_particles(_slam_point + Vector3.UP * 0.1, Color(0.85, 0.74, 0.5), 40, 5.0)
-	for n: Node in get_tree().get_nodes_in_group("player"):
-		if n is Node3D and n.has_method("take_damage"):
-			var p: Vector3 = (n as Node3D).global_position
-			if Vector2(p.x - _slam_point.x, p.z - _slam_point.z).length() <= SLAM_RADIUS:
-				_deal_damage(n, slam_damage)
+	for n: Node3D in _players_within(_slam_point, SLAM_RADIUS):
+		_deal_damage(n, slam_damage)
 
 
 ## Ponto fraco: pinça presa na areia, sem se mexer, leva dano x2.
@@ -269,12 +266,9 @@ func _process_charge(delta: float) -> void:
 	move_and_slide()
 	_animate_walk(delta * 2.5)
 	if not _charge_hit:
-		for n: Node in get_tree().get_nodes_in_group("player"):
-			if n is Node3D and n.has_method("take_damage"):
-				var p: Vector3 = (n as Node3D).global_position
-				if Vector2(p.x - global_position.x, p.z - global_position.z).length() <= CHARGE_HIT_RADIUS:
-					_deal_damage(n, charge_damage)
-					_charge_hit = true
+		for n: Node3D in _players_within(global_position, CHARGE_HIT_RADIUS):
+			_deal_damage(n, charge_damage)
+			_charge_hit = true
 	var travelled: float = Vector2(global_position.x - _charge_start.x, global_position.z - _charge_start.z).length()
 	if travelled >= charge_length or (is_on_wall() and _state_time > 0.2):
 		_charges_left -= 1
@@ -366,7 +360,7 @@ func flee_from(_origin: Vector3, _seconds: float) -> void:
 
 func take_damage(amount: float, from: Vector3 = Vector3.INF) -> void:
 	super.take_damage(amount, from)
-	if _dead:
+	if _dead or not has_simulation_authority():
 		return
 	health_bar.value = health
 	health_changed.emit(health, max_health)
@@ -389,11 +383,14 @@ func _call_reinforcements() -> void:
 	if parent == null:
 		return
 	for i: int in range(count):
+		var ang: float = TAU * float(i) / float(count) + randf() * 0.5
+		var pos: Vector3 = Vector3(global_position.x, _surface_y, global_position.z) + Vector3(cos(ang), 0.0, sin(ang)) * 3.5
+		if _spawn_minion(&"crab", pos) != null:
+			continue
 		var crab: Crab = CRAB_SCENE.instantiate() as Crab
 		crab.spawn_level = 0
-		var ang: float = TAU * float(i) / float(count) + randf() * 0.5
 		parent.add_child(crab)
-		crab.global_position = Vector3(global_position.x, _surface_y, global_position.z) + Vector3(cos(ang), 0.0, sin(ang)) * 3.5
+		crab.global_position = pos
 	reinforcements_called.emit(count)
 	# Rugido (só se não estiver a meio de um ataque)
 	if state == State.APPROACH or state == State.RECOVER:
@@ -412,6 +409,26 @@ func _process(delta: float) -> void:
 	if state == State.DYING and _dead:
 		_state_time += delta
 		_process_dying(delta)
+	elif not has_simulation_authority():
+		# Cliente: barra de vida e aviso a partir do estado replicado.
+		health_bar.value = health
+		if _warn != null and _warn.visible:
+			_state_time += delta
+			_pulse_warning()
+
+
+## Cliente: avisos no chão e HUD a partir do estado do host (posição aproximada: à frente).
+func _on_remote_state(new_state: int) -> void:
+	_state_time = 0.0
+	_set_warning_visible(false)
+	collision_shape.disabled = new_state == State.EMERGE or new_state == State.DYING
+	match new_state:
+		State.SLAM_TELEGRAPH:
+			_show_circle_warning(global_position - global_transform.basis.z * 2.0, SLAM_RADIUS)
+		State.CHARGE_TELEGRAPH:
+			_show_line_warning(global_position, global_transform.basis.x.normalized(), charge_length)
+		State.DYING:
+			hud.visible = false
 
 
 func _drop_crown() -> void:
@@ -426,7 +443,7 @@ func _drop_crown() -> void:
 ## Avisa o core (o host valida, ignora repetidos e sincroniza defeated_bosses; desbloqueia
 ## a compra do Campo Antigo). Qualquer peer pode reportar.
 func _report_defeat_to_core(boss_id: StringName) -> void:
-	if GameState.instance != null:
+	if has_simulation_authority() and GameState.instance != null:
 		GameState.instance.request_report_boss_defeated(String(boss_id))
 
 

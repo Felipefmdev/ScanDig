@@ -5,12 +5,17 @@ extends EnemyBase
 ## mochila (player.steal_loot()). Sem nada para roubar, só bica (PECK_DAMAGE) e volta a tentar.
 ## Depois de roubar foge para longe e desaparece passado despawn_after segundos. Se for abatida
 ## (estilingue), cai e larga o item roubado como ItemPickup onde tocar no chão.
+## Coop (#5 F, #24): a gaivota corre no host. A mochila é do dono, por isso ao chegar ao
+## jogador o host chama target._steal_from (rpc_id ao dono, ou direto se o jogador for o do
+## host) e fica a pairar (WAIT_LOOT) até o dono responder request_seagull_loot(dict do item,
+## ou {} se não havia nada). O item roubado é replicado como has_stolen (só visual).
 
 enum State {
 	CIRCLE,
 	DIVE,
 	ESCAPE,
 	FALL,
+	WAIT_LOOT,
 }
 
 @export var circle_radius: float = 6.0
@@ -34,6 +39,8 @@ enum State {
 @export_flags_3d_physics var ground_mask: int = 1
 
 const CHEST_OFFSET: Vector3 = Vector3(0.0, 1.3, 0.0)
+## Tempo máximo à espera da resposta do dono da mochila.
+const LOOT_REPLY_TIMEOUT: float = 1.5
 const MAX_DIVE_TIME: float = 3.5
 const STEER: float = 3.0
 const WHITE: Color = Color(0.96, 0.96, 0.95)
@@ -46,6 +53,12 @@ const FEET_ORANGE: Color = Color(0.95, 0.55, 0.2)
 var state: State = State.CIRCLE
 ## Item roubado (largado se a gaivota for abatida).
 var stolen: CarriedItem = null
+## Replicado: leva um item no bico (os clientes só mostram um item genérico).
+var has_stolen: bool = false:
+	set(value):
+		has_stolen = value
+		if not has_simulation_authority() and is_node_ready():
+			_show_loot()
 
 var _orbit_angle: float = 0.0
 var _orbit_dir: float = 1.0
@@ -91,6 +104,8 @@ func _enemy_physics(delta: float) -> void:
 			_process_escape(delta)
 		State.FALL:
 			_process_fall(delta)
+		State.WAIT_LOOT:
+			_process_wait_loot(delta)
 
 	_animate_wings(delta)
 
@@ -133,18 +148,60 @@ func _process_dive(delta: float) -> void:
 
 
 func _grab(target: Node3D) -> void:
+	if target.has_method("_steal_from"):
+		# Jogador: a mochila é do dono; espera pela resposta (request_seagull_loot).
+		_enter_state(State.WAIT_LOOT)
+		var owner_id: int = target.get_multiplayer_authority()
+		if not NetVisibility.is_online(multiplayer) or owner_id == multiplayer.get_unique_id():
+			target.call("_steal_from", get_path())
+		else:
+			target.rpc_id(owner_id, &"_steal_from", get_path())
+		return
 	var loot: CarriedItem = null
 	if target.has_method("steal_loot"):
 		loot = target.call("steal_loot") as CarriedItem
+	_on_loot_reply(loot, target)
+
+
+## Host: resposta do dono da mochila (contrato #5 F). `data` = CarriedItem.to_dict(), ou {}
+## se não havia nada para roubar. Só aceita do dono do alvo (ou chamada local no host).
+@rpc("any_peer", "call_remote", "reliable")
+func request_seagull_loot(data: Dictionary) -> void:
+	if not has_simulation_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	var target: Node3D = _target if is_instance_valid(_target) else null
+	if sender != 0 and (target == null or target.get_multiplayer_authority() != sender):
+		return
+	var loot: CarriedItem = CarriedItem.from_dict(data) if not data.is_empty() else null
+	if state != State.WAIT_LOOT or not is_alive():
+		# Já não está à espera (abatida, desistiu): o item não se perde, cai aqui.
+		if loot != null and get_parent() != null:
+			ItemPickup.spawn(get_parent(), loot, global_position, Vector3.UP)
+		return
+	_on_loot_reply(loot, target)
+
+
+func _on_loot_reply(loot: CarriedItem, target: Node3D) -> void:
 	if loot != null:
 		stolen = loot
+		has_stolen = true
 		SFX.play_at(SFX.SEAGULL_CAW, global_position)
 		_show_loot()
-		_start_escape(target.global_position)
+		_start_escape(target.global_position if target != null else global_position)
 		return
-	if target.has_method("take_damage"):
+	if target != null and target.has_method("take_damage"):
 		_deal_damage(target, peck_damage)
 	_after_failed_dive()
+
+
+## À espera da resposta do dono: paira junto ao jogador.
+func _process_wait_loot(delta: float) -> void:
+	var target: Node3D = _target if is_instance_valid(_target) else null
+	if target != null:
+		_fly_towards(target.global_position + CHEST_OFFSET + Vector3.UP * 0.6, fly_speed * 0.5, delta)
+	if _state_time > LOOT_REPLY_TIMEOUT:
+		_after_failed_dive()
 
 
 func _after_failed_dive() -> void:
@@ -178,6 +235,16 @@ func _process_escape(delta: float) -> void:
 		_fly_towards(goal, fly_speed, delta)
 	else:
 		_fly_towards(goal, escape_speed, delta)
+
+
+## Replica também has_stolen (o item no bico).
+func setup_network() -> void:
+	super.setup_network()
+	var config: SceneReplicationConfig = get_net_sync().replication_config
+	if not config.has_property(".:has_stolen"):
+		config.add_property(".:has_stolen")
+		config.property_set_replication_mode(".:has_stolen", SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE)
+		config.property_set_spawn(".:has_stolen", true)
 
 
 ## Abatida: cai a rodopiar e, ao tocar no chão, larga o item roubado.
@@ -341,14 +408,16 @@ func _build_wing(side: float, mat: Material) -> Node3D:
 
 
 ## Mostra o item roubado pendurado no bico.
+## Item no bico. Num cliente não há `stolen` (só has_stolen): mostra um item genérico.
 func _show_loot() -> void:
-	if stolen == null:
+	if _loot_visual != null or (stolen == null and not has_stolen):
 		return
 	_loot_visual = MeshInstance3D.new()
 	_loot_visual.name = "Loot"
 	var cube: BoxMesh = BoxMesh.new()
 	cube.size = Vector3(0.12, 0.12, 0.12)
 	_loot_visual.mesh = cube
-	_loot_visual.material_override = ItemPickup.make_material(stolen.item, stolen.is_rare_variant)
+	if stolen != null:
+		_loot_visual.material_override = ItemPickup.make_material(stolen.item, stolen.is_rare_variant)
 	_loot_visual.position = Vector3(0.0, -0.06, -0.5)
 	add_child(_loot_visual)

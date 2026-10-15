@@ -11,10 +11,13 @@ extends CharacterBody3D
 ##   flee_from(origin, seconds)               — foge e depois vai-se embora
 ##   is_alive()
 ##
-## Coop (#5, bloco F): a IA e a física só correm com autoridade de simulação (o host).
-## Com `replicated = false` (hoje: solo e coop sem MultiplayerSpawner) cada peer simula os
-## seus. O estado a replicar são campos simples: `state` (int, nas subclasses), `health`,
-## `stunned` e `fleeing`; o dano entra sempre por take_damage().
+## Coop (#5, bloco F; #24): a IA e a física só correm no host. O EnemySpawner cria os
+## inimigos por MultiplayerSpawner e chama setup_network(): cada um ganha um
+## MultiplayerSynchronizer (position, rotation, net_state, health, stunned, fleeing) visível
+## só para peers com o mapa carregado. Num cliente, take_damage/stun/flee_from na réplica
+## viram request_hit/request_stun/request_flee para o host, que confere a distância do
+## jogador que pediu e a cadência antes de aplicar. Os inimigos perseguem o jogador mais
+## próximo entre TODOS (grupo "players") e ferem-no com apply_damage.rpc_id(dono).
 
 signal died()
 signal damaged(amount: float, health_left: float)
@@ -25,6 +28,16 @@ const FLASH_TIME: float = 0.12
 const FLASH_COLOR: Color = Color(1.0, 0.25, 0.2)
 ## Flash quando o golpe foi amortecido (ex.: concha do ermitão).
 const BLOCK_FLASH_COLOR: Color = Color(0.55, 0.65, 1.0)
+## Grupos de jogadores: "players" (todos, coop) e "player" (só o local; testes/solo antigo).
+const PLAYERS_GROUPS: Array[StringName] = [&"players", &"player"]
+## Validação no host dos pedidos dos clientes (#5 F; a Fase 4 do Dev B endurece).
+## Distância máxima (no plano) entre o jogador que pede e o inimigo (estilingue incluído).
+const REQUEST_MAX_RANGE: float = 40.0
+## Dano máximo aceite por pedido e intervalo mínimo entre pedidos do mesmo peer.
+const REQUEST_MAX_DAMAGE: float = 100.0
+const REQUEST_MIN_INTERVAL_MS: int = 150
+const REQUEST_MAX_STUN: float = 6.0
+const REQUEST_MAX_FLEE: float = 10.0
 
 @export var max_health: float = 50.0
 ## Cor das partículas ao morrer.
@@ -52,6 +65,21 @@ var fleeing: bool:
 		return _flee_left > 0.0
 	set(value):
 		_flee_left = maxf(_flee_left, 0.25) if value else 0.0
+## `state` da subclasse como int (o synchronizer não conhece os enums). Num cliente, a
+## mudança chama _on_remote_state() para acertar o visual (corpo escondido, monte de terra...).
+var net_state: int:
+	get:
+		return int(get("state")) if "state" in self else 0
+	set(value):
+		if not "state" in self or int(get("state")) == value:
+			return
+		set("state", value)
+		if not has_simulation_authority():
+			_on_remote_state(value)
+
+var _net_sync: MultiplayerSynchronizer = null
+## Host: último pedido aceite por peer (cadência).
+var _last_request_ms: Dictionary = {}
 
 var _gravity: float = 9.8
 var _target: Node3D = null
@@ -99,11 +127,40 @@ func has_simulation_authority() -> bool:
 	return not multiplayer.has_multiplayer_peer() or multiplayer.is_server()
 
 
+## Prepara a replicação (EnemySpawner, antes de entrar na árvore, em todos os peers).
+func setup_network() -> void:
+	replicated = true
+	if _net_sync != null:
+		return
+	var config: SceneReplicationConfig = SceneReplicationConfig.new()
+	for prop: String in [".:position", ".:rotation"]:
+		config.add_property(prop)
+		config.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
+		config.property_set_spawn(prop, true)
+	for prop: String in [".:net_state", ".:health", ".:stunned", ".:fleeing"]:
+		config.add_property(prop)
+		config.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE)
+		config.property_set_spawn(prop, true)
+	_net_sync = MultiplayerSynchronizer.new()
+	_net_sync.name = "NetSync"
+	_net_sync.replication_config = config
+	_net_sync.replication_interval = 0.05
+	NetVisibility.watch(_net_sync)
+	add_child(_net_sync)
+
+
+func get_net_sync() -> MultiplayerSynchronizer:
+	return _net_sync
+
+
 func is_alive() -> bool:
 	return not _dead and health > 0.0 and not is_queued_for_deletion()
 
 
 func take_damage(amount: float, from: Vector3 = Vector3.INF) -> void:
+	if not has_simulation_authority():
+		request_hit(amount, from)
+		return
 	if amount <= 0.0 or not is_alive() or not _can_take_damage():
 		return
 	var final_amount: float = _modify_damage(amount, from)
@@ -117,6 +174,9 @@ func take_damage(amount: float, from: Vector3 = Vector3.INF) -> void:
 
 
 func stun(seconds: float) -> void:
+	if not has_simulation_authority():
+		request_stun(seconds)
+		return
 	if seconds <= 0.0 or not is_alive() or not _can_be_stunned():
 		return
 	_stun_left = maxf(_stun_left, seconds)
@@ -129,6 +189,9 @@ func is_stunned() -> bool:
 
 
 func flee_from(origin: Vector3, seconds: float) -> void:
+	if not has_simulation_authority():
+		request_flee(origin, seconds)
+		return
 	if seconds <= 0.0 or not is_alive():
 		return
 	_flee_origin = origin
@@ -141,8 +204,85 @@ func is_fleeing() -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Pedidos dos clientes ao host (contrato #5 F)
+# ---------------------------------------------------------------------------
+
+## Golpe de um jogador. No host aplica já; num cliente pede ao host (que valida).
+func request_hit(amount: float, from: Vector3 = Vector3.INF) -> void:
+	if has_simulation_authority():
+		take_damage(amount, from)
+		return
+	if amount <= 0.0 or not is_alive():
+		return
+	_flash(FLASH_COLOR)  # resposta imediata no cliente; a vida chega pelo synchronizer
+	_rpc_request_hit.rpc_id(1, amount, from)
+
+
+func request_stun(seconds: float) -> void:
+	if has_simulation_authority():
+		stun(seconds)
+	elif seconds > 0.0 and is_alive():
+		_rpc_request_stun.rpc_id(1, seconds)
+
+
+func request_flee(origin: Vector3, seconds: float) -> void:
+	if has_simulation_authority():
+		flee_from(origin, seconds)
+	elif seconds > 0.0 and is_alive():
+		_rpc_request_flee.rpc_id(1, origin, seconds)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_request_hit(amount: float, from: Vector3) -> void:
+	if accept_request(multiplayer.get_remote_sender_id()):
+		take_damage(clampf(amount, 0.0, REQUEST_MAX_DAMAGE), from)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_request_stun(seconds: float) -> void:
+	if accept_request(multiplayer.get_remote_sender_id()):
+		stun(clampf(seconds, 0.0, REQUEST_MAX_STUN))
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_request_flee(origin: Vector3, seconds: float) -> void:
+	if accept_request(multiplayer.get_remote_sender_id()):
+		flee_from(origin, clampf(seconds, 0.0, REQUEST_MAX_FLEE))
+
+
+## Host: aceita o pedido do peer? O jogador dele tem de estar a <= REQUEST_MAX_RANGE (no
+## plano) e o último pedido aceite tem de ter sido há >= REQUEST_MIN_INTERVAL_MS.
+func accept_request(peer_id: int) -> bool:
+	if not has_simulation_authority() or not is_alive():
+		return false
+	var player: Node3D = _player_of_peer(peer_id)
+	if player == null:
+		return false
+	var d: Vector3 = player.global_position - global_position
+	if Vector2(d.x, d.z).length() > REQUEST_MAX_RANGE:
+		return false
+	var now: int = Time.get_ticks_msec()
+	if _last_request_ms.has(peer_id) and now - int(_last_request_ms[peer_id]) < REQUEST_MIN_INTERVAL_MS:
+		return false
+	_last_request_ms[peer_id] = now
+	return true
+
+
+func _player_of_peer(peer_id: int) -> Node3D:
+	for p: Node3D in _all_players():
+		if p.get_multiplayer_authority() == peer_id:
+			return p
+	return null
+
+
+# ---------------------------------------------------------------------------
 # Ganchos para subclasses
 # ---------------------------------------------------------------------------
+
+## Num cliente, net_state mudou (o host mudou de estado). Por omissão nada.
+func _on_remote_state(_new_state: int) -> void:
+	pass
+
 
 ## Lógica normal do inimigo (não corre enquanto atordoado).
 func _enemy_physics(_delta: float) -> void:
@@ -208,6 +348,15 @@ func _apply_gravity(delta: float) -> void:
 		velocity.y = 0.0
 
 
+## Reforço chamado por um chefe: pelo EnemySpawner do mapa (replicado em coop). Sem
+## spawner (testes, cenas antigas) devolve null e o chefe cria-o localmente.
+func _spawn_minion(kind: StringName, pos: Vector3) -> Node3D:
+	var spawner: EnemySpawner = EnemySpawner.find(get_tree()) if is_inside_tree() else null
+	if spawner == null or not spawner.can_spawn():
+		return null
+	return spawner.spawn_from_data(EnemySpawner.make_spawn_data(kind, pos, 0))
+
+
 ## Altura do chão (layer 1) por baixo de (pos.x, pos.z); `fallback` se não houver chão.
 ## Para inimigos que andam debaixo de terra (sem colisão) em mapas com relevo.
 func _ground_height(pos: Vector3, fallback: float) -> float:
@@ -222,11 +371,11 @@ func _ground_height(pos: Vector3, fallback: float) -> float:
 ## Jogadores (grupo 'player') a menos de `radius` m de `center` no plano.
 func _players_within(center: Vector3, radius: float) -> Array[Node3D]:
 	var out: Array[Node3D] = []
-	for n: Node in get_tree().get_nodes_in_group("player"):
-		if n is Node3D and n.has_method("take_damage"):
-			var p: Vector3 = (n as Node3D).global_position
+	for n: Node3D in _all_players():
+		if n.has_method("take_damage"):
+			var p: Vector3 = n.global_position
 			if Vector2(p.x - center.x, p.z - center.z).length() <= radius:
-				out.append(n as Node3D)
+				out.append(n)
 	return out
 
 
@@ -247,14 +396,26 @@ func _update_target(delta: float) -> Node3D:
 
 	var best: Node3D = null
 	var best_dist: float = INF
-	for n: Node in get_tree().get_nodes_in_group("player"):
-		if n is Node3D and n.is_inside_tree():
-			var d: float = global_position.distance_squared_to((n as Node3D).global_position)
-			if d < best_dist:
-				best_dist = d
-				best = n as Node3D
+	for p: Node3D in _all_players():
+		var d: float = global_position.distance_squared_to(p.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = p
 	_target = best
 	return _target
+
+
+## Todos os jogadores da cena (local e remotos), sem repetidos.
+func _all_players() -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	if not is_inside_tree():
+		return out
+	for group: StringName in PLAYERS_GROUPS:
+		for n: Node in get_tree().get_nodes_in_group(group):
+			var p: Node3D = n as Node3D
+			if p != null and p.is_inside_tree() and not out.has(p):
+				out.append(p)
+	return out
 
 
 ## Aplica dano ao jogador já escalado pela dificuldade (nº de jogadores). Usar sempre isto.
@@ -262,7 +423,13 @@ func _deal_damage(target: Node, amount: float) -> void:
 	if target == null or not target.has_method("take_damage"):
 		return
 	var tree: SceneTree = get_tree() if is_inside_tree() else null
-	target.call("take_damage", amount * DifficultyProfile.current(tree).enemy_damage_multiplier)
+	var final_amount: float = amount * DifficultyProfile.current(tree).enemy_damage_multiplier
+	# Jogador de outro peer: a vida é do dono (contrato #5 B).
+	if target.has_method("apply_damage") and NetVisibility.is_online(multiplayer) \
+			and target.get_multiplayer_authority() != multiplayer.get_unique_id():
+		target.rpc_id(target.get_multiplayer_authority(), &"apply_damage", final_amount, global_position)
+		return
+	target.call("take_damage", final_amount)
 
 
 ## Regista um material para o flash de dano (albedo_color é animado de volta à cor base).

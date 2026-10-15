@@ -49,6 +49,7 @@ tem exatamente uma ação:
 | `{"t":0,"start_expedition":"praia"}` | host: inicia a expedição pelo fluxo normal e espera o mapa carregar |
 | `{"sleep":1.5}` | espera N segundos a partir de agora (`t` opcional; útil depois de `wait_until`) |
 | `{"t":0,"face_player":"remote"}` | vira o jogador local para o jogador remoto mais próximo |
+| `{"t":0,"goto_player":"remote"}` | põe o jogador local 1.5 m ao lado do remoto mais próximo, virado para ele |
 | `{"sell":true}` | carrega E dentro do raio do SellPoint (mesmo caminho do jogador: `Player._interact` → `SellPoint.deliver`) |
 
 Qualquer passo aceita `"if"`: condição ou lista de condições (todas verdadeiras) — senão é saltado.
@@ -62,6 +63,10 @@ Com passos de alto nível o `summary.json` ganha `metrics`: `time_to_goal`, `mon
 (avisos de jogo, ex. "pickup: nenhum item" — não contam como erros), `fight_swings`.
 Exemplos: `praia_300.json` (economia da Praia), `campo_rate.json` (economia do Campo),
 `campo_boss.json` (cava o altar do círculo de pedras e luta com a Toupeira Gigante).
+Coop dos inimigos (#24, `run_coop.sh <godot> <host.json> <client.json>`): `coop_enemies_host/client.json`
+(o host acorda um caranguejo e afasta-se; persegue e fere o convidado, que o mata por request_hit)
+e `coop_boss_host/client.json` (o convidado cava o altar do Campo; o host cria a Toupeira Gigante;
+os dois lutam e `giant_mole` fica vencido nos dois lados).
 
 Ações: `move_forward/backward/left/right`, `jump`, `interact`, `use_tool`, `careful_dig`, `attack`
 (botão direito = cavar; `tap` não simula Shift — usa `dig_spot` com `mode`).
@@ -77,8 +82,13 @@ tools/bot/run_coop.sh "<godot console exe>"              # 2 janelas 960x540 lad
 tools/bot/run_coop.sh "<godot>" tools/bot/coop_host.json tools/bot/coop_client.json --headless
 ```
 
-`coop_host.json` hospeda na porta 7791 e entra na Praia; `coop_client.json` liga-se a ela.
-Cada instância escreve o seu run em `.bot_runs/` (logs do Godot em `.bot_runs/coop_*.log`).
+`coop_host.json` hospeda na porta 7791 e entra na Praia; `coop_client.json` liga-se a ela
+(Fase 1: cada um vê o outro andar).
+`coop2_host.json` / `coop2_client.json` (porta 7792, Fase 2): os dois veem os mesmos spots
+(`h1_spots` vs `c1_spots`), o convidado cava (o host executa o `dig`), os dois veem o item,
+correm para o apanhar (só um o leva) e quem o tem entrega-o na base: o dinheiro e o museu
+ficam iguais nos dois dumps finais.
+Cada instância escreve o seu run em `.bot_runs/` (logs do Godot em `.bot_runs/<roteiro>.log`).
 Os dumps trazem `net` (peer_id, is_server, peers) e `players` (todos os jogadores, com
 `local`, posição e ferramenta na mão); a variável `players` conta-os em `wait_until`.
 O jogador "local" (grupo `player`) é sempre o desta instância.

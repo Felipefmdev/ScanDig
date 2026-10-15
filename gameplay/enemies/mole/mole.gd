@@ -179,6 +179,8 @@ func _process_dig_down() -> void:
 
 
 func _on_threshold_cleared(level: int) -> void:
+	if not has_simulation_authority():
+		return
 	if level <= spawn_level and is_alive():
 		_go_away()
 
@@ -194,6 +196,31 @@ func _go_away() -> void:
 # ---------------------------------------------------------------------------
 # Ganchos da EnemyBase
 # ---------------------------------------------------------------------------
+
+## Cliente: corpo, monte de terra, aviso e colisão a partir do estado do host.
+func _on_remote_state(new_state: int) -> void:
+	var surface: bool = new_state == State.EXPOSED or new_state == State.ERUPT
+	_body_root.visible = surface or new_state == State.DIG_DOWN or new_state == State.LEAVE
+	_mound.visible = not surface
+	if _collision != null:
+		_collision.disabled = not surface
+	if new_state == State.TELEGRAPH:
+		_ground_y = global_position.y + UNDERGROUND_DEPTH
+		_warning.show_circle(Vector3(global_position.x, _ground_y, global_position.z), erupt_radius)
+	else:
+		_warning.hide_warning()
+
+
+## Cliente: o monte de terra segue a posição replicada (o host move-o no _physics_process).
+func _process(delta: float) -> void:
+	if has_simulation_authority():
+		return
+	if state == State.UNDERGROUND or state == State.TELEGRAPH:
+		_ground_y = global_position.y + UNDERGROUND_DEPTH
+		_place_mound(0.03 * sin(Time.get_ticks_msec() * 0.02))
+	if state == State.TELEGRAPH:
+		_warning.pulse(delta)
+
 
 ## Só leva dano à superfície.
 func _can_take_damage() -> bool:

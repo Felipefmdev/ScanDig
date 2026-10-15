@@ -1,0 +1,13 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 10,
+	"steps": [
+		{"t": 0.5, "host": 7795},
+		{"t": 0.6, "start_expedition": "praia", "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"t": 0, "teleport": [20, 0.6, 18]},
+		{"sleep": 390.0},
+		{"t": 0, "dump": "h_final"},
+		{"t": 0, "quit": true}
+	]
+}

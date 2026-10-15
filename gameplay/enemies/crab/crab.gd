@@ -204,6 +204,8 @@ func _pinch() -> void:
 
 
 func _on_threshold_cleared(level: int) -> void:
+	if not has_simulation_authority():
+		return
 	if level <= spawn_level and state != State.BURROW and is_alive():
 		_enter_state(State.BURROW)
 
@@ -219,6 +221,11 @@ func _can_take_damage() -> bool:
 
 func _can_be_stunned() -> bool:
 	return state != State.EMERGE and state != State.BURROW
+
+
+## Cliente: sem colisão enquanto está debaixo da areia (o resto chega pelo synchronizer).
+func _on_remote_state(new_state: int) -> void:
+	collision_shape.disabled = new_state == State.EMERGE or new_state == State.BURROW
 
 
 func _on_flee_started() -> void:

@@ -3,6 +3,9 @@ extends BuriedSpot
 
 ## Ponto especial onde dorme o chefe do mapa: totem de conchas + aviso. Só o jogador o acorda,
 ## ao cavar até ao fim (nunca aparece por acaso). Não tem item: no fim surge o chefe.
+## Coop (#5 F, #24): o altar é fixo na cena (networked = false), por isso quem cava corre o
+## dig() localmente; num cliente o fim da escavação pede ao host que acorde o chefe. Só o
+## host cria o chefe, pelo EnemySpawner do mapa (replicado), e só uma vez.
 
 signal boss_spawned(boss: Node3D)
 
@@ -34,26 +37,71 @@ func _ready() -> void:
 func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = true) -> Dictionary:
 	var res: Dictionary = super.dig(is_careful, damage_multiplier, report_noise)
 	if bool(res.get("revealed", false)) and not _woken:
-		_wake_boss()
+		if _is_host():
+			_wake_boss()
+		else:
+			_mark_woken()
+			_rpc_request_wake.rpc_id(1)
 	return res
 
 
+func _is_host() -> bool:
+	return not is_inside_tree() or not NetVisibility.is_online(multiplayer) or multiplayer.is_server()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_request_wake() -> void:
+	if multiplayer.is_server() and not _woken:
+		_wake_boss()
+
+
+## Host: acorda o chefe (uma vez) e avisa os outros peers.
 func _wake_boss() -> void:
+	if _woken or not _is_host():
+		return
+	_mark_woken()
+	if NetVisibility.is_online(multiplayer):
+		for peer_id: int in multiplayer.get_peers():
+			if NetVisibility.is_peer_ready(multiplayer, peer_id):
+				_rpc_woken.rpc_id(peer_id)
+	DisturbanceMeter.report(DisturbanceMeter.NOISE_REVEAL * 3.0, global_position)
+	SFX.play_at(SFX.EMERGE_SAND, global_position, 6.0)
+	var world_pos: Vector3 = global_transform * boss_offset
+	var boss: Node3D = null
+	var spawner: EnemySpawner = EnemySpawner.find(get_tree())
+	var kind: StringName = _boss_kind()
+	if spawner != null and kind != &"":
+		boss = spawner.spawn_from_data({"kind": String(kind), "pos": world_pos, "level": 0, "rot_y": global_rotation.y})
+	if boss == null:
+		# Sem spawner (testes, cenas antigas): só local.
+		boss = boss_scene.instantiate() as Node3D
+		var parent: Node = get_parent()
+		# Posiciona antes de entrar na árvore: o _ready do chefe guarda a posição de partida.
+		boss.position = (parent as Node3D).global_transform.affine_inverse() * world_pos if parent is Node3D else world_pos
+		boss.rotation.y = global_rotation.y
+		parent.add_child(boss)
+		boss.global_position = world_pos
+	boss_spawned.emit(boss)
+
+
+## Kind do EnemySpawner correspondente a boss_scene ("" se não houver).
+func _boss_kind() -> StringName:
+	for kind: StringName in EnemySpawner.KIND_SCENES:
+		if EnemySpawner.KIND_SCENES[kind] == boss_scene.resource_path:
+			return kind
+	return &""
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_woken() -> void:
+	_mark_woken()
+
+
+func _mark_woken() -> void:
 	_woken = true
 	if _label != null:
 		_label.text = "Ele acordou!"
 		_label.modulate = Color(1.0, 0.35, 0.25)
-	DisturbanceMeter.report(DisturbanceMeter.NOISE_REVEAL * 3.0, global_position)
-	SFX.play_at(SFX.EMERGE_SAND, global_position, 6.0)
-	var boss: Node3D = boss_scene.instantiate() as Node3D
-	var parent: Node = get_parent()
-	var world_pos: Vector3 = global_transform * boss_offset
-	# Posiciona antes de entrar na árvore: o _ready do chefe guarda a posição de partida.
-	boss.position = (parent as Node3D).global_transform.affine_inverse() * world_pos if parent is Node3D else world_pos
-	boss.rotation.y = global_rotation.y
-	parent.add_child(boss)
-	boss.global_position = world_pos
-	boss_spawned.emit(boss)
 
 
 func _build_totem() -> void:

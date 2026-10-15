@@ -1,0 +1,22 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 10,
+	"steps": [
+		{"t": 0.3, "set_state": {"unlocked_maps": ["praia", "campo"], "defeated_bosses": ["king_crab"]}},
+		{"t": 0.5, "host": 7794},
+		{"t": 0.6, "start_expedition": "campo", "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"t": 0, "teleport": [-12.0, 0.6, -12.0]},
+		{"wait_until": "enemies>=1", "timeout": 90},
+		{"sleep": 2.5},
+		{"t": 0, "fight": 0.4, "radius": 60},
+		{"t": 0, "screenshot": "h1_chefe"},
+		{"t": 0, "dump": "h1_chefe"},
+		{"t": 0, "loop": [{"fight": 20, "radius": 60}], "until": "enemies<1", "timeout": 300},
+		{"t": 0, "dump": "h2_vencido"},
+		{"t": 0, "screenshot": "h2_vencido"},
+		{"sleep": 8.0},
+		{"t": 0, "dump": "h3_final"},
+		{"t": 0, "quit": true}
+	]
+}

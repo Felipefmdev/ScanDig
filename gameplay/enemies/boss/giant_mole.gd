@@ -405,7 +405,7 @@ func flee_from(_origin: Vector3, _seconds: float) -> void:
 
 func take_damage(amount: float, from: Vector3 = Vector3.INF) -> void:
 	super.take_damage(amount, from)
-	if _dead:
+	if _dead or not has_simulation_authority():
 		return
 	health_bar.value = health
 	health_changed.emit(health, max_health)
@@ -428,10 +428,12 @@ func _call_reinforcements() -> void:
 	if parent == null:
 		return
 	for i: int in range(count):
-		var mole: Mole = MOLE_SCENE.instantiate() as Mole
-		mole.spawn_level = 0
 		var ang: float = TAU * float(i) / float(count) + randf() * 0.5
 		var pos: Vector3 = Vector3(global_position.x, _ground_y, global_position.z) + Vector3(cos(ang), 0.0, sin(ang)) * 4.0
+		if _spawn_minion(&"mole", pos) != null:
+			continue
+		var mole: Mole = MOLE_SCENE.instantiate() as Mole
+		mole.spawn_level = 0
 		mole.position = pos
 		parent.add_child(mole)
 		mole.global_position = pos
@@ -451,6 +453,31 @@ func _process(delta: float) -> void:
 	if state == State.DYING and _dead:
 		_state_time += delta
 		_process_dying(delta)
+	elif not has_simulation_authority():
+		# Cliente: barra de vida, monte de terra e aviso a partir do estado replicado.
+		health_bar.value = health
+		if _mound.visible:
+			_place_mound(0.04 * sin(Time.get_ticks_msec() * 0.018))
+		if _warning.visible:
+			_warning.pulse(delta)
+
+
+## Cliente: corpo/monte/aviso/colisão a partir do estado do host.
+func _on_remote_state(new_state: int) -> void:
+	var underground: bool = new_state in [State.BURROW, State.TUNNEL, State.ERUPT_TELEGRAPH]
+	body_root.visible = not (new_state == State.TUNNEL or new_state == State.ERUPT_TELEGRAPH)
+	collision_shape.disabled = underground or new_state == State.EMERGE or new_state == State.DYING
+	_mound.visible = new_state == State.TUNNEL or new_state == State.ERUPT_TELEGRAPH
+	if _mound.visible:
+		_ground_y = global_position.y + UNDERGROUND_DEPTH
+	_warning.hide_warning()
+	match new_state:
+		State.SWIPE_TELEGRAPH:
+			_warning.show_circle(global_position - global_transform.basis.z * 1.4, swipe_radius)
+		State.ERUPT_TELEGRAPH:
+			_warning.show_circle(Vector3(global_position.x, _ground_y, global_position.z), erupt_radius)
+		State.DYING:
+			hud.visible = false
 
 
 ## Avisa o core (o host valida, ignora repetidos e libera a compra das Ruínas).

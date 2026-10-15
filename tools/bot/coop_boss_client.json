@@ -1,0 +1,31 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 10,
+	"steps": [
+		{"t": 1.5, "join": "127.0.0.1", "port": 7794, "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 1.0},
+		{"t": 0, "teleport": [-17.2, 0.6, -17.0]},
+		{"sleep": 0.3},
+		{"t": 0, "look_at": [-18.0, 0.0, -18.0]},
+		{"t": 0, "screenshot": "c0_altar"},
+		{"t": 0, "tap": "careful_dig"},
+		{"sleep": 1.4},
+		{"t": 0, "tap": "careful_dig"},
+		{"sleep": 1.4},
+		{"t": 0, "tap": "careful_dig"},
+		{"sleep": 1.4},
+		{"t": 0, "tap": "careful_dig"},
+		{"wait_until": "enemies>=1", "timeout": 30},
+		{"sleep": 2.5},
+		{"t": 0, "fight": 0.4, "radius": 60},
+		{"t": 0, "screenshot": "c1_chefe"},
+		{"t": 0, "dump": "c1_chefe"},
+		{"t": 0, "loop": [{"fight": 20, "radius": 60}], "until": "enemies<1", "timeout": 300},
+		{"t": 0, "dump": "c2_vencido"},
+		{"t": 0, "screenshot": "c2_vencido"},
+		{"sleep": 3.0},
+		{"t": 0, "dump": "c3_final"},
+		{"t": 0, "quit": true}
+	]
+}

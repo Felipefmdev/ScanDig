@@ -1,0 +1,22 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 5,
+	"screenshot_every": 5,
+	"steps": [
+		{"t": 1.5, "join": "127.0.0.1", "port": 7795, "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 0.5},
+		{"t": 0, "loop": [
+			{"goto_spot": "nearest", "walk": true, "timeout": 20, "if": "nearest_spot<9000"},
+			{"dig_spot": true, "mode": "careful", "timeout": 15, "if": "nearest_spot<=1.8"},
+			{"pickup": true, "radius": 6, "timeout": 6, "if": ["free_slots>=1", "pickup_dist<=6"]}
+		], "until": "deliverable>=2", "timeout": 90},
+		{"t": 0, "dump": "c1_com_loot"},
+		{"t": 0, "loop": [
+			{"fight": 4, "radius": 5, "if": "enemy_dist<=5"},
+			{"sleep": 0.5}
+		], "until": "time>=380", "timeout": 385},
+		{"t": 0, "dump": "c2_final"},
+		{"t": 0, "quit": true}
+	]
+}
