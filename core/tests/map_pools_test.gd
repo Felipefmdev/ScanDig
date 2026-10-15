@@ -7,6 +7,9 @@ const CATALOG_DIR: String = "res://items/catalog/"
 ## Itens de missão, relíquias e easter eggs da Praia (#39/#40, Dev A).
 const PRAIA_SIDE_ITEMS: Array[String] = ["concha_dourada", "bussola_naufragio", "medalhao_sereia",
 	"mapa_na_garrafa", "olho_do_polvo", "moeda_chocolate"]
+## Recompensa da missão, relíquias e troféus do Campo Antigo (#45/#41): fora de pool também.
+const CAMPO_SIDE_ITEMS: Array[String] = ["sino_bronze", "anel_do_poco", "moeda_celta",
+	"fibula_romana", "pena_corvo_rei", "lanterna_espantalho"]
 
 var _fails: int = 0
 
@@ -96,15 +99,17 @@ func _run() -> void:
 	for map_id: String in MAP_IDS + ["geleira"]:
 		var map_data: MapData = _load_map(map_id)
 		for item: ItemData in (map_data.item_pool if map_data != null else []):
-			trophy_in_pool = trophy_in_pool or (item != null and item.id in ["coroa_caranguejo_rei", "garra_toupeira", "olho_do_polvo"])
+			trophy_in_pool = trophy_in_pool or (item != null and item.id in ["coroa_caranguejo_rei", "garra_toupeira", "olho_do_polvo", "pena_corvo_rei", "lanterna_espantalho"])
 	_check(not trophy_in_pool, "troféus fora dos pools")
 	_check(ResourceLoader.exists(CATALOG_DIR + "garra_toupeira.tres"), "garra_toupeira no catálogo")
 	for item_id: String in PRAIA_SIDE_ITEMS:
 		_check(ResourceLoader.exists(CATALOG_DIR + item_id + ".tres"), "%s no catálogo (#39/#40)" % item_id)
+	for item_id: String in CAMPO_SIDE_ITEMS:
+		_check(ResourceLoader.exists(CATALOG_DIR + item_id + ".tres"), "%s no catálogo (#45/#41)" % item_id)
 	# Conta o catálogo aqui, sem o GameState, para não depender de um número fixo.
 	var catalog_files: int = _count_catalog_files()
 	_check(gs.get_total_catalog_items() == catalog_files, "catálogo: GameState %d, arquivos %d" % [gs.get_total_catalog_items(), catalog_files])
-	_check(catalog_files >= 27, "catálogo com pelo menos 27 itens: %d" % catalog_files)
+	_check(catalog_files >= 33, "catálogo com pelo menos 33 itens: %d" % catalog_files)
 
 	# Ordem dos motivos em get_map_status: bloqueado → "Em breve." (sem cena) → detector.
 	# Com radar Nv.3 (< 4) e Ruínas desbloqueadas, falta a cena, então o motivo é "Em breve.".

@@ -43,12 +43,18 @@ const MAP_UNLOCK_BOSSES: Dictionary = {
 ## comprar cada nível ("" = sem trava) e nível máximo. Tabela aprovada na #25;
 ## o nível 3 do detector (700, sem trava) veio da #46.
 ## Missões de NPC (#45): recompensa em dinheiro paga uma só vez por save.
-const QUESTS: Dictionary = {"ze_anzol": {"name": "O anzol de ouro", "reward": 600}}
+const QUESTS: Dictionary = {
+	"ze_anzol": {"name": "O anzol de ouro", "reward": 600},
+	"lurdes_chaves": {"name": "Os corvos levaram as chaves", "reward": 1800},
+}
 ## Relíquias escondidas e easter eggs (#45): só ficam registrados no save.
 const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", "praia_reliquia_mare",
-	"praia_polvo", "praia_ovo_pato", "praia_ovo_castelo"]
+	"praia_polvo", "praia_ovo_pato", "praia_ovo_castelo",
+	"campo_reliquia_poco", "campo_reliquia_fardo", "campo_reliquia_muro",
+	"campo_espantalho", "campo_ovo_circulo", "campo_ovo_ovelha"]
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
-const EXTRA_BOSSES: Array[String] = ["octopus"]
+## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
+const EXTRA_BOSSES: Array[String] = ["octopus", "crow_king", "scarecrow"]
 
 const UPGRADES: Dictionary = {
 	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 15000, 25000],

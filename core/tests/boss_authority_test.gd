@@ -96,6 +96,10 @@ func _run_client() -> void:
 	gs.request_report_boss_defeated("giant_mole")
 	gs.rpc_id(1, &"_host_complete_quest", "ze_anzol")
 	gs.request_report_secret("praia_polvo")
+	# Campo Antigo (#45): missão da Lurdes, segredo e chefe extra também só do host.
+	gs.request_complete_quest("lurdes_chaves")
+	gs.request_report_secret("campo_espantalho")
+	gs.request_report_boss_defeated("crow_king")
 	gs.request_buy_upgrade("detector")
 	var quest_signals: Array[String] = []
 	gs.quest_completed.connect(func(quest_id: String, reward: int) -> void: quest_signals.append("%s:%d" % [quest_id, reward]))
