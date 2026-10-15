@@ -138,10 +138,8 @@ func _check_contrast() -> void:
 		[UiPalette.INK, UiPalette.PAPER_LIGHT.lerp(UiPalette.ORANGE, 0.18), "botão hover"],
 		[UiPalette.INK, UiPalette.ORANGE, "PrimaryButton / seleção da lista"],
 		[UiPalette.INK, UiPalette.ORANGE.lerp(UiPalette.GOLD, 0.25), "PrimaryButton hover"],
-		
 		[UiPalette.PAPER, UiPalette.RED_BURNT, "DangerButton"],
 		[UiPalette.PAPER, UiPalette.RED_BURNT.darkened(0.15), "DangerButton pressionado"],
-		[UiPalette.PAPER, UiPalette.METAL, "botão desativado"],
 		[UiPalette.RED_BURNT, UiPalette.PAPER, "WarningLabel"],
 		[UiPalette.WOOD, UiPalette.PAPER, "HintLabel"],
 		[UiPalette.WOOD, UiPalette.PAPER_LIGHT, "placeholder do LineEdit"],
@@ -153,6 +151,17 @@ func _check_contrast() -> void:
 	for pair: Array in pairs:
 		var ratio: float = contrast(pair[0] as Color, pair[1] as Color)
 		_check(ratio >= 4.5, "contraste %s: %.2f" % [pair[2], ratio])
+	# Controles desativados: isentos pelo WCAG 1.4.3, mas legíveis (>= 3:1).
+	var disabled_pairs: Array = [
+		[UiPalette.WOOD, UiPalette.PAPER_DARK, "disabled: botão e aba desativados"],
+	]
+	for pair: Array in disabled_pairs:
+		var ratio: float = contrast(pair[0] as Color, pair[1] as Color)
+		_check(ratio >= 3.0, "contraste %s: %.2f (>= 3)" % [pair[2], ratio])
+	for type: String in ["Button", "PrimaryButton", "DangerButton"]:
+		var box: StyleBoxFlat = _theme.get_stylebox("disabled", type) as StyleBoxFlat
+		_check(box != null and box.bg_color.is_equal_approx(UiPalette.PAPER_DARK) and box.border_color.is_equal_approx(UiPalette.METAL)
+			and _theme.get_color("font_disabled_color", type).is_equal_approx(UiPalette.WOOD), "%s desativado em papel (PAPER_DARK, contorno METAL, texto WOOD)" % type)
 
 
 # --- 4. Layout a 960x540 --------------------------------------------------------------------

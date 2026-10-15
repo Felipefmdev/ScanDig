@@ -206,10 +206,13 @@ func _button_type(type: String, bg: Color, hover: Color, pressed: Color, text: C
 	_theme.set_stylebox("hover", type, _button_box(hover))
 	_theme.set_stylebox("pressed", type, _button_box(pressed, true))
 	_theme.set_stylebox("hover_pressed", type, _button_box(pressed, true))
-	_theme.set_stylebox("disabled", type, _button_box(P.METAL))
+	# Desativado em papel (contorno METAL, texto WOOD) para a Loja sem saldo não virar um bloco morto.
+	var disabled: StyleBoxFlat = _button_box(P.PAPER_DARK)
+	disabled.border_color = P.METAL
+	_theme.set_stylebox("disabled", type, disabled)
 	_theme.set_stylebox("focus", type, _focus_box())
 	_set_font_colors(type, ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"], text)
-	_theme.set_color("font_disabled_color", type, P.PAPER)
+	_theme.set_color("font_disabled_color", type, P.WOOD)
 	_theme.set_color("font_outline_color", type, P.INK)
 	_theme.set_color("icon_normal_color", type, Color.WHITE)
 
@@ -265,10 +268,12 @@ func _tabs() -> void:
 		_theme.set_stylebox("tab_selected", type, _tab_box(P.PAPER, true))
 		_theme.set_stylebox("tab_unselected", type, _tab_box(P.PAPER_DARK, false))
 		_theme.set_stylebox("tab_hovered", type, _tab_box(P.PAPER_DARK.lerp(P.PAPER, 0.5), false))
-		_theme.set_stylebox("tab_disabled", type, _tab_box(P.METAL, false))
+		var tab_disabled: StyleBoxFlat = _tab_box(P.PAPER_DARK, false)
+		tab_disabled.border_color = P.METAL
+		_theme.set_stylebox("tab_disabled", type, tab_disabled)
 		_theme.set_stylebox("tab_focus", type, _focus_box())
 		_set_font_colors(type, ["font_selected_color", "font_unselected_color", "font_hovered_color"], P.INK)
-		_theme.set_color("font_disabled_color", type, P.PAPER)
+		_theme.set_color("font_disabled_color", type, P.WOOD)
 		_theme.set_color("font_outline_color", type, P.INK)
 	_theme.set_stylebox("panel", "TabContainer", panel)
 	_theme.set_stylebox("tabbar_background", "TabContainer", _empty())
