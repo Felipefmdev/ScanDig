@@ -159,7 +159,9 @@ func _check_progress_bars() -> void:
 	var pb_fill: StyleBoxFlat = _theme.get_stylebox("fill", "ProgressBar") as StyleBoxFlat
 	_check(pb_bg != null and pb_bg.bg_color.is_equal_approx(UiPalette.PAPER_DARK), "ProgressBar background em PAPER_DARK")
 	_check(pb_fill != null and pb_fill.bg_color.is_equal_approx(UiPalette.RED_BURNT), "ProgressBar fill em RED_BURNT")
-	_check(_theme.get_color("font_color", "ProgressBar").is_equal_approx(UiPalette.INK), "ProgressBar font_color em INK")
+	_check(_theme.get_color("font_color", "ProgressBar").is_equal_approx(UiPalette.PAPER), "ProgressBar font_color em PAPER")
+	_check(_theme.get_color("font_outline_color", "ProgressBar").is_equal_approx(UiPalette.INK), "ProgressBar font_outline_color em INK")
+	_check(_theme.get_constant("outline_size", "ProgressBar") == 3, "ProgressBar outline_size == 3")
 
 	var threat_fill: StyleBoxFlat = _theme.get_stylebox("fill", "ThreatBar") as StyleBoxFlat
 	_check(_theme.get_type_variation_base("ThreatBar") == &"ProgressBar" and threat_fill != null and threat_fill.bg_color.is_equal_approx(UiPalette.ORANGE), "ThreatBar herda de ProgressBar com fill em ORANGE")
@@ -169,6 +171,7 @@ func _check_progress_bars() -> void:
 	_check(_theme.get_type_variation_base("BossBar") == &"ProgressBar", "BossBar herda de ProgressBar")
 	_check(boss_fill != null and boss_fill.bg_color.is_equal_approx(UiPalette.RED_BURNT) and boss_fill.border_width_top == 3, "BossBar fill em RED_BURNT com borda 3")
 	_check(boss_bg != null and boss_bg.bg_color.is_equal_approx(UiPalette.PAPER_DARK) and boss_bg.shadow_size > 0, "BossBar background em PAPER_DARK com sombra")
+
 
 
 # --- 3. Contraste WCAG ----------------------------------------------------------------------

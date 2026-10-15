@@ -118,7 +118,12 @@ func _run() -> void:
 	center.theme = load("res://ui/theme/scandig_theme.tres") as Theme
 	var panel: PanelContainer = PanelContainer.new()
 	panel.theme_type_variation = &"WornPanel"
+	var margin: MarginContainer = MarginContainer.new()
+	for side: String in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 12)
 	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.custom_minimum_size.x = 320
 	var bar_specs: Array[Array] = [
 		["ProgressBar (HP)", &""],
 		["ThreatBar", &"ThreatBar"],
@@ -131,14 +136,17 @@ func _run() -> void:
 		var bar: ProgressBar = ProgressBar.new()
 		bar.theme_type_variation = spec[1] as StringName
 		bar.value = 65.0
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bar.custom_minimum_size = Vector2(320, 22)
 		vbox.add_child(bar)
-	panel.add_child(vbox)
+	margin.add_child(vbox)
+	panel.add_child(margin)
 	center.add_child(panel)
 	bars_layer.add_child(center)
 	root.add_child(bars_layer)
 	await _shot("barras")
 	bars_layer.queue_free()
+
 
 	session.set("_current_map", null)
 	ui._refresh_expedition_bar()

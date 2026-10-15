@@ -409,8 +409,9 @@ func _scroll_and_separators() -> void:
 func _progress_bars() -> void:
 	_theme.set_stylebox("background", "ProgressBar", _flat(P.PAPER_DARK, 2, 3, 2, 2))
 	_theme.set_stylebox("fill", "ProgressBar", _flat(P.RED_BURNT, 2, 3, 0, 0))
-	_theme.set_color("font_color", "ProgressBar", P.INK)
+	_theme.set_color("font_color", "ProgressBar", P.PAPER)
 	_theme.set_color("font_outline_color", "ProgressBar", P.INK)
+	_theme.set_constant("outline_size", "ProgressBar", 3)
 
 	_variation("ThreatBar", "ProgressBar")
 	_theme.set_stylebox("fill", "ThreatBar", _flat(P.ORANGE, 2, 3, 0, 0))
@@ -418,6 +419,7 @@ func _progress_bars() -> void:
 	_variation("BossBar", "ProgressBar")
 	_theme.set_stylebox("background", "BossBar", _panel_flat(P.PAPER_DARK))
 	_theme.set_stylebox("fill", "BossBar", _flat(P.RED_BURNT, 3, 3, 0, 0))
+
 
 
 func _windows() -> void:
