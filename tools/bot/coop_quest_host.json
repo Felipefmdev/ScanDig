@@ -1,0 +1,32 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 20,
+	"steps": [
+		{"t": 0.3, "set_state": {"unlocked_maps": ["praia"], "upgrade_levels": {"detector": 1}}},
+		{"t": 0.5, "host": 7798},
+		{"t": 0.6, "start_expedition": "praia", "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 60},
+		{"sleep": 1.0},
+		{"t": 0, "teleport": [18.0, 0.6, 15.0]},
+		{"t": 0, "interact": "Ze", "walk": true},
+		{"sleep": 0.6},
+		{"t": 0, "screenshot": "h1_ze_missao"},
+		{"wait_until": "flag_anzol_encontrado==1", "timeout": 60},
+		{"t": 0, "interact": "Ze", "walk": true},
+		{"wait_until": "wave_phase==2", "timeout": 20},
+		{"sleep": 2.0},
+		{"t": 0, "screenshot": "h2_rondas"},
+		{"loop": [{"if": "enemy_dist>14", "teleport": [19.0, 0.6, 14.0]}, {"fight": 15, "radius": 16}, {"sleep": 0.5}], "until": "wave_phase>=3", "timeout": 400},
+		{"t": 0, "dump": "h3_evento_fim"},
+		{"wait_until": "bosses>=1", "timeout": 90},
+		{"t": 0, "teleport": [24.0, 0.6, -9.0]},
+		{"sleep": 2.5},
+		{"t": 0, "look_at": [28.4, 2.0, -11.0]},
+		{"t": 0, "screenshot": "h4_polvo"},
+		{"loop": [{"if": "enemy_dist>9", "teleport": [25.0, 0.6, -9.5]}, {"fight": 15, "radius": 18}, {"sleep": 0.3}], "until": "bosses==0", "timeout": 300},
+		{"wait_until": "flag_polvo_vencido==1", "timeout": 10},
+		{"sleep": 4.0},
+		{"t": 0, "dump": "h5_final"},
+		{"t": 0, "quit": true}
+	]
+}

@@ -80,6 +80,21 @@ Variáveis de `wait_until`/`until`/`if`: `money`, `inventory`, `enemies`, `spots
 `pickup_dist` (m até ao item no chão mais próximo);
 operadores `>= <= == != > <`.
 
+### Missões, segredos e eventos (#39/#40)
+
+| passo | efeito |
+|---|---|
+| `{"t":1,"interact":"Ze","walk":true}` | vai até ao `Interactable` com esse nome de nó (a pé com `walk`, senão teleporte), olha para ele e carrega E; avisa se ele não ficou em foco |
+| `{"t":1,"call":"Tide","method":"force_low_tide"}` | atalho de debug: chama um método da allowlist (`force_low_tide`, `wake_immediately`, `start`, `trigger`) no primeiro nó com esse nome |
+
+Variáveis: `flag_<nome>` (1/0, bandeira do `WorldFlags`), `quest_<nó do NPC>` (0 OFFER, 1 ACTIVE,
+2 READY, 3 EVENT, 4 DONE), `wave_round`, `wave_phase` (0 IDLE, 1 BREAK, 2 FIGHT, 3 WON, 4 LOST),
+`wave_left`, `bosses` (chefes vivos). Os dumps trazem `flags`, `quests` e `waves`.
+Roteiros: `praia_secrets_tour.json` (visita: Zé, conchas, garrafa, pedra, castelo, pato, maré
+baixa), `praia_quest_solo.json` (missão do anzol → Maré Vermelha → conchas → Polvo → relíquias e
+easter eggs, solo) e `coop_quest_host/client.json` (porta 7798: o convidado cava e apanha o
+anzol, os dois defendem o barco, o convidado toca as conchas e os dois vencem o Polvo).
+
 ## Coop (2 instâncias)
 
 ```bash

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = "bussola_naufragio"
+display_name = "Bússola do Naufrágio"
+category = 1
+material_type = 0
+size_category = 0
+base_value = 280
+fragility = 0.1
+depth_cm = 0

@@ -176,3 +176,22 @@ func test_coop_steps() -> void:
 		{"t": 0, "start_expedition": "../x"}, {"sleep": -1}, {"t": 0, "face_player": "1"}, {"t": 0, "goto_player": 2},
 	]:
 		assert_true(Bridge.parse_step(bad) is String, "deveria falhar: %s" % str(bad))
+
+
+func test_quest_steps_and_vars() -> void:
+	var it: Variant = Bridge.parse_step({"t": 1, "interact": "Ze", "walk": true})
+	assert_true(it is Dictionary)
+	assert_eq((it as Dictionary)["target"], "Ze")
+	assert_true((it as Dictionary)["walk"])
+	assert_eq((it as Dictionary)["timeout"], 30.0)
+	var call: Variant = Bridge.parse_step({"t": 1, "call": "Tide", "method": "force_low_tide"})
+	assert_eq((call as Dictionary)["method"], "force_low_tide")
+	for bad: Dictionary in [{"t": 1, "interact": ""}, {"t": 1, "interact": 3}, {"t": 1, "call": "Tide"},
+			{"t": 1, "call": "Tide", "method": "queue_free"}]:
+		assert_true(Bridge.parse_step(bad) is String, "deveria falhar: %s" % str(bad))
+	assert_eq(Bridge.parse_condition("flag_anzol_encontrado==1"), {"var": "flag_anzol_encontrado", "op": "==", "value": 1.0})
+	assert_eq((Bridge.parse_condition("quest_Ze>=4") as Dictionary)["var"], "quest_Ze")
+	assert_eq((Bridge.parse_condition("wave_round>=2") as Dictionary)["var"], "wave_round")
+	assert_true(Bridge.parse_condition("bosses==0") is Dictionary)
+	assert_null(Bridge.parse_condition("flag_==1"), "prefixo sem nome")
+	assert_null(Bridge.parse_condition("zzz==1"))

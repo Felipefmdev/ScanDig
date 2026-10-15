@@ -33,6 +33,7 @@ const KIND_SCENES: Dictionary = {
 	&"snake": "res://gameplay/enemies/snake/snake.tscn",
 	&"mole": "res://gameplay/enemies/mole/mole.tscn",
 	&"giant_mole": "res://gameplay/enemies/boss/giant_mole.tscn",
+	&"octopus": "res://gameplay/enemies/boss/octopus.tscn",
 }
 
 ## Inimigo base do mapa (níveis de ameaça e ambiente) e o "resistente" a partir do nível 2.

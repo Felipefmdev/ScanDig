@@ -66,21 +66,9 @@ func _wake_boss() -> void:
 				_rpc_woken.rpc_id(peer_id)
 	DisturbanceMeter.report(DisturbanceMeter.NOISE_REVEAL * 3.0, global_position)
 	SFX.play_at(SFX.EMERGE_SAND, global_position, 6.0)
-	var world_pos: Vector3 = global_transform * boss_offset
-	var boss: Node3D = null
-	var spawner: EnemySpawner = EnemySpawner.find(get_tree())
-	var kind: StringName = _boss_kind()
-	if spawner != null and kind != &"":
-		boss = spawner.spawn_from_data({"kind": String(kind), "pos": world_pos, "level": 0, "rot_y": global_rotation.y})
-	if boss == null:
-		# Sem spawner (testes, cenas antigas): só local.
-		boss = boss_scene.instantiate() as Node3D
-		var parent: Node = get_parent()
-		# Posiciona antes de entrar na árvore: o _ready do chefe guarda a posição de partida.
-		boss.position = (parent as Node3D).global_transform.affine_inverse() * world_pos if parent is Node3D else world_pos
-		boss.rotation.y = global_rotation.y
-		parent.add_child(boss)
-		boss.global_position = world_pos
+	# Mesmo caminho dos gatilhos de chefe (#39): EnemySpawner replicado, ou local sem spawner.
+	var boss: Node3D = BossTrigger.spawn_boss(self, _boss_kind(), global_transform * boss_offset,
+		global_rotation.y, boss_scene)
 	boss_spawned.emit(boss)
 
 

@@ -96,6 +96,10 @@ var _flash_mats: Array[Material] = []
 var _flash_base_colors: Array[Color] = []
 var _flash_tween: Tween = null
 var _stun_fx: Node3D = null
+## Alvo de evento (WaveEvent): persegue-o em vez do jogador, salvo se um jogador estiver perto.
+## Só no host (a IA corre lá). Um alvo sem take_damage só serve de destino.
+var objective_target: Node3D = null
+var objective_aggro_radius: float = 3.0
 
 
 func _ready() -> void:
@@ -444,6 +448,10 @@ func _update_target(delta: float) -> Node3D:
 		if d < best_dist:
 			best_dist = d
 			best = p
+	# Objetivo de evento (#39, ex.: o barco na Maré Vermelha): vai a ele salvo se um jogador
+	# estiver a menos de objective_aggro_radius.
+	if is_instance_valid(objective_target) and best_dist > objective_aggro_radius * objective_aggro_radius:
+		best = objective_target
 	_target = best
 	return _target
 

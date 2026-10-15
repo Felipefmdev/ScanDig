@@ -11,6 +11,7 @@ const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
 	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore", "fight",
 	"host", "join", "start_expedition", "sleep", "face_player", "goto_player",
+	"interact", "call",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
@@ -19,7 +20,13 @@ const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop", "sleep"]
 const CONDITION_VARS: PackedStringArray = [
 	"money", "inventory", "enemies", "spots", "time", "health",
 	"nearest_spot", "free_slots", "deliverable", "sell_dist", "pickup_dist", "enemy_dist", "players",
+	"wave_round", "wave_phase", "wave_left", "bosses",
 ]
+## Variáveis com prefixo (#39): flag_<bandeira do WorldFlags> (1/0) e quest_<nome do NPC>
+## (estado da missão 0..4: OFFER, ACTIVE, READY, EVENT, DONE).
+const CONDITION_PREFIXES: PackedStringArray = ["flag_", "quest_"]
+## Métodos que o passo "call" pode chamar (atalhos de debug para testar segredos e eventos).
+const DEBUG_CALL_METHODS: PackedStringArray = ["force_low_tide", "wake_immediately", "start", "trigger"]
 const DIG_MODES: PackedStringArray = ["fast", "careful", "smart"]
 ## Distância "infinita" usada pelas variáveis nearest_spot/sell_dist quando não há alvo.
 const NO_TARGET_DISTANCE: float = 9999.0
@@ -158,7 +165,7 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			return "'if' invalido '%s'" % str(d["if"])
 		step["if"] = conds
 	var timeout_default: float = DEFAULT_WAIT_TIMEOUT
-	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot", "explore", "fight"]:
+	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot", "explore", "fight", "interact"]:
 		timeout_default = 30.0
 	if d.has("timeout"):
 		if not _is_number(d["timeout"]) or float(d["timeout"]) <= 0.0:
@@ -320,6 +327,20 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 		"face_player", "goto_player":
 			if not value is String or value != "remote":
 				return "'%s' so aceita \"remote\"" % kind
+		"interact":
+			if not value is String or (value as String).is_empty():
+				return "'interact' deve ser o nome do no Interactable"
+			step["target"] = value
+			step["walk"] = d.get("walk", false) == true
+			step["timeout"] = timeout
+		"call":
+			if not value is String or (value as String).is_empty():
+				return "'call' deve ser o nome do no"
+			var method: Variant = d.get("method", "")
+			if not method is String or not DEBUG_CALL_METHODS.has(method):
+				return "'method' deve ser um de %s" % ", ".join(DEBUG_CALL_METHODS)
+			step["target"] = value
+			step["method"] = method
 	return step
 
 
@@ -352,10 +373,17 @@ static func parse_condition(text: String) -> Variant:
 			continue
 		var var_name: String = s.substr(0, idx)
 		var rhs: String = s.substr(idx + op.length())
-		if not CONDITION_VARS.has(var_name) or not rhs.is_valid_float():
+		if not (CONDITION_VARS.has(var_name) or _has_condition_prefix(var_name)) or not rhs.is_valid_float():
 			return null
 		return {"var": var_name, "op": op, "value": rhs.to_float()}
 	return null
+
+
+static func _has_condition_prefix(var_name: String) -> bool:
+	for prefix: String in CONDITION_PREFIXES:
+		if var_name.begins_with(prefix) and var_name.length() > prefix.length():
+			return true
+	return false
 
 
 static func compare(lhs: float, op: String, rhs: float) -> bool:
@@ -575,6 +603,10 @@ func _execute(step: Dictionary) -> void:
 			_dump(step["label"])
 		"wait_until":
 			await _wait_condition(step["condition"], step["timeout"])
+		"interact":
+			await _interact_with(step["target"], step["walk"], step["timeout"])
+		"call":
+			_debug_call(step["target"], step["method"])
 		"quit":
 			pass
 
@@ -1082,6 +1114,25 @@ func _condition_value(var_name: String) -> float:
 			return Vector2(d.x, d.z).length()
 		"players":
 			return float(get_tree().get_nodes_in_group(PLAYERS_GROUP).size())
+		"wave_round", "wave_phase", "wave_left":
+			var wave: WaveEvent = _active_wave()
+			if wave == null:
+				return 0.0
+			if var_name == "wave_round":
+				return float(wave.round_number)
+			return float(wave.phase) if var_name == "wave_phase" else float(wave.enemies_left)
+		"bosses":
+			var alive: int = 0
+			for n: Node in get_tree().get_nodes_in_group(&"bosses"):
+				if n is EnemyBase and (n as EnemyBase).is_alive():
+					alive += 1
+			return float(alive)
+	if var_name.begins_with("flag_"):
+		var flags: WorldFlags = WorldFlags.find(get_tree())
+		return 1.0 if flags != null and flags.has_flag(StringName(var_name.substr(5))) else 0.0
+	if var_name.begins_with("quest_"):
+		var npc: Node = _find_named(var_name.substr(6))
+		return float(npc.get("state")) if npc is QuestNpc else -1.0
 	var state: Dictionary = collect_state()
 	match var_name:
 		"money": return float(state["game_state"].get("team_money", 0))
@@ -1187,7 +1238,80 @@ func collect_state() -> Dictionary:
 			"boss_altar": _is_altar(s),
 		})
 	state["spots"] = spots
+	# Missões e eventos (#39)
+	var flags: WorldFlags = WorldFlags.find(get_tree())
+	state["flags"] = flags.get_all() if flags != null else {}
+	var quests: Dictionary = {}
+	for n: Node in get_tree().get_nodes_in_group(Interactable.GROUP):
+		if n is QuestNpc:
+			quests[String(n.name)] = QuestNpc.QuestState.keys()[(n as QuestNpc).state]
+	state["quests"] = quests
+	var waves: Array = []
+	for n: Node in get_tree().get_nodes_in_group(WaveEvent.GROUP):
+		waves.append((n as WaveEvent).get_status())
+	state["waves"] = waves
 	return state
+
+
+# --- Missões e eventos (#39) ----------------------------------------------------
+
+## Vai até ao Interactable `target_name` (a pé com walk, senão teleporte), olha para ele e
+## carrega [E] como o jogador (o foco do Interactable trata o resto).
+func _interact_with(target_name: String, walk: bool, timeout: float) -> void:
+	var it: Interactable = _find_named(target_name) as Interactable
+	var player: Node3D = _player()
+	if it == null or player == null:
+		_fail("interact: '%s' nao encontrado" % target_name)
+		return
+	var focus: Vector3 = it.get_focus_point()
+	var arrive: float = clampf(it.interact_range - 1.0, 1.0, 2.0)
+	var flat: Vector3 = Vector3(player.global_position.x - focus.x, 0.0, player.global_position.z - focus.z)
+	if flat.length() > arrive:
+		if walk:
+			await _walk_to(focus, arrive, timeout, 0.6)
+		else:
+			var dir: Vector3 = flat.normalized() if flat.length() > 0.01 else Vector3.BACK
+			player.global_position = Vector3(focus.x, player.global_position.y, focus.z) + dir * arrive
+			if player is CharacterBody3D:
+				(player as CharacterBody3D).velocity = Vector3.ZERO
+	_look_at(focus)
+	for i: int in 3:
+		await get_tree().process_frame
+	if Interactable.get_focused() != it:
+		_fail("interact: '%s' sem foco (alvo do proprio jogador ou fora do cone)" % target_name)
+	await _hold_action("interact", TAP_SECONDS)
+	await get_tree().process_frame
+
+
+func _debug_call(target_name: String, method: String) -> void:
+	var n: Node = _find_named(target_name)
+	if n == null or not n.has_method(method):
+		_fail("call: '%s.%s' nao existe" % [target_name, method])
+		return
+	n.call(method)
+
+
+## Primeiro nó da cena atual com este nome (procura recursiva).
+func _find_named(node_name: String) -> Node:
+	var scene: Node = get_tree().current_scene
+	if scene == null:
+		return null
+	if String(scene.name) == node_name:
+		return scene
+	return scene.find_child(node_name, true, false)
+
+
+func _active_wave() -> WaveEvent:
+	var first: WaveEvent = null
+	for n: Node in get_tree().get_nodes_in_group(WaveEvent.GROUP):
+		var w: WaveEvent = n as WaveEvent
+		if w == null:
+			continue
+		if w.phase != WaveEvent.Phase.IDLE:
+			return w
+		if first == null:
+			first = w
+	return first
 
 
 # --- Coop (CoreNetwork / CoreSession) ------------------------------------------
