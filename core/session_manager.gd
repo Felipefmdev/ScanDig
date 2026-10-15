@@ -10,6 +10,11 @@ signal expedition_ended(summary: Dictionary)
 signal host_lost()
 ## Só no host: um peer (inclusive o próprio host, id 1) terminou de carregar o mapa atual.
 signal peer_scene_ready(peer_id: int, map_id: String)
+## Só no host: a expedição vai terminar AGORA. Emitido dentro de request_end_expedition(),
+## depois de advance_day() + save_game() e ANTES de avisar os peers (_rpc_return_to_lobby).
+## Quem escuta pode remover nós replicados de forma síncrona (remove_child + queue_free)
+## para que os despawns saiam antes do RPC de volta ao lobby.
+signal expedition_ending(map_id: String)
 
 const LOBBY_SCENE: String = "res://world/lobby_base.tscn"
 const MAP_SCENE_FORMAT: String = "res://world/map_%s.tscn"
@@ -30,6 +35,8 @@ var _ready_peers: Array[int] = []
 var _pending_scene_path: String = ""
 ## Evita dois "aguarda frame" ao mesmo tempo em _process.
 var _awaiting_scene_frame: bool = false
+## request_end_expedition() em andamento: impede reentrada vinda de quem ouve expedition_ending.
+var _ending: bool = false
 
 
 func _enter_tree() -> void:
@@ -212,8 +219,10 @@ func request_end_expedition() -> void:
 	if not multiplayer.is_server():
 		push_warning("SessionManager: apenas o host pode encerrar a expedição.")
 		return
-	if not is_in_expedition():
+	if not is_in_expedition() or _ending:
 		return
+	_ending = true
+	var map_id: String = _current_map.id
 	var summary: Dictionary = _pending_summary.duplicate(true)
 	var state: GameState = GameState.instance
 	if state != null:
@@ -224,7 +233,10 @@ func request_end_expedition() -> void:
 	if save != null:
 		save.save_game()
 	_pending_summary = {}
+	# Antes do RPC: despawns feitos aqui chegam aos clientes antes da volta ao lobby (#22).
+	expedition_ending.emit(map_id)
 	_call_all(&"_rpc_return_to_lobby", [summary])
+	_ending = false
 
 
 # --- RPCs (host -> todos) -------------------------------------------------------

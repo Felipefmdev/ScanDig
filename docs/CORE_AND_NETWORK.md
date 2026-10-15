@@ -122,9 +122,16 @@ Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado
 1. Host: `request_start_expedition(map_id)` (exige `can_start_map`: mapa desbloqueado, nível do detector e cena `res://world/map_<id>.tscn`).
 2. RPC `_rpc_enter_map` → todos trocam de cena (`scene_changing`, `expedition_started`). Quem entra no meio recebe `_rpc_sync_scene`.
 3. Durante a expedição o host junta `item_sold`/`item_donated` no resumo.
-4. Host: `request_end_expedition()` → `advance_day()` → `SaveManager.save_game()` → `_rpc_return_to_lobby(summary)` → `expedition_ended(summary)` em todos.
+4. Host: `request_end_expedition()` → `advance_day()` → `SaveManager.save_game()` → `expedition_ending(map_id)` (só no host) → `_rpc_return_to_lobby(summary)` → `scene_changing(lobby)` e `expedition_ended(summary)` em todos.
 5. Queda do host: cliente volta ao lobby e recebe `host_lost`.
 6. Saída voluntária (`disconnect_game()`): o próprio peer volta ao lobby sem `host_lost` (ver "Sair da sessão").
+
+### Fim da expedição no host (`expedition_ending`)
+- `signal expedition_ending(map_id: String)`: só no host (inclusive solo/offline), dentro de `request_end_expedition()`, **depois** de `advance_day()` + `save_game()` e **antes** do `_rpc_return_to_lobby` (que, online, roda no próprio host na mesma chamada por ser `call_local`).
+- No momento do sinal: `is_in_expedition() == true`, `get_current_map().id == map_id`, a cena atual ainda é o mapa, o dia já avançou e o save já foi gravado.
+- Não é emitido nos clientes, na queda do host nem no `session_left`.
+- Uso previsto: nós replicados por `MultiplayerSpawner` devem sair da árvore aqui (`remove_child` + `queue_free`, de forma síncrona; só `queue_free` chega tarde), para os despawns irem antes do RPC de volta ao lobby (#22). Sem isso, o cliente já trocou de cena quando o despawn chega e loga `recv_nodes.has(net_id) ... ERR_UNAUTHORIZED`.
+- Protegido contra reentrada: chamar `request_end_expedition()` de dentro do handler não faz nada.
 
 ### Mapa carregado por peer (`peer_scene_ready`)
 A Godot 4.3 não avisa quando `change_scene_to_file` termina. O `SessionManager` guarda a cena pedida em `_change_scene`, compara com `current_scene.scene_file_path` no `_process` e espera mais um frame (para os `_ready` da cena rodarem) antes de avisar. Se outra troca começar nesse frame, o aviso é descartado.
@@ -196,6 +203,7 @@ $G --headless --path . --script res://core/tests/value_cap_test.gd  # teto de ve
 $G --headless --path . --script res://core/tests/purchase_item_test.gd  # ferramentas da Praia: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/map_unlock_test.gd    # progressão de mapas (grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/scene_ready_test.gd   # peer_scene_ready no solo: "RESULT fails=0"
+$G --headless --path . --script res://core/tests/expedition_ending_test.gd  # ordem do expedition_ending e reentrada (grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/leave_session_test.gd # sair da sessão (porta 7792, grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/net_errors_test.gd    # sanitize, IP inválido, porta em uso, timeout e thread do UPnP com UPnP falso: "UPNP skipped" + "RESULT fails=0"
 # Só com autorização do dono da rede: "-- upnp" abre de verdade a porta 7797 (UDP) no roteador e fecha logo depois.
