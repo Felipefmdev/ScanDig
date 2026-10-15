@@ -63,6 +63,8 @@ func _ready() -> void:
 	_load_catalog()
 	_setup_shop_buttons()
 	_setup_museum_controls()
+	# A loja já usa o CoreSession (nome dos mapas) no primeiro refresh.
+	_session = get_node_or_null(SESSION_PATH)
 	_resolve_game_state()
 	_setup_expeditions()
 
@@ -249,6 +251,8 @@ func _on_map_unlock_result(_map_id: String, _success: bool, message: String) -> 
 
 func _on_progression_changed(_unlocked_maps: Array, _defeated_bosses: Array) -> void:
 	_refresh_map_list()
+	# Mapa desbloqueado libera níveis da loja travados por ele.
+	_refresh_shop_buttons()
 
 
 func _refresh_depart_button() -> void:
@@ -386,23 +390,54 @@ func _refresh_shop_buttons() -> void:
 		var level: int = _game_state.get_upgrade_level(upgrade_id)
 		var max_level: int = _game_state.get_upgrade_max_level(upgrade_id)
 		var cost: int = _game_state.get_next_upgrade_cost(upgrade_id)
+		var header: String = "%s  •  Nível %d/%d" % [display_name, level, max_level]
+		if upgrade_id == "detector":
+			# O radar começa no nível 1 com o detector no nível 0.
+			header += " (radar Nv.%d)" % (level + 1)
 		if cost < 0:
-			btn.text = "%s  •  Nível %d/%d
-NÍVEL MÁXIMO" % [display_name, level, max_level]
+			btn.text = "%s\nNÍVEL MÁXIMO" % header
 			btn.tooltip_text = "%s já está no nível máximo." % display_name
 			btn.disabled = true
+			continue
+		var reason: String = _get_upgrade_block_reason(upgrade_id, cost)
+		var required_map: String = _get_next_upgrade_required_map(upgrade_id)
+		if not required_map.is_empty() and reason.begins_with("Desbloqueie"):
+			btn.text = "%s\n🔒 Requer %s — R$ %d" % [header, _get_map_display_name(required_map), cost]
+			btn.tooltip_text = reason
+			btn.disabled = true
+			continue
+		btn.text = "%s\nComprar nível %d — R$ %d" % [header, level + 1, cost]
+		if not reason.is_empty():
+			btn.tooltip_text = reason
+		elif upgrade_id == "detector":
+			btn.tooltip_text = "Radar: Nv.%d → Nv.%d" % [level + 1, level + 2]
+		elif upgrade_id == "backpack":
+			var base: int = _get_backpack_base()
+			btn.tooltip_text = "Mochila: %d → %d espaços" % [base + level, base + level + 1]
 		else:
-			var affordable: bool = _game_state.team_money >= cost
-			btn.text = "%s  •  Nível %d/%d
-Comprar nível %d — R$ %d" % [display_name, level, max_level, level + 1, cost]
-			if not affordable:
-				btn.tooltip_text = "Saldo insuficiente (R$ %d)." % _game_state.team_money
-			elif upgrade_id == "backpack":
-				var base: int = _get_backpack_base()
-				btn.tooltip_text = "Mochila: %d → %d espaços" % [base + level, base + level + 1]
-			else:
-				btn.tooltip_text = ""
-			btn.disabled = _pending_purchase or not affordable
+			btn.tooltip_text = ""
+		btn.disabled = _pending_purchase or not reason.is_empty()
+
+
+## Motivo do core para não comprar o próximo nível; core antigo: só checa o saldo.
+func _get_upgrade_block_reason(upgrade_id: String, cost: int) -> String:
+	if _game_state.has_method(&"get_upgrade_block_reason"):
+		return str(_game_state.call(&"get_upgrade_block_reason", upgrade_id))
+	if _game_state.team_money < cost:
+		return "Saldo insuficiente (R$ %d)." % _game_state.team_money
+	return ""
+
+
+func _get_next_upgrade_required_map(upgrade_id: String) -> String:
+	if _game_state.has_method(&"get_next_upgrade_required_map"):
+		return str(_game_state.call(&"get_next_upgrade_required_map", upgrade_id))
+	return ""
+
+
+func _get_map_display_name(map_id: String) -> String:
+	var status: Variant = _session_call(&"get_map_status", [map_id], {})
+	var display_name: String = str((status as Dictionary).get("display_name", "")) if status is Dictionary else ""
+	return display_name if not display_name.is_empty() else map_id
 
 
 func _setup_museum_controls() -> void:
