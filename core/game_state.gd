@@ -34,12 +34,17 @@ const MAP_UNLOCK_BOSSES: Dictionary = {
 	"cratera": {"boss_id": "ancient_guardian", "boss_name": "Guardião Ancestral"},
 }
 
-## Definição da loja: custo de cada nível e nível máximo.
+## Definição da loja: custo de cada nível, mapa que precisa estar desbloqueado para
+## comprar cada nível ("" = sem trava) e nível máximo. Tabela aprovada na #25.
 const UPGRADES: Dictionary = {
-	"detector": {"name": "Detector", "costs": [300, 600, 1200], "max_level": 3},
-	"pinpointer": {"name": "Pinpointer de Precisão", "costs": [500], "max_level": 1},
-	"shovel": {"name": "Pá de Fibra", "costs": [800], "max_level": 1},
-	"backpack": {"name": "Mochila Reforçada", "costs": [400, 800, 1600], "max_level": 3},
+	"detector": {"name": "Detector", "costs": [300, 600, 1200, 2000, 15000, 25000],
+		"required_maps": ["", "", "campo", "ruinas", "cratera", "cratera"], "max_level": 6},
+	"pinpointer": {"name": "Pinpointer de Precisão", "costs": [500, 18000],
+		"required_maps": ["", "cratera"], "max_level": 2},
+	"shovel": {"name": "Pá de Fibra", "costs": [800, 1200, 12000],
+		"required_maps": ["", "ruinas", "cratera"], "max_level": 3},
+	"backpack": {"name": "Mochila Reforçada", "costs": [400, 800, 1600, 1800, 10000],
+		"required_maps": ["", "", "campo", "ruinas", "cratera"], "max_level": 5},
 }
 
 static var instance: GameState = null
@@ -72,6 +77,7 @@ func _ready() -> void:
 	if max_museum_items <= 0:
 		max_museum_items = _count_catalog_items()
 	_ensure_upgrade_keys()
+	_validate_upgrades()
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 
@@ -99,7 +105,36 @@ func get_next_upgrade_cost(upgrade_id: String) -> int:
 	return int(costs[level])
 
 
-## Espaços da mochila: 3 (sem upgrade) a 6.
+## Id do mapa exigido para o PRÓXIMO nível; "" se não há trava, se está no máximo ou se o upgrade não existe.
+func get_next_upgrade_required_map(upgrade_id: String) -> String:
+	if get_next_upgrade_cost(upgrade_id) < 0:
+		return ""
+	var required_maps: Array = UPGRADES[upgrade_id]["required_maps"]
+	var level: int = get_upgrade_level(upgrade_id)
+	return str(required_maps[level]) if level < required_maps.size() else ""
+
+
+## "" se dá para comprar o próximo nível agora; senão o motivo, pronto para a UI.
+func get_upgrade_block_reason(upgrade_id: String) -> String:
+	if not UPGRADES.has(upgrade_id):
+		return "Upgrade desconhecido."
+	var upgrade_name: String = str(UPGRADES[upgrade_id]["name"])
+	var cost: int = get_next_upgrade_cost(upgrade_id)
+	if cost < 0:
+		return "%s já está no nível máximo." % upgrade_name
+	var required_map: String = get_next_upgrade_required_map(upgrade_id)
+	if not required_map.is_empty() and not is_map_unlocked(required_map):
+		var map_data: MapData = _load_map(required_map)
+		if map_data == null:
+			push_warning("GameState: mapa '%s' exigido por '%s' não existe em %s." % [required_map, upgrade_id, MAPS_DIR])
+			return "Desbloqueie %s primeiro." % required_map
+		return "Desbloqueie %s primeiro." % map_data.display_name
+	if team_money < cost:
+		return "Saldo insuficiente para %s (Custo: R$ %d)." % [upgrade_name, cost]
+	return ""
+
+
+## Espaços da mochila: 3 (sem upgrade) a 8.
 func get_backpack_capacity() -> int:
 	return BASE_BACKPACK_CAPACITY + get_upgrade_level("backpack")
 
@@ -118,6 +153,11 @@ func get_shovel_level() -> int:
 
 func has_pinpointer() -> bool:
 	return get_upgrade_level("pinpointer") > 0
+
+
+## 0 a 2.
+func get_pinpointer_level() -> int:
+	return get_upgrade_level("pinpointer")
 
 
 func is_authority() -> bool:
@@ -274,16 +314,9 @@ func _host_buy_upgrade(upgrade_id: String) -> void:
 		sender = multiplayer.get_unique_id()
 
 	var success: bool = false
-	var message: String = ""
-	var cost: int = get_next_upgrade_cost(upgrade_id)
-	if not UPGRADES.has(upgrade_id):
-		message = "Upgrade desconhecido."
-	elif cost < 0:
-		message = "%s já está no nível máximo." % UPGRADES[upgrade_id]["name"]
-	elif team_money < cost:
-		message = "Saldo insuficiente para %s (Custo: R$ %d)." % [UPGRADES[upgrade_id]["name"], cost]
-	else:
-		team_money -= cost
+	var message: String = get_upgrade_block_reason(upgrade_id)
+	if message.is_empty():
+		team_money -= get_next_upgrade_cost(upgrade_id)
 		upgrade_levels[upgrade_id] = get_upgrade_level(upgrade_id) + 1
 		success = true
 		message = "Compra realizada: %s (nível %d)!" % [UPGRADES[upgrade_id]["name"], get_upgrade_level(upgrade_id)]
@@ -513,6 +546,20 @@ func _is_safe_resource_id(resource_id: String) -> bool:
 	if resource_id.is_empty() or not resource_id.is_valid_filename():
 		return false
 	return not (resource_id.contains("/") or resource_id.contains("\\") or resource_id.contains(".."))
+
+
+## Confere a tabela UPGRADES: um custo e um mapa exigido por nível, e mapas existentes.
+func _validate_upgrades() -> void:
+	for upgrade_id: String in UPGRADES.keys():
+		var entry: Dictionary = UPGRADES[upgrade_id]
+		var costs: Array = entry["costs"]
+		var required_maps: Array = entry["required_maps"]
+		var max_level: int = int(entry["max_level"])
+		if costs.size() != max_level or required_maps.size() != max_level:
+			push_error("GameState: UPGRADES['%s'] tem %d custos, %d required_maps e max_level %d." % [upgrade_id, costs.size(), required_maps.size(), max_level])
+		for map_id: Variant in required_maps:
+			if not str(map_id).is_empty() and _load_map(str(map_id)) == null:
+				push_error("GameState: UPGRADES['%s'] exige o mapa '%s', que não existe em %s." % [upgrade_id, map_id, MAPS_DIR])
 
 
 func _load_map(map_id: String) -> MapData:

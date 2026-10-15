@@ -54,19 +54,28 @@ Após cada mudança o host envia a todos `_receive_snapshot` com:
 Quem entra recebe o snapshot em `peer_connected` (e o cliente pede de novo com `_request_full_state`). `apply_snapshot` valida tipos e limita níveis.
 
 ### Loja (`GameState.UPGRADES`)
-| Upgrade | Nome | Custos | Nível máx. |
-| :--- | :--- | :--- | :--- |
-| `detector` | Detector | 300 / 600 / 1200 | 3 |
-| `pinpointer` | Pinpointer de Precisão | 500 | 1 |
-| `shovel` | Pá de Fibra | 800 | 1 |
-| `backpack` | Mochila Reforçada | 400 / 800 / 1600 | 3 |
+Tabela aprovada na #25. Cada nível tem um custo e um mapa que precisa estar desbloqueado (`required_maps`, `—` = sem trava).
 
-`get_next_upgrade_cost` devolve -1 no máximo. `equipped_detector_level = 1 + nível do detector` (lido pelo `MetalDetector`).
+| Upgrade | Nome | Nível comprado: custo (mapa exigido) | Nível máx. |
+| :--- | :--- | :--- | :--- |
+| `detector` | Detector | 1: 300 · 2: 600 · 3: 1.200 (`campo`) · 4: 2.000 (`ruinas`) · 5: 15.000 (`cratera`) · 6: 25.000 (`cratera`) | 6 (equipado Nv.7) |
+| `pinpointer` | Pinpointer de Precisão | 1: 500 · 2: 18.000 (`cratera`) | 2 |
+| `shovel` | Pá de Fibra | 1: 800 · 2: 1.200 (`ruinas`) · 3: 12.000 (`cratera`) | 3 (pá Nv.4) |
+| `backpack` | Mochila Reforçada | 1: 400 · 2: 800 · 3: 1.600 (`campo`) · 4: 1.800 (`ruinas`) · 5: 10.000 (`cratera`) | 5 (8 espaços) |
+
+`get_next_upgrade_cost` devolve -1 no máximo. `equipped_detector_level = 1 + nível do detector` (1 a 7, lido pelo `MetalDetector`; o gameplay limita em 3 até a #27).
+
+Trava de mapa:
+- `get_next_upgrade_required_map(upgrade_id)` → id do mapa exigido para o **próximo** nível; `""` sem trava, no máximo ou upgrade desconhecido.
+- `get_upgrade_block_reason(upgrade_id)` → `""` se dá para comprar agora; senão o motivo, na ordem: `"Upgrade desconhecido."` → `"<nome> já está no nível máximo."` → `"Desbloqueie <nome do mapa> primeiro."` (quando `not is_map_unlocked(required)`) → `"Saldo insuficiente para <nome> (Custo: R$ <custo>)."`.
+- `_host_buy_upgrade` usa `get_upgrade_block_reason`: com motivo, falha com essa mensagem em `purchase_result`, sem mexer em saldo, nível nem snapshot.
+- A trava vale só para comprar: um nível já comprado antes dela continua valendo. Snapshot e save não mudaram de formato; `apply_snapshot` limita o nível ao `max_level`.
+- `_ready` confere a tabela (`costs`, `required_maps` e `max_level` do mesmo tamanho; mapas exigidos existem em `MAPS_DIR`) com `push_error`.
 
 Consultas de equipamento (só leitura, qualquer peer; clientes leem o valor do snapshot):
-- `get_backpack_capacity()` → `BASE_BACKPACK_CAPACITY` (3) + nível de `backpack` (3 a 6).
+- `get_backpack_capacity()` → `BASE_BACKPACK_CAPACITY` (3) + nível de `backpack` (3 a 8).
 - `get_shovel_level()` → 1 + nível de `shovel` (escala do `player.shovel_level`; 1 = pá básica).
-- `has_pinpointer()` → nível de `pinpointer` > 0.
+- `has_pinpointer()` → nível de `pinpointer` > 0. `get_pinpointer_level()` → 0 a 2.
 - `get_tool_data(item_id)` → `ToolData` de `TOOLS_DIR/<id>.tres` (`res://items/tools`), ou `null` se o id for inválido (vazio, com `/`, `\` ou `..`), não existir ou não bater com `ToolData.id`.
 - `get_max_item_value(item_data)` → teto anti-trapaça de venda/doação: `ceil(base_value × BuriedSpot.RARE_VALUE_MULTIPLIER × BuriedSpot.PERFECT_BONUS_MULTIPLIER)` (ex.: base 250 → 938).
 
@@ -159,6 +168,7 @@ timeout 300 $G --headless --path . --editor --quit-after 600 >/dev/null 2>&1   #
 timeout 240 $G --headless --path . -s addons/gut/gut_cmdln.gd       # GUT: "All tests passed!"
 $G --headless --path . --script res://core/tests/flow_test.gd       # offline: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/upgrade_test.gd    # loja/mochila: "RESULT fails=0"
+$G --headless --path . --script res://core/tests/upgrade_lock_test.gd  # trava de mapa da loja: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/value_cap_test.gd  # teto de venda/doação: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/purchase_item_test.gd  # ferramentas da Praia: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/map_unlock_test.gd    # progressão de mapas (grava o save): "RESULT fails=0"
