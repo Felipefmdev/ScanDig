@@ -3,7 +3,8 @@ extends CanvasLayer
 
 ## Overlay global do fluxo de sessão (autoload "CoreSessionUI").
 ## Tela de carregamento, barra de expedição (mapa/dia + "Voltar à base" para o host
-## e "Sair da sessão" online), resumo do dia e aviso de queda do host. Acessa o
+## e "Sair da sessão" online), avisos de missão/segredo, resumo do dia e aviso de
+## queda do host. Acessa o
 ## SessionManager de forma dinâmica (autoload "CoreSession") para funcionar mesmo
 ## antes dele existir.
 
@@ -11,6 +12,8 @@ const SESSION_PATH: NodePath = ^"/root/CoreSession"
 ## Tempo mínimo da tela de carregamento, para não piscar.
 const LOADING_MIN_SEC: float = 0.4
 const LEAVE_HOST_TEXT: String = "Você é o host: todos os jogadores voltarão à base.\nO dinheiro e o museu até agora ficam salvos, mas o dia não avança."
+## Tempo de cada aviso de missão/segredo na tela.
+const TOAST_SEC: float = 3.0
 const LEAVE_CLIENT_TEXT: String = "Sair da sessão e voltar à base?\nO que estiver na sua mochila será perdido."
 
 static var instance: SessionUI = null
@@ -32,12 +35,20 @@ static var instance: SessionUI = null
 @onready var leave_confirm_label: Label = %LeaveConfirmLabel
 @onready var leave_confirm_button: Button = %LeaveConfirmButton
 @onready var leave_cancel_button: Button = %LeaveCancelButton
+@onready var toast_panel: Control = %ToastPanel
+@onready var toast_label: Label = %ToastLabel
 
 var _session: Node = null
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _mouse_released: bool = false
 ## Incrementado a cada troca de cena para descartar esperas antigas do carregamento.
 var _loading_token: int = 0
+## Falso ao entrar numa sessão até o primeiro state_synced: o snapshot inicial do host
+## reemite quest_completed/secret_found de tudo já conquistado. O save só é carregado
+## fora da expedição, onde nenhum aviso aparece, então solo começa em verdadeiro.
+var _synced_once: bool = true
+var _toast_queue: Array[String] = []
+var _toast_token: int = 0
 
 
 func _enter_tree() -> void:
@@ -57,6 +68,7 @@ func _ready() -> void:
 	host_lost_panel.visible = false
 	leave_confirm_panel.visible = false
 	expedition_bar.visible = false
+	toast_panel.visible = false
 	return_button.pressed.connect(_on_return_pressed)
 	leave_button.pressed.connect(_on_leave_pressed)
 	leave_confirm_button.pressed.connect(_on_leave_confirm_pressed)
@@ -65,6 +77,8 @@ func _ready() -> void:
 	host_lost_close_button.pressed.connect(_on_host_lost_close_pressed)
 	multiplayer.connected_to_server.connect(_refresh_expedition_bar)
 	multiplayer.server_disconnected.connect(_refresh_expedition_bar)
+	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer.server_disconnected.connect(_clear_toasts)
 	# Garante que todos os autoloads já entraram na árvore antes de procurar o CoreSession.
 	_connect_session.call_deferred()
 
@@ -73,6 +87,10 @@ func _connect_session() -> void:
 	_session = get_node_or_null(SESSION_PATH)
 	if GameState.instance != null and not GameState.instance.state_synced.is_connected(_refresh_expedition_bar):
 		GameState.instance.state_synced.connect(_refresh_expedition_bar)
+	if GameState.instance != null:
+		_connect_if_has(GameState.instance, &"state_synced", _on_state_synced)
+		_connect_if_has(GameState.instance, &"quest_completed", _on_quest_completed)
+		_connect_if_has(GameState.instance, &"secret_found", _on_secret_found)
 	if NetworkManager.instance != null:
 		_connect_if_has(NetworkManager.instance, &"session_left", _on_session_left)
 	if _session == null:
@@ -165,6 +183,7 @@ func _on_leave_confirm_pressed() -> void:
 ## O próprio peer saiu: o SessionManager volta ao lobby sozinho, sem host_lost nem resumo.
 func _on_session_left(_was_host: bool) -> void:
 	leave_confirm_panel.visible = false
+	_clear_toasts()
 	expedition_bar.visible = false
 	_update_mouse()
 
@@ -206,6 +225,67 @@ func _on_host_lost() -> void:
 	leave_confirm_panel.visible = false
 	host_lost_panel.visible = true
 	_update_mouse()
+
+
+# --- Avisos de missão e segredo ------------------------------------------------
+
+## Deferido: os sinais do mesmo apply_snapshot (leva inicial) chegam antes da flag.
+func _on_state_synced() -> void:
+	_mark_synced.call_deferred()
+
+
+func _mark_synced() -> void:
+	_synced_once = true
+
+
+## O próximo snapshot (estado completo do host) é a leva inicial.
+func _on_connected_to_server() -> void:
+	_synced_once = false
+	_clear_toasts()
+
+
+func _clear_toasts() -> void:
+	_toast_queue.clear()
+	_toast_token += 1
+	toast_panel.visible = false
+
+
+func _should_show_toast() -> bool:
+	return _synced_once and bool(_session_call(&"is_in_expedition", false))
+
+
+func _on_quest_completed(quest_id: String, reward: int) -> void:
+	var quest: Dictionary = GameState.QUESTS.get(quest_id, {})
+	var quest_name: String = str(quest.get("name", "Missão"))
+	_enqueue_toast("Missão concluída: %s (+R$ %d)" % [quest_name, reward])
+
+
+func _on_secret_found(_secret_id: String) -> void:
+	var found: int = GameState.instance.found_secrets.size() if GameState.instance != null else 0
+	_enqueue_toast("Segredo encontrado! (%d/%d)" % [found, GameState.SECRETS.size()])
+
+
+func _enqueue_toast(text: String) -> void:
+	if not _should_show_toast():
+		return
+	_toast_queue.append(text)
+	if not toast_panel.visible:
+		_show_next_toast()
+
+
+## Um aviso por vez; cada um fica TOAST_SEC na tela.
+func _show_next_toast() -> void:
+	if _toast_queue.is_empty():
+		toast_panel.visible = false
+		return
+	toast_label.text = _toast_queue.pop_front()
+	toast_panel.visible = true
+	_toast_token += 1
+	var token: int = _toast_token
+	await get_tree().create_timer(TOAST_SEC, true, false, true).timeout
+	if token != _toast_token:
+		return
+	_show_next_toast()
 
 
 # --- Resumo do dia ------------------------------------------------------------

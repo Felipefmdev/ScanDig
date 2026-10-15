@@ -113,6 +113,11 @@ metadata/_tab_index = 1
 layout_mode = 2
 text = "Catálogo de Relíquias e Descobertas:"
 
+[node name="SecretsLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Segredos: 0/0"
+
 [node name="MuseumItemList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 140)

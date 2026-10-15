@@ -17,6 +17,7 @@ extends Control
 @onready var item_select_box: OptionButton = _resolve_node("ItemSelectBox", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/ItemSelectBox") as OptionButton
 @onready var sell_item_btn: Button = _resolve_node("SellItemButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/SellItemButton") as Button
 @onready var register_item_btn: Button = _resolve_node("RegisterItemButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/RegisterItemButton") as Button
+@onready var secrets_label: Label = _resolve_node("SecretsLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/SecretsLabel") as Label
 @onready var museum_feedback_label: Label = _resolve_node("MuseumFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/MuseumFeedbackLabel") as Label
 
 # Expedições
@@ -303,8 +304,11 @@ func _resolve_game_state() -> void:
 		# Sinais da progressão de mapas: podem não existir em um core antigo.
 		_connect_game_state_signal(&"map_unlock_result", _on_map_unlock_result)
 		_connect_game_state_signal(&"progression_changed", _on_progression_changed)
+		_connect_game_state_signal(&"secret_found", _on_secret_found)
+		_connect_game_state_signal(&"state_synced", _refresh_secrets_label)
 	
 	_refresh_museum_display()
+	_refresh_secrets_label()
 	_refresh_shop_buttons()
 
 
@@ -538,6 +542,17 @@ func _refresh_museum_display() -> void:
 			item.depth_cm
 		]
 		museum_item_list.add_item(text)
+
+
+func _refresh_secrets_label() -> void:
+	if secrets_label == null:
+		return
+	var found: int = _game_state.found_secrets.size() if _game_state != null else 0
+	secrets_label.text = "Segredos: %d/%d" % [found, GameState.SECRETS.size()]
+
+
+func _on_secret_found(_secret_id: String) -> void:
+	_refresh_secrets_label()
 
 
 func _on_state_updated(_amount: int) -> void:
