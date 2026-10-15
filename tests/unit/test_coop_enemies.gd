@@ -147,3 +147,57 @@ func test_seagull_pecks_when_owner_has_nothing() -> void:
 	gull._grab(owner_node)
 	assert_false(gull.has_stolen)
 	assert_gt(owner_node.damage_taken, 0.0, "sem nada para roubar: bica")
+
+
+# --- #31 ---------------------------------------------------------------------------
+
+func test_seagull_has_its_own_slot() -> void:
+	DifficultyProfile.override = DifficultyProfile.for_player_count(2)
+	var spawner: EnemySpawner = _spawner()
+	var typed: Array[Node3D] = spawner.get("_alive")
+	for i: int in spawner.get_max_alive():
+		var filler: Node3D = Node3D.new()
+		arena.add_child(filler)
+		typed.append(filler)
+	assert_eq(spawner.get_alive_count(), spawner.get_max_alive(), "chão cheio")
+	spawner.call("_on_threshold_reached", 3, Vector3.ZERO)
+	assert_eq(spawner.get_seagull_count(), 1, "a gaivota do nível 3 nasce mesmo com o chão cheio")
+	spawner.call("_on_threshold_reached", 3, Vector3.ZERO)
+	assert_eq(spawner.get_seagull_count(), 1, "max_seagulls = 1")
+	DifficultyProfile.override = null
+
+
+func test_remote_speed_from_replicated_position() -> void:
+	var s: Snake = SNAKE_SCENE.instantiate() as Snake
+	arena.add_child(s)
+	s._update_remote_motion(1.0 / 60.0)
+	for i: int in 20:
+		s.global_position += Vector3(0.05, 0.0, 0.0)  # 3 m/s a 60 Hz
+		s._update_remote_motion(1.0 / 60.0)
+	assert_almost_eq(s.remote_speed, 3.0, 0.3)
+	for i: int in 60:
+		s._update_remote_motion(1.0 / 60.0)
+	assert_lt(s.remote_speed, 0.1, "parada: volta a 0")
+
+
+func test_bosses_replicate_attack_point() -> void:
+	var king: KingCrab = (load("res://gameplay/enemies/boss/king_crab.tscn") as PackedScene).instantiate() as KingCrab
+	king.setup_network()
+	arena.add_child(king)
+	king.wake_immediately()
+	assert_has(king.get_net_sync().replication_config.get_properties(), NodePath(".:net_attack_point"))
+	assert_has(king.get_net_sync().replication_config.get_properties(), NodePath(".:net_attack_dir"))
+	var dummy: DamageDummy = DamageDummy.new()
+	arena.add_child(dummy)
+	dummy.global_position = Vector3(2.0, 0.0, 0.0)
+	king._enter_state(KingCrab.State.SLAM_TELEGRAPH)
+	assert_almost_eq(king.net_attack_point.x, 2.0, 0.01, "círculo onde o jogador está")
+	king._enter_state(KingCrab.State.CHARGE_TELEGRAPH)
+	assert_almost_eq(king.net_attack_dir.x, 1.0, 0.01)
+	var mole: GiantMole = (load("res://gameplay/enemies/boss/giant_mole.tscn") as PackedScene).instantiate() as GiantMole
+	mole.setup_network()
+	arena.add_child(mole)
+	mole.wake_immediately()
+	assert_has(mole.get_net_sync().replication_config.get_properties(), NodePath(".:net_attack_point"))
+	mole._enter_state(GiantMole.State.ERUPT_TELEGRAPH)
+	assert_eq(mole.net_attack_point, Vector3(mole.global_position.x, 0.0, mole.global_position.z))

@@ -79,6 +79,12 @@ const DIRT: Color = Color(0.42, 0.3, 0.18)
 
 var state: State = State.EMERGE
 var phase: int = 1
+## Replicado (#31): centro do círculo do ataque telegrafado (garras ou irromper).
+var net_attack_point: Vector3 = Vector3.ZERO:
+	set(value):
+		net_attack_point = value
+		if is_node_ready() and not has_simulation_authority():
+			_refresh_remote_warning()
 
 var _state_time: float = 0.0
 var _ground_y: float = 0.0
@@ -154,6 +160,7 @@ func _enter_state(new_state: State) -> void:
 			to_t.y = 0.0
 			_attack_point = global_position + to_t.limit_length(1.4)
 			_attack_point.y = _ground_y
+			net_attack_point = _attack_point
 			_warning.show_circle(_attack_point, swipe_radius)
 		State.SWIPE:
 			_do_swipe_impact()
@@ -166,6 +173,7 @@ func _enter_state(new_state: State) -> void:
 			_place_mound(0.0)
 		State.ERUPT_TELEGRAPH:
 			_attack_point = Vector3(global_position.x, _ground_y, global_position.z)
+			net_attack_point = _attack_point
 			_warning.show_circle(_attack_point, erupt_radius)
 		State.ERUPT:
 			body_root.visible = true
@@ -470,14 +478,30 @@ func _on_remote_state(new_state: int) -> void:
 	_mound.visible = new_state == State.TUNNEL or new_state == State.ERUPT_TELEGRAPH
 	if _mound.visible:
 		_ground_y = global_position.y + UNDERGROUND_DEPTH
+	if new_state == State.DYING:
+		hud.visible = false
+	_refresh_remote_warning()
+
+
+## Cliente: aviso no ponto replicado (estado e ponto podem chegar por qualquer ordem).
+func _refresh_remote_warning() -> void:
 	_warning.hide_warning()
-	match new_state:
+	match state:
 		State.SWIPE_TELEGRAPH:
-			_warning.show_circle(global_position - global_transform.basis.z * 1.4, swipe_radius)
+			_warning.show_circle(net_attack_point, swipe_radius)
 		State.ERUPT_TELEGRAPH:
-			_warning.show_circle(Vector3(global_position.x, _ground_y, global_position.z), erupt_radius)
-		State.DYING:
-			hud.visible = false
+			_warning.show_circle(net_attack_point, erupt_radius)
+
+
+func setup_network() -> void:
+	super.setup_network()
+	_add_synced_property(".:net_attack_point")
+
+
+## Cliente: anda à superfície conforme a velocidade replicada.
+func _animate_remote(delta: float, speed: float) -> void:
+	if speed > 0.15 and body_root.visible and state != State.DYING:
+		_animate_walk(delta * clampf(speed / move_speed, 0.5, 3.0))
 
 
 ## Avisa o core (o host valida, ignora repetidos e libera a compra das Ruínas).

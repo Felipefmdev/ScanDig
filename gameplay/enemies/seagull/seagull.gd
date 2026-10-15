@@ -240,11 +240,7 @@ func _process_escape(delta: float) -> void:
 ## Replica também has_stolen (o item no bico).
 func setup_network() -> void:
 	super.setup_network()
-	var config: SceneReplicationConfig = get_net_sync().replication_config
-	if not config.has_property(".:has_stolen"):
-		config.add_property(".:has_stolen")
-		config.property_set_replication_mode(".:has_stolen", SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE)
-		config.property_set_spawn(".:has_stolen", true)
+	_add_synced_property(".:has_stolen")
 
 
 ## Abatida: cai a rodopiar e, ao tocar no chão, larga o item roubado.
@@ -342,6 +338,11 @@ func _face_velocity(delta: float) -> void:
 	# Inclina nas curvas
 	var turn: float = clampf(-_orbit_dir * 0.35, -0.5, 0.5) if state == State.CIRCLE else 0.0
 	rotation.z = lerpf(rotation.z, turn, clampf(4.0 * delta, 0.0, 1.0))
+
+
+## Cliente: as asas batem sempre (mais devagar a planar).
+func _animate_remote(delta: float, speed: float) -> void:
+	_animate_wings(delta * (1.0 if speed > 2.0 else 0.6))
 
 
 func _animate_wings(delta: float) -> void:

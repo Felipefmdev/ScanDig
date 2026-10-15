@@ -7,7 +7,8 @@ extends Node3D
 ##  - ambiente (pressão mesmo sem barulho): um caranguejo a 12-20 m do jogador a cada
 ##    ambient_interval_min..max s, e uma gaivota a cada seagull_interval_min..max s se o
 ##    jogador tiver itens escavados na mochila (player.has_loot()).
-## Nunca passa de max_alive inimigos vivos criados por este spawner.
+## Nunca passa de max_alive inimigos de chão vivos criados por este spawner; a gaivota tem
+## vaga própria (max_seagulls), para os caranguejos do nível 3 não a deixarem de fora (#31).
 ##
 ## Os inimigos são criados por dados {"kind", "pos", "level"[, "rot_y"]} (spawn_from_data).
 ## Coop (#5 F, #24): só o host cria inimigos (e corre a IA). O spawner monta em código um
@@ -44,6 +45,8 @@ const KIND_SCENES: Dictionary = {
 @export var hermit_scene: PackedScene = null
 @export var seagull_scene: PackedScene = null
 @export var max_alive: int = 6
+## Gaivotas vivas ao mesmo tempo (vaga à parte de max_alive).
+@export var max_seagulls: int = 1
 ## Usa DifficultyProfile (nº de jogadores) para max_alive, tabelas por nível, graça, intervalos
 ## e dano. Desligado: usa os @export deste nó tal como estão.
 @export var use_player_scaling: bool = true
@@ -83,6 +86,7 @@ const GROUP: StringName = &"enemy_spawners"
 const NET_SPAWNER_NAME: StringName = &"EnemyNetSpawner"
 
 var _alive: Array[Node3D] = []
+var _gulls: Array[Node3D] = []
 var _connected: bool = false
 var _ambient_timer: float = 0.0
 var _seagull_timer: float = 0.0
@@ -212,13 +216,22 @@ func _find_player() -> Node3D:
 # Instanciação
 # ---------------------------------------------------------------------------
 
+## Inimigos de chão vivos (os que contam para max_alive).
 func get_alive_count() -> int:
-	# Inimigos mortos ficam como referências libertadas; um lambda tipado (n: Node3D)
-	# rebenta ao receber um objeto libertado, por isso limpamos com um ciclo.
-	for i: int in range(_alive.size() - 1, -1, -1):
-		if not is_instance_valid(_alive[i]):
-			_alive.remove_at(i)
-	return _alive.size()
+	return _prune(_alive)
+
+
+func get_seagull_count() -> int:
+	return _prune(_gulls)
+
+
+## Inimigos mortos ficam como referências libertadas; um lambda tipado (n: Node3D)
+## rebenta ao receber um objeto libertado, por isso limpamos com um ciclo.
+static func _prune(list: Array[Node3D]) -> int:
+	for i: int in range(list.size() - 1, -1, -1):
+		if not is_instance_valid(list[i]):
+			list.remove_at(i)
+	return list.size()
 
 
 ## Inimigo de chão do `kind` num ponto válido a r_min..r_max de center.
@@ -232,7 +245,7 @@ func _spawn_ground(kind: StringName, center: Vector3, r_min: float, r_max: float
 
 
 func _spawn_seagull(player_pos: Vector3) -> Node3D:
-	if not can_spawn() or get_alive_count() >= get_max_alive():
+	if not can_spawn() or get_seagull_count() >= max_seagulls:
 		return null
 	var angle: float = randf() * TAU
 	var pos: Vector3 = player_pos + Vector3(cos(angle), 0.0, sin(angle)) * seagull_spawn_distance
@@ -269,7 +282,7 @@ func spawn_from_data(data: Dictionary) -> Node3D:
 			add_child(enemy)
 	if enemy == null:
 		return null
-	_alive.append(enemy)
+	(_gulls if enemy is Seagull else _alive).append(enemy)
 	enemy_spawned.emit(enemy)
 	return enemy
 

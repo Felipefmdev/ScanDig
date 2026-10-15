@@ -78,6 +78,10 @@ var net_state: int:
 			_on_remote_state(value)
 
 var _net_sync: MultiplayerSynchronizer = null
+## Cliente: velocidade estimada a partir da posição replicada (para animar o andar, #31).
+var remote_speed: float = 0.0
+var _remote_last_pos: Vector3 = Vector3.INF
+var _remote_since_move: float = 0.0
 ## Host: último pedido aceite por peer (cadência).
 var _last_request_ms: Dictionary = {}
 
@@ -101,7 +105,11 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _dead or not has_simulation_authority():
+	if not has_simulation_authority():
+		if not _dead:
+			_update_remote_motion(delta)
+		return
+	if _dead:
 		return
 	if _flee_left > 0.0:
 		_flee_left -= delta
@@ -151,6 +159,41 @@ func setup_network() -> void:
 
 func get_net_sync() -> MultiplayerSynchronizer:
 	return _net_sync
+
+
+## Subclasses: replica mais um campo (chamar depois de super.setup_network()).
+func _add_synced_property(prop: String, always: bool = false) -> void:
+	var config: SceneReplicationConfig = _net_sync.replication_config
+	if config.has_property(prop):
+		return
+	config.add_property(prop)
+	config.property_set_replication_mode(prop,
+		SceneReplicationConfig.REPLICATION_MODE_ALWAYS if always else SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE)
+	config.property_set_spawn(prop, true)
+
+
+## Cliente: a posição chega a ~20 Hz e a física corre a 60 Hz, por isso a velocidade mede-se
+## entre mudanças de posição (e cai para 0 se ficar parada mais de 0.25 s).
+func _update_remote_motion(delta: float) -> void:
+	_remote_since_move += delta
+	var pos: Vector3 = global_position
+	if not _remote_last_pos.is_finite():
+		_remote_last_pos = pos
+	var moved: Vector3 = pos - _remote_last_pos
+	moved.y = 0.0
+	if moved.length_squared() > 0.000001:
+		var inst: float = moved.length() / maxf(_remote_since_move, delta)
+		remote_speed = lerpf(remote_speed, inst, 0.5)
+		_remote_last_pos = pos
+		_remote_since_move = 0.0
+	elif _remote_since_move > 0.25:
+		remote_speed = move_toward(remote_speed, 0.0, delta * 10.0)
+	_animate_remote(delta, remote_speed)
+
+
+## Cliente: anima o andar com a velocidade estimada. Por omissão nada.
+func _animate_remote(_delta: float, _speed: float) -> void:
+	pass
 
 
 func is_alive() -> bool:

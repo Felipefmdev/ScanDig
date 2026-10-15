@@ -71,6 +71,18 @@ const WARN_COLOR: Color = Color(1.0, 0.12, 0.08, 0.45)
 
 var state: State = State.EMERGE
 var phase: int = 1
+## Replicados (#31): onde vai cair o ataque telegrafado. Esmagar = centro do círculo;
+## investida = início da linha + direção. Num cliente redesenham o aviso ao chegar.
+var net_attack_point: Vector3 = Vector3.ZERO:
+	set(value):
+		net_attack_point = value
+		if is_node_ready() and not has_simulation_authority():
+			_refresh_remote_warning()
+var net_attack_dir: Vector3 = Vector3.ZERO:
+	set(value):
+		net_attack_dir = value
+		if is_node_ready() and not has_simulation_authority():
+			_refresh_remote_warning()
 
 var _state_time: float = 0.0
 var _reinforce_index: int = 0
@@ -141,6 +153,7 @@ func _enter_state(new_state: State) -> void:
 				to_t.y = 0.0
 				_slam_point = global_position + to_t.limit_length(2.6)
 			_slam_point.y = global_position.y
+			net_attack_point = _slam_point
 			_show_circle_warning(_slam_point, SLAM_RADIUS)
 		State.SLAM_STUCK:
 			_do_slam_impact()
@@ -150,6 +163,8 @@ func _enter_state(new_state: State) -> void:
 			var to_t: Vector3 = (target.global_position - global_position) if target != null else -global_transform.basis.z
 			to_t.y = 0.0
 			_charge_dir = to_t.normalized() if to_t.length_squared() > 0.01 else Vector3.FORWARD
+			net_attack_point = global_position
+			net_attack_dir = _charge_dir
 			_show_line_warning(global_position, _charge_dir, charge_length)
 		State.CHARGE:
 			_charge_start = global_position
@@ -420,15 +435,33 @@ func _process(delta: float) -> void:
 ## Cliente: avisos no chão e HUD a partir do estado do host (posição aproximada: à frente).
 func _on_remote_state(new_state: int) -> void:
 	_state_time = 0.0
-	_set_warning_visible(false)
 	collision_shape.disabled = new_state == State.EMERGE or new_state == State.DYING
-	match new_state:
+	if new_state == State.DYING:
+		hud.visible = false
+	_refresh_remote_warning()
+
+
+## Cliente: aviso no ponto replicado (estado e ponto podem chegar por qualquer ordem).
+func _refresh_remote_warning() -> void:
+	_set_warning_visible(false)
+	match state:
 		State.SLAM_TELEGRAPH:
-			_show_circle_warning(global_position - global_transform.basis.z * 2.0, SLAM_RADIUS)
+			_show_circle_warning(net_attack_point, SLAM_RADIUS)
 		State.CHARGE_TELEGRAPH:
-			_show_line_warning(global_position, global_transform.basis.x.normalized(), charge_length)
-		State.DYING:
-			hud.visible = false
+			var dir: Vector3 = net_attack_dir if net_attack_dir.length_squared() > 0.01 else global_transform.basis.x
+			_show_line_warning(net_attack_point, dir.normalized(), charge_length)
+
+
+func setup_network() -> void:
+	super.setup_network()
+	_add_synced_property(".:net_attack_point")
+	_add_synced_property(".:net_attack_dir")
+
+
+## Cliente: anda/patas conforme a velocidade replicada.
+func _animate_remote(delta: float, speed: float) -> void:
+	if speed > 0.15 and state != State.DYING:
+		_animate_walk(delta * clampf(speed / move_speed, 0.5, 3.0))
 
 
 func _drop_crown() -> void:

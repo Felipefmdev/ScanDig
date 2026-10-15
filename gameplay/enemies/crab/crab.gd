@@ -244,6 +244,15 @@ func _on_stun_ended() -> void:
 # Animação e efeitos
 # ---------------------------------------------------------------------------
 
+## Cliente: patas a mexer conforme a velocidade replicada.
+func _animate_remote(delta: float, speed: float) -> void:
+	if speed > 0.15:
+		_animate_scuttle(delta * clampf(speed / move_speed, 0.5, 2.0))
+	else:
+		body_root.position.y = move_toward(body_root.position.y, 0.0, delta)
+		body_root.rotation.z = move_toward(body_root.rotation.z, 0.0, delta)
+
+
 func _animate_scuttle(delta: float) -> void:
 	_scuttle_time += delta * 18.0
 	body_root.position.y = absf(sin(_scuttle_time)) * 0.04

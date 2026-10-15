@@ -283,6 +283,12 @@ func _build_model() -> void:
 		_segments.append(seg)
 
 
+## Cliente: o corpo ondula conforme a velocidade replicada.
+func _animate_remote(delta: float, speed: float) -> void:
+	if speed > 0.1:
+		_animate_slither(delta, clampf(speed / move_speed, 0.5, 2.0))
+
+
 func _animate_slither(delta: float, speed: float) -> void:
 	_wiggle += delta * 12.0 * speed
 	for i: int in _segments.size():
