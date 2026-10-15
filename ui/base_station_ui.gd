@@ -68,6 +68,30 @@ func _ready() -> void:
 	_session = get_node_or_null(SESSION_PATH)
 	_resolve_game_state()
 	_setup_expeditions()
+	if tab_container != null:
+		tab_container.resized.connect(_sync_hidden_tab_widths)
+		tab_container.tab_changed.connect(func(_tab: int) -> void: _sync_hidden_tab_widths())
+		_sync_hidden_tab_widths.call_deferred()
+
+
+## Layout: a Base tem a altura da maior aba (use_hidden_tabs_for_min_size). O TabContainer
+## não dimensiona as abas ocultas, e um Container oculto não reorganiza os filhos; sem
+## largura, os Labels com quebra de linha mediriam uma letra por linha e a Base ficaria
+## gigante até cada aba ser aberta. Aqui os Labels com quebra das abas ocultas recebem a
+## largura da aba atual (as abas são VBox sem margem, então é a largura deles).
+func _sync_hidden_tab_widths() -> void:
+	var current: Control = tab_container.get_current_tab_control()
+	if current == null:
+		return
+	for i in range(tab_container.get_tab_count()):
+		var page: Control = tab_container.get_tab_control(i)
+		if page == current:
+			continue
+		for child: Node in page.get_children():
+			var label: Label = child as Label
+			if label != null and label.autowrap_mode != TextServer.AUTOWRAP_OFF and not is_equal_approx(label.size.x, current.size.x):
+				label.size = Vector2(current.size.x, label.size.y)
+				label.update_minimum_size()
 
 
 # --- Expedições ---------------------------------------------------------------

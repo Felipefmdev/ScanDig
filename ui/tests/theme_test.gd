@@ -30,7 +30,7 @@ func _run() -> void:
 	_check_overrides()
 	_check_contrast()
 	_check_fonts()
-	root.size = Vector2i(960, 540)
+	root.size = LOGICAL_SIZES[0]
 	change_scene_to_file("res://world/lobby_base.tscn")
 	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
 	SaveManager.instance.use_test_save_dir("theme_test")
@@ -226,43 +226,55 @@ func _buttons_fit(node: Node, where: String) -> void:
 	_check(cut.is_empty(), "%s: textos de botão inteiros %s" % [where, cut])
 
 
+## Tamanhos lógicos com o stretch canvas_items/expand (base 1152x648): o pior caso de altura,
+## 21:9 e 4:3. Telas menores só encolhem a UI inteira.
+const LOGICAL_SIZES: Array[Vector2i] = [Vector2i(1152, 648), Vector2i(1536, 648), Vector2i(1152, 864)]
+
+
 func _check_layout(base: BaseStationUI, menu: MultiplayerMenu, hud: Node) -> void:
-	var screen: Rect2 = Rect2(Vector2.ZERO, Vector2(root.size))
-	_check(root.size == Vector2i(960, 540), "janela 960x540: %s" % root.size)
 	var tabs: TabContainer = base.get_node("%TabContainer") as TabContainer
 	var base_panel: Control = base.get_node("PanelContainer") as Control
 	var menu_panel: Control = menu.get_node("PanelContainer") as Control
 	var hud_panel: Control = hud.get_node("MarginContainer/PanelContainer") as Control
-	for i in range(tabs.get_tab_count()):
-		tabs.current_tab = i
-		await _wait(3)
-		var r: Rect2 = base_panel.get_global_rect()
-		var min_h: float = base_panel.get_combined_minimum_size().y
-		var limit: float = 390.0 if i == 0 else 399.0
-		_check(is_equal_approx(r.position.x, 16) and is_equal_approx(r.end.x, 592) and min_h <= limit and _inside_screen(r, screen),
-			"Base aba %s: %s, altura mínima %.0f (<= %.0f)" % [tabs.get_tab_title(i), r, min_h, limit])
-		_buttons_fit(base_panel, "Base aba %s" % tabs.get_tab_title(i))
-	tabs.current_tab = 0
-	await _wait(2)
+	_check(tabs.use_hidden_tabs_for_min_size, "abas da Base com altura da maior aba")
+	for logical: Vector2i in LOGICAL_SIZES:
+		root.size = logical
+		await _wait(10)
+		var screen: Rect2 = Rect2(Vector2.ZERO, root.get_visible_rect().size)
+		var where: String = "%dx%d" % [logical.x, logical.y]
+		_check(screen.size.is_equal_approx(Vector2(logical)), "%s: área lógica %s" % [where, screen.size])
+		var heights: Array[float] = []
+		for i in range(tabs.get_tab_count()):
+			tabs.current_tab = i
+			await _wait(5)
+			var r: Rect2 = base_panel.get_global_rect()
+			heights.append(r.size.y)
+			_check(is_equal_approx(r.position.x, 16) and is_equal_approx(r.end.x, 592) and screen.encloses(r),
+				"%s Base aba %s: %s dentro da tela" % [where, tabs.get_tab_title(i), r])
+			_check(r.size.y <= base_panel.get_combined_minimum_size().y + 0.5, "%s Base aba %s: altura do conteúdo (%.0f), sem esticar" % [where, tabs.get_tab_title(i), r.size.y])
+			_buttons_fit(base_panel, "%s Base aba %s" % [where, tabs.get_tab_title(i)])
+		_check(heights.max() - heights.min() < 0.5, "%s: Base não muda de altura entre abas %s" % [where, heights])
+		tabs.current_tab = 0
+		await _wait(2)
 
-	# Menu no pior caso: progresso com aviso + código da sala.
-	menu._progress_message = "Save de uma versão mais nova do jogo (v9)."
-	menu.progress_box.visible = true
-	menu.progress_warning_label.text = menu._progress_message
-	menu.progress_warning_label.visible = true
-	NetworkManager.instance.room_code_ready.emit("K7Q3MX")
-	for tab in range(2):
-		menu.mode_tabs.current_tab = tab
-		await _wait(3)
-		var m: Rect2 = menu_panel.get_global_rect()
-		_check(is_equal_approx(m.position.x, 620) and is_equal_approx(m.end.x, 944) and _inside_screen(m, screen), "menu aba %d: %s" % [tab, m])
-		_check(not m.intersects(base_panel.get_global_rect()), "menu não sobrepõe a Base")
-		_buttons_fit(menu_panel, "menu aba %d" % tab)
-	menu._hide_room_code()
-	menu._progress_message = ""
-	menu.progress_warning_label.visible = false
-	menu.mode_tabs.current_tab = 0
+		# Menu no pior caso: progresso com aviso + código da sala.
+		menu._progress_message = "Save de uma versão mais nova do jogo (v9)."
+		menu.progress_box.visible = true
+		menu.progress_warning_label.text = menu._progress_message
+		menu.progress_warning_label.visible = true
+		NetworkManager.instance.room_code_ready.emit("K7Q3MX")
+		for tab in range(2):
+			menu.mode_tabs.current_tab = tab
+			await _wait(3)
+			var m: Rect2 = menu_panel.get_global_rect()
+			_check(is_equal_approx(m.end.x, screen.size.x - 16) and screen.encloses(m), "%s menu aba %d: %s" % [where, tab, m])
+			_check(not m.intersects(base_panel.get_global_rect()) and not m.intersects(hud_panel.get_global_rect()), "%s: menu não sobrepõe a Base nem o HUD" % where)
+			_buttons_fit(menu_panel, "%s menu aba %d" % [where, tab])
+		menu._hide_room_code()
+		menu._progress_message = ""
+		menu.progress_warning_label.visible = false
+		menu.mode_tabs.current_tab = 0
 
-	var h: Rect2 = hud_panel.get_global_rect()
-	_check(_inside_screen(h, screen) and h.end.y <= base_panel.get_global_rect().position.y and not h.intersects(menu_panel.get_global_rect()),
-		"HUD %s acima da Base e longe do menu" % h)
+		var h: Rect2 = hud_panel.get_global_rect()
+		_check(screen.encloses(h) and h.end.y <= base_panel.get_global_rect().position.y,
+			"%s: HUD %s acima da Base (y %.0f)" % [where, h, base_panel.get_global_rect().position.y])

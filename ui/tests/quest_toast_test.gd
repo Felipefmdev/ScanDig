@@ -48,7 +48,7 @@ func _run() -> void:
 	_check(not ui.toast_panel.visible and ui._toast_queue.is_empty(), "leva inicial ignorada: %s" % ui.toast_label.text)
 	_check(ui._should_show_toast(), "depois do sync: mostra")
 	if station != null:
-		_check(station.secrets_label.text == "Segredos: 2/6", "museu: %s" % station.secrets_label.text)
+		_check(station.secrets_label.text == "Segredos: 2/%d" % GameState.SECRETS.size(), "museu: %s" % station.secrets_label.text)
 
 	# 2. Missão concluída depois do sync.
 	gs.quest_completed.emit("ze_anzol", 600)
@@ -59,9 +59,9 @@ func _run() -> void:
 	await _wait(2)
 	_check(ui._toast_queue.size() == 1, "segredo na fila: %d" % ui._toast_queue.size())
 	if station != null:
-		_check(station.secrets_label.text == "Segredos: 3/6", "museu após segredo: %s" % station.secrets_label.text)
+		_check(station.secrets_label.text == "Segredos: 3/%d" % GameState.SECRETS.size(), "museu após segredo: %s" % station.secrets_label.text)
 	await create_timer(SessionUI.TOAST_SEC + 0.3).timeout
-	_check(ui.toast_panel.visible and ui.toast_label.text == "Segredo encontrado! (3/6)", "aviso segredo: %s" % ui.toast_label.text)
+	_check(ui.toast_panel.visible and ui.toast_label.text == "Segredo encontrado! (3/%d)" % GameState.SECRETS.size(), "aviso segredo: %s" % ui.toast_label.text)
 	await create_timer(SessionUI.TOAST_SEC + 0.3).timeout
 	_check(not ui.toast_panel.visible, "aviso some depois de %.0f s" % SessionUI.TOAST_SEC)
 

@@ -9,8 +9,11 @@ const OUT_PATH: String = "res://ui/theme/scandig_theme.tres"
 const WORN_TEXTURE: String = "res://ui/theme/paper_worn.png"
 ## Margem do 9-patch da textura (igual a gen_paper_worn.gd TEX_MARGIN).
 const TEX_MARGIN: int = 14
-const FONT_SIZE: int = 16
+const FONT_SIZE: int = 18
 const FONT_VARIANT: String = "patrick_hand"
+## Engrossar o traço do Patrick Hand (FontVariation.variation_embolden).
+const BODY_EMBOLDEN: float = 0.35
+const TITLE_EMBOLDEN: float = 0.8
 const FONT_DIR: String = "res://ui/theme/fonts/"
 const ICON_DIR: String = "res://ui/theme/icons/"
 ## Fallback dos glifos que as fontes não têm (→ ★ ✔ 🔒): fontes de símbolos/emoji do sistema.
@@ -204,19 +207,19 @@ func _labels() -> void:
 	_theme.set_stylebox("normal", "Label", _empty())
 
 	_variation("TitleLabel", "Label")
-	_theme.set_font_size("font_size", "TitleLabel", 18)
+	_theme.set_font_size("font_size", "TitleLabel", 21)
 
 	_variation("HintLabel", "Label")
-	_theme.set_font_size("font_size", "HintLabel", 13)
+	_theme.set_font_size("font_size", "HintLabel", 15)
 	_theme.set_color("font_color", "HintLabel", P.WOOD)
 
 	_variation("WarningLabel", "Label")
-	_theme.set_font_size("font_size", "WarningLabel", 13)
+	_theme.set_font_size("font_size", "WarningLabel", 15)
 	_theme.set_color("font_color", "WarningLabel", P.RED_BURNT)
 
 	# Código da sala: letras GOLD com contorno INK numa plaquinha INK.
 	_variation("CodeLabel", "Label")
-	_theme.set_font_size("font_size", "CodeLabel", 28)
+	_theme.set_font_size("font_size", "CodeLabel", 30)
 	_theme.set_color("font_color", "CodeLabel", P.GOLD)
 	_theme.set_color("font_outline_color", "CodeLabel", P.INK)
 	_theme.set_constant("outline_size", "CodeLabel", 4)
@@ -225,11 +228,11 @@ func _labels() -> void:
 	_theme.set_stylebox("normal", "CodeLabel", plaque)
 
 	_variation("LoadingLabel", "Label")
-	_theme.set_font_size("font_size", "LoadingLabel", 28)
+	_theme.set_font_size("font_size", "LoadingLabel", 30)
 	_theme.set_color("font_color", "LoadingLabel", P.PAPER)
 
 	_variation("ToastLabel", "Label")
-	_theme.set_font_size("font_size", "ToastLabel", 18)
+	_theme.set_font_size("font_size", "ToastLabel", 20)
 	_theme.set_color("font_color", "ToastLabel", P.PAPER)
 
 	_theme.set_color("font_color", "TooltipLabel", P.INK)
@@ -440,9 +443,11 @@ func _hand_font(file: String, embolden: float = 0.0) -> FontVariation:
 func _fonts() -> void:
 	if _font_variant == "none":
 		return
-	# Patrick Hand no texto todo: traço de caneta, dígitos claros e cabe no layout de 960x540.
-	_theme.default_font = _hand_font("PatrickHand-Regular.ttf")
-	var strong: FontVariation = _hand_font("PatrickHand-Regular.ttf", 0.6)
+	# Patrick Hand no texto todo: traço de caneta e dígitos claros. O traço original fica fino
+	# em telas grandes; o embolden engrossa sem mudar as métricas. Kalam Bold em títulos e
+	# botões foi testada e recusada: o "1" dela parece "l" nos preços e níveis.
+	_theme.default_font = _hand_font("PatrickHand-Regular.ttf", BODY_EMBOLDEN)
+	var strong: FontVariation = _hand_font("PatrickHand-Regular.ttf", TITLE_EMBOLDEN)
 	_theme.set_font("font", "TitleLabel", strong)
 	_theme.set_font("title_font", "Window", strong)
 	# Código da sala: no Patrick Hand o "M" parece "H" (os dois estão no alfabeto do código);

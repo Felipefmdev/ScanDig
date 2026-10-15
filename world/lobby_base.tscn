@@ -109,14 +109,14 @@ offset_bottom = 360.0
 grow_horizontal = 0
 
 [node name="BaseStationUI" parent="UILayer" instance=ExtResource("6_baseui")]
-anchors_preset = 9
+anchors_preset = 0
 anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
-anchor_bottom = 1.0
+anchor_bottom = 0.0
 offset_left = 16.0
-offset_top = 125.0
+offset_top = 150.0
 offset_right = 592.0
-offset_bottom = -16.0
+offset_bottom = 150.0
 grow_horizontal = 1
 grow_vertical = 1
