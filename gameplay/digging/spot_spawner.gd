@@ -3,6 +3,9 @@ extends Node3D
 
 ## Gera BuriedSpots aleatórios a partir de um MapData e repõe-nos depois de escavados,
 ## para que o mapa nunca esgote.
+## Coop (contrato #5, bloco D): só o host sorteia. Os spots nascem por um
+## MultiplayerSpawner filho (criado aqui) com spawn_function e os dados
+## {"n", "item_id", "rare", "pos"}; os clientes recebem-nos já decididos e não sorteiam nada.
 
 signal spot_spawned(spot: BuriedSpot)
 
@@ -26,9 +29,18 @@ const MAX_PLACEMENT_ATTEMPTS: int = 30
 @export_flags_3d_physics var ground_mask: int = 33
 
 var _active_spots: Array[BuriedSpot] = []
+var _net_spawner: MultiplayerSpawner = null
+var _spawn_counter: int = 0
 
 
 func _ready() -> void:
+	_net_spawner = MultiplayerSpawner.new()
+	_net_spawner.name = "SpotNetSpawner"
+	_net_spawner.spawn_path = NodePath("..")
+	_net_spawner.spawn_function = _create_spot
+	add_child(_net_spawner)
+	if not multiplayer.is_server():
+		return
 	if map_data == null:
 		push_warning("[SpotSpawner] map_data não definido; nenhum spot será gerado.")
 		return
@@ -73,14 +85,42 @@ func _spawn_spot() -> void:
 		_schedule_respawn()
 		return
 
-	var spot: BuriedSpot = BURIED_SPOT_SCENE.instantiate() as BuriedSpot
-	spot.item = item
-	spot.rare_variant_chance = map_data.rare_variant_chance
-	add_child(spot)
-	spot.global_position = spawn_pos
+	_spawn_counter += 1
+	var spot: BuriedSpot = _net_spawner.spawn({
+		"n": _spawn_counter,
+		"item_id": item.id,
+		"rare": randf() < map_data.rare_variant_chance,
+		"pos": to_local(spawn_pos),
+	}) as BuriedSpot
+	if spot == null:
+		return
 	spot.item_revealed.connect(_on_spot_revealed.bind(spot))
 	_active_spots.append(spot)
 	spot_spawned.emit(spot)
+
+
+## spawn_function: corre no host e em cada cliente com os mesmos dados.
+func _create_spot(data: Variant) -> Node:
+	var d: Dictionary = data as Dictionary
+	var spot: BuriedSpot = BURIED_SPOT_SCENE.instantiate() as BuriedSpot
+	spot.name = "Spot%d" % int(d.get("n", 0))
+	spot.networked = true
+	spot.item = _load_item(str(d.get("item_id", "")))
+	spot.is_rare_variant = bool(d.get("rare", false))
+	spot.rare_decided = true
+	spot.position = d.get("pos", Vector3.ZERO)
+	return spot
+
+
+func _load_item(item_id: String) -> ItemData:
+	if map_data != null:
+		for it: ItemData in map_data.item_pool:
+			if it != null and it.id == item_id:
+				return it
+	var path: String = "res://items/catalog/%s.tres" % item_id
+	if item_id.is_valid_filename() and ResourceLoader.exists(path):
+		return load(path) as ItemData
+	return null
 
 
 func _pick_item() -> ItemData:

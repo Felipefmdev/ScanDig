@@ -1,0 +1,25 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{"t": 1.5, "join": "127.0.0.1", "port": 7792, "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 1.0},
+		{"t": 0, "dump": "c1_spots"},
+		{"t": 0, "goto_spot": "nearest"},
+		{"sleep": 0.3},
+		{"t": 0, "screenshot": "c1_antes_de_cavar"},
+		{"t": 0, "dig_spot": true, "mode": "smart", "timeout": 20},
+		{"t": 0, "screenshot": "c2_item_revelado"},
+		{"t": 0, "dump": "c2_item_no_chao"},
+		{"t": 0, "pickup": true, "radius": 6, "timeout": 4},
+		{"sleep": 0.1},
+		{"t": 0, "screenshot": "c3_depois_da_corrida"},
+		{"t": 0, "dump": "c3_depois_da_corrida"},
+		{"t": 0, "goto_sell": true, "if": "deliverable>=1", "timeout": 20},
+		{"t": 0, "sell": true, "if": "deliverable>=1", "timeout": 10},
+		{"sleep": 5.0},
+		{"t": 0, "dump": "c4_final"},
+		{"sleep": 1.0},
+		{"t": 0, "quit": true}
+	]
+}

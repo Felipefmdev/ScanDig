@@ -169,9 +169,10 @@ func test_coop_steps() -> void:
 	assert_eq((Bridge.parse_step({"t": 0, "start_expedition": "praia"}) as Dictionary)["map_id"], "praia")
 	assert_eq((Bridge.parse_step({"sleep": 1.5}) as Dictionary)["seconds"], 1.5, "sleep dispensa 't'")
 	assert_true(Bridge.parse_step({"t": 0, "face_player": "remote"}) is Dictionary)
+	assert_true(Bridge.parse_step({"t": 0, "goto_player": "remote"}) is Dictionary)
 	assert_eq(Bridge.parse_condition("players>=2"), {"var": "players", "op": ">=", "value": 2.0})
 	for bad: Dictionary in [
 		{"t": 0, "host": 80}, {"t": 0, "host": "x"}, {"t": 0, "join": ""}, {"t": 0, "join": "1.2.3.4", "port": 99999},
-		{"t": 0, "start_expedition": "../x"}, {"sleep": -1}, {"t": 0, "face_player": "1"},
+		{"t": 0, "start_expedition": "../x"}, {"sleep": -1}, {"t": 0, "face_player": "1"}, {"t": 0, "goto_player": 2},
 	]:
 		assert_true(Bridge.parse_step(bad) is String, "deveria falhar: %s" % str(bad))

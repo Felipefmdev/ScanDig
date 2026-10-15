@@ -10,7 +10,7 @@ const ACTIONS: PackedStringArray = [
 const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
 	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore", "fight",
-	"host", "join", "start_expedition", "sleep", "face_player",
+	"host", "join", "start_expedition", "sleep", "face_player", "goto_player",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
@@ -317,9 +317,9 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			if not _is_number(value) or float(value) < 0.0:
 				return "'sleep' deve ser um numero >= 0"
 			step["seconds"] = float(value)
-		"face_player":
-			if value != "remote":
-				return "'face_player' so aceita \"remote\""
+		"face_player", "goto_player":
+			if not value is String or value != "remote":
+				return "'%s' so aceita \"remote\"" % kind
 	return step
 
 
@@ -567,6 +567,8 @@ func _execute(step: Dictionary) -> void:
 			await _sleep(step["seconds"])
 		"face_player":
 			_face_remote_player()
+		"goto_player":
+			_goto_remote_player()
 		"screenshot":
 			await _screenshot(step["label"])
 		"dump":
@@ -911,7 +913,13 @@ func _pickup(radius: float, timeout: float) -> void:
 		return
 	await _sleep(0.9) # deixa o item saltar e assentar
 	var t0: float = _elapsed()
+	# Em coop o item chega pelo host (request_pickup → _grant_item) depois do tap: conta
+	# a partir da mochila inicial e não só logo a seguir a cada tap.
+	var start_count: int = inv.get_count()
 	while _elapsed() - t0 < timeout:
+		if inv.get_count() > start_count:
+			_m["items_picked"] = int(_m["items_picked"]) + 1
+			return
 		var target: ItemPickup = null
 		var best: float = radius
 		for n: Node in get_tree().get_nodes_in_group(PICKUP_GROUP):
@@ -923,7 +931,7 @@ func _pickup(radius: float, timeout: float) -> void:
 				best = dist
 				target = p
 		if target == null:
-			if _elapsed() - t0 > 1.5:
+			if _elapsed() - t0 > 1.5 and inv.get_count() <= start_count:
 				_fail("pickup: nenhum item a menos de %.1f m" % radius)
 				return
 			await get_tree().process_frame
@@ -1238,6 +1246,31 @@ func _face_remote_player() -> void:
 	if me == null:
 		_fail("face_player: jogador local nao encontrado")
 		return
+	var best: Node3D = _nearest_remote_player(me)
+	if best == null:
+		_fail("face_player: nenhum jogador remoto")
+		return
+	_look_at(best.global_position + Vector3.UP * 1.2)
+	_log("  a olhar para o jogador %s (%.1f m)" % [best.name, best.global_position.distance_to(me.global_position)])
+
+
+## Atalho de debug: põe o jogador local 1.5 m ao lado do remoto mais próximo, virado para ele.
+func _goto_remote_player() -> void:
+	var me: Node3D = _player()
+	var other: Node3D = _nearest_remote_player(me) if me != null else null
+	if other == null:
+		_fail("goto_player: nenhum jogador remoto")
+		return
+	var side: Vector3 = other.global_basis.x
+	side.y = 0.0
+	me.global_position = other.global_position + side.normalized() * 1.5 + Vector3.UP * 0.3
+	if me is CharacterBody3D:
+		(me as CharacterBody3D).velocity = Vector3.ZERO
+	_look_at(other.global_position + Vector3.UP * 1.2)
+	_log("  ao lado do jogador %s" % other.name)
+
+
+func _nearest_remote_player(me: Node3D) -> Node3D:
 	var best: Node3D = null
 	var best_dist: float = INF
 	for n: Node in get_tree().get_nodes_in_group(PLAYERS_GROUP):
@@ -1248,11 +1281,7 @@ func _face_remote_player() -> void:
 		if dist < best_dist:
 			best_dist = dist
 			best = pl
-	if best == null:
-		_fail("face_player: nenhum jogador remoto")
-		return
-	_look_at(best.global_position + Vector3.UP * 1.2)
-	_log("  a olhar para o jogador %s (%.1f m)" % [best.name, best_dist])
+	return best
 
 
 ## Os altares de chefe (BossAltar e subclasses) também são BuriedSpot; goto_spot ignora-os.

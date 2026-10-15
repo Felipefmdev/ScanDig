@@ -73,6 +73,8 @@ func get_player(peer_id: int) -> Player:
 func _on_peer_scene_ready(peer_id: int, _map_id: String) -> void:
 	spawn_player(peer_id)
 	_refresh_visibility()
+	# Spots e itens no chão já existentes passam a ser replicados para este peer.
+	NetVisibility.refresh(get_tree())
 
 
 func _on_peer_left(peer_id: int) -> void:

@@ -1,0 +1,30 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{"t": 0.5, "host": 7792},
+		{"t": 0.6, "start_expedition": "praia", "timeout": 20},
+		{"wait_until": "players>=2", "timeout": 45},
+		{"sleep": 1.0},
+		{"t": 0, "dump": "h1_spots"},
+		{"sleep": 1.0},
+		{"t": 0, "goto_player": "remote"},
+		{"sleep": 1.5},
+		{"t": 0, "face_player": "remote"},
+		{"sleep": 0.3},
+		{"t": 0, "screenshot": "h2_convidado_a_cavar"},
+		{"wait_until": "pickup_dist<3.5", "timeout": 20},
+		{"sleep": 0.3},
+		{"t": 0, "screenshot": "h3_item_no_chao"},
+		{"t": 0, "dump": "h3_item_no_chao"},
+		{"t": 0, "pickup": true, "radius": 6, "timeout": 4},
+		{"sleep": 0.8},
+		{"t": 0, "screenshot": "h4_depois_da_corrida"},
+		{"t": 0, "dump": "h4_depois_da_corrida"},
+		{"t": 0, "goto_sell": true, "if": "deliverable>=1", "timeout": 20},
+		{"t": 0, "sell": true, "if": "deliverable>=1", "timeout": 10},
+		{"sleep": 6.0},
+		{"t": 0, "dump": "h5_final"},
+		{"sleep": 3.0},
+		{"t": 0, "quit": true}
+	]
+}

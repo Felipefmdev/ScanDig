@@ -14,6 +14,9 @@ abs() {
 	if command -v cygpath >/dev/null 2>&1; then cygpath -m "$p"; else echo "$p"; fi
 }
 mkdir -p .bot_runs
+# Um log por roteiro: duas corridas de coop em paralelo (portas diferentes) não se pisam.
+HOST_LOG=".bot_runs/$(basename "$HOST_JSON" .json).log"
+CLIENT_LOG=".bot_runs/$(basename "$CLIENT_JSON" .json).log"
 COMMON=(--path .)
 if [ "${4:-}" = "--headless" ]; then
 	HOST_WIN=(--headless)
@@ -22,14 +25,14 @@ else
 	HOST_WIN=(--windowed --resolution 960x540 --position 0,60)
 	CLIENT_WIN=(--windowed --resolution 960x540 --position 970,60)
 fi
-"$GODOT" "${COMMON[@]}" "${HOST_WIN[@]}" -- "--bot=$(abs "$HOST_JSON")" > .bot_runs/coop_host.log 2>&1 &
+"$GODOT" "${COMMON[@]}" "${HOST_WIN[@]}" -- "--bot=$(abs "$HOST_JSON")" > "$HOST_LOG" 2>&1 &
 HOST_PID=$!
 sleep 1
-"$GODOT" "${COMMON[@]}" "${CLIENT_WIN[@]}" -- "--bot=$(abs "$CLIENT_JSON")" > .bot_runs/coop_client.log 2>&1 &
+"$GODOT" "${COMMON[@]}" "${CLIENT_WIN[@]}" -- "--bot=$(abs "$CLIENT_JSON")" > "$CLIENT_LOG" 2>&1 &
 CLIENT_PID=$!
 HOST_RC=0
 CLIENT_RC=0
 wait "$HOST_PID" || HOST_RC=$?
 wait "$CLIENT_PID" || CLIENT_RC=$?
-echo "host exit=$HOST_RC client exit=$CLIENT_RC (logs: .bot_runs/coop_host.log, .bot_runs/coop_client.log)"
+echo "host exit=$HOST_RC client exit=$CLIENT_RC (logs: $HOST_LOG, $CLIENT_LOG)"
 exit $(( HOST_RC != 0 || CLIENT_RC != 0 ))

@@ -31,8 +31,8 @@ func _ready() -> void:
 	_build_totem()
 
 
-func dig(is_careful: bool, damage_multiplier: float = 1.0) -> Dictionary:
-	var res: Dictionary = super.dig(is_careful, damage_multiplier)
+func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = true) -> Dictionary:
+	var res: Dictionary = super.dig(is_careful, damage_multiplier, report_noise)
 	if bool(res.get("revealed", false)) and not _woken:
 		_wake_boss()
 	return res

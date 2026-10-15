@@ -5,26 +5,91 @@ extends RigidBody3D
 ## e larga a mochila. Apanha-se com a ação "interact" (E) — ver Player.
 
 const GROUP: StringName = &"pickups"
+## Coop: a física só corre no host; os clientes recebem posição/rotação a ~10 Hz.
+const NET_INTERVAL: float = 0.1
+## Rapidez da interpolação nos clientes (maior = segue mais colado à posição do host).
+const NET_SMOOTHING: float = 14.0
 
 var carried: CarriedItem = null
+## Criado pelo PickupsRoot (MultiplayerSpawner): o host simula, os clientes interpolam.
+var networked: bool = false
+## Replicados (NetSync) — escritos pelo host, lidos pelos clientes.
+var net_position: Vector3 = Vector3.ZERO
+var net_rotation: Vector3 = Vector3.ZERO
+var _pending_impulse: Vector3 = Vector3.ZERO
 var _mesh: MeshInstance3D = null
 var _label: Label3D = null
 
 
-## Cria o pickup como filho de `parent` na posição global `pos`, com um impulso opcional.
+## Cria o item no chão na posição global `pos`, com um impulso opcional.
+## Se a cena tiver um PickupsRoot (mapas), o item nasce em rede por ele: no host cria-o
+## e devolve-o; num cliente pede ao host (request_drop) e devolve null. Sem PickupsRoot
+## (sandbox, testes) fica filho de `parent`, só local, como antes.
 static func spawn(parent: Node, p_carried: CarriedItem, pos: Vector3, impulse: Vector3 = Vector3.ZERO) -> ItemPickup:
-	var pickup: ItemPickup = ItemPickup.new()
-	pickup.carried = p_carried
+	var root: PickupsRoot = PickupsRoot.find(parent.get_tree()) if parent != null and parent.is_inside_tree() else null
+	if root != null:
+		return root.drop(p_carried, pos, impulse)
+	var pickup: ItemPickup = create(p_carried)
 	parent.add_child(pickup)
 	pickup.global_position = pos
-	if impulse != Vector3.ZERO:
-		pickup.apply_central_impulse(impulse)
-		pickup.apply_torque_impulse(Vector3(randf_range(-0.05, 0.05), randf_range(-0.1, 0.1), randf_range(-0.05, 0.05)))
+	pickup.launch(impulse)
 	return pickup
+
+
+static func create(p_carried: CarriedItem) -> ItemPickup:
+	var pickup: ItemPickup = ItemPickup.new()
+	pickup.carried = p_carried
+	return pickup
+
+
+func launch(impulse: Vector3) -> void:
+	if impulse == Vector3.ZERO:
+		return
+	apply_central_impulse(impulse)
+	apply_torque_impulse(Vector3(randf_range(-0.05, 0.05), randf_range(-0.1, 0.1), randf_range(-0.05, 0.05)))
+
+
+## PickupsRoot: prepara o nó para a rede antes de entrar na árvore (host e clientes).
+func setup_network(local_pos: Vector3, impulse: Vector3) -> void:
+	networked = true
+	position = local_pos
+	net_position = local_pos
+	_pending_impulse = impulse
+	var config: SceneReplicationConfig = SceneReplicationConfig.new()
+	for prop: String in [".:net_position", ".:net_rotation"]:
+		config.add_property(NodePath(prop))
+		config.property_set_spawn(NodePath(prop), false)
+		config.property_set_replication_mode(NodePath(prop), SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
+	var sync: MultiplayerSynchronizer = MultiplayerSynchronizer.new()
+	sync.name = "NetSync"
+	sync.replication_config = config
+	sync.replication_interval = NET_INTERVAL
+	sync.root_path = NodePath("..")
+	add_child(sync)
+	NetVisibility.watch(sync)
+
+
+func _physics_process(delta: float) -> void:
+	if not networked:
+		return
+	if multiplayer.is_server():
+		net_position = position
+		net_rotation = rotation
+	else:
+		var t: float = 1.0 - exp(-NET_SMOOTHING * delta)
+		position = position.lerp(net_position, t)
+		basis = basis.orthonormalized().slerp(Basis.from_euler(net_rotation), t)
 
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	if networked:
+		if multiplayer.is_server():
+			launch.call_deferred(_pending_impulse)
+		else:
+			freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+			freeze = true
+			net_rotation = rotation
 	mass = 0.6
 	collision_layer = 1 << 4  # layer 5: objetos apanháveis (layer 4 = inimigos)
 	collision_mask = 1        # colide com o chão/mundo

@@ -98,6 +98,9 @@ const LOCAL_GROUP: StringName = &"player"
 const ALL_GROUP: StringName = &"players"
 
 var health: float = 100.0
+## Replicado (NetSync): o dono tem itens escavados na mochila? É o que has_loot()
+## responde num jogador remoto (ex.: a gaivota no host escolhe quem roubar).
+var carrying_loot: bool = false
 ## Ferramenta na mão (replicada para o avatar que os outros veem).
 var held_tool_id: StringName = &"":
 	set(value):
@@ -121,6 +124,9 @@ var _step_distance: float = 0.0
 const STEP_LENGTH: float = 1.15
 var _dig_target: BuriedSpot = null
 var _dig_is_careful: bool = false
+## Cliente: request_pickup pendente até este instante (evita pedidos repetidos com E).
+var _pickup_pending_until: int = 0
+const PICKUP_REQUEST_TIMEOUT_MS: int = 2000
 
 # Contador de Sessão: total já entregue na base
 var session_money: int = 0
@@ -388,6 +394,16 @@ func _find_ground_point(around: Vector3) -> Vector3:
 	return hit["position"]
 
 
+func _on_remote_dig_result(res: Dictionary, is_careful: bool, spot_pos: Vector3) -> void:
+	# TODO Fase 3 (#5 G): barulho de quem cavou, reportado deste lado (o host cavou com
+	# report_noise = false); com o DisturbanceMeter em rede isto passa a chegar ao host.
+	DisturbanceMeter.report(
+		DisturbanceMeter.NOISE_CAREFUL_DIG if is_careful else DisturbanceMeter.NOISE_FAST_DIG, spot_pos)
+	if bool(res.get("revealed", false)) and res.get("item") != null:
+		DisturbanceMeter.report(DisturbanceMeter.NOISE_REVEAL, spot_pos)
+	_show_dig_feedback(res, is_careful)
+
+
 ## A lâmina cravou: só agora o dig() é aplicado.
 func _on_shovel_impact(ground_point: Vector3) -> void:
 	SFX.play_at(SFX.DIG_CAREFUL if _dig_is_careful else SFX.DIG_FAST, ground_point, -6.0 if _dig_is_careful else -3.0, 0.06)
@@ -396,6 +412,12 @@ func _on_shovel_impact(ground_point: Vector3) -> void:
 	var spot: BuriedSpot = _dig_target
 	_dig_target = null
 	if spot != null and is_instance_valid(spot) and spot.is_inside_tree() and spot.is_in_group("buried_spots"):
+		if spot.networked and not multiplayer.is_server():
+			# Coop (#5 D): o host cava e responde só a nós com o resultado.
+			spot.remote_dig_result.connect(_on_remote_dig_result.bind(_dig_is_careful, spot.global_position),
+				CONNECT_ONE_SHOT)
+			spot.request_dig.rpc_id(1, _dig_is_careful, get_dig_damage_multiplier())
+			return
 		var res: Dictionary = spot.dig(_dig_is_careful, get_dig_damage_multiplier())
 		_show_dig_feedback(res, _dig_is_careful)
 	else:
@@ -791,15 +813,44 @@ func _interact() -> void:
 		SFX.play_ui(SFX.ERROR, -4.0)
 		_show_temporary_message("🎒 Mochila cheia! Entregue na base ou largue um item [Q].", Color(1.0, 0.6, 0.3), 1.8)
 		return
-	var c: CarriedItem = _target_pickup.take()
+	var root: PickupsRoot = PickupsRoot.find(get_tree())
+	if root != null and not multiplayer.is_server():
+		# Coop (#5 E): pede ao host; o item chega por receive_granted_item.
+		if _pickup_pending_until > Time.get_ticks_msec():
+			return
+		_pickup_pending_until = Time.get_ticks_msec() + PICKUP_REQUEST_TIMEOUT_MS
+		root.take(_target_pickup)
+		_target_pickup = null
+		return
+	var c: CarriedItem = root.take(_target_pickup) if root != null else _target_pickup.take()
 	_target_pickup = null
+	_add_picked_item(c)
+
+
+func _add_picked_item(c: CarriedItem) -> void:
 	if c == null:
 		return
-	inventory.add_item(c)
+	if not inventory.add_item(c):
+		# A mochila encheu enquanto o host respondia: o item volta ao chão.
+		ItemPickup.spawn(get_parent(), c, global_position + Vector3.UP * 0.8, Vector3.UP * 1.2)
+		_show_temporary_message("🎒 Mochila cheia! O item caiu no chão.", Color(1.0, 0.6, 0.3), 1.8)
+		return
 	SFX.play_ui(SFX.PICKUP)
 	var value: String = "" if c.is_tool() else " (R$ %d)" % c.final_value
 	_show_temporary_message("✋ Apanhou: %s%s" % [c.get_display_name(), value],
 		Color(0.85, 0.55, 1.0) if c.is_rare_variant else Color(0.95, 0.95, 0.85), 1.4)
+
+
+## PickupsRoot (cliente): o host aceitou o nosso request_pickup.
+func receive_granted_item(c: CarriedItem) -> void:
+	_pickup_pending_until = 0
+	_add_picked_item(c)
+
+
+## PickupsRoot (cliente): outro jogador apanhou primeiro (ou ficámos longe demais).
+func on_pickup_denied() -> void:
+	_pickup_pending_until = 0
+	_show_temporary_message("Alguém apanhou primeiro.", Color(0.9, 0.9, 0.9), 1.2)
 
 
 func _drop_selected() -> void:
@@ -889,6 +940,7 @@ func _update_interaction_target() -> void:
 func _on_inventory_changed() -> void:
 	_update_session_hud()
 	_update_tool_in_hand()
+	carrying_loot = _count_deliverable() > 0
 
 
 func _on_selected_slot_changed(_index: int) -> void:
@@ -966,7 +1018,26 @@ func _buy_offer(offer: ShopOffer) -> void:
 
 ## A gaivota (Dev_Detector) chama isto: há algum item escavado para roubar?
 func has_loot() -> bool:
-	return _count_deliverable() > 0
+	return _count_deliverable() > 0 if is_local() else carrying_loot
+
+
+## Gaivota no host (contrato #5 F): pede ao dono deste jogador que lhe entregue um item
+## escavado. O dono tira-o da mochila e responde com request_seagull_loot; dicionário
+## vazio = não havia nada (a gaivota bica em vez de roubar).
+@rpc("any_peer", "call_local", "reliable")
+func _steal_from(gull_path: NodePath) -> void:
+	if not is_local() or multiplayer.get_remote_sender_id() not in [0, 1]:
+		return
+	var c: CarriedItem = steal_loot()
+	var gull: Node = get_node_or_null(gull_path)
+	if gull == null or not gull.has_method("request_seagull_loot"):
+		return
+	var data: Dictionary = c.to_dict() if c != null else {}
+	# No host (jogador do host ou solo) um rpc_id(1) "call_remote" não correria: chamada direta.
+	if multiplayer.is_server():
+		gull.call(&"request_seagull_loot", data)
+	else:
+		gull.rpc_id(1, &"request_seagull_loot", data)
 
 
 ## Tira e devolve UM item escavado aleatório (nunca ferramentas). null se não houver.
