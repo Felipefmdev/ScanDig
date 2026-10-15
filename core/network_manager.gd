@@ -18,6 +18,10 @@ signal players_changed()
 signal connection_error(message: String)
 ## Só no host, depois de start_upnp(): resultado do mapeamento de porta.
 signal upnp_finished(success: bool, public_ip: String, message: String)
+## Sala online (#30), no host: código normalizado (sem hífen); mostre com RoomCode.format_for_display.
+signal room_code_ready(code: String)
+## Sala online (#30): "registrando" | "punch" | "relay" | "conectado" (este só no cliente).
+signal online_join_progress(stage: String)
 
 const DEFAULT_PORT: int = 7777
 const MAX_PLAYERS: int = 4
@@ -27,6 +31,20 @@ const SETTINGS_PATH: String = "user://scandig_settings.cfg"
 const HOST_PEER_ID: int = 1
 ## Tempo máximo que a saída da sessão espera a thread do UPnP terminar.
 const UPNP_STOP_TIMEOUT_MSEC: int = 3000
+## Servidor de salas (noray). Troque em [online] no SETTINGS_PATH (noray_address,
+## noray_port, noray_registrar_port) ou com "--noray=host:porta" nos argumentos.
+const NORAY_DEFAULT_ADDRESS: String = "127.0.0.1"
+const NORAY_DEFAULT_PORT: int = 8890
+const NORAY_DEFAULT_REGISTRAR_PORT: int = 8809
+## join_code: prazo total até sucesso ou erro.
+const ONLINE_JOIN_DEADLINE_SEC: float = 15.0
+## Handshake UDP antes do ENet: punch e, se falhar, relay.
+const PUNCH_TIMEOUT_SEC: float = 4.0
+const RELAY_TIMEOUT_SEC: float = 4.0
+## Espera do ENet depois de um handshake.
+const ONLINE_ENET_TIMEOUT_SEC: float = 3.0
+
+enum OnlineRole { NONE, HOST, CLIENT }
 
 static var instance: NetworkManager = null
 
@@ -52,6 +70,20 @@ var _stale_upnp_threads: Array[Thread] = []
 ## No _exit_tree a limpeza não emite sinais: quem ouve pode já estar fora da árvore.
 var _shutting_down: bool = false
 
+## Sala online: endereço do noray (padrão, [online] do SETTINGS_PATH ou --noray=).
+var noray_address: String = NORAY_DEFAULT_ADDRESS
+var noray_port: int = NORAY_DEFAULT_PORT
+var noray_registrar_port: int = NORAY_DEFAULT_REGISTRAR_PORT
+## Pula o punch e vai direto ao relay ("--force-relay"; testes e diagnóstico).
+var noray_force_relay: bool = false
+var _noray: NorayClient = null
+var _online_role: OnlineRole = OnlineRole.NONE
+var _room_code: String = ""
+## Host: sala criada; cliente: ENet conectado pela sala.
+var _online_ready: bool = false
+## Muda a cada tentativa ou saída; corrotinas de uma tentativa antiga param ao ver outro valor.
+var _online_generation: int = 0
+
 
 func _enter_tree() -> void:
 	if instance == null:
@@ -62,6 +94,7 @@ func _exit_tree() -> void:
 	if instance == self:
 		instance = null
 	_shutting_down = true
+	_close_online()
 	_cleanup_peer()
 	for thread: Thread in _stale_upnp_threads:
 		thread.wait_to_finish()
@@ -85,7 +118,13 @@ func _ready() -> void:
 	_join_timer.one_shot = true
 	_join_timer.timeout.connect(_on_join_timeout)
 	add_child(_join_timer)
+	_noray = NorayClient.new()
+	_noray.name = "NorayClient"
+	_noray.connect_requested.connect(_on_noray_connect_requested)
+	_noray.server_lost.connect(_on_noray_server_lost)
+	add_child(_noray)
 	_load_settings()
+	_read_online_args()
 
 
 func _get_multiplayer_api() -> MultiplayerAPI:
@@ -157,9 +196,193 @@ func disconnect_game() -> void:
 	var mp: MultiplayerAPI = _get_multiplayer_api()
 	var was_online: bool = enet_peer != null or (mp != null and mp.multiplayer_peer != null and not (mp.multiplayer_peer is OfflineMultiplayerPeer))
 	var was_host: bool = was_online and mp != null and mp.has_multiplayer_peer() and mp.is_server()
+	_close_online()
 	_cleanup_peer()
 	if was_online:
 		session_left.emit(was_host)
+
+
+# --- Salas online (noray, #30) ------------------------------------------------------
+
+## Host: registra no noray com a porta UDP `port`, abre o ENet nela e emite
+## room_code_ready(código). Volta na hora; erros chegam por connection_error.
+func host_online(port: int = DEFAULT_PORT) -> Error:
+	_close_online()
+	_cleanup_peer()
+	_online_role = OnlineRole.HOST
+	_online_generation += 1
+	_run_host_online(_online_generation, port)
+	return OK
+
+
+## Cliente: entra pela sala `code` ("K7Q-3MX", "k7q3mx"...). Tenta o punch e depois o relay;
+## sucesso por connection_succeeded, erro por connection_error em até ONLINE_JOIN_DEADLINE_SEC.
+func join_code(code: String) -> Error:
+	var normalized: String = RoomCode.normalize(code)
+	if not RoomCode.is_valid(normalized):
+		connection_error.emit("Código de sala inválido.")
+		return ERR_INVALID_PARAMETER
+	_close_online()
+	_cleanup_peer()
+	_online_role = OnlineRole.CLIENT
+	_room_code = normalized
+	_online_generation += 1
+	if _join_timer != null:
+		_join_timer.start(ONLINE_JOIN_DEADLINE_SEC)
+	_run_join_code(_online_generation, normalized)
+	return OK
+
+
+## true se a sessão atual foi criada por código (host com sala ou cliente que entrou por ela).
+func is_online_room() -> bool:
+	return _online_role != OnlineRole.NONE and _online_ready and _is_online()
+
+
+## Código normalizado da sala atual (ou da que está entrando); "" se não houver.
+func get_room_code() -> String:
+	return _room_code if _online_role != OnlineRole.NONE else ""
+
+
+func _run_host_online(generation: int, port: int) -> void:
+	online_join_progress.emit("registrando")
+	var error: Error = await _noray.connect_to_server(noray_address, noray_port)
+	if generation != _online_generation:
+		return
+	if error == OK:
+		error = await _noray.register(noray_registrar_port, port, true)
+		if generation != _online_generation:
+			return
+	if error == ERR_ALREADY_IN_USE:
+		_fail_online("Não foi possível hospedar: a porta %d já está em uso." % port)
+		return
+	if error != OK:
+		_fail_online("Servidor de salas fora do ar.")
+		return
+	var code: String = RoomCode.normalize(_noray.oid)
+	if not RoomCode.is_valid(code):
+		push_error("NetworkManager: o noray devolveu o código '%s'; configure NORAY_OID_LENGTH=%d e NORAY_OID_CHARSET=%s." % [_noray.oid, RoomCode.LENGTH, RoomCode.CHARSET])
+		_fail_online("Servidor de salas fora do ar.")
+		return
+	if host_game(port) != OK:
+		# host_game já emitiu connection_error.
+		_close_online()
+		return
+	_room_code = code
+	_online_ready = true
+	room_code_ready.emit(code)
+
+
+func _run_join_code(generation: int, code: String) -> void:
+	online_join_progress.emit("registrando")
+	var error: Error = await _noray.connect_to_server(noray_address, noray_port)
+	if generation != _online_generation:
+		return
+	if error == OK:
+		error = await _noray.register(noray_registrar_port, 0, false)
+		if generation != _online_generation:
+			return
+	if error != OK:
+		_fail_online("Servidor de salas fora do ar.")
+		return
+	if not noray_force_relay:
+		online_join_progress.emit("punch")
+		error = await _try_online_path(generation, code, false, PUNCH_TIMEOUT_SEC)
+		if generation != _online_generation or error == OK:
+			return
+		if error != ERR_CANT_CONNECT:
+			_fail_online(_online_error_message(error))
+			return
+	online_join_progress.emit("relay")
+	error = await _try_online_path(generation, code, true, RELAY_TIMEOUT_SEC)
+	if generation != _online_generation or error == OK:
+		return
+	_fail_online(_online_error_message(error))
+
+
+## Pede o caminho ao noray, faz o handshake e abre o ENet na porta registrada.
+## OK = ENet conectado; ERR_CANT_CONNECT = este caminho falhou (dá para tentar o outro).
+func _try_online_path(generation: int, code: String, relay: bool, timeout_sec: float) -> Error:
+	var reply: Dictionary = await _noray.request_connect(code, relay)
+	if generation != _online_generation:
+		return ERR_SKIP
+	var error: Error = reply["error"]
+	if error != OK:
+		return error
+	var address: String = reply["address"]
+	var port: int = reply["port"]
+	error = await _noray.handshake_udp(address, port, timeout_sec)
+	if generation != _online_generation:
+		return ERR_SKIP
+	if error != OK and error != ERR_BUSY:
+		return ERR_CANT_CONNECT
+
+	_cleanup_peer_keep_deadline()
+	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
+	if peer.create_client(address, port, 0, 0, 0, _noray.local_port) != OK:
+		return ERR_CANT_CONNECT
+	enet_peer = peer
+	var mp: MultiplayerAPI = _get_multiplayer_api()
+	if mp != null:
+		mp.multiplayer_peer = peer
+	var deadline: int = Time.get_ticks_msec() + int(ONLINE_ENET_TIMEOUT_SEC * 1000.0)
+	while peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTING and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+		if generation != _online_generation or enet_peer != peer:
+			return ERR_SKIP
+	if peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		return OK
+	_cleanup_peer_keep_deadline()
+	return ERR_CANT_CONNECT
+
+
+## _cleanup_peer para o _join_timer; aqui o prazo total do join_code continua correndo.
+func _cleanup_peer_keep_deadline() -> void:
+	var remaining: float = _join_timer.time_left if _join_timer != null and not _join_timer.is_stopped() else 0.0
+	_cleanup_peer()
+	if remaining > 0.0:
+		_join_timer.start(remaining)
+
+
+func _online_error_message(error: Error) -> String:
+	match error:
+		ERR_DOES_NOT_EXIST:
+			return "Sala não encontrada."
+		ERR_TIMEOUT, ERR_CONNECTION_ERROR:
+			return "Servidor de salas fora do ar."
+		_:
+			return "Não foi possível conectar ao amigo."
+
+
+## Encerra a tentativa/sala online com erro. connection_failed só no cliente.
+func _fail_online(message: String) -> void:
+	var was_client: bool = _online_role == OnlineRole.CLIENT
+	_close_online()
+	_cleanup_peer()
+	if was_client:
+		connection_failed.emit()
+	connection_error.emit(message)
+
+
+## Fecha o noray e esquece a sala. Não mexe no peer do ENet.
+func _close_online() -> void:
+	_online_generation += 1
+	_online_role = OnlineRole.NONE
+	_online_ready = false
+	_room_code = ""
+	if _noray != null:
+		_noray.close()
+
+
+## Host: um cliente pediu para entrar; abre o NAT até ele (punch) ou até o relay dele.
+func _on_noray_connect_requested(address: String, port: int) -> void:
+	if _online_role == OnlineRole.HOST and enet_peer != null:
+		_noray.handshake_enet(enet_peer, address, port)
+
+
+func _on_noray_server_lost() -> void:
+	if _online_role == OnlineRole.HOST and _online_ready:
+		# O ENet de quem já entrou não depende do noray (punch); só novos jogadores ficam de fora.
+		connection_error.emit("Servidor de salas caiu: novos jogadores não conseguem entrar.")
 
 
 func _cleanup_peer() -> void:
@@ -382,23 +605,35 @@ func _on_connected_to_server() -> void:
 	if not connected_players.has(my_id):
 		connected_players[my_id] = {"peer_id": my_id, "name": local_player_name}
 	_rpc_register_name.rpc_id(HOST_PEER_ID, local_player_name)
+	if _online_role == OnlineRole.CLIENT:
+		_online_ready = true
 	connection_succeeded.emit()
 	players_changed.emit()
+	if _online_role == OnlineRole.CLIENT:
+		online_join_progress.emit("conectado")
 
 
 func _on_connection_failed() -> void:
+	# Entrando por código: _try_online_path vê a falha e tenta o relay.
+	if _online_role == OnlineRole.CLIENT and not _online_ready:
+		return
+	_close_online()
 	_cleanup_peer()
 	connection_failed.emit()
 	connection_error.emit("Não foi possível conectar (host offline, porta fechada ou sala cheia).")
 
 
 func _on_join_timeout() -> void:
+	if _online_role == OnlineRole.CLIENT and not _online_ready:
+		_fail_online("Não foi possível conectar ao amigo.")
+		return
 	_cleanup_peer()
 	connection_failed.emit()
 	connection_error.emit("O host não respondeu em %d s. Confira o IP e se a porta está aberta." % int(JOIN_TIMEOUT_SEC))
 
 
 func _on_server_disconnected() -> void:
+	_close_online()
 	_cleanup_peer()
 	server_disconnected.emit()
 
@@ -451,6 +686,21 @@ func _load_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	if config.load(SETTINGS_PATH) == OK:
 		local_player_name = sanitize_player_name(str(config.get_value("player", "name", "")))
+		noray_address = str(config.get_value("online", "noray_address", noray_address))
+		noray_port = int(config.get_value("online", "noray_port", noray_port))
+		noray_registrar_port = int(config.get_value("online", "noray_registrar_port", noray_registrar_port))
+
+
+## Testes: "--noray=host:porta" troca o servidor; "--force-relay" pula o punch.
+func _read_online_args() -> void:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--noray="):
+			var target: PackedStringArray = arg.trim_prefix("--noray=").split(":")
+			noray_address = target[0]
+			if target.size() > 1 and target[1].is_valid_int():
+				noray_port = target[1].to_int()
+		elif arg == "--force-relay":
+			noray_force_relay = true
 
 
 func _save_settings() -> void:
