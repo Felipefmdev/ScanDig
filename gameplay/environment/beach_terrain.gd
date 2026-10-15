@@ -85,10 +85,15 @@ static func color_at(x: float, z: float, h: float) -> Color:
 
 
 func rebuild() -> void:
+	# #47: só os filhos gerados (sem owner); os que estão gravados na cena ficam.
 	for child: Node in get_children():
-		child.free()
-	collision_layer = 1
-	collision_mask = 0
+		if child.owner == null:
+			child.free()
+	# Em jogo: só a layer 1 (o chão não procura nada). No editor não se mexe em propriedades
+	# gravadas do próprio nó, senão cada Ctrl+S mudava o .tscn.
+	if not Engine.is_editor_hint():
+		collision_layer = 1
+		collision_mask = 0
 
 	var nx: int = int((SIZE_X.y - SIZE_X.x) / CELL)
 	var nz: int = int((SIZE_Z.y - SIZE_Z.x) / CELL)

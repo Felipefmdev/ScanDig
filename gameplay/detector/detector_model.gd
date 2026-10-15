@@ -39,8 +39,10 @@ func _ready() -> void:
 
 
 func rebuild() -> void:
+	# #47: só os filhos gerados (sem owner).
 	for child: Node in get_children():
-		child.queue_free()
+		if child.owner == null:
+			child.queue_free()
 
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)

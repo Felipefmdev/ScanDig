@@ -28,8 +28,23 @@ const GREEN_LIGHT: Color = Color(0.4, 0.62, 0.16)
 			rebuild()
 
 
+## cast_shadow como está gravado na cena (o rebuild desliga-o; ao gravar volta a este valor).
+var _saved_cast_shadow: GeometryInstance3D.ShadowCastingSetting = SHADOW_CASTING_SETTING_ON
+
+
 func _ready() -> void:
+	_saved_cast_shadow = cast_shadow
 	rebuild()
+
+
+## #47: o editor grava as propriedades do próprio nó; a MultiMesh e o cast_shadow gerados saem
+## antes de gravar e voltam logo a seguir.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		multimesh = null
+		cast_shadow = _saved_cast_shadow
+	elif what == NOTIFICATION_EDITOR_POST_SAVE:
+		rebuild()
 
 
 func rebuild() -> void:

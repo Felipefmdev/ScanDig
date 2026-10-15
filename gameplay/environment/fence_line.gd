@@ -50,8 +50,10 @@ func _queue() -> void:
 
 func rebuild() -> void:
 	_queued = false
+	# #47: só os filhos gerados (sem owner); os que estão gravados na cena ficam.
 	for c: Node in get_children():
-		c.free()
+		if c.owner == null:
+			c.free()
 	if points.size() < 2:
 		return
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
