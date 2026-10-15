@@ -4,6 +4,9 @@ extends SceneTree
 
 const MAP_IDS: Array[String] = ["praia", "campo", "ruinas", "cratera"]
 const CATALOG_DIR: String = "res://items/catalog/"
+## Itens de missão, relíquias e easter eggs da Praia (#39/#40, Dev A).
+const PRAIA_SIDE_ITEMS: Array[String] = ["concha_dourada", "bussola_naufragio", "medalhao_sereia",
+	"mapa_na_garrafa", "olho_do_polvo", "moeda_chocolate"]
 
 var _fails: int = 0
 
@@ -21,6 +24,14 @@ func _initialize() -> void:
 
 func _load_map(map_id: String) -> MapData:
 	return load("res://items/maps/%s.tres" % map_id) as MapData
+
+## Arquivos .tres em CATALOG_DIR (.remap das builds exportadas conta como o .tres).
+func _count_catalog_files() -> int:
+	var count: int = 0
+	for file_name: String in DirAccess.get_files_at(CATALOG_DIR):
+		if file_name.trim_suffix(".remap").ends_with(".tres"):
+			count += 1
+	return count
 
 func _pool_average(map_data: MapData) -> float:
 	if map_data.item_pool.is_empty():
@@ -85,10 +96,15 @@ func _run() -> void:
 	for map_id: String in MAP_IDS + ["geleira"]:
 		var map_data: MapData = _load_map(map_id)
 		for item: ItemData in (map_data.item_pool if map_data != null else []):
-			trophy_in_pool = trophy_in_pool or (item != null and item.id in ["coroa_caranguejo_rei", "garra_toupeira"])
+			trophy_in_pool = trophy_in_pool or (item != null and item.id in ["coroa_caranguejo_rei", "garra_toupeira", "olho_do_polvo"])
 	_check(not trophy_in_pool, "troféus fora dos pools")
 	_check(ResourceLoader.exists(CATALOG_DIR + "garra_toupeira.tres"), "garra_toupeira no catálogo")
-	_check(gs.get_total_catalog_items() == 21, "catálogo com 21 itens: %d" % gs.get_total_catalog_items())
+	for item_id: String in PRAIA_SIDE_ITEMS:
+		_check(ResourceLoader.exists(CATALOG_DIR + item_id + ".tres"), "%s no catálogo (#39/#40)" % item_id)
+	# Conta o catálogo aqui, sem o GameState, para não depender de um número fixo.
+	var catalog_files: int = _count_catalog_files()
+	_check(gs.get_total_catalog_items() == catalog_files, "catálogo: GameState %d, arquivos %d" % [gs.get_total_catalog_items(), catalog_files])
+	_check(catalog_files >= 27, "catálogo com pelo menos 27 itens: %d" % catalog_files)
 
 	# Ordem dos motivos em get_map_status: bloqueado → "Em breve." (sem cena) → detector.
 	# Com radar Nv.3 (< 4) e Ruínas desbloqueadas, falta a cena, então o motivo é "Em breve.".
