@@ -110,9 +110,40 @@ func _run() -> void:
 		]})
 	await _shot("resumo_do_dia")
 	ui._on_summary_close_pressed()
+
+	var bars_layer: CanvasLayer = CanvasLayer.new()
+	bars_layer.layer = 60
+	var center: CenterContainer = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.theme = load("res://ui/theme/scandig_theme.tres") as Theme
+	var panel: PanelContainer = PanelContainer.new()
+	panel.theme_type_variation = &"WornPanel"
+	var vbox: VBoxContainer = VBoxContainer.new()
+	var bar_specs: Array[Array] = [
+		["ProgressBar (HP)", &""],
+		["ThreatBar", &"ThreatBar"],
+		["BossBar", &"BossBar"],
+	]
+	for spec: Array in bar_specs:
+		var lbl: Label = Label.new()
+		lbl.text = spec[0] as String
+		vbox.add_child(lbl)
+		var bar: ProgressBar = ProgressBar.new()
+		bar.theme_type_variation = spec[1] as StringName
+		bar.value = 65.0
+		bar.custom_minimum_size = Vector2(320, 22)
+		vbox.add_child(bar)
+	panel.add_child(vbox)
+	center.add_child(panel)
+	bars_layer.add_child(center)
+	root.add_child(bars_layer)
+	await _shot("barras")
+	bars_layer.queue_free()
+
 	session.set("_current_map", null)
 	ui._refresh_expedition_bar()
 	menu.set_save_manager(null)
 	fake.queue_free()
 	GameState.instance.reset_state()
 	quit()
+
