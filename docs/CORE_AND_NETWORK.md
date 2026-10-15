@@ -140,6 +140,29 @@ Resumo: `{day, map_id, map_name, money_start, money_end, money_earned, entries: 
 
 Rede: ENet, porta `7777`, máx. 4 jogadores (`NetworkManager.host_game` / `join_game` / `disconnect_game`).
 
+### Nomes, erros de conexão e UPnP (`NetworkManager`, #28)
+Sinais: `players_changed()` (a lista mudou: entrada, saída ou nome; em todos os peers), `connection_error(message)` (texto pronto para a UI) e `upnp_finished(success, public_ip, message)` (só no host, depois de `start_upnp`).
+
+**Nomes**
+- `local_player_name` vem de `user://scandig_settings.cfg` (`ConfigFile`, seção `player`, chave `name`), carregado no `_ready`. Fica fora do save do mundo (que é só do host). `set_local_player_name(name, persist = true)` sanitiza, grava (`persist=false` nos testes) e, se online, propaga.
+- `sanitize_player_name(raw)` (static): tira caracteres de controle, `strip_edges` e corta em `NAME_MAX_LENGTH` (16). Pode devolver `""`.
+- O host é a fonte da verdade. Ele registra o próprio nome no `host_game()`; o cliente manda `_rpc_register_name(local_player_name)` ao conectar; o host sanitiza e faz broadcast de `_rpc_sync_players(connected_players)` em toda entrada, saída e troca de nome. Nos clientes a lista é **substituída** pela do host (só aceita do peer 1, chaves `int` e `name` `String`, sanitizado de novo).
+- `connected_players` continua `{peer_id: {"peer_id", "name"}}` e `size()` conta todos os peers. `get_player_name(peer_id)` → nome registrado, ou `"Host"` (peer 1), ou `"Jogador N"` (N = posição 1-based na lista ordenada de ids).
+- `get_local_addresses()` → IPv4 privados (10.x, 172.16–31.x, 192.168.x) para jogar na mesma rede.
+
+**Erros (`connection_error`)**, texto exato:
+- `host_game` sem conseguir abrir a porta: `"Não foi possível hospedar: a porta <porta> já está em uso."`
+- `join_game` com IP inválido: `"Endereço inválido: <ip>"`, devolve `ERR_INVALID_PARAMETER` sem criar peer (vazio continua virando `127.0.0.1`).
+- Sem resposta em `JOIN_TIMEOUT_SEC` (10 s): limpa o peer, emite `connection_failed` e `"O host não respondeu em 10 s. Confira o IP e se a porta está aberta."` (`Timer` filho, cancelado ao conectar, ao falhar e no `_cleanup_peer`).
+- `connection_failed` do ENet: `"Não foi possível conectar (host offline, porta fechada ou sala cheia)."`
+
+**UPnP** (`start_upnp(port = DEFAULT_PORT)`):
+- **Só pela UI, depois de hospedar; nunca dentro do `host_game()`.** Abre a porta UDP no roteador do jogador, que é uma ação real na rede dele. Offline ou como cliente só dá `push_warning`.
+- Roda numa `Thread` (`UPNP.discover`, `get_gateway`/`is_valid_gateway`, `add_port_mapping(port, port, "ScanDig", "UDP")`, `query_external_address`); nunca chama `UPNP` na thread principal. O resultado volta com `call_deferred` e preenche `public_ip`.
+- Mensagens: sucesso `"Porta <porta> aberta no roteador. Passe o IP <ip> aos amigos."`; sem gateway `"UPnP indisponível: abra a porta <porta> (UDP) no roteador ou jogue na mesma rede."`; recusa `"O roteador recusou abrir a porta <porta> (UPnP). Abra manualmente (UDP)."`
+- Ao sair da sessão (`_cleanup_peer`), a thread remove o mapeamento e termina com `wait_to_finish`; a saída espera no máximo 3 s (se o roteador demorar mais, a thread é juntada no `_exit_tree`). Sair no meio da descoberta não emite `upnp_finished`.
+- `_upnp_factory` (Callable) é um ponto de injeção só para testes: troca o `UPNP` real por um falso.
+
 ### Sair da sessão (`NetworkManager.session_left`)
 - `signal session_left(was_host: bool)`: o próprio peer saiu por `disconnect_game()`. `was_host` é capturado antes da limpeza (depois dela o peer é offline e `is_server()` dá true sempre). Não emite em queda de conexão nem no `_exit_tree`; `disconnect_game()` offline não emite nada.
 - O `SessionManager` ouve o sinal e volta ao lobby, limpando expedição, resumo pendente e `ready_peers`. **Não** emite `host_lost` nem `expedition_ended`; no lobby não troca de cena.
@@ -174,10 +197,18 @@ $G --headless --path . --script res://core/tests/purchase_item_test.gd  # ferram
 $G --headless --path . --script res://core/tests/map_unlock_test.gd    # progressão de mapas (grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/scene_ready_test.gd   # peer_scene_ready no solo: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/leave_session_test.gd # sair da sessão (porta 7792, grava o save): "RESULT fails=0"
+$G --headless --path . --script res://core/tests/net_errors_test.gd    # sanitize, IP inválido, porta em uso, timeout e thread do UPnP com UPnP falso: "UPNP skipped" + "RESULT fails=0"
+# Só com autorização do dono da rede: "-- upnp" abre de verdade a porta 7797 (UDP) no roteador e fecha logo depois.
+# $G --headless --path . --script res://core/tests/net_errors_test.gd -- upnp
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client.gd   # cliente entra a meio: estado igual ao host, "CLIENT RESULT fails=0"
 grep HOST /tmp/h.log   # "HOST scene_ready=[1, <id do cliente>] ... ok=true" e "HOST ready_after_end=[]"
+
+# Nomes (porta 7794; backup de scandig_settings.cfg, embora os testes usem persist=false): "RESULT fails=0" nos três
+(timeout 90 $G --headless --path . --script res://core/tests/net_names_host.gd > /tmp/nh.log 2>&1 &); sleep 3
+(timeout 90 $G --headless --path . --script res://core/tests/net_names_client.gd -- A > /tmp/na.log 2>&1 &); sleep 2
+timeout 90 $G --headless --path . --script res://core/tests/net_names_client.gd -- B; sleep 6; grep HOST /tmp/nh.log
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host_drop.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client_drop.gd   # "host_lost=true scene=LobbyBase"
