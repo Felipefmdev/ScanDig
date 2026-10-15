@@ -8,6 +8,9 @@ signal player_disconnected(peer_id: int)
 signal connection_succeeded()
 signal connection_failed()
 signal server_disconnected()
+## O próprio peer saiu da sessão por disconnect_game() (não emite em queda nem no _exit_tree).
+## was_host = este peer era o servidor online antes de sair.
+signal session_left(was_host: bool)
 
 const DEFAULT_PORT: int = 7777
 const MAX_PLAYERS: int = 4
@@ -100,7 +103,13 @@ func join_game(ip_address: String, port: int = DEFAULT_PORT) -> Error:
 
 
 func disconnect_game() -> void:
+	# Captura antes da limpeza: depois dela o peer é offline e is_server() dá true sempre.
+	var mp: MultiplayerAPI = _get_multiplayer_api()
+	var was_online: bool = enet_peer != null or (mp != null and mp.multiplayer_peer != null and not (mp.multiplayer_peer is OfflineMultiplayerPeer))
+	var was_host: bool = was_online and mp != null and mp.has_multiplayer_peer() and mp.is_server()
 	_cleanup_peer()
+	if was_online:
+		session_left.emit(was_host)
 
 
 func _cleanup_peer() -> void:

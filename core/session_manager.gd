@@ -46,6 +46,10 @@ func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	if NetworkManager.instance != null:
+		NetworkManager.instance.session_left.connect(_on_session_left)
+	else:
+		push_warning("SessionManager: NetworkManager indisponível; sair da sessão não voltará ao lobby.")
 	var state: GameState = GameState.instance
 	if state != null:
 		state.item_sold.connect(_on_item_sold)
@@ -285,6 +289,20 @@ func _on_server_disconnected() -> void:
 	_ready_peers.clear()
 	_change_scene(LOBBY_SCENE)
 	host_lost.emit()
+
+
+## O próprio peer saiu por disconnect_game(): volta ao lobby sem host_lost nem resumo.
+## Aqui o peer já é offline (is_server() dá true sempre): só o was_host do sinal vale.
+func _on_session_left(was_host: bool) -> void:
+	if was_host and _current_map != null:
+		# Guarda dinheiro e museu ganhos até aqui, sem avançar o dia.
+		var save: SaveManager = SaveManager.instance
+		if save != null:
+			save.save_game()
+	_current_map = null
+	_pending_summary = {}
+	_ready_peers.clear()
+	_change_scene(LOBBY_SCENE)
 
 
 func _on_item_sold(item_name: String, value: int) -> void:

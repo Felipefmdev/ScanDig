@@ -11,6 +11,7 @@ var _buy_result: Dictionary = {}
 var _bought: bool = false
 var _saw_converged: bool = false
 var _host_gone: bool = false
+var _host_lost: bool = false
 func _w(s: float) -> void:
 	await create_timer(s).timeout
 ## Checa `cond` a cada 0,25 s; devolve true assim que vale, false ao estourar o tempo.
@@ -54,6 +55,7 @@ func _run() -> void:
 			_buy_result = {"success": success, "message": message})
 	gs.state_synced.connect(func() -> void: _on_state_synced(gs))
 	NetworkManager.instance.server_disconnected.connect(func() -> void: _host_gone = true)
+	sm.host_lost.connect(func() -> void: _host_lost = true)
 
 	var join_err: Error = NetworkManager.instance.join_game("127.0.0.1", PORT)
 	print(_prefix, " join=", join_err)
@@ -97,10 +99,10 @@ func _run_a(gs: GameState, sm: SessionManager) -> void:
 func _run_b(gs: GameState, sm: SessionManager) -> void:
 	await _w(1.0)
 	NetworkManager.instance.disconnect_game()
-	await _w(2.0)
-	print(_prefix, " after_leave scene=", _scene_name(), " in_exp=", sm.is_in_expedition())
-	if _scene_name() != "LobbyBase" or sm.is_in_expedition():
-		print(_prefix, " KNOWN_BUG saída voluntária não volta ao lobby")
+	await _wait_until(func() -> bool: return _scene_name() == "LobbyBase" and not sm.is_in_expedition(), 3.0)
+	print(_prefix, " after_leave scene=", _scene_name(), " in_exp=", sm.is_in_expedition(), " host_lost=", _host_lost)
+	_check(_scene_name() == "LobbyBase" and not sm.is_in_expedition(), "saída voluntária não voltou ao lobby: scene=%s in_exp=%s" % [_scene_name(), sm.is_in_expedition()])
+	_check(not _host_lost, "host_lost emitido numa saída voluntária")
 	await _w(8.0)
 	_host_gone = false
 	var join_err: Error = NetworkManager.instance.join_game("127.0.0.1", PORT)

@@ -115,6 +115,7 @@ Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado
 3. Durante a expedição o host junta `item_sold`/`item_donated` no resumo.
 4. Host: `request_end_expedition()` → `advance_day()` → `SaveManager.save_game()` → `_rpc_return_to_lobby(summary)` → `expedition_ended(summary)` em todos.
 5. Queda do host: cliente volta ao lobby e recebe `host_lost`.
+6. Saída voluntária (`disconnect_game()`): o próprio peer volta ao lobby sem `host_lost` (ver "Sair da sessão").
 
 ### Mapa carregado por peer (`peer_scene_ready`)
 A Godot 4.3 não avisa quando `change_scene_to_file` termina. O `SessionManager` guarda a cena pedida em `_change_scene`, compara com `current_scene.scene_file_path` no `_process` e espera mais um frame (para os `_ready` da cena rodarem) antes de avisar. Se outra troca começar nesse frame, o aviso é descartado.
@@ -129,6 +130,13 @@ Spawners/Synchronizers do mapa devem usar `public_visibility = false` e liberar 
 Resumo: `{day, map_id, map_name, money_start, money_end, money_earned, entries: [{name, action: "sold"|"donated", value}]}`.
 
 Rede: ENet, porta `7777`, máx. 4 jogadores (`NetworkManager.host_game` / `join_game` / `disconnect_game`).
+
+### Sair da sessão (`NetworkManager.session_left`)
+- `signal session_left(was_host: bool)`: o próprio peer saiu por `disconnect_game()`. `was_host` é capturado antes da limpeza (depois dela o peer é offline e `is_server()` dá true sempre). Não emite em queda de conexão nem no `_exit_tree`; `disconnect_game()` offline não emite nada.
+- O `SessionManager` ouve o sinal e volta ao lobby, limpando expedição, resumo pendente e `ready_peers`. **Não** emite `host_lost` nem `expedition_ended`; no lobby não troca de cena.
+- Host que sai no meio da expedição chama `SaveManager.save_game()` antes de limpar: dinheiro e museu ganhos até ali ficam salvos, mas o dia **não** avança e não há resumo.
+- Os outros peers não mudam: se um cliente sai, o host recebe `peer_disconnected`; se o host sai, os clientes recebem `server_disconnected` → `host_lost`.
+- O botão "Sair da sessão" da UI deve chamar `disconnect_game()`.
 
 ## 3. Save (`user://scandig_save.json`, versão 3)
 
@@ -155,6 +163,7 @@ $G --headless --path . --script res://core/tests/value_cap_test.gd  # teto de ve
 $G --headless --path . --script res://core/tests/purchase_item_test.gd  # ferramentas da Praia: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/map_unlock_test.gd    # progressão de mapas (grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/scene_ready_test.gd   # peer_scene_ready no solo: "RESULT fails=0"
+$G --headless --path . --script res://core/tests/leave_session_test.gd # sair da sessão (porta 7792, grava o save): "RESULT fails=0"
 
 (timeout 60 $G --headless --path . --script res://core/tests/net_host.gd > /tmp/h.log 2>&1 &); sleep 3
 timeout 60 $G --headless --path . --script res://core/tests/net_client.gd   # cliente entra a meio: estado igual ao host, "CLIENT RESULT fails=0"
