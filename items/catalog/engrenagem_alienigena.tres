@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = "engrenagem_alienigena"
+display_name = "Engrenagem Alienígena"
+category = 3
+material_type = 4
+size_category = 2
+base_value = 3000
+fragility = 0.4
+depth_cm = 55

@@ -1,10 +1,21 @@
-[gd_resource type="Resource" script_class="MapData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MapData" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://items/map_data.gd" id="1_map"]
+[ext_resource type="Script" path="res://items/item_data.gd" id="2_item"]
+[ext_resource type="Resource" path="res://items/catalog/fivela_prata.tres" id="i0_fivela_prata"]
+[ext_resource type="Resource" path="res://items/catalog/relogio_bolso_antigo.tres" id="i1_relogio_bolso_antigo"]
+[ext_resource type="Resource" path="res://items/catalog/idolo_ouro.tres" id="i2_idolo_ouro"]
+[ext_resource type="Resource" path="res://items/catalog/calice_prata.tres" id="i3_calice_prata"]
+[ext_resource type="Resource" path="res://items/catalog/relogio_ouro.tres" id="i4_relogio_ouro"]
 
 [resource]
 script = ExtResource("1_map")
 id = "ruinas"
 display_name = "Ruínas"
 unlock_cost = 8000
-required_detector_level = 1
+required_detector_level = 4
+item_pool = Array[ExtResource("2_item")]([ExtResource("i0_fivela_prata"), ExtResource("i0_fivela_prata"), ExtResource("i0_fivela_prata"), ExtResource("i0_fivela_prata"), ExtResource("i0_fivela_prata"), ExtResource("i0_fivela_prata"), ExtResource("i0_fivela_prata"), ExtResource("i0_fivela_prata"), ExtResource("i1_relogio_bolso_antigo"), ExtResource("i1_relogio_bolso_antigo"), ExtResource("i1_relogio_bolso_antigo"), ExtResource("i1_relogio_bolso_antigo"), ExtResource("i1_relogio_bolso_antigo"), ExtResource("i2_idolo_ouro"), ExtResource("i2_idolo_ouro"), ExtResource("i2_idolo_ouro"), ExtResource("i2_idolo_ouro"), ExtResource("i3_calice_prata"), ExtResource("i3_calice_prata"), ExtResource("i4_relogio_ouro")])
+rare_variant_chance = 0.06
+noise_multiplier = 1.3
+noise_decay_per_second = 2.2
+spot_count = 10

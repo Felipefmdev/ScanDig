@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = "calice_prata"
+display_name = "Cálice de Prata"
+category = 2
+material_type = 2
+size_category = 1
+base_value = 800
+fragility = 0.5
+depth_cm = 38

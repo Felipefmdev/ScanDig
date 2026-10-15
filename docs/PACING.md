@@ -20,16 +20,31 @@ custam ~4x mais. Assim o tempo por mapa cresce devagar e o jogador sente-se mais
 
 Um "ciclo" = detetar + cavar 3 itens + voltar à base ≈ **3 min** na Praia.
 
-| Mapa | Valor médio/item | R$ por minuto | Gasto total no mapa (upgrades + desbloqueio) |
-| :--- | :--- | :--- | :--- |
-| Praia | ~50 | ~50 | ~3.400 upgrades + 2.000 = ~5.400 (≈ 70 min + tempo a explorar) |
-| Campo | ~150 | ~130 | ~11.000 |
-| Ruínas | ~450 | ~350 | ~30.000 |
-| Cratera | ~1.300 | ~900 | ~80.000 |
+| Mapa | Valor médio/item | R$ por minuto | Detector mínimo | Gasto total no mapa (upgrades + desbloqueio do seguinte) |
+| :--- | :--- | :--- | :--- | :--- |
+| Praia | ~50 | ~50 | Nv.1 | 3.400 + 2.000 = 5.400 (≈ 70 min + tempo a explorar) |
+| Campo | ~150 | ~130 | Nv.1 (Nv.2 pendente da #27) | 2.800 + 8.000 = 10.800 |
+| Ruínas | ~468 | ~350 | Nv.4 | 5.000 + 25.000 = 30.000 |
+| Cratera | ~1.248 | ~900 | Nv.5 | 80.000 |
+
+Os upgrades seguem a tabela aprovada na #25. Cada nível exige o mapa da linha onde aparece
+(ex.: detector Nv.4 e mochila de 6 slots só com o Campo desbloqueado).
 
 Estado atual (Praia, `items/maps/praia.tres`): lata x5, chave x4, moeda x2, aliança x1
 (média ≈ 53 R$). **O Relógio de Ouro (2.500) saiu da Praia** — passa para as Ruínas.
 Variante rara (x3, 5%) e escavação perfeita (+25%) são bónus por habilidade.
+
+- **Ruínas** (`items/maps/ruinas.tres`, #26): fivela de prata x8, relógio de bolso x5,
+  ídolo de ouro x4, cálice de prata x2, relógio de ouro x1 (média ≈ 468 R$). Variante rara 6%.
+- **Cratera** (`items/maps/cratera.tres`, #26): fragmento de meteorito x7, caixa de música
+  x6, liga desconhecida x5, engrenagem alienígena x2 (média ≈ 1.248 R$). Variante rara 7%.
+  O Orbe Vibrante (10.000) fica fora do pool: é o prémio do chefe final.
+- **Detector mínimo** (`required_detector_level`): Ruínas Nv.4 (comprado no Campo) e
+  Cratera Nv.5 (comprado nas Ruínas). O Campo passa a Nv.2 só depois da #27: primeiro o
+  Dev A ajusta o `test_map_campo`, depois o Dev B muda o `campo.tres`.
+- **Ritmo da Praia:** a #19 mediu 20–24 R$/min, abaixo dos ~50 da tabela. Pela decisão B
+  da #25/#27, os preços não caem: a renda da Praia sobe com os upgrades (detector, pá e
+  pinpointer com efeito no gameplay).
 
 **Pedido ao Dev B:** com estes valores, os custos atuais da loja
 (detector 300/600/1200, pinpointer 500, pá 800 = 3.400) encaixam na Praia. Os níveis
