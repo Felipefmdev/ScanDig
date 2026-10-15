@@ -1,4 +1,4 @@
-[gd_scene load_steps=72 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=73 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
@@ -46,6 +46,7 @@
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallA.glb" id="nat_rock_smallA"]
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallC.glb" id="nat_rock_smallC"]
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallFlatA.glb" id="nat_rock_smallFlatA"]
+[ext_resource type="Script" path="res://gameplay/art/toon_override.gd" id="art_toon_override"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(1.502, 0.949, 1.514)
@@ -860,7 +861,6 @@ transform = Transform3D(-0.70711, 0, -0.70711, 0, 1, 0, 0.70711, 0, -0.70711, 0.
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 2, 0.75)
 pixel_size = 0.008
 billboard = 1
-no_depth_test = true
 modulate = Color(1, 0.88, 0.35, 1)
 text = "ENTREGA [E]"
 font_size = 56
@@ -920,7 +920,6 @@ tool_data = ExtResource("11_tool_kit_medico")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 pixel_size = 0.008
 billboard = 1
-no_depth_test = true
 modulate = Color(0.55, 0.9, 1, 1)
 text = "LOJA"
 font_size = 64
@@ -952,3 +951,6 @@ collision_mask = 0
 [node name="Collision" type="CollisionShape3D" parent="BossArenaSpotBlocker"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
 shape = SubResource("CylinderShape3D_boss_arena_blocker")
+
+[node name="ToonOverride" type="Node" parent="."]
+script = ExtResource("art_toon_override")

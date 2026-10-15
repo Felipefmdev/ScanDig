@@ -120,11 +120,8 @@ func rebuild() -> void:
 				# a mesma ordem (frente para cima) serve a malha e a colisão
 				faces.append_array(_face(st, t[0], t[1], t[2]))
 
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.roughness = 0.95
-	mat.metallic_specular = 0.15
+	# Cel shading toon sem contorno (#36)
+	var mat: ShaderMaterial = ToonKit.material(&"terrain")
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
 	mi.mesh = st.commit()

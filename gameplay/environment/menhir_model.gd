@@ -73,13 +73,15 @@ func rebuild() -> void:
 	for k: int in sides:
 		_tri(st, top[k], top[(k + 1) % sides], tip, STONE, center)
 
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.roughness = 1.0
+	# Toon + contorno preto (#36), com manchas de líquen
+	var mat: ShaderMaterial = ToonKit.vertex_material()
+	mat.set_shader_parameter(&"spots_amount", 0.45)
+	mat.set_shader_parameter(&"spots_color", Color(0.62, 0.66, 0.4))
+	mat.set_shader_parameter(&"spots_scale", 5.0)
+	mat.set_shader_parameter(&"spots_size", 0.22)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
-	mi.mesh = st.commit()
+	mi.mesh = ToonKit.commit(st)
 	mi.material_override = mat
 	add_child(mi)
 

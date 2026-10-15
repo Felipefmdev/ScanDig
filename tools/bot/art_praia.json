@@ -1,0 +1,30 @@
+{
+	"scene": "res://world/map_praia.tscn",
+	"steps": [
+		{"t": 0.5, "teleport": [-2.0, 0.6, 10.0]},
+		{"t": 0.6, "look_at": [5.0, 0.6, 1.5]},
+		{"t": 2.5, "screenshot": "01_base_banca"},
+		{"t": 2.6, "dump": "01_base_banca"},
+		{"t": 2.8, "teleport": [-17.0, 0.6, -6.5]},
+		{"t": 2.9, "look_at": [-27.0, 2.5, -12.5]},
+		{"t": 4.4, "screenshot": "02_palmeiras"},
+		{"t": 4.5, "dump": "02_palmeiras"},
+		{"t": 4.7, "teleport": [22.0, 0.6, -6.0]},
+		{"t": 4.8, "look_at": [34.0, 0.5, -13.0]},
+		{"t": 6.3, "screenshot": "03_naufragio"},
+		{"t": 6.4, "dump": "03_naufragio"},
+		{"t": 6.6, "teleport": [26.0, 0.6, 9.0]},
+		{"t": 6.7, "look_at": [35.0, 0.0, 15.0]},
+		{"t": 8.2, "screenshot": "04_barco_doca"},
+		{"t": 8.3, "dump": "04_barco_doca"},
+		{"t": 8.5, "teleport": [-21.0, 1.5, 21.0]},
+		{"t": 8.6, "look_at": [8.0, 0.0, -8.0]},
+		{"t": 10.1, "screenshot": "05_vista_geral"},
+		{"t": 10.2, "dump": "05_vista_geral"},
+		{"t": 10.4, "teleport": [-13.0, 0.6, -13.0]},
+		{"t": 10.5, "look_at": [-22.0, 0.8, -22.0]},
+		{"t": 12.0, "screenshot": "06_altar"},
+		{"t": 12.1, "dump": "06_altar"},
+		{"t": 12.5, "quit": true}
+	]
+}

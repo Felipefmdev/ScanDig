@@ -92,7 +92,7 @@ var _stun_left: float = 0.0
 var _flee_left: float = 0.0
 var _flee_origin: Vector3 = Vector3.ZERO
 var _dead: bool = false
-var _flash_mats: Array[StandardMaterial3D] = []
+var _flash_mats: Array[Material] = []
 var _flash_base_colors: Array[Color] = []
 var _flash_tween: Tween = null
 var _stun_fx: Node3D = null
@@ -475,12 +475,14 @@ func _deal_damage(target: Node, amount: float) -> void:
 	target.call("take_damage", final_amount)
 
 
-## Regista um material para o flash de dano (albedo_color é animado de volta à cor base).
-func _register_flash_material(mat: StandardMaterial3D) -> void:
+## Regista um material para o flash de dano. Toon (ShaderMaterial): anima flash_amount 1 → 0.
+## StandardMaterial3D: albedo_color é animado de volta à cor base.
+func _register_flash_material(mat: Material) -> void:
 	if mat == null:
 		return
 	_flash_mats.append(mat)
-	_flash_base_colors.append(mat.albedo_color)
+	var std: StandardMaterial3D = mat as StandardMaterial3D
+	_flash_base_colors.append(std.albedo_color if std != null else Color.WHITE)
 
 
 func _flash(color: Color) -> void:
@@ -490,7 +492,15 @@ func _flash(color: Color) -> void:
 		_flash_tween.kill()
 	_flash_tween = create_tween().set_parallel(true)
 	for i: int in range(_flash_mats.size()):
-		var mat: StandardMaterial3D = _flash_mats[i]
+		var shader_mat: ShaderMaterial = _flash_mats[i] as ShaderMaterial
+		if shader_mat != null:
+			shader_mat.set_shader_parameter(&"flash_color", color)
+			shader_mat.set_shader_parameter(&"flash_amount", 1.0)
+			_flash_tween.tween_property(shader_mat, "shader_parameter/flash_amount", 0.0, FLASH_TIME)
+			continue
+		var mat: StandardMaterial3D = _flash_mats[i] as StandardMaterial3D
+		if mat == null:
+			continue
 		mat.albedo_color = color
 		mat.emission_enabled = true
 		mat.emission = color
@@ -499,8 +509,10 @@ func _flash(color: Color) -> void:
 
 
 func _end_flash() -> void:
-	for mat: StandardMaterial3D in _flash_mats:
-		mat.emission_enabled = false
+	for m: Material in _flash_mats:
+		var mat: StandardMaterial3D = m as StandardMaterial3D
+		if mat != null:
+			mat.emission_enabled = false
 
 
 ## Partículas one-shot no pai (sobrevivem ao inimigo).
@@ -557,10 +569,8 @@ func _set_stun_fx(on: bool) -> void:
 		# Estrela simples: dois losangos cruzados
 		LowPolyMesh.box(st, c, Vector3(0.07, 0.07, 0.02), Basis(Vector3.FORWARD, PI * 0.25), Color(1.0, 0.9, 0.2))
 		LowPolyMesh.box(st, c, Vector3(0.02, 0.07, 0.07), Basis(Vector3.RIGHT, PI * 0.25), Color(1.0, 0.9, 0.2))
-	var mat: StandardMaterial3D = LowPolyMesh.make_material()
-	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.85, 0.2)
-	mat.emission_energy_multiplier = 0.6
+	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	mat.set_shader_parameter(&"emission_color", Color(0.6, 0.51, 0.12))
 	_stun_fx.add_child(LowPolyMesh.commit(st, "Stars", mat))
 	add_child(_stun_fx)
 	_animate_stun_fx(0.0)

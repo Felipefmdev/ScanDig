@@ -52,8 +52,11 @@ func rebuild() -> void:
 		c.free()
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = seed_value
+	# Tronco (peça fechada, contorno normal) e folhas (cartões de dupla face, contorno de cartão)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var fst: SurfaceTool = SurfaceTool.new()
+	fst.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	# Tronco: segmentos (anéis) ao longo de uma curva quadrática.
 	var segs: int = 9
@@ -74,20 +77,21 @@ func rebuild() -> void:
 		var yaw: float = TAU * float(f) / float(fronds) + rng.randf_range(-0.2, 0.2)
 		var up_tilt: float = rng.randf_range(0.15, 0.55)
 		var length: float = frond_length * rng.randf_range(0.8, 1.1)
-		_frond(st, top, yaw, up_tilt, length, rng)
+		_frond(fst, top, yaw, up_tilt, length, rng)
 	# coco/centro da copa
 	_prism(st, top + Vector3(0, -0.1, 0), top + Vector3(0, 0.15, 0), 0.2, 0.08, 6, LEAF_DARK)
 
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.roughness = 0.85
+	# Toon + contorno preto (#36)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
-	mi.mesh = st.commit()
-	mi.material_override = mat
+	mi.mesh = ToonKit.commit(st)
+	mi.material_override = ToonKit.vertex_material()
 	add_child(mi)
+	var fronds_mi: MeshInstance3D = MeshInstance3D.new()
+	fronds_mi.name = "Fronds"
+	fronds_mi.mesh = ToonKit.commit(fst, true)
+	fronds_mi.material_override = ToonKit.material(&"foliage")
+	add_child(fronds_mi)
 
 
 func _trunk_point(t: float) -> Vector3:
@@ -150,8 +154,13 @@ func _side_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, inside: Vect
 		return
 	n = n.normalized()
 	if n.dot((a + b + c) / 3.0 - inside) < 0.0:
+		var tmp: Vector3 = b
+		b = c
+		c = tmp
 		n = -n
-	for v: Vector3 in [a, b, c]:
+	# Godot usa ordem horária para a face da frente: com n para fora, inverte (o material toon
+	# corta as faces de trás e o contorno desenha-as; antes o cull estava desligado).
+	for v: Vector3 in [a, c, b]:
 		st.set_color(color)
 		st.set_normal(n)
 		st.add_vertex(v)

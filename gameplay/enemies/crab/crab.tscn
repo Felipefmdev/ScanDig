@@ -1,25 +1,9 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://gameplay/enemies/crab/crab.gd" id="1_crab"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_crab"]
 size = Vector3(0.75, 0.35, 0.55)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_shell"]
-albedo_color = Color(0.95, 0.42, 0.12, 1)
-roughness = 0.55
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_claw"]
-albedo_color = Color(0.85, 0.3, 0.08, 1)
-roughness = 0.5
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leg"]
-albedo_color = Color(0.7, 0.25, 0.08, 1)
-roughness = 0.7
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eye"]
-albedo_color = Color(0.05, 0.05, 0.05, 1)
-roughness = 0.2
 
 [node name="Crab" type="CharacterBody3D"]
 collision_layer = 8
@@ -32,59 +16,14 @@ shape = SubResource("BoxShape3D_crab")
 
 [node name="BodyRoot" type="Node3D" parent="."]
 
-[node name="Carapace" type="CSGSphere3D" parent="BodyRoot"]
-transform = Transform3D(1.2, 0, 0, 0, 0.5, 0, 0, 0, 0.9, 0, 0.24, 0)
-radius = 0.3
-radial_segments = 16
-rings = 8
-material = SubResource("StandardMaterial3D_shell")
-
-[node name="EyeLeft" type="CSGSphere3D" parent="BodyRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08, 0.42, -0.2)
-radius = 0.035
-radial_segments = 8
-rings = 4
-material = SubResource("StandardMaterial3D_eye")
-
-[node name="EyeRight" type="CSGSphere3D" parent="BodyRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, 0.42, -0.2)
-radius = 0.035
-radial_segments = 8
-rings = 4
-material = SubResource("StandardMaterial3D_eye")
-
 [node name="ClawLeft" type="Node3D" parent="BodyRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.22, -0.22)
-
-[node name="Arm" type="CSGBox3D" parent="BodyRoot/ClawLeft"]
-transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, -0.06, 0, -0.08)
-size = Vector3(0.06, 0.06, 0.22)
-material = SubResource("StandardMaterial3D_claw")
-
-[node name="Pincer" type="CSGBox3D" parent="BodyRoot/ClawLeft"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.02, -0.24)
-size = Vector3(0.14, 0.1, 0.18)
-material = SubResource("StandardMaterial3D_claw")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 0.22, -0.1)
 
 [node name="ClawRight" type="Node3D" parent="BodyRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.22, -0.22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.24, 0.2, -0.15)
 
-[node name="Arm" type="CSGBox3D" parent="BodyRoot/ClawRight"]
-transform = Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, 0.06, 0, -0.08)
-size = Vector3(0.06, 0.06, 0.22)
-material = SubResource("StandardMaterial3D_claw")
+[node name="LegsLeft" type="Node3D" parent="BodyRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.2, 0.02)
 
-[node name="Pincer" type="CSGBox3D" parent="BodyRoot/ClawRight"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.02, -0.24)
-size = Vector3(0.14, 0.1, 0.18)
-material = SubResource("StandardMaterial3D_claw")
-
-[node name="LegsLeft" type="CSGBox3D" parent="BodyRoot"]
-transform = Transform3D(0.939693, 0.34202, 0, -0.34202, 0.939693, 0, 0, 0, 1, -0.36, 0.1, 0.05)
-size = Vector3(0.3, 0.04, 0.3)
-material = SubResource("StandardMaterial3D_leg")
-
-[node name="LegsRight" type="CSGBox3D" parent="BodyRoot"]
-transform = Transform3D(0.939693, -0.34202, 0, 0.34202, 0.939693, 0, 0, 0, 1, 0.36, 0.1, 0.05)
-size = Vector3(0.3, 0.04, 0.3)
-material = SubResource("StandardMaterial3D_leg")
+[node name="LegsRight" type="Node3D" parent="BodyRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.2, 0.02)

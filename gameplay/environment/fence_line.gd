@@ -87,13 +87,13 @@ func rebuild() -> void:
 			var b: Vector3 = posts[j].lerp(tops[j], h) + Vector3.UP * rng.randf_range(-0.06, 0.06)
 			_beam(st, a, b, RAIL_HALF, WOOD)
 
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.roughness = 0.95
+	# Madeira toon (veio) + contorno preto (#36); a cor vem dos vértices
+	var mat: ShaderMaterial = ToonKit.material(&"wood")
+	mat.set_shader_parameter(&"albedo_color", Color.WHITE)
+	mat.set_shader_parameter(&"grain_amount", 0.5)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
-	mi.mesh = st.commit()
+	mi.mesh = ToonKit.commit(st)
 	mi.material_override = mat
 	add_child(mi)
 

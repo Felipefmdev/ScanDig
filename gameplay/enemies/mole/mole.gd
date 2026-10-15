@@ -251,7 +251,7 @@ func _build_model() -> void:
 		_body_root = Node3D.new()
 		_body_root.name = "BodyRoot"
 		add_child(_body_root)
-	var mat: StandardMaterial3D = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = LowPolyMesh.make_material()
 	_register_flash_material(mat)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)

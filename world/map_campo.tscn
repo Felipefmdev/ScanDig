@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3]
+[gd_scene load_steps=48 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
@@ -31,6 +31,7 @@
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallC.glb" id="nat_rock_smallC"]
 [ext_resource type="PackedScene" path="res://assets/models/kenney_nature/rock_smallFlatA.glb" id="nat_rock_smallFlatA"]
 [ext_resource type="Script" path="res://gameplay/enemies/boss/mole_altar.gd" id="b_mole_altar"]
+[ext_resource type="Script" path="res://gameplay/art/toon_override.gd" id="art_toon_override"]
 
 [sub_resource type="CylinderShape3D" id="Shape_trunk"]
 height = 3.0
@@ -1567,7 +1568,6 @@ transform = Transform3D(0.43879, 0, 0.23971, 0, 0.5, 0, -0.23971, 0, 0.43879, -1
 transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.75, 2, 0.75)
 pixel_size = 0.008
 billboard = 1
-no_depth_test = true
 modulate = Color(1, 0.88, 0.35, 1)
 text = "ENTREGA [E]"
 font_size = 56
@@ -1590,3 +1590,6 @@ script = ExtResource("d_detector_spawn")
 [node name="MoleAltar" type="Area3D" parent="."]
 transform = Transform3D(-0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, -0.707107, -18, 0, -18)
 script = ExtResource("b_mole_altar")
+
+[node name="ToonOverride" type="Node" parent="."]
+script = ExtResource("art_toon_override")

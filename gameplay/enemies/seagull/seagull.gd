@@ -373,7 +373,7 @@ func _animate_wings(delta: float) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	var mat: StandardMaterial3D = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = LowPolyMesh.make_material()
 	_register_flash_material(mat)
 
 	var st: SurfaceTool = SurfaceTool.new()

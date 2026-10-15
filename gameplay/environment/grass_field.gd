@@ -97,13 +97,8 @@ func _build_tuft_mesh() -> ArrayMesh:
 		_tri(st, mid - side * w * 0.6, mid + side * w * 0.6, tip, c1, c1, c2)
 	st.generate_normals()
 	var mesh: ArrayMesh = st.commit()
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.roughness = 0.9
-	mat.metallic_specular = 0.1
-	mesh.surface_set_material(0, mat)
+	# Toon de dupla face, sem contorno (#36): milhares de tufos, o contorno seria ruído
+	mesh.surface_set_material(0, ToonKit.material(&"grass"))
 	return mesh
 
 

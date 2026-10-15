@@ -46,14 +46,18 @@ func rebuild() -> void:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	_build_body(st)
 
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.8
-	mat.metallic_specular = 0.25
+	# Toon + contorno preto (#36), cores lineares como antes; tinta lascada e ferrugem leves
+	# (nada parece novo, docs/GAME_DESIGN.md §2)
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, false)
+	mat.set_shader_parameter(&"chip_amount", 0.22)
+	mat.set_shader_parameter(&"chip_scale", 22.0)
+	mat.set_shader_parameter(&"rust_amount", 0.12)
+	mat.set_shader_parameter(&"rust_scale", 14.0)
+	mat.set_shader_parameter(&"specular_amount", 0.2)
 
 	_body = MeshInstance3D.new()
 	_body.name = "Body"
-	_body.mesh = st.commit()
+	_body.mesh = ToonKit.commit(st)
 	_body.material_override = mat
 	add_child(_body)
 

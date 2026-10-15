@@ -30,11 +30,21 @@ enum State {
 ## Multiplicador de velocidade ao fugir.
 @export var flee_speed_multiplier: float = 1.6
 
+## Modelo low-poly partilhado (#37): carapaça, olhos em pedúnculos, pinça gigante, patas finas.
+const CrabModel := preload("res://gameplay/enemies/crab/crab_model.gd")
+
 @onready var body_root: Node3D = $BodyRoot
-@onready var carapace: CSGSphere3D = $BodyRoot/Carapace
+## Pinça gigante levantada (esquerda, como na referência) e pinça pequena (direita).
 @onready var claw_left: Node3D = $BodyRoot/ClawLeft
 @onready var claw_right: Node3D = $BodyRoot/ClawRight
+@onready var legs_left: Node3D = $BodyRoot/LegsLeft
+@onready var legs_right: Node3D = $BodyRoot/LegsRight
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
+
+## Carapaça + boca + olhos (MeshInstance3D criada em _build_model).
+var carapace: MeshInstance3D = null
+## Material toon desta instância (partilhado pelas peças; o flash de dano anima-o).
+var body_material: ShaderMaterial = null
 
 var state: State = State.EMERGE
 
@@ -46,12 +56,7 @@ var _surface_y: float = 0.0
 
 func _ready() -> void:
 	super._ready()
-
-	# Material próprio por instância para o flash não afetar outros caranguejos
-	if carapace.material is StandardMaterial3D:
-		var mat: StandardMaterial3D = (carapace.material as StandardMaterial3D).duplicate() as StandardMaterial3D
-		carapace.material = mat
-		_register_flash_material(mat)
+	_build_model()
 
 	if DisturbanceMeter.instance != null:
 		DisturbanceMeter.instance.threshold_cleared.connect(_on_threshold_cleared)
@@ -196,10 +201,11 @@ func _pinch() -> void:
 	if _target != null and _target.has_method("take_damage"):
 		_deal_damage(_target, attack_damage)
 
+	# A pinça gigante desce para a frente; a pequena fecha para dentro
 	var tween: Tween = create_tween().set_parallel(true)
-	tween.tween_property(claw_left, "rotation:y", -0.6, 0.08)
+	tween.tween_property(claw_left, "rotation:x", -0.9, 0.08)
 	tween.tween_property(claw_right, "rotation:y", 0.6, 0.08)
-	tween.chain().tween_property(claw_left, "rotation:y", 0.0, 0.18)
+	tween.chain().tween_property(claw_left, "rotation:x", 0.0, 0.22)
 	tween.parallel().tween_property(claw_right, "rotation:y", 0.0, 0.18)
 
 
@@ -251,14 +257,45 @@ func _animate_remote(delta: float, speed: float) -> void:
 	else:
 		body_root.position.y = move_toward(body_root.position.y, 0.0, delta)
 		body_root.rotation.z = move_toward(body_root.rotation.z, 0.0, delta)
+		legs_left.rotation.z = move_toward(legs_left.rotation.z, 0.0, delta)
+		legs_right.rotation.z = move_toward(legs_right.rotation.z, 0.0, delta)
 
 
 func _animate_scuttle(delta: float) -> void:
 	_scuttle_time += delta * 18.0
 	body_root.position.y = absf(sin(_scuttle_time)) * 0.04
 	body_root.rotation.z = sin(_scuttle_time) * 0.06
+	# Patas em contratempo: um lado levanta enquanto o outro apoia
+	legs_left.rotation.z = -maxf(sin(_scuttle_time), 0.0) * 0.35
+	legs_right.rotation.z = maxf(-sin(_scuttle_time), 0.0) * 0.35
+	claw_left.rotation.z = sin(_scuttle_time * 0.5) * 0.08
 
 
 func _emit_sand_puff() -> void:
 	SFX.play_at(SFX.EMERGE_SAND, global_position)
 	spawn_particles(Vector3(global_position.x, _surface_y + 0.05, global_position.z), Color(0.85, 0.74, 0.5), 16, 2.0)
+
+
+## Paleta do modelo (o Ermitão troca as cores).
+func _palette() -> Dictionary:
+	return CrabModel.PALETTE_CRAB
+
+
+func _build_model() -> void:
+	var m: Dictionary = CrabModel.meshes(_palette())
+	body_material = CrabModel.make_material()
+	_register_flash_material(body_material)
+	carapace = _add_part(body_root, "Carapace", m["body"])
+	_add_part(legs_left, "Mesh", m["legs_left"])
+	_add_part(legs_right, "Mesh", m["legs_right"])
+	_add_part(claw_left, "Mesh", m["claw_big"])
+	_add_part(claw_right, "Mesh", m["claw_small"])
+
+
+func _add_part(parent: Node3D, part_name: String, mesh: Mesh) -> MeshInstance3D:
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.name = part_name
+	mi.mesh = mesh
+	mi.material_override = body_material
+	parent.add_child(mi)
+	return mi

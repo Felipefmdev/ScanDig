@@ -41,12 +41,8 @@ const PHASE_TWO_RATIO: float = 0.5
 const CROWN_ITEM: ItemData = preload("res://items/catalog/coroa_caranguejo_rei.tres")
 const CRAB_SCENE: PackedScene = preload("res://gameplay/enemies/crab/crab.tscn")
 
-const SHELL_RED: Color = Color(0.86, 0.27, 0.12)
-const SHELL_DARK: Color = Color(0.62, 0.16, 0.08)
-const CLAW_RED: Color = Color(0.93, 0.36, 0.16)
 const GOLD: Color = Color(1.0, 0.78, 0.12)
 const GEM_RED: Color = Color(0.85, 0.08, 0.2)
-const EYE_BLACK: Color = Color(0.04, 0.04, 0.05)
 const WARN_COLOR: Color = Color(1.0, 0.12, 0.08, 0.45)
 
 @export var move_speed: float = 1.3
@@ -320,7 +316,7 @@ func _process_dying(_delta: float) -> void:
 	if _state_time >= 1.8 and _state_time - get_physics_process_delta_time() < 1.8:
 		_drop_crown()
 	if _state_time >= 3.0:
-		spawn_particles(global_position + Vector3.UP * 0.6, SHELL_RED, 40, 4.0)
+		spawn_particles(global_position + Vector3.UP * 0.6, death_color, 40, 4.0)
 		queue_free()
 
 
@@ -536,54 +532,50 @@ func _animate_walk(delta: float) -> void:
 
 
 # ---------------------------------------------------------------------------
-# Modelo low-poly facetado (~3x o caranguejo): carapaça, coroa dourada, pinça gigante
+# Modelo low-poly facetado (#37): as peças do caranguejo (CrabModel) a ~2,8x, coroa dourada,
+# picos na carapaça e a pinça gigante virada para a frente (nó BigClaw, anima o esmagamento)
 # ---------------------------------------------------------------------------
 
+const CrabModel := preload("res://gameplay/enemies/crab/crab_model.gd")
+const MODEL_SCALE: float = 2.8
+
+
 func _build_model() -> void:
-	var mat: StandardMaterial3D = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = CrabModel.make_material(7.0)
 	_register_flash_material(mat)
+	var pal: Dictionary = CrabModel.PALETTE_KING
+	var sc: Basis = Basis.from_scale(Vector3.ONE * MODEL_SCALE)
 
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Carapaça larga e achatada, com picos
-	LowPolyMesh.prism(st, Vector3(0, 0.35, 0), Vector3(0, 0.85, 0), 1.05, 0.95, 8, SHELL_RED)
-	LowPolyMesh.prism(st, Vector3(0, 0.85, 0), Vector3(0, 1.1, 0), 0.95, 0.6, 8, SHELL_DARK)
+	CrabModel.body(st, Transform3D(sc, Vector3.ZERO), pal)
+	for side: float in [-1.0, 1.0]:
+		var pivot: Vector3 = CrabModel.PIVOT_LEGS_LEFT if side < 0.0 else CrabModel.PIVOT_LEGS_RIGHT
+		CrabModel.legs(st, Transform3D(sc, pivot * MODEL_SCALE), side, pal)
+	# Pinça pequena à esquerda (a gigante é o nó BigClaw, à direita)
+	CrabModel.small_claw(st, Transform3D(sc, Vector3(-0.24, 0.2, -0.15) * MODEL_SCALE), pal)
+	# Picos escuros nos bicos da carapaça
+	var dark: Color = pal["leg"]
 	for k: int in range(6):
-		var ang: float = TAU * float(k) / 6.0 + 0.3
-		var base: Vector3 = Vector3(cos(ang) * 0.8, 0.88, sin(ang) * 0.8)
-		LowPolyMesh.prism(st, base, base + Vector3(cos(ang) * 0.12, 0.28, sin(ang) * 0.12), 0.11, 0.0, 4, SHELL_DARK)
-	# Olhos em pedúnculos
-	for side: float in [-1.0, 1.0]:
-		var stalk: Vector3 = Vector3(0.28 * side, 1.0, -0.7)
-		LowPolyMesh.prism(st, stalk, stalk + Vector3(0, 0.35, -0.05), 0.05, 0.05, 6, SHELL_RED)
-		LowPolyMesh.box(st, stalk + Vector3(0, 0.4, -0.06), Vector3(0.14, 0.14, 0.14), Basis.IDENTITY, EYE_BLACK)
-	# Coroa dourada: aro + 5 pontas + gemas
-	LowPolyMesh.prism(st, Vector3(0, 1.1, 0.1), Vector3(0, 1.28, 0.1), 0.38, 0.4, 8, GOLD)
+		var ang: float = TAU * float(k) / 6.0
+		var base: Vector3 = Vector3(cos(ang) * 0.3, 0.27, sin(ang) * 0.2) * MODEL_SCALE
+		var tip: Vector3 = base + Vector3(cos(ang) * 0.16, 0.22, sin(ang) * 0.12)
+		LowPolyMesh.prism(st, base, tip, 0.1, 0.0, 4, dark)
+	# Coroa dourada: aro + 5 pontas + gemas (sem pintas: alfa 0)
+	var gold: Color = Color(GOLD.r, GOLD.g, GOLD.b, 0.0)
+	var gem_red: Color = Color(GEM_RED.r, GEM_RED.g, GEM_RED.b, 0.0)
+	var crown_c: Vector3 = Vector3(0.0, 1.0, 0.18)
+	LowPolyMesh.prism(st, crown_c, crown_c + Vector3(0, 0.2, 0), 0.36, 0.4, 8, gold)
 	for k: int in range(5):
-		var ang: float = TAU * float(k) / 5.0
-		var b: Vector3 = Vector3(cos(ang) * 0.34, 1.28, 0.1 + sin(ang) * 0.34)
-		LowPolyMesh.prism(st, b, b + Vector3(0, 0.26, 0), 0.08, 0.0, 4, GOLD)
-		LowPolyMesh.box(st, Vector3(cos(ang) * 0.4, 1.19, 0.1 + sin(ang) * 0.4), Vector3(0.07, 0.07, 0.07), Basis(Vector3.UP, ang), GEM_RED)
-	# Patas: 3 de cada lado
-	for side: float in [-1.0, 1.0]:
-		for k: int in range(3):
-			var z: float = -0.35 + 0.4 * float(k)
-			var hip: Vector3 = Vector3(0.95 * side, 0.55, z)
-			var knee: Vector3 = Vector3(1.45 * side, 0.75, z + 0.05)
-			var foot: Vector3 = Vector3(1.75 * side, 0.0, z + 0.1)
-			LowPolyMesh.prism(st, hip, knee, 0.09, 0.08, 5, CLAW_RED)
-			LowPolyMesh.prism(st, knee, foot, 0.08, 0.03, 5, CLAW_RED)
-	# Pinça pequena (esquerda)
-	var arm_l: Vector3 = Vector3(-0.75, 0.6, -0.75)
-	LowPolyMesh.prism(st, Vector3(-0.6, 0.6, -0.5), arm_l, 0.12, 0.1, 6, CLAW_RED)
-	LowPolyMesh.box(st, arm_l + Vector3(-0.05, 0.0, -0.25), Vector3(0.3, 0.22, 0.4), Basis.IDENTITY, CLAW_RED)
+		var ang: float = TAU * float(k) / 5.0 + 0.3
+		var b: Vector3 = crown_c + Vector3(cos(ang) * 0.34, 0.2, sin(ang) * 0.34)
+		LowPolyMesh.prism(st, b, b + Vector3(0, 0.28, 0), 0.09, 0.0, 4, gold)
+		LowPolyMesh.box(st, crown_c + Vector3(cos(ang) * 0.4, 0.1, sin(ang) * 0.4), Vector3(0.08, 0.08, 0.08), Basis(Vector3.UP, ang), gem_red)
 	body_root.add_child(LowPolyMesh.commit(st, "Body", mat))
 
-	# Pinça gigante (direita): nó próprio para levantar/esmagar
+	# Pinça gigante: a da referência, deitada para a frente (+Y do desenho -> frente e cima)
 	var cst: SurfaceTool = SurfaceTool.new()
 	cst.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(cst, Vector3(0, 0, 0), Vector3(0.25, 0.1, -0.6), 0.2, 0.17, 6, CLAW_RED)
-	LowPolyMesh.prism(cst, Vector3(0.25, 0.1, -0.6), Vector3(0.35, 0.05, -1.5), 0.48, 0.32, 7, CLAW_RED)
-	LowPolyMesh.prism(cst, Vector3(0.35, 0.2, -1.5), Vector3(0.4, 0.15, -2.15), 0.2, 0.0, 5, SHELL_DARK)
-	LowPolyMesh.prism(cst, Vector3(0.3, -0.18, -1.45), Vector3(0.35, -0.2, -1.95), 0.14, 0.0, 5, SHELL_DARK)
+	var claw_basis: Basis = Basis(Vector3.RIGHT, -1.05) * Basis(Vector3.UP, -0.35) * sc
+	CrabModel.big_claw(cst, Transform3D(claw_basis, Vector3(-0.25, -0.2, 0.0)), pal)
 	big_claw.add_child(LowPolyMesh.commit(cst, "Mesh", mat))

@@ -1,0 +1,12 @@
+{
+	"scene": "res://gameplay/debug/art_showcase.tscn",
+	"steps": [
+		{"t": 1.0, "screenshot": "01_caranguejo"},
+		{"t": 2.2, "screenshot": "02_ermitao"},
+		{"t": 3.4, "screenshot": "03_caranguejo_rei"},
+		{"t": 4.6, "screenshot": "04_inimigos"},
+		{"t": 5.8, "screenshot": "05_kit_materiais"},
+		{"t": 7.0, "screenshot": "06_caranguejo_tras"},
+		{"t": 7.3, "quit": true}
+	]
+}

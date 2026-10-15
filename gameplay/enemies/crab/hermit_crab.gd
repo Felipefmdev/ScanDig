@@ -10,23 +10,20 @@ const FRONT_DAMAGE_FACTOR: float = 0.25
 ## Cosseno do meio-ângulo do cone frontal (0.35 ≈ ±70°).
 const FRONT_CONE_DOT: float = 0.35
 
-const SHELL_LIGHT: Color = Color(0.93, 0.84, 0.66)
-const SHELL_DARK: Color = Color(0.62, 0.42, 0.28)
-const BODY_TINT: Color = Color(0.78, 0.3, 0.38)
+## Cores da concha em sRGB (material toon do corpo, com pintas/manchas).
+const SHELL_LIGHT: Color = Color(0.96, 0.9, 0.76)
+const SHELL_DARK: Color = Color(0.72, 0.52, 0.36)
 
 var _shell: MeshInstance3D = null
 
 
 func _ready() -> void:
 	super._ready()
-	if carapace.material is StandardMaterial3D:
-		var mat: StandardMaterial3D = carapace.material as StandardMaterial3D
-		mat.albedo_color = BODY_TINT
-		# A cor base do flash foi registada antes da tinta; atualizamos.
-		var idx: int = _flash_mats.find(mat)
-		if idx >= 0:
-			_flash_base_colors[idx] = BODY_TINT
 	_build_shell()
+
+
+func _palette() -> Dictionary:
+	return CrabModel.PALETTE_HERMIT
 
 
 ## Dano reduzido se a origem do golpe estiver no cone da frente (-Z local).
@@ -68,7 +65,5 @@ func _build_shell() -> void:
 	# Boca da concha (anel escuro onde o corpo entra)
 	LowPolyMesh.prism(st, Vector3(0.0, 0.16, 0.1), Vector3(0.0, 0.22, 0.2), 0.24, 0.3, 8, SHELL_DARK)
 
-	var mat: StandardMaterial3D = LowPolyMesh.make_material()
-	_shell = LowPolyMesh.commit(st, "Shell", mat)
+	_shell = LowPolyMesh.commit(st, "Shell", body_material)
 	body_root.add_child(_shell)
-	_register_flash_material(mat)

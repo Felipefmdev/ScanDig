@@ -76,20 +76,17 @@ static func box(st: SurfaceTool, center: Vector3, size: Vector3, basis: Basis, c
 	quad(st, c[1], c[3], c[7], c[5], center, color)
 
 
-## Material partilhado por malhas com cor por vértice. albedo_color multiplica as cores
-## (usado para o flash de dano).
-static func make_material() -> StandardMaterial3D:
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.8
-	mat.metallic_specular = 0.25
-	return mat
+## Material toon (#36) para malhas com cor por vértice, com contorno preto em next_pass.
+## As cores destes modelos foram afinadas em linear (vertex_color_srgb = false). O flash de
+## dano anima o parâmetro flash_amount (EnemyBase._flash).
+static func make_material() -> ShaderMaterial:
+	return ToonKit.vertex_material(true, false)
 
 
-## Cria um MeshInstance3D a partir de um SurfaceTool já preenchido.
+## Cria um MeshInstance3D a partir de um SurfaceTool já preenchido (com as normais do contorno).
 static func commit(st: SurfaceTool, name: String, mat: Material) -> MeshInstance3D:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = name
-	mi.mesh = st.commit()
+	mi.mesh = ToonKit.commit(st)
 	mi.material_override = mat
 	return mi

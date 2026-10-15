@@ -92,16 +92,11 @@ func rebuild() -> void:
 			r = canopy_radius * rng.randf_range(0.55, 0.75)
 		_blob(st, center, r, rng)
 
-	var mesh: ArrayMesh = st.commit()
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.roughness = 0.9
-	mat.metallic_specular = 0.1
+	# Toon + contorno preto (#36)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
-	mi.mesh = mesh
-	mi.material_override = mat
+	mi.mesh = ToonKit.commit(st)
+	mi.material_override = ToonKit.vertex_material()
 	add_child(mi)
 
 
