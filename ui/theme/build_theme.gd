@@ -39,6 +39,7 @@ func _initialize() -> void:
 	_lists()
 	_popups()
 	_scroll_and_separators()
+	_progress_bars()
 	_windows()
 	_fonts()
 	if not _needs_import.is_empty():
@@ -402,6 +403,21 @@ func _scroll_and_separators() -> void:
 		_theme.set_stylebox("grabber", type, _flat(P.WOOD, 1, 2, 0, 0))
 		_theme.set_stylebox("grabber_highlight", type, _flat(P.ORANGE, 1, 2, 0, 0))
 		_theme.set_stylebox("grabber_pressed", type, _flat(P.ORANGE.darkened(0.12), 1, 2, 0, 0))
+
+
+## Barras de progresso (HP padrão em RED_BURNT, ThreatBar em ORANGE e BossBar com painel/sombra).
+func _progress_bars() -> void:
+	_theme.set_stylebox("background", "ProgressBar", _flat(P.PAPER_DARK, 2, 3, 2, 2))
+	_theme.set_stylebox("fill", "ProgressBar", _flat(P.RED_BURNT, 2, 3, 0, 0))
+	_theme.set_color("font_color", "ProgressBar", P.INK)
+	_theme.set_color("font_outline_color", "ProgressBar", P.INK)
+
+	_variation("ThreatBar", "ProgressBar")
+	_theme.set_stylebox("fill", "ThreatBar", _flat(P.ORANGE, 2, 3, 0, 0))
+
+	_variation("BossBar", "ProgressBar")
+	_theme.set_stylebox("background", "BossBar", _panel_flat(P.PAPER_DARK))
+	_theme.set_stylebox("fill", "BossBar", _flat(P.RED_BURNT, 3, 3, 0, 0))
 
 
 func _windows() -> void:

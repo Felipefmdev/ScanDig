@@ -30,6 +30,7 @@ func _run() -> void:
 	_check_overrides()
 	_check_contrast()
 	_check_fonts()
+	_check_progress_bars()
 	root.size = LOGICAL_SIZES[0]
 	change_scene_to_file("res://world/lobby_base.tscn")
 	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
@@ -150,6 +151,24 @@ func _check_fonts() -> void:
 	if main != null:
 		_check(_missing_glyphs(main) == "", "glifos da UI na fonte principal ou no fallback (faltando: '%s')" % _missing_glyphs(main))
 	_check(_missing_glyphs(code) == "", "glifos na fonte do código ou no fallback (faltando: '%s')" % _missing_glyphs(code))
+
+
+func _check_progress_bars() -> void:
+	_check(_theme.has_stylebox("background", "ProgressBar") and _theme.has_stylebox("fill", "ProgressBar"), "ProgressBar tem background e fill")
+	var pb_bg: StyleBoxFlat = _theme.get_stylebox("background", "ProgressBar") as StyleBoxFlat
+	var pb_fill: StyleBoxFlat = _theme.get_stylebox("fill", "ProgressBar") as StyleBoxFlat
+	_check(pb_bg != null and pb_bg.bg_color.is_equal_approx(UiPalette.PAPER_DARK), "ProgressBar background em PAPER_DARK")
+	_check(pb_fill != null and pb_fill.bg_color.is_equal_approx(UiPalette.RED_BURNT), "ProgressBar fill em RED_BURNT")
+	_check(_theme.get_color("font_color", "ProgressBar").is_equal_approx(UiPalette.INK), "ProgressBar font_color em INK")
+
+	var threat_fill: StyleBoxFlat = _theme.get_stylebox("fill", "ThreatBar") as StyleBoxFlat
+	_check(_theme.get_type_variation_base("ThreatBar") == &"ProgressBar" and threat_fill != null and threat_fill.bg_color.is_equal_approx(UiPalette.ORANGE), "ThreatBar herda de ProgressBar com fill em ORANGE")
+
+	var boss_bg: StyleBoxFlat = _theme.get_stylebox("background", "BossBar") as StyleBoxFlat
+	var boss_fill: StyleBoxFlat = _theme.get_stylebox("fill", "BossBar") as StyleBoxFlat
+	_check(_theme.get_type_variation_base("BossBar") == &"ProgressBar", "BossBar herda de ProgressBar")
+	_check(boss_fill != null and boss_fill.bg_color.is_equal_approx(UiPalette.RED_BURNT) and boss_fill.border_width_top == 3, "BossBar fill em RED_BURNT com borda 3")
+	_check(boss_bg != null and boss_bg.bg_color.is_equal_approx(UiPalette.PAPER_DARK) and boss_bg.shadow_size > 0, "BossBar background em PAPER_DARK com sombra")
 
 
 # --- 3. Contraste WCAG ----------------------------------------------------------------------
