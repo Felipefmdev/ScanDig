@@ -27,6 +27,8 @@ func _snapshot(money: int, unlocked_maps: Array) -> Dictionary:
 
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
+	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
+	SaveManager.instance.use_test_save_dir("shop_lock_test")
 	await _wait(10)
 	var gs: GameState = GameState.instance
 	_check(gs != null, "GameState presente")

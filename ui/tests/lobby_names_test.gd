@@ -1,9 +1,10 @@
 # Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://ui/tests/lobby_names_test.gd
 # Host sozinho na porta 7798, sem UPnP real (o upnp_finished é emitido à mão).
-# Grava o nome em user://scandig_settings.cfg: faça backup.
+# O menu grava o nome em user://scandig_settings.cfg: o teste guarda e restaura o arquivo.
 extends SceneTree
 
 const PORT: int = 7798
+const SETTINGS_PATH: String = "user://scandig_settings.cfg"
 
 var _fails: int = 0
 
@@ -31,6 +32,10 @@ func _host(net: NetworkManager) -> Error:
 
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
+	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
+	SaveManager.instance.use_test_save_dir("lobby_names_test")
+	var settings_backup: PackedByteArray = FileAccess.get_file_as_bytes(SETTINGS_PATH)
+	var had_settings: bool = FileAccess.file_exists(SETTINGS_PATH)
 	await _wait(10)
 	var net: NetworkManager = NetworkManager.instance
 	var menu: MultiplayerMenu = current_scene.get_node_or_null("UILayer/MultiplayerMenu") as MultiplayerMenu
@@ -92,6 +97,13 @@ func _run() -> void:
 	_check(not menu.leave_button.visible, "sem sessão após IP inválido")
 
 	# 8. Restaura o nome.
-	net.set_local_player_name(name_backup, true)
+	net.set_local_player_name(name_backup, false)
+	# Devolve o scandig_settings.cfg do jogador byte a byte.
+	if had_settings:
+		var f: FileAccess = FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
+		f.store_buffer(settings_backup)
+		f.close()
+	elif FileAccess.file_exists(SETTINGS_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS_PATH))
 	print("RESULT fails=%d" % _fails)
 	quit(_fails)

@@ -21,6 +21,8 @@ func _select_map(map_list: ItemList, idx: int) -> void:
 
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
+	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
+	SaveManager.instance.use_test_save_dir("expedition_tab_test")
 	await _wait(10)
 	var gs: GameState = GameState.instance
 	_check(gs != null, "GameState presente")

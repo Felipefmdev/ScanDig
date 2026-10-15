@@ -49,6 +49,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
+	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
+	SaveManager.instance.use_test_save_dir("save_panel_test")
 	await _wait(10)
 	var gs: GameState = GameState.instance
 	var menu: MultiplayerMenu = current_scene.get_node_or_null("UILayer/MultiplayerMenu") as MultiplayerMenu

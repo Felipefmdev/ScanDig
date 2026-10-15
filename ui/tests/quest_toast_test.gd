@@ -17,6 +17,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
+	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
+	SaveManager.instance.use_test_save_dir("quest_toast_test")
 	await _wait(10)
 	var gs: GameState = GameState.instance
 	var ui: SessionUI = SessionUI.instance
