@@ -12,6 +12,7 @@ const TEX_MARGIN: int = 14
 const FONT_SIZE: int = 16
 const FONT_VARIANT: String = "patrick_hand"
 const FONT_DIR: String = "res://ui/theme/fonts/"
+const ICON_DIR: String = "res://ui/theme/icons/"
 ## Fallback dos glifos que as fontes não têm (→ ★ ✔ 🔒): fontes de símbolos/emoji do sistema.
 const SYMBOL_FONTS: PackedStringArray = ["Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans Symbols", "DejaVu Sans"]
 const EMOJI_FONTS: PackedStringArray = ["Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji"]
@@ -19,6 +20,7 @@ const P = preload("res://ui/theme/ui_palette.gd")
 
 var _theme: Theme = Theme.new()
 var _font_variant: String = FONT_VARIANT
+var _needs_import: Array[String] = []
 
 
 func _initialize() -> void:
@@ -36,6 +38,10 @@ func _initialize() -> void:
 	_scroll_and_separators()
 	_windows()
 	_fonts()
+	if not _needs_import.is_empty():
+		printerr("Ícones novos/alterados %s: rode --editor --quit-after e o build de novo." % [_needs_import])
+		quit(ERR_FILE_UNRECOGNIZED)
+		return
 	# Preserva o UID do .tres (e dos ext_resource) para o editor não reescrever a cada build.
 	var uid: int = ResourceLoader.get_resource_uid(OUT_PATH)
 	var err: Error = ResourceSaver.save(_theme, OUT_PATH)
@@ -138,11 +144,27 @@ func _focus_box() -> StyleBoxFlat:
 
 # --- Ícones (desenhados em INK; os padrão da Godot são claros e somem no papel) -----------
 
-func _icon(size: Vector2i, painter: Callable) -> ImageTexture:
+## Grava o ícone em ui/theme/icons/<nome>.png (determinístico) e devolve a textura importada.
+## Ícones como ext_resource: Image embutida no .tres ganha id novo cada vez que o editor salva (#50).
+## PNG novo ou alterado precisa de import (--editor --quit-after) e de outro build.
+func _icon(icon_name: String, size: Vector2i, painter: Callable) -> Texture2D:
 	var img: Image = Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	painter.call(img)
-	return ImageTexture.create_from_image(img)
+	var path: String = ICON_DIR + icon_name + ".png"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ICON_DIR))
+	var previous: PackedByteArray = FileAccess.get_file_as_bytes(path)
+	var png: PackedByteArray = img.save_png_to_buffer()
+	if previous != png:
+		var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+		f.store_buffer(png)
+		f.close()
+		_needs_import.append(path)
+	if not ResourceLoader.exists(path):
+		_needs_import.append(path)
+		# Provisório (o build falha no fim pedindo o import).
+		return ImageTexture.create_from_image(img)
+	return load(path) as Texture2D
 
 
 func _paint_arrow(img: Image) -> void:
@@ -279,7 +301,7 @@ func _buttons() -> void:
 	_button_type("DangerButton", P.RED_BURNT, P.RED_BURNT.lightened(0.08), P.RED_BURNT.darkened(0.15), P.PAPER)
 
 	_button_type("OptionButton", P.PAPER_LIGHT, P.PAPER_LIGHT.lerp(P.ORANGE, 0.18), P.PAPER_DARK, P.INK)
-	_theme.set_icon("arrow", "OptionButton", _icon(Vector2i(12, 8), _paint_arrow))
+	_theme.set_icon("arrow", "OptionButton", _icon("arrow_down", Vector2i(12, 8), _paint_arrow))
 	_theme.set_constant("arrow_margin", "OptionButton", 6)
 
 
@@ -355,8 +377,8 @@ func _popups() -> void:
 	_set_font_colors("PopupMenu", ["font_color", "font_hover_color", "font_accelerator_color", "font_separator_color"], P.INK)
 	_theme.set_color("font_disabled_color", "PopupMenu", P.METAL)
 	_theme.set_color("font_outline_color", "PopupMenu", P.INK)
-	_theme.set_icon("radio_checked", "PopupMenu", _icon(Vector2i(14, 14), _paint_radio_checked))
-	_theme.set_icon("radio_unchecked", "PopupMenu", _icon(Vector2i(14, 14), _paint_radio_unchecked))
+	_theme.set_icon("radio_checked", "PopupMenu", _icon("radio_checked", Vector2i(14, 14), _paint_radio_checked))
+	_theme.set_icon("radio_unchecked", "PopupMenu", _icon("radio_unchecked", Vector2i(14, 14), _paint_radio_unchecked))
 
 
 func _scroll_and_separators() -> void:
