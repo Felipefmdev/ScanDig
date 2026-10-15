@@ -15,12 +15,12 @@ func _wait(frames: int) -> void:
 func _initialize() -> void:
 	_run.call_deferred()
 
-func _snapshot(money: int, unlocked_maps: Array) -> Dictionary:
+func _snapshot(money: int, unlocked_maps: Array, levels: Dictionary = {"detector": 2, "backpack": 2}) -> Dictionary:
 	return {
 		"team_money": money,
 		"current_day": 1,
 		"discovered_items": [],
-		"upgrade_levels": {"detector": 2, "backpack": 2},
+		"upgrade_levels": levels,
 		"unlocked_maps": unlocked_maps,
 		"defeated_bosses": [],
 	}
@@ -67,6 +67,22 @@ func _run() -> void:
 	_check(detector.disabled, "detector desabilitado sem saldo")
 	_check(not detector.text.contains("🔒"), "sem cadeado no saldo: %s" % detector.text)
 	_check(detector.tooltip_text.begins_with("Saldo insuficiente"), "tooltip de saldo: %s" % detector.tooltip_text)
+
+	# 4. Detector e mochila no nível 4 com as Ruínas: o nível 5 dos dois trava na Geleira (#49).
+	var levels_4: Dictionary = {"detector": 4, "backpack": 4}
+	gs.load_snapshot(_snapshot(100000, ["campo", "ruinas"], levels_4))
+	await _wait(3)
+	_check(detector.text.contains("🔒 Requer Geleira Eterna") and detector.text.contains("R$ 12.000"), "detector travado na Geleira: %s" % detector.text)
+	_check(detector.disabled, "detector desabilitado na Geleira")
+	_check(detector.tooltip_text == "Desbloqueie Geleira Eterna primeiro.", "tooltip detector Geleira: %s" % detector.tooltip_text)
+	_check(backpack.text.contains("🔒 Requer Geleira Eterna") and backpack.text.contains("R$ 6.000"), "mochila travada na Geleira: %s" % backpack.text)
+	_check(backpack.disabled, "mochila desabilitada na Geleira")
+
+	# 5. Com a Geleira aberta, o detector Nv.5 libera.
+	gs.load_snapshot(_snapshot(100000, ["campo", "ruinas", "geleira"], levels_4))
+	await _wait(3)
+	_check(not detector.disabled, "detector habilitado com a Geleira: %s" % detector.tooltip_text)
+	_check(not detector.text.contains("🔒"), "detector sem cadeado com a Geleira: %s" % detector.text)
 
 	gs.reset_state()
 	print("RESULT fails=%d" % _fails)

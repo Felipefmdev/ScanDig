@@ -1,17 +1,21 @@
-# ScanDig — Ritmo e Progressão (alvo: 5 a 7 horas)
+# ScanDig — Ritmo e Progressão (alvo: 7 a 9 horas)
 
 Documento partilhado entre Dev A e Dev B. Os números são o **alvo de design**; afinem
 com testes reais e atualizem a tabela.
 
-## 1. Estrutura das ~6 horas
+## 1. Estrutura das ~8 horas
 
 | Mapa | Tempo alvo | Inimigos | Chefe | Desbloqueia com |
 | :--- | :--- | :--- | :--- | :--- |
 | 1. Praia | 60–80 min | Caranguejo | Caranguejo-Rei | Início |
 | 2. Campo Antigo | 80–100 min | Cobra, Toupeira | Toupeira Gigante | R$ 1.200 + detector Nv.2 + vencer o chefe da Praia |
 | 3. Ruínas | 90–110 min | Guardião de pedra, Morcegos | Guardião Ancestral | R$ 8.000 + chefe do Campo |
-| 4. Cratera | 90–120 min | Criaturas "estranhas" | O Que Dorme Lá Em Baixo | R$ 25.000 + chefe das Ruínas |
+| 4. Geleira Eterna | 90–110 min | A definir (Dev A) | Mamute Congelado (`frozen_mammoth`) | R$ 20.000 + detector Nv.5 + chefe das Ruínas (`ancient_guardian`) |
+| 5. Cratera | 90–120 min | Criaturas "estranhas" | O Que Dorme Lá Em Baixo | R$ 55.000 + detector Nv.6 + chefe da Geleira (`frozen_mammoth`) |
 | Final / museu 100% | +30–60 min | — | — | Opcional (completistas) |
+
+Ordem (#49): Praia → Campo → Ruínas → **Geleira** → Cratera. Soma: 6 h 50 min a 8 h 40 min
+sem o final; 7 h 20 min a 9 h 40 min com ele. **Provisório** até a medição pelo bot (#46).
 
 Regra geral: **cada mapa novo paga ~3x mais por item**, mas os upgrades e o mapa seguinte
 custam ~4x mais. Assim o tempo por mapa cresce devagar e o jogador sente-se mais rico.
@@ -23,9 +27,16 @@ Um "ciclo" = detetar + cavar 3 itens + voltar à base ≈ **3 min** na Praia.
 | Mapa | Valor médio/item | R$ por minuto | Detector mínimo | Gasto total no mapa (upgrades + desbloqueio do seguinte) |
 | :--- | :--- | :--- | :--- | :--- |
 | Praia | ~50 | ~50 | Nv.1 | upgrades opcionais + 1.200 (alvo: 70–80 min até o Campo) |
-| Campo | ~150 | ~130 | Nv.2 | 2.800 + 8.000 = 10.800 |
-| Ruínas | ~468 | ~350 | Nv.4 | 5.000 + 25.000 = 30.000 |
-| Cratera | ~1.248 | ~900 | Nv.5 | 80.000 |
+| Campo | ~150 | ~130 | Nv.2 | mochila 1.600 + Ruínas 8.000 = 9.600 |
+| Ruínas | ~468 | ~350 | Nv.4 | detector 2.000 + mochila 1.800 + pá 1.200 + Geleira 20.000 = 25.000 |
+| Geleira | ~783 | ~570 | Nv.5 | detector 12.000 + mochila 6.000 + Cratera 55.000 = 73.000 |
+| Cratera | ~1.248 | ~900 | Nv.6 | detector 25.000 + pá 12.000 + pinpointer 18.000 = 55.000 |
+
+R$/min = 0,73 × valor médio (como nas outras linhas). **Números provisórios** da Geleira e da
+Cratera até a medição pelo bot (#46). Upgrades por mapa (#49, `UPGRADES` em
+`core/game_state.gd`): detector 300 / 600 / 700 / 2.000 (Ruínas) / **12.000 (Geleira)** /
+25.000 (Cratera); mochila 400 / 800 / 1.600 (Campo) / 1.800 (Ruínas) / **6.000 (Geleira)**;
+pá 800 / 1.200 (Ruínas) / 12.000 (Cratera); pinpointer 500 / 18.000 (Cratera).
 
 Os upgrades seguem a tabela aprovada na #25, com o ajuste da #46. Cada nível exige o mapa
 da linha onde aparece (ex.: mochila de 6 slots só com o Campo desbloqueado). Exceção da #46:
@@ -37,11 +48,14 @@ Variante rara (x3, 5%) e escavação perfeita (+25%) são bónus por habilidade.
 
 - **Ruínas** (`items/maps/ruinas.tres`, #26): fivela de prata x8, relógio de bolso x5,
   ídolo de ouro x4, cálice de prata x2, relógio de ouro x1 (média ≈ 468 R$). Variante rara 6%.
+- **Geleira Eterna** (`items/maps/geleira.tres`, #49): crampon enferrujado x7, lanterna da
+  expedição perdida x6, cronômetro do explorador x4, medalha da expedição polar x2, bússola
+  congelada x1 (média ≈ 783 R$). Variante rara 6%. Tema gelo / expedição perdida.
 - **Cratera** (`items/maps/cratera.tres`, #26): fragmento de meteorito x7, caixa de música
   x6, liga desconhecida x5, engrenagem alienígena x2 (média ≈ 1.248 R$). Variante rara 7%.
   O Orbe Vibrante (10.000) fica fora do pool: é o prémio do chefe final.
-- **Detector mínimo** (`required_detector_level`): Ruínas Nv.4 (comprado no Campo) e
-  Cratera Nv.5 (comprado nas Ruínas). Campo Nv.2 (`campo.tres`, #46; os testes e roteiros do Campo
+- **Detector mínimo** (`required_detector_level`): Ruínas Nv.4 (comprado no Campo),
+  Geleira Nv.5 (comprado nas Ruínas) e Cratera Nv.6 (comprado na Geleira). Campo Nv.2 (`campo.tres`, #46; os testes e roteiros do Campo
   compram o detector Nv.2 desde a #27).
 - **Ritmo da Praia:** a #19 mediu 20–24 R$/min, abaixo dos ~50 da tabela. Pela decisão B
   da #25/#27, os preços não caem: a renda da Praia sobe com os upgrades (detector, pá e

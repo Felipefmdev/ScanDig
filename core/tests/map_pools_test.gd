@@ -2,7 +2,7 @@
 ## Pools de itens dos mapas (#26): itens válidos no catálogo, médias alvo e detector mínimo.
 extends SceneTree
 
-const MAP_IDS: Array[String] = ["praia", "campo", "ruinas", "cratera"]
+const MAP_IDS: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera"]
 const CATALOG_DIR: String = "res://items/catalog/"
 ## Itens de missão, relíquias e easter eggs da Praia (#39/#40, Dev A).
 const PRAIA_SIDE_ITEMS: Array[String] = ["concha_dourada", "bussola_naufragio", "medalhao_sereia",
@@ -10,6 +10,9 @@ const PRAIA_SIDE_ITEMS: Array[String] = ["concha_dourada", "bussola_naufragio", 
 ## Recompensa da missão, relíquias e troféus do Campo Antigo (#45/#41): fora de pool também.
 const CAMPO_SIDE_ITEMS: Array[String] = ["sino_bronze", "anel_do_poco", "moeda_celta",
 	"fibula_romana", "pena_corvo_rei", "lanterna_espantalho"]
+## Pool da Geleira Eterna (#49): tema gelo / expedição perdida.
+const GELEIRA_ITEMS: Array[String] = ["crampon_enferrujado", "lanterna_expedicao",
+	"cronometro_explorador", "medalha_polar", "bussola_congelada"]
 
 var _fails: int = 0
 
@@ -88,15 +91,20 @@ func _run() -> void:
 	_check(ruinas.required_detector_level == 4, "ruinas exige detector Nv.4: %d" % ruinas.required_detector_level)
 	_check(cratera.required_detector_level == 6, "cratera exige detector Nv.6: %d" % cratera.required_detector_level)
 	_check(cratera.unlock_cost == 55000, "cratera custa 55000: %d" % cratera.unlock_cost)
-	# Geleira (#45): pool vazio até o Dev A preencher; custo e detector já valem.
+	# Geleira (#49): entre as Ruínas e a Cratera.
 	var geleira: MapData = _load_map("geleira")
 	_check(geleira != null and geleira.id == "geleira" and geleira.display_name == "Geleira Eterna", "geleira carregada")
 	if geleira != null:
+		var geleira_avg: float = _pool_average(geleira)
+		_check(geleira_avg >= 650.0 and geleira_avg <= 950.0, "média geleira 650–950: %.1f" % geleira_avg)
+		_check(ruinas_avg < geleira_avg and geleira_avg < cratera_avg, "ruinas < geleira < cratera: %.1f < %.1f < %.1f" % [ruinas_avg, geleira_avg, cratera_avg])
 		_check(geleira.unlock_cost == 20000, "geleira custa 20000: %d" % geleira.unlock_cost)
 		_check(geleira.required_detector_level == 5, "geleira exige detector Nv.5: %d" % geleira.required_detector_level)
+	for item_id: String in GELEIRA_ITEMS:
+		_check(ResourceLoader.exists(CATALOG_DIR + item_id + ".tres"), "%s no catálogo (#49)" % item_id)
 	# Troféus de chefe ficam fora de qualquer item_pool.
 	var trophy_in_pool: bool = false
-	for map_id: String in MAP_IDS + ["geleira"]:
+	for map_id: String in MAP_IDS:
 		var map_data: MapData = _load_map(map_id)
 		for item: ItemData in (map_data.item_pool if map_data != null else []):
 			trophy_in_pool = trophy_in_pool or (item != null and item.id in ["coroa_caranguejo_rei", "garra_toupeira", "olho_do_polvo", "pena_corvo_rei", "lanterna_espantalho"])
@@ -109,7 +117,7 @@ func _run() -> void:
 	# Conta o catálogo aqui, sem o GameState, para não depender de um número fixo.
 	var catalog_files: int = _count_catalog_files()
 	_check(gs.get_total_catalog_items() == catalog_files, "catálogo: GameState %d, arquivos %d" % [gs.get_total_catalog_items(), catalog_files])
-	_check(catalog_files >= 33, "catálogo com pelo menos 33 itens: %d" % catalog_files)
+	_check(catalog_files >= 38, "catálogo com pelo menos 38 itens: %d" % catalog_files)
 
 	# Ordem dos motivos em get_map_status: bloqueado → "Em breve." (sem cena) → detector.
 	# Com radar Nv.3 (< 4) e Ruínas desbloqueadas, falta a cena, então o motivo é "Em breve.".
