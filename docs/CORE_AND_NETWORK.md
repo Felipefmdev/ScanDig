@@ -37,9 +37,11 @@ Só o host (peer 1) altera o estado. Qualquer peer chama `request_*`; `_send_to_
 | `request_buy_upgrade(upgrade_id)` | `_host_buy_upgrade` → `purchase_result` só para quem comprou |
 | `request_purchase_item(item_id)` | `_host_purchase_item` → `item_purchase_result` só para quem comprou |
 | `request_unlock_map(map_id)` | `_host_unlock_map` → `map_unlock_result` só para quem pediu |
-| `request_report_boss_defeated(boss_id)` | `_host_report_boss_defeated` |
+| `request_report_boss_defeated(boss_id)` | `_host_report_boss_defeated` (**só do host**, ver abaixo) |
 
 Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
+
+**Chefe vencido só vem do host (Fase 4, #5).** O chefe só morre na simulação do host, e o `_process_dying` dele chama `request_report_boss_defeated` fora de qualquer RPC. Por isso `_host_report_boss_defeated` só aceita `multiplayer.get_remote_sender_id()` igual a `0` (chamada local) ou `1`; o pedido de qualquer outro peer é ignorado com `push_warning`, sem mexer em `defeated_bosses`. Compras, entregas (`_host_report_discovery`/`_sell`/`_donate`) e desbloqueio de mapa continuam aceitos de qualquer peer. Teste: `core/tests/boss_authority_test.gd`.
 
 ### Sinais do `GameState`
 `money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `progression_changed(unlocked_maps, defeated_bosses)`, `map_unlock_result(map_id, success, message)`, `state_synced()`.
@@ -102,7 +104,7 @@ Desbloquear é uma compra única, só depois de vencer o chefe exigido. Um mapa 
 - `is_boss_defeated(boss_id)`.
 - `get_map_unlock_block_reason(map_id)` → `""` se pode desbloquear agora; senão o motivo pronto para a UI.
 - `request_unlock_map(map_id)` → o host revalida com `get_map_unlock_block_reason`, debita `unlock_cost`, adiciona a `unlocked_maps` e sincroniza. Resposta em `map_unlock_result` só para quem pediu.
-- `request_report_boss_defeated(boss_id)` → o host aceita só os `boss_id` de `MAP_UNLOCK_BOSSES`, sem duplicar e sem dar dinheiro. O gameplay liga o `boss_defeated` de cada chefe a isso.
+- `request_report_boss_defeated(boss_id)` → o host aceita só os `boss_id` de `MAP_UNLOCK_BOSSES`, só da própria simulação (nunca de um cliente), sem duplicar e sem dar dinheiro. O gameplay liga o `boss_defeated` de cada chefe a isso.
 - `map_id` vazio, com `/`, `\` ou `..`, inválido como nome de arquivo ou com `MapData.id` diferente é tratado como mapa desconhecido.
 
 Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado."`, `"Vença o chefe <chefe> primeiro."`, `"Saldo insuficiente para desbloquear <nome> (R$ <custo>)."`, sucesso `"<nome> desbloqueado!"`.
@@ -205,6 +207,7 @@ $G --headless --path . --script res://core/tests/map_unlock_test.gd    # progres
 $G --headless --path . --script res://core/tests/scene_ready_test.gd   # peer_scene_ready no solo: "RESULT fails=0"
 $G --headless --path . --script res://core/tests/expedition_ending_test.gd  # ordem do expedition_ending e reentrada (grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/leave_session_test.gd # sair da sessão (porta 7792, grava o save): "RESULT fails=0"
+$G --headless --path . --script res://core/tests/boss_authority_test.gd # chefe só do host; abre o próprio cliente (porta 7798, grava o save): "RESULT fails=0"
 $G --headless --path . --script res://core/tests/net_errors_test.gd    # sanitize, IP inválido, porta em uso, timeout e thread do UPnP com UPnP falso: "UPNP skipped" + "RESULT fails=0"
 # Só com autorização do dono da rede: "-- upnp" abre de verdade a porta 7797 (UDP) no roteador e fecha logo depois.
 # $G --headless --path . --script res://core/tests/net_errors_test.gd -- upnp

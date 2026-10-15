@@ -382,7 +382,15 @@ func _host_unlock_map(map_id: String) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _host_report_boss_defeated(boss_id: String) -> void:
-	if not is_authority() or defeated_bosses.has(boss_id):
+	if not is_authority():
+		return
+	# O chefe só morre na simulação do host: aceita a chamada local (sender 0) ou do
+	# próprio host. Compras, entregas e desbloqueios continuam aceitos de qualquer peer.
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != HOST_PEER_ID:
+		push_warning("GameState: chefe '%s' reportado pelo peer %d ignorado (só o host)." % [boss_id, sender])
+		return
+	if defeated_bosses.has(boss_id):
 		return
 	for entry: Dictionary in MAP_UNLOCK_BOSSES.values():
 		if str(entry["boss_id"]) == boss_id:
