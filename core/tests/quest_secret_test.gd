@@ -27,6 +27,8 @@ func _on_secret_found(secret_id: String) -> void:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _wait(10)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("quest_secret_test")
 	var gs: GameState = GameState.instance
 	var save: SaveManager = SaveManager.instance
 	_check(gs != null and save != null, "GameState e SaveManager presentes")

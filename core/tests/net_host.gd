@@ -8,6 +8,8 @@ func _initialize() -> void:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_host")
 	SessionManager.instance.peer_scene_ready.connect(func(peer_id: int, map_id: String) -> void: scene_ready_pairs.append("%d:%s" % [peer_id, map_id]))
 	print("HOST host_game=", NetworkManager.instance.host_game(7790))
 	SessionManager.instance.request_start_expedition("praia")

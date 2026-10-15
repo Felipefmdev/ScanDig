@@ -32,6 +32,8 @@ func _initialize() -> void:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_host_multi")
 	var gs: GameState = GameState.instance
 	var sm: SessionManager = SessionManager.instance
 	var net: NetworkManager = NetworkManager.instance

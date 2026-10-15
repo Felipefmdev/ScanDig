@@ -47,6 +47,8 @@ func _run() -> void:
 	_prefix = "CLIENT_" + _role
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_client_multi")
 	var gs: GameState = GameState.instance
 	var sm: SessionManager = SessionManager.instance
 	sm.expedition_ended.connect(func(s: Dictionary) -> void: summary = s)

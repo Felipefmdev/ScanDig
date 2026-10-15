@@ -30,6 +30,8 @@ func _initialize() -> void:
 func _run_host() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("boss_authority_test")
 	var gs: GameState = GameState.instance
 	var net: NetworkManager = NetworkManager.instance
 	_check(gs != null and net != null, "GameState e NetworkManager presentes")

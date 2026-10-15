@@ -49,6 +49,8 @@ func _run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(CODE_FILE))
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_room_host")
 	var net: NetworkManager = NetworkManager.instance
 	var sm: SessionManager = SessionManager.instance
 	if not await _noray_up(net.noray_address, net.noray_port):

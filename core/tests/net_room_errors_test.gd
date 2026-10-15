@@ -48,6 +48,8 @@ func _initialize() -> void:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_room_errors_test")
 	var net: NetworkManager = NetworkManager.instance
 	net.connection_error.connect(func(message: String) -> void: _errors.append(message))
 	var failed: Array[int] = [0]

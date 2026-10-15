@@ -48,6 +48,8 @@ func _on_players_changed(net: NetworkManager) -> void:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_names_host")
 	var net: NetworkManager = NetworkManager.instance
 	net.player_connected.connect(func(peer_id: int) -> void:
 		if peer_id != 1 and not arrivals.has(peer_id):

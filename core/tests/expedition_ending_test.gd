@@ -66,6 +66,8 @@ func _start_expedition(sm: SessionManager) -> bool:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _wait(10)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("expedition_ending_test")
 	var gs: GameState = GameState.instance
 	var sm: SessionManager = SessionManager.instance
 	_check(gs != null and sm != null, "autoloads presentes")

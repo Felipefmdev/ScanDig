@@ -25,6 +25,8 @@ func _initialize() -> void:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_client")
 	SessionManager.instance.expedition_ended.connect(func(s: Dictionary) -> void: summary = s)
 	print("CLIENT join=", NetworkManager.instance.join_game("127.0.0.1", 7790))
 	var in_map: bool = await _wait_until(func() -> bool: return _scene_name() == "MapPraia" and SessionManager.instance.is_in_expedition(), 8.0)

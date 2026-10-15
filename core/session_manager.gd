@@ -197,6 +197,10 @@ func request_start_expedition(map_id: String) -> void:
 	if is_in_expedition():
 		push_warning("SessionManager: já existe uma expedição em andamento.")
 		return
+	# Ninguém escolheu "Continuar"/"Novo jogo": aplica o save antes (o fim da expedição grava
+	# por cima dele). Vem antes do can_start_map, porque o save pode desbloquear o mapa.
+	if SaveManager.instance != null:
+		SaveManager.instance.ensure_progress_applied()
 	if not can_start_map(map_id):
 		push_warning("SessionManager: mapa '%s' indisponível." % map_id)
 		return

@@ -41,6 +41,8 @@ func _report_boss(gs: GameState, boss_id: String) -> void:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _wait(10)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("map_unlock_test")
 	var gs: GameState = GameState.instance
 	var sm: SessionManager = SessionManager.instance
 	_check(gs != null and sm != null, "GameState e SessionManager presentes")

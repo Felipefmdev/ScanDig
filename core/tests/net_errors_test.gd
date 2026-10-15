@@ -93,6 +93,8 @@ func _fake_upnp_run(net: NetworkManager, fake_config: Dictionary) -> Dictionary:
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _wait(10)
+	# Save isolado: o teste não lê nem grava o save do jogador.
+	SaveManager.instance.use_test_save_dir("net_errors_test")
 	var net: NetworkManager = NetworkManager.instance
 	_check(net != null, "NetworkManager presente")
 	net.connection_error.connect(func(message: String) -> void: _errors.append(message))
