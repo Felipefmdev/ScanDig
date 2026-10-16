@@ -204,3 +204,16 @@ func test_slot_change_dips_tool() -> void:
 	player._on_selected_slot_changed(0)
 	player.update_tool_sway(0.01)
 	assert_lt(player.tool_sway.position.y, -0.05, "mergulha ao trocar")
+
+
+func test_attack_pressed_during_cooldown_is_buffered() -> void:
+	var player: Player = _spawn_player()
+	player._attack_cooldown = 0.2
+	Input.action_press("attack")
+	player._handle_attack_action()
+	Input.action_release("attack")
+	assert_gt(player._attack_buffer_left, 0.0, "guardado durante a recarga")
+	player._attack_cooldown = 0.0
+	player._handle_attack_action()
+	assert_eq(player._attack_buffer_left, 0.0, "sai assim que a recarga acaba")
+	assert_gt(player._attack_cooldown, 0.0, "golpe executado")

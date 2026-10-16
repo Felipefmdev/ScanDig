@@ -1060,10 +1060,20 @@ func _on_health_changed(current: float, max_value: float) -> void:
 # Golpe corpo-a-corpo com a pá
 # ---------------------------------------------------------------------------
 
+## Golpe apertado durante a recarga fica guardado por ATTACK_BUFFER s (combo fluido).
+const ATTACK_BUFFER: float = 0.35
+var _attack_buffer_left: float = 0.0
+
+
 func _handle_attack_action() -> void:
+	if Input.is_action_just_pressed("attack"):
+		_attack_buffer_left = ATTACK_BUFFER
+	elif _attack_buffer_left > 0.0:
+		_attack_buffer_left = maxf(_attack_buffer_left - get_physics_process_delta_time(), 0.0)
 	if _attack_cooldown > 0.0 or dig_animator.is_playing() or _disarm_time > 0.0:
 		return
-	if Input.is_action_just_pressed("attack"):
+	if _attack_buffer_left > 0.0:
+		_attack_buffer_left = 0.0
 		var c: CarriedItem = inventory.get_selected()
 		if c != null and c.tool_id == TOOL_FORCADO:
 			if _use_cooldown <= 0.0:
