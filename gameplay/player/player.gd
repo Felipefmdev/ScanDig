@@ -3,6 +3,14 @@ extends CharacterBody3D
 
 signal health_changed(current: float, max_value: float)
 signal died
+signal player_downed(player: Player)
+signal player_carried(carrier: Player, carried: Player)
+signal player_dropped(carrier: Player, dropped: Player)
+signal player_revived(player: Player, by_player: Player)
+
+@export_group("Coop Downed State")
+@export var allow_downed: bool = false
+@export var carry_speed_multiplier: float = 0.85
 
 @export var speed: float = 4.5
 @export var jump_velocity: float = 4.2
@@ -211,8 +219,24 @@ const THREAT_MESSAGES: Array[String] = [
 const LOCAL_GROUP: StringName = &"player"
 ## Grupo com todos os jogadores da cena (local + remotos).
 const ALL_GROUP: StringName = &"players"
+## Grupo para jogadores caídos (morte em expedição coop).
+const DOWNED_GROUP: StringName = &"downed_players"
 
 var health: float = 100.0
+## Estado caído (downed) em expedição coop (#79).
+var is_downed: bool = false:
+	set(value):
+		if is_downed == value:
+			return
+		is_downed = value
+		_on_is_downed_changed(value)
+
+## Jogador caído que este jogador está atualmente a carregar.
+var carried_player: Player = null
+## Jogador que está atualmente a carregar este jogador caído.
+var carried_by: Player = null
+## Jogador caído focado pela mira para carregar/reanimar.
+var _target_downed_player: Player = null
 ## Replicado (NetSync): o dono tem itens escavados na mochila? É o que has_loot()
 ## responde num jogador remoto (ex.: a gaivota no host escolhe quem roubar).
 var carrying_loot: bool = false
@@ -297,6 +321,14 @@ func _enter_tree() -> void:
 		body.visible = not local
 
 
+func _exit_tree() -> void:
+	if carried_player != null and is_instance_valid(carried_player):
+		_perform_drop(self)
+	if carried_by != null and is_instance_valid(carried_by):
+		carried_by.carried_player = null
+		carried_by = null
+
+
 static func peer_id_from_name(node_name: StringName) -> int:
 	var s: String = String(node_name)
 	return s.to_int() if s.is_valid_int() else 0
@@ -304,6 +336,10 @@ static func peer_id_from_name(node_name: StringName) -> int:
 
 func is_local() -> bool:
 	return is_multiplayer_authority()
+
+
+func is_alive() -> bool:
+	return health > 0.0 and not is_downed
 
 
 func _ready() -> void:
@@ -428,7 +464,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_settings(not is_settings_open())
 		return
 
-	if is_settings_open():
+	if is_settings_open() or is_downed:
 		return
 	if event is InputEventMouseButton and event.is_pressed():
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
@@ -441,6 +477,23 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if is_downed:
+		if carried_by != null and is_instance_valid(carried_by):
+			global_position = carried_by.global_position - carried_by.global_transform.basis.z * 0.35 + Vector3.UP * 0.85
+			rotation.y = carried_by.rotation.y
+			velocity = Vector3.ZERO
+			return
+		# No chão caído: apenas gravidade e amortecimento horizontal
+		velocity.x = move_toward(velocity.x, 0.0, ground_deceleration * delta)
+		velocity.z = move_toward(velocity.z, 0.0, ground_deceleration * delta)
+		if not is_on_floor():
+			var grav: Vector3 = get_gravity()
+			if velocity.y < 0.0:
+				grav *= fall_gravity_multiplier
+			velocity += grav * delta
+		move_and_slide()
+		return
+
 	var on_floor: bool = is_on_floor()
 	if not on_floor:
 		var gravity: Vector3 = get_gravity()
@@ -467,6 +520,10 @@ func _physics_process(delta: float) -> void:
 		_apply_horizontal_movement(direction, input_dir, on_floor, delta)
 
 	move_and_slide()
+	if carried_player != null and is_instance_valid(carried_player):
+		carried_player.global_position = global_position - global_transform.basis.z * 0.35 + Vector3.UP * 0.85
+		carried_player.rotation.y = rotation.y
+
 	_update_footsteps(delta)
 	if is_local() and health > 0.0 and _current_map_id() != "":
 		tick_hunger(delta)
@@ -495,6 +552,13 @@ func _process(_delta: float) -> void:
 	if not is_local():
 		avatar.set_pitch(head.rotation.x)
 		return
+	if is_downed:
+		if interact_prompt != null:
+			if carried_by != null:
+				interact_prompt.text = "🤝 A ser transportado por %s..." % _get_player_name(carried_by)
+			else:
+				interact_prompt.text = "💀 Estás caído! Aguarda que um colega te leve à base."
+		return
 	update_tool_sway(_delta)
 	_update_interaction_target()
 
@@ -502,7 +566,7 @@ func _process(_delta: float) -> void:
 ## Botão direito saca a pá e cava: sozinho = pá rápida, com Shift = escavação cuidadosa.
 ## (A ação "careful_dig" é o botão direito no InputMap; o botão esquerdo já não cava.)
 func _handle_dig_actions() -> void:
-	if _dig_cooldown > 0.0 or dig_animator.is_playing():
+	if carried_player != null or _dig_cooldown > 0.0 or dig_animator.is_playing():
 		return
 	if Input.is_action_just_pressed("careful_dig"):
 		_perform_dig(Input.is_physical_key_pressed(KEY_SHIFT))
@@ -915,7 +979,7 @@ func apply_damage(amount: float, _from: Vector3 = Vector3.INF) -> void:
 ## `apply_knockback.rpc_id(dono, impulse, shake)` num jogador remoto; só o dono aplica.
 @rpc("any_peer", "call_local", "reliable")
 func apply_knockback(impulse: Vector3, shake: float = 0.0) -> void:
-	if not is_local() or health <= 0.0:
+	if not is_local() or health <= 0.0 or is_downed:
 		return
 	velocity += impulse
 	# Vários empurrões seguidos não se somam sem fim (#57): teto para não sair do mapa.
@@ -928,7 +992,7 @@ func apply_knockback(impulse: Vector3, shake: float = 0.0) -> void:
 
 func take_damage(amount: float) -> void:
 	# Num jogador remoto a vida não é nossa: quem acerta usa apply_damage.rpc_id(dono).
-	if not is_local() or amount <= 0.0 or health <= 0.0:
+	if not is_local() or amount <= 0.0 or health <= 0.0 or is_downed:
 		return
 	var now: int = Time.get_ticks_msec()
 	if now < _invulnerable_until_ms:
@@ -955,12 +1019,340 @@ func _die() -> void:
 	died.emit()
 	SFX.play_ui(SFX.PLAYER_DEATH)
 	dig_animator.cancel()
+	if carried_player != null:
+		drop_carried_player()
 	var lost: int = _drop_all_items()
+	if _should_enter_downed():
+		enter_downed()
+		return
 	var msg: String = "💀 Você desmaiou... e acordou de volta no ponto de partida."
 	if lost > 0:
 		msg += "\nA mochila caiu no local da morte (%d itens) — volte para apanhar!" % lost
 	_show_temporary_message(msg, Color(1.0, 0.4, 0.4), 4.0)
 	_respawn()
+
+
+func _should_enter_downed() -> bool:
+	if allow_downed:
+		return true
+	var sm: SessionManager = SessionManager.instance
+	var in_expedition: bool = sm != null and sm.is_in_expedition()
+	var is_coop: bool = multiplayer.has_multiplayer_peer() and (multiplayer.get_peers().size() > 0 or not multiplayer.is_server())
+	return in_expedition and is_coop
+
+
+func enter_downed() -> void:
+	if is_downed:
+		return
+	if carried_player != null:
+		drop_carried_player()
+	is_downed = true
+	health = 0.0
+	health_changed.emit(health, max_health)
+	_on_is_downed_changed(true)
+	if _is_multiplayer_active():
+		if multiplayer.is_server():
+			_rpc_sync_downed.rpc(true)
+		else:
+			_rpc_sync_downed.rpc_id(1, true)
+	player_downed.emit(self)
+
+
+func revive(restore_health_fraction: float = 0.5) -> void:
+	is_downed = false
+	if carried_by != null:
+		if carried_by.carried_player == self:
+			carried_by.carried_player = null
+		carried_by = null
+	collision_layer = 1
+	health = maxf(max_health * restore_health_fraction, 1.0)
+	health_changed.emit(health, max_health)
+	set_hunger(max_hunger * 0.5)
+	_on_is_downed_changed(false)
+	if is_local():
+		_show_temporary_message("✨ Foste reanimado na base! De volta à expedição.", Color(0.3, 1.0, 0.4), 3.0)
+		SFX.play_ui(SFX.RESPAWN)
+
+
+func _on_is_downed_changed(downed: bool) -> void:
+	if avatar != null:
+		avatar.set_downed(downed)
+	if downed:
+		if is_in_group(LOCAL_GROUP):
+			remove_from_group(LOCAL_GROUP)
+		if is_in_group(ALL_GROUP):
+			remove_from_group(ALL_GROUP)
+		if not is_in_group(DOWNED_GROUP):
+			add_to_group(DOWNED_GROUP)
+		if is_local():
+			if head != null:
+				head.position.y = 0.35
+				head.rotation.x = deg_to_rad(-10.0)
+			if shovel_rig != null:
+				shovel_rig.visible = false
+			if tool_view != null:
+				tool_view.visible = false
+			if detector != null:
+				if detector.has_method("set_active"):
+					detector.call("set_active", false)
+				else:
+					detector.visible = false
+			_show_temporary_message("💀 Foste derrubado! Um colega tem de te levar à base para te reanimar.", Color(1.0, 0.35, 0.35), 5.0)
+	else:
+		if is_in_group(DOWNED_GROUP):
+			remove_from_group(DOWNED_GROUP)
+		if not is_in_group(ALL_GROUP):
+			add_to_group(ALL_GROUP)
+		if is_local():
+			if not is_in_group(LOCAL_GROUP):
+				add_to_group(LOCAL_GROUP)
+			if head != null:
+				head.position.y = 1.6
+				head.rotation.x = 0.0
+			_update_tool_in_hand()
+
+
+# ---------------------------------------------------------------------------
+# Transporte e Reanimação em Coop (#79)
+# ---------------------------------------------------------------------------
+
+func carry_player(target: Player) -> void:
+	request_carry_player(target)
+
+
+func drop_carried_player() -> void:
+	request_drop_carried_player()
+
+
+func revive_player(target: Player) -> void:
+	request_revive_player(target)
+
+
+func request_carry_player(target: Player) -> void:
+	if target == null or is_downed or carried_player != null:
+		return
+	if not _is_multiplayer_active():
+		_perform_carry(self, target)
+		return
+	if multiplayer.is_server():
+		_host_validate_and_carry(self, target)
+	else:
+		_rpc_request_carry.rpc_id(1, get_path(), target.get_path())
+
+
+func request_drop_carried_player() -> void:
+	if carried_player == null:
+		return
+	if not _is_multiplayer_active():
+		_perform_drop(self)
+		return
+	if multiplayer.is_server():
+		_host_validate_and_drop(self)
+	else:
+		_rpc_request_drop.rpc_id(1, get_path())
+
+
+func request_revive_player(target: Player) -> void:
+	if target == null or not target.is_downed:
+		return
+	if not _is_multiplayer_active():
+		_perform_revive(self, target)
+		return
+	if multiplayer.is_server():
+		_host_validate_and_revive(self, target)
+	else:
+		_rpc_request_revive.rpc_id(1, get_path(), target.get_path())
+
+
+func _host_validate_and_carry(carrier: Player, target: Player) -> void:
+	if not multiplayer.is_server() or carrier == null or target == null:
+		return
+	if carrier.is_downed or carrier.carried_player != null:
+		return
+	if not target.is_downed or target.carried_by != null:
+		return
+	if carrier.global_position.distance_to(target.global_position) > interact_range + 2.0:
+		return
+	_perform_carry(carrier, target)
+	_rpc_sync_carry.rpc(carrier.get_path(), target.get_path())
+
+
+func _host_validate_and_drop(carrier: Player) -> void:
+	if not multiplayer.is_server() or carrier == null or carrier.carried_player == null:
+		return
+	_perform_drop(carrier)
+	_rpc_sync_drop.rpc(carrier.get_path())
+
+
+func _host_validate_and_revive(reviver: Player, target: Player) -> void:
+	if not multiplayer.is_server() or target == null or not target.is_downed:
+		return
+	var at_base: bool = false
+	if reviver != null and reviver._get_sell_point_in_range() != null:
+		at_base = true
+	elif target._get_sell_point_in_range() != null:
+		at_base = true
+	if not at_base:
+		return
+	_perform_revive(reviver, target)
+	_rpc_sync_revive.rpc(reviver.get_path() if reviver != null else NodePath(""), target.get_path())
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _rpc_request_carry(carrier_path: NodePath, target_path: NodePath) -> void:
+	if not multiplayer.is_server():
+		return
+	var carrier: Player = get_node_or_null(carrier_path) as Player
+	var target: Player = get_node_or_null(target_path) as Player
+	if carrier != null and target != null:
+		_host_validate_and_carry(carrier, target)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _rpc_request_drop(carrier_path: NodePath) -> void:
+	if not multiplayer.is_server():
+		return
+	var carrier: Player = get_node_or_null(carrier_path) as Player
+	if carrier != null:
+		_host_validate_and_drop(carrier)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _rpc_request_revive(reviver_path: NodePath, target_path: NodePath) -> void:
+	if not multiplayer.is_server():
+		return
+	var reviver: Player = get_node_or_null(reviver_path) as Player
+	var target: Player = get_node_or_null(target_path) as Player
+	if target != null:
+		_host_validate_and_revive(reviver, target)
+
+
+@rpc("authority", "call_local", "reliable")
+func _rpc_sync_carry(carrier_path: NodePath, target_path: NodePath) -> void:
+	var carrier: Player = get_node_or_null(carrier_path) as Player
+	var target: Player = get_node_or_null(target_path) as Player
+	if carrier != null and target != null:
+		_perform_carry(carrier, target)
+
+
+@rpc("authority", "call_local", "reliable")
+func _rpc_sync_drop(carrier_path: NodePath) -> void:
+	var carrier: Player = get_node_or_null(carrier_path) as Player
+	if carrier != null:
+		_perform_drop(carrier)
+
+
+@rpc("authority", "call_local", "reliable")
+func _rpc_sync_revive(reviver_path: NodePath, target_path: NodePath) -> void:
+	var reviver: Player = get_node_or_null(reviver_path) as Player if not reviver_path.is_empty() else null
+	var target: Player = get_node_or_null(target_path) as Player
+	if target != null:
+		_perform_revive(reviver, target)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _rpc_sync_downed(downed: bool) -> void:
+	is_downed = downed
+
+
+func _perform_carry(carrier: Player, target: Player) -> void:
+	if carrier == null or target == null:
+		return
+	carrier.carried_player = target
+	target.carried_by = carrier
+	target.collision_layer = 0
+	if carrier.is_local():
+		carrier._show_temporary_message("🤝 A carregar %s. Leva-o à base!" % carrier._get_player_name(target), Color(0.4, 0.8, 1.0), 2.5)
+	if target.is_local():
+		target._show_temporary_message("🤝 %s está a carregar-te!" % target._get_player_name(carrier), Color(0.4, 0.8, 1.0), 2.5)
+	carrier.player_carried.emit(carrier, target)
+
+
+func _perform_drop(carrier: Player) -> void:
+	if carrier == null or carrier.carried_player == null:
+		return
+	var dropped: Player = carrier.carried_player
+	carrier.carried_player = null
+	dropped.carried_by = null
+	dropped.collision_layer = 1
+	var fwd: Vector3 = -carrier.global_transform.basis.z
+	fwd.y = 0.0
+	dropped.global_position = carrier.global_position + fwd.normalized() * 0.9 + Vector3.UP * 0.1
+	dropped.velocity = Vector3.ZERO
+	if carrier.is_local():
+		carrier._show_temporary_message("Largaste o corpo de %s." % carrier._get_player_name(dropped), Color(0.9, 0.9, 0.9), 1.5)
+	carrier.player_dropped.emit(carrier, dropped)
+
+
+func _perform_revive(reviver: Player, target: Player) -> void:
+	if target == null:
+		return
+	if reviver != null and reviver.carried_player == target:
+		reviver.carried_player = null
+	target.carried_by = null
+	target.revive()
+	if reviver != null and reviver.is_local():
+		reviver._show_temporary_message("✨ Reanimaste %s!" % reviver._get_player_name(target), Color(0.3, 1.0, 0.4), 2.5)
+	target.player_revived.emit(target, reviver)
+
+
+func _is_multiplayer_active() -> bool:
+	return multiplayer != null and multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED
+
+
+func _get_player_name(p: Player) -> String:
+	if p == null:
+		return "Jogador"
+	if p.has_method("get_player_display_name"):
+		return p.get_player_display_name()
+	return p.name
+
+
+func get_player_display_name() -> String:
+	var owner_id: int = get_multiplayer_authority()
+	if owner_id == 1:
+		return "Anfitrião"
+	elif owner_id > 1:
+		return "Jogador %d" % owner_id
+	return name
+
+
+func _is_player_at_base(p: Player) -> bool:
+	if p == null:
+		return false
+	for n: Node in get_tree().get_nodes_in_group(SellPoint.GROUP):
+		var sp: SellPoint = n as SellPoint
+		if sp != null and sp.is_in_range(p.global_position):
+			return true
+	return false
+
+
+func _find_target_downed_player() -> Player:
+	if is_downed or carried_player != null:
+		return null
+	var from: Vector3 = camera.global_position if camera != null else global_position + Vector3.UP * 1.6
+	var fwd: Vector3 = -camera.global_basis.z if camera != null else -global_transform.basis.z
+	var candidates: Array[Node] = []
+	candidates.append_array(get_tree().get_nodes_in_group(DOWNED_GROUP))
+	for n: Node in get_tree().get_nodes_in_group(ALL_GROUP):
+		if not candidates.has(n):
+			candidates.append(n)
+
+	var best: Player = null
+	var best_dist: float = interact_range + 1.0
+	for node: Node in candidates:
+		var p: Player = node as Player
+		if p == null or p == self or not p.is_downed or p.carried_by != null:
+			continue
+		var to_p: Vector3 = (p.global_position + Vector3.UP * 0.3) - from
+		var dist: float = to_p.length()
+		if dist > best_dist:
+			continue
+		if fwd.dot(to_p.normalized()) < 0.5:
+			continue
+		best = p
+		best_dist = dist
+	return best
 
 
 ## Larga todos os itens da mochila espalhados à volta do jogador. Devolve quantos caíram.
@@ -1075,6 +1467,8 @@ var _attack_buffer_left: float = 0.0
 
 
 func _handle_attack_action() -> void:
+	if carried_player != null:
+		return
 	if Input.is_action_just_pressed("attack"):
 		_attack_buffer_left = ATTACK_BUFFER
 	elif _attack_buffer_left > 0.0:
@@ -1260,6 +1654,9 @@ func _handle_inventory_actions() -> void:
 		_interact()
 	if InputMap.has_action("drop"):
 		if Input.is_action_just_pressed("drop"):
+			if carried_player != null:
+				request_drop_carried_player()
+				return
 			_drop_hold = 0.0
 			_drop_holding = inventory.get_selected() != null
 			if not _drop_holding:
@@ -1273,6 +1670,23 @@ func _handle_inventory_actions() -> void:
 
 
 func _interact() -> void:
+	if is_downed:
+		return
+	if carried_player != null:
+		var sp: SellPoint = _get_sell_point_in_range()
+		if sp != null:
+			request_revive_player(carried_player)
+		else:
+			request_drop_carried_player()
+		return
+	if _target_downed_player != null and is_instance_valid(_target_downed_player):
+		var sp: SellPoint = _get_sell_point_in_range()
+		if sp != null or _is_player_at_base(_target_downed_player):
+			request_revive_player(_target_downed_player)
+		else:
+			request_carry_player(_target_downed_player)
+		return
+
 	if _target_offer != null and is_instance_valid(_target_offer):
 		_buy_offer(_target_offer)
 		return
@@ -1386,6 +1800,10 @@ func _drop_selected(charge: float = 0.0) -> void:
 ## Interactable (#39/#40): o [E] fica com o jogador quando ele tem alvo próprio (produto da
 ## banca, item no chão ou entrega possível na base).
 func has_own_interact_target() -> bool:
+	if carried_player != null:
+		return true
+	if _target_downed_player != null and is_instance_valid(_target_downed_player):
+		return true
 	if _target_offer != null and is_instance_valid(_target_offer):
 		return true
 	if _target_pickup != null and is_instance_valid(_target_pickup):
@@ -1431,7 +1849,10 @@ func _find_target_pickup() -> ItemPickup:
 
 
 func _update_interaction_target() -> void:
-	var offer: ShopOffer = _find_target_offer()
+	var downed_p: Player = _find_target_downed_player()
+	_target_downed_player = downed_p
+
+	var offer: ShopOffer = null if (_target_downed_player != null or carried_player != null) else _find_target_offer()
 	if offer != _target_offer:
 		if _target_offer != null and is_instance_valid(_target_offer):
 			_target_offer.set_highlighted(false)
@@ -1439,7 +1860,7 @@ func _update_interaction_target() -> void:
 		if _target_offer != null:
 			_target_offer.set_highlighted(true)
 
-	var target: ItemPickup = null if _target_offer != null else _find_target_pickup()
+	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null) else _find_target_pickup()
 	if target != _target_pickup:
 		if _target_pickup != null and is_instance_valid(_target_pickup):
 			_target_pickup.set_highlighted(false)
@@ -1451,7 +1872,18 @@ func _update_interaction_target() -> void:
 		return
 	var sell_point: SellPoint = _get_sell_point_in_range()
 	var deliverable: int = _count_deliverable()
-	if _target_offer != null:
+
+	if carried_player != null:
+		if sell_point != null:
+			interact_prompt.text = "[E] Reanimar %s na base | [Q] Largar" % _get_player_name(carried_player)
+		else:
+			interact_prompt.text = "[Q] Largar corpo de %s" % _get_player_name(carried_player)
+	elif _target_downed_player != null:
+		if sell_point != null or _is_player_at_base(_target_downed_player):
+			interact_prompt.text = "[E] Reanimar %s" % _get_player_name(_target_downed_player)
+		else:
+			interact_prompt.text = "[E] Carregar %s" % _get_player_name(_target_downed_player)
+	elif _target_offer != null:
 		var full: String = "  — mochila cheia!" if inventory.is_full() else ""
 		interact_prompt.text = _target_offer.get_prompt() + full
 	elif sell_point != null and deliverable > 0:
@@ -1638,7 +2070,7 @@ func steal_loot() -> CarriedItem:
 
 
 func _handle_use_tool_action() -> void:
-	if not Input.is_action_just_pressed("use_tool") or _use_cooldown > 0.0 or _disarm_time > 0.0:
+	if carried_player != null or not Input.is_action_just_pressed("use_tool") or _use_cooldown > 0.0 or _disarm_time > 0.0:
 		return
 	var c: CarriedItem = inventory.get_selected()
 	if c == null or c.tool_data == null:
@@ -2099,8 +2531,12 @@ func _place_net_trap() -> bool:
 
 ## Velocidade alvo: andar, ou correr com Shift indo pra frente (sem correr agachado na escavação).
 func get_target_speed(input_dir: Vector2) -> float:
-	var sprinting: bool = InputMap.has_action("sprint") and Input.is_action_pressed("sprint") 		and input_dir.y < -0.1 and not dig_animator.is_playing()
-	return speed * (sprint_multiplier if sprinting else 1.0)
+	var sprinting: bool = InputMap.has_action("sprint") and Input.is_action_pressed("sprint") \
+		and input_dir.y < -0.1 and not dig_animator.is_playing() and carried_player == null
+	var spd: float = speed * (sprint_multiplier if sprinting else 1.0)
+	if carried_player != null:
+		spd *= carry_speed_multiplier
+	return spd
 
 
 ## Aproxima a velocidade horizontal do alvo de forma exponencial (independe do FPS).

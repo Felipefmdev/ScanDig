@@ -32,6 +32,8 @@ var _head_pivot: Node3D = null
 var _upper_body: Node3D = null
 var _tool: MeshInstance3D = null
 var _label: Label3D = null
+var _is_downed: bool = false
+var _base_display_name: String = ""
 
 
 func _ready() -> void:
@@ -76,10 +78,12 @@ func _ready() -> void:
 	_label.outline_size = 10
 	_label.no_depth_test = true
 	add_child(_label)
+	_update_label()
 
 
 ## Cor da camisa e nome a partir do peer dono deste jogador.
 func setup(peer_id: int, display_name: String) -> void:
+	_base_display_name = display_name
 	var shirt: Color = SHIRTS[0] if peer_id == 1 else SHIRTS[1 + absi(peer_id) % (SHIRTS.size() - 1)]
 	var torso: MeshInstance3D = get_node_or_null(^"UpperBody/Torso") as MeshInstance3D
 	if torso != null:
@@ -90,11 +94,46 @@ func setup(peer_id: int, display_name: String) -> void:
 		if mi != null and mi.name.begins_with("Arm"):
 			(mi.material_override as StandardMaterial3D).albedo_color = shirt.darkened(0.1)
 	if _label != null:
-		_label.text = display_name
 		_label.modulate = shirt.lightened(0.35)
+	_update_label()
+
+
+func set_downed(downed: bool) -> void:
+	_is_downed = downed
+	if downed:
+		rotation.x = deg_to_rad(-90.0)
+		position.y = 0.2
+		if _upper_body != null:
+			_upper_body.rotation.x = 0.0
+		if _head_pivot != null:
+			_head_pivot.rotation.x = 0.0
+		if _tool != null:
+			_tool.visible = false
+	else:
+		rotation.x = 0.0
+		position.y = 0.0
+	_update_label()
+
+
+func is_downed() -> bool:
+	return _is_downed
+
+
+func _update_label() -> void:
+	if _label == null:
+		return
+	if _is_downed:
+		var txt: String = _base_display_name if not _base_display_name.is_empty() else "Jogador"
+		_label.text = "💀 %s (Caído)" % txt
+		_label.position = Vector3(0, 0.6, 0)
+	else:
+		_label.text = _base_display_name
+		_label.position = Vector3(0, 2.2, 0)
 
 
 func set_pitch(pitch: float) -> void:
+	if _is_downed:
+		return
 	var lean: float = get_torso_lean(pitch)
 	if _upper_body != null:
 		_upper_body.rotation.x = lean
@@ -115,7 +154,7 @@ static func get_head_pitch(pitch: float, lean: float) -> float:
 
 func set_tool(tool_id: StringName) -> void:
 	if _tool != null:
-		_tool.visible = tool_id != &""
+		_tool.visible = (tool_id != &"" and not _is_downed)
 
 
 func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color, node_name: String = "") -> MeshInstance3D:
