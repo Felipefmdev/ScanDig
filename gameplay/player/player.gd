@@ -329,6 +329,7 @@ func _ready() -> void:
 	add_child(_hit_feedback)
 	_setup_tool_sway()
 	_setup_nearby_items_ui()
+	_setup_settings()
 
 	_apply_backpack_capacity()
 	_apply_shovel_level()
@@ -423,12 +424,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		head.rotate_x(-event.relative.y * mouse_sensitivity)
 		head.rotation.x = clampf(head.rotation.x, deg_to_rad(-80.0), deg_to_rad(80.0))
 
-	if event is InputEventKey and event.is_pressed() and event.keycode == KEY_ESCAPE:
-		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		else:
-			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_ESCAPE:
+		toggle_settings(not is_settings_open())
+		return
 
+	if is_settings_open():
+		return
 	if event is InputEventMouseButton and event.is_pressed():
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -482,6 +483,8 @@ func _physics_process(delta: float) -> void:
 	if _use_cooldown > 0.0:
 		_use_cooldown -= delta
 
+	if is_settings_open():
+		return
 	_handle_dig_actions()
 	_handle_attack_action()
 	_handle_inventory_actions()
@@ -1132,6 +1135,60 @@ func _on_swing_hit() -> void:
 
 	if hits > 0:
 		_shake_camera(0.02, 0.15)
+
+
+var settings_panel: Control = null
+const SETTINGS_SCRIPT: Script = preload("res://gameplay/player/player_settings.gd")
+const SETTINGS_PANEL_SCRIPT: Script = preload("res://gameplay/player/settings_panel.gd")
+
+
+func _setup_settings() -> void:
+	apply_settings(SETTINGS_SCRIPT.load_settings())
+	var hud: Node = get_node_or_null(^"HUD")
+	if hud == null:
+		return
+	settings_panel = SETTINGS_PANEL_SCRIPT.new()
+	settings_panel.name = "SettingsPanel"
+	settings_panel.visible = false
+	hud.add_child(settings_panel)
+	settings_panel.connect(&"settings_changed", _on_settings_changed)
+	settings_panel.connect(&"closed", func() -> void: toggle_settings(false))
+
+
+func is_settings_open() -> bool:
+	return settings_panel != null and settings_panel.visible
+
+
+## [Esc]: abre/fecha as opções. O jogo segue (coop); só o mouse fica livre.
+func toggle_settings(open: bool) -> void:
+	if settings_panel == null:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CAPTURED
+		return
+	if open:
+		settings_panel.call("show_values", current_settings())
+	settings_panel.visible = open
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CAPTURED
+
+
+func current_settings() -> Dictionary:
+	return {
+		"mouse_sensitivity": mouse_sensitivity,
+		"fov": camera.fov if camera != null else 75.0,
+		"view_bobbing": view_bobbing,
+	}
+
+
+func apply_settings(values: Dictionary) -> void:
+	var v: Dictionary = SETTINGS_SCRIPT.sanitize(values)
+	mouse_sensitivity = v["mouse_sensitivity"]
+	view_bobbing = v["view_bobbing"]
+	if camera != null:
+		camera.fov = v["fov"]
+
+
+func _on_settings_changed(values: Dictionary) -> void:
+	apply_settings(values)
+	SETTINGS_SCRIPT.save_settings(values)
 
 
 var nearby_items_ui: Control = null
