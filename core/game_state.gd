@@ -54,7 +54,11 @@ const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", 
 	"campo_espantalho", "campo_ovo_circulo", "campo_ovo_ovelha"]
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
 ## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
-const EXTRA_BOSSES: Array[String] = ["octopus", "crow_king", "scarecrow"]
+## Mapas 3-5: idol_mummy, cave_yeti, ancient_walrus, the_sleeper, the_echo (#75).
+const EXTRA_BOSSES: Array[String] = [
+	"octopus", "crow_king", "scarecrow",
+	"idol_mummy", "cave_yeti", "ancient_walrus", "the_sleeper", "the_echo",
+]
 
 const UPGRADES: Dictionary = {
 	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 12000, 25000],
