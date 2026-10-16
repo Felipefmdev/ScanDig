@@ -46,10 +46,10 @@ const MAP_UNLOCK_BOSSES: Dictionary = {
 const QUESTS: Dictionary = {
 	"ze_anzol": {"name": "O anzol de ouro", "reward": 600},
 	"lurdes_chaves": {"name": "Os corvos levaram as chaves", "reward": 1800},
-	# Mapas 3-5: ~25% do desbloqueio seguinte, como Zé/Lurdes; afinar com o pacing (#64).
-	"ines_camara": {"name": "A câmara selada", "reward": 5000},
-	"bjorn_expedicao": {"name": "A expedição perdida", "reward": 13000},
-	"vega_sinal": {"name": "Sinal no fundo", "reward": 15000},
+	# Como Zé (~12 min) e Lurdes (~14 min): ~13 min da renda de bot do mapa (docs/PACING.md, #64).
+	"ines_camara": {"name": "A câmara selada", "reward": 17000},
+	"bjorn_expedicao": {"name": "A expedição perdida", "reward": 37000},
+	"vega_sinal": {"name": "Sinal no fundo", "reward": 30000},
 }
 ## Relíquias escondidas e easter eggs (#45): só ficam registrados no save.
 const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", "praia_reliquia_mare",
