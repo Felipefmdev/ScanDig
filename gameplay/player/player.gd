@@ -1065,6 +1065,8 @@ func enter_downed() -> void:
 		else:
 			_rpc_sync_downed.rpc_id(1, true)
 	player_downed.emit(self)
+	if _is_multiplayer_active() and multiplayer.is_server():
+		_check_team_wipe.call_deferred()
 
 
 func revive(restore_health_fraction: float = 0.5) -> void:
@@ -1262,6 +1264,54 @@ func _rpc_sync_revive(reviver_path: NodePath, target_path: NodePath) -> void:
 @rpc("any_peer", "call_local", "reliable")
 func _rpc_sync_downed(downed: bool) -> void:
 	is_downed = downed
+	if downed and multiplayer.is_server():
+		_check_team_wipe.call_deferred()
+
+
+## Host: se ninguém ficou de pé, ninguém pode carregar ninguém (#79). Toda a equipa reaparece
+## no ponto de partida, como no solo (as mochilas já caíram onde cada um tombou).
+func _check_team_wipe() -> void:
+	if not is_inside_tree() or not multiplayer.is_server():
+		return
+	var everyone: Array[Player] = []
+	for group: StringName in [ALL_GROUP, DOWNED_GROUP]:
+		for n: Node in get_tree().get_nodes_in_group(group):
+			var pl: Player = n as Player
+			if pl != null and not everyone.has(pl):
+				everyone.append(pl)
+	if everyone.is_empty():
+		return
+	for pl: Player in everyone:
+		if not pl.is_downed:
+			return
+	for pl: Player in everyone:
+		if pl.is_local():
+			pl._team_wipe_respawn()
+		else:
+			pl._rpc_team_wipe.rpc_id(pl.get_multiplayer_authority())
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_team_wipe() -> void:
+	# Só o host decide o wipe (o nó é do cliente: "authority" recusaria o host).
+	if multiplayer.get_remote_sender_id() != 1 or not is_local():
+		return
+	_team_wipe_respawn()
+
+
+func _team_wipe_respawn() -> void:
+	if not is_downed:
+		return
+	revive(0.5)
+	velocity = Vector3.ZERO
+	global_transform = _spawn_transform
+	if _is_multiplayer_active():
+		if multiplayer.is_server():
+			_rpc_sync_downed.rpc(false)
+		else:
+			_rpc_sync_downed.rpc_id(1, false)
+	_show_temporary_message("💫 A equipa toda caiu! Acordaram no ponto de partida (as mochilas ficaram onde tombaram).",
+		Color(1.0, 0.75, 0.35), 4.0)
 
 
 func _perform_carry(carrier: Player, target: Player) -> void:

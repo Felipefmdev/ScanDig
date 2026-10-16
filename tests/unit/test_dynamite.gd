@@ -44,7 +44,8 @@ func test_blast_hits_enemies_items_and_thrower() -> void:
 	var hp0: float = player.health
 	var out: Dictionary = DYNAMITE.apply_blast(get_tree(), Vector3.ZERO, player)
 	assert_eq(out["enemies"], 1, "só a cobra perto")
-	assert_eq(out["items"], 1, "o item perto")
+	# >= 1: a cobra pode morrer e largar Carne Crua (15%) mesmo ao lado da explosão.
+	assert_gte(out["items"], 1, "o item perto")
 	assert_eq(out["players"], 1, "quem lançou também")
 	assert_lt(player.health, hp0, "auto-dano")
 	assert_gt(player.velocity.x, 3.0, "arremessado para longe da explosão")

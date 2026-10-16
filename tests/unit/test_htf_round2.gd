@@ -300,3 +300,27 @@ func test_low_hunger_triggers_hint() -> void:
 	player.tick_hunger(0.1)
 	assert_true(HINTS.has_seen("hunger"), "fome baixa mostrou a dica")
 	Engine.remove_meta(HINTS.PATH_META)
+
+
+# --- #79: equipa toda caída ----------------------------------------------------
+
+func test_whole_team_downed_respawns_everyone() -> void:
+	var a: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(a)
+	a.global_position = Vector3(10, 0, 0)
+	a._spawn_transform = Transform3D(Basis.IDENTITY, Vector3(1, 0, 1))
+	a.is_downed = true
+	a._check_team_wipe()
+	assert_false(a.is_downed, "sozinho e caído: reaparece")
+	assert_almost_eq(a.global_position, Vector3(1, 0, 1), Vector3.ONE * 0.01, "no ponto de partida")
+	assert_gt(a.health, 0.0)
+
+
+func test_no_wipe_while_someone_stands() -> void:
+	var a: Player = PLAYER_SCENE.instantiate() as Player
+	var b: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(a)
+	add_child_autofree(b)
+	a.is_downed = true
+	a._check_team_wipe()
+	assert_true(a.is_downed, "o colega de pé ainda o pode carregar")
