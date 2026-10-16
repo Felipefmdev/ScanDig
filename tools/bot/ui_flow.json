@@ -1,0 +1,378 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{
+			"t": 0.3,
+			"set_state": {
+				"unlocked_maps": [
+					"campo",
+					"ruinas",
+					"geleira",
+					"cratera"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole",
+					"ancient_guardian",
+					"frozen_mammoth"
+				],
+				"upgrade_levels": {
+					"detector": 5,
+					"backpack": 2
+				},
+				"team_money": 500
+			}
+		},
+		{
+			"t": 1.0,
+			"screenshot": "00_lobby"
+		},
+		{
+			"t": 0,
+			"ui_tab": "Expedições"
+		},
+		{
+			"t": 0,
+			"ui_select": "MapList",
+			"item": "Praia"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"screenshot": "01_praia_lista"
+		},
+		{
+			"t": 0,
+			"ui_press": "DepartButton"
+		},
+		{
+			"wait_until": "in_expedition==1",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"screenshot": "02_praia_mapa"
+		},
+		{
+			"t": 0,
+			"dump": "02_praia_mapa"
+		},
+		{
+			"t": 0,
+			"goto_spot": "nearest",
+			"walk": true,
+			"timeout": 40
+		},
+		{
+			"t": 0,
+			"dig_spot": true,
+			"mode": "smart",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 6,
+			"timeout": 10
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 60
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5
+		},
+		{
+			"t": 0,
+			"screenshot": "03_praia_vendido"
+		},
+		{
+			"t": 0,
+			"ui_press": "ReturnButton"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"screenshot": "04_praia_resumo"
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"ui_tab": "Expedições"
+		},
+		{
+			"t": 0,
+			"ui_select": "MapList",
+			"item": "Campo Antigo"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"screenshot": "11_campo_lista"
+		},
+		{
+			"t": 0,
+			"ui_press": "DepartButton"
+		},
+		{
+			"wait_until": "in_expedition==1",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"screenshot": "12_campo_mapa"
+		},
+		{
+			"t": 0,
+			"dump": "12_campo_mapa"
+		},
+		{
+			"t": 0,
+			"ui_press": "ReturnButton"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"screenshot": "14_campo_resumo"
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"ui_tab": "Expedições"
+		},
+		{
+			"t": 0,
+			"ui_select": "MapList",
+			"item": "Ruínas"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"screenshot": "21_ruinas_lista"
+		},
+		{
+			"t": 0,
+			"ui_press": "DepartButton"
+		},
+		{
+			"wait_until": "in_expedition==1",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"screenshot": "22_ruinas_mapa"
+		},
+		{
+			"t": 0,
+			"dump": "22_ruinas_mapa"
+		},
+		{
+			"t": 0,
+			"ui_press": "ReturnButton"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"screenshot": "24_ruinas_resumo"
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"ui_tab": "Expedições"
+		},
+		{
+			"t": 0,
+			"ui_select": "MapList",
+			"item": "Geleira Eterna"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"screenshot": "31_geleira_lista"
+		},
+		{
+			"t": 0,
+			"ui_press": "DepartButton"
+		},
+		{
+			"wait_until": "in_expedition==1",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"screenshot": "32_geleira_mapa"
+		},
+		{
+			"t": 0,
+			"dump": "32_geleira_mapa"
+		},
+		{
+			"t": 0,
+			"ui_press": "ReturnButton"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"screenshot": "34_geleira_resumo"
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"ui_tab": "Expedições"
+		},
+		{
+			"t": 0,
+			"ui_select": "MapList",
+			"item": "Cratera"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"screenshot": "41_cratera_lista"
+		},
+		{
+			"t": 0,
+			"ui_press": "DepartButton"
+		},
+		{
+			"wait_until": "in_expedition==1",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"screenshot": "42_cratera_mapa"
+		},
+		{
+			"t": 0,
+			"dump": "42_cratera_mapa"
+		},
+		{
+			"t": 0,
+			"ui_press": "ReturnButton"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 30
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"screenshot": "44_cratera_resumo"
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"ui_tab": "Museu de Achados"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"screenshot": "90_museu"
+		},
+		{
+			"t": 0,
+			"dump": "90_museu"
+		},
+		{
+			"t": 0,
+			"ui_tab": "Loja de Equipamentos"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"screenshot": "91_loja"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}

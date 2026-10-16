@@ -93,7 +93,8 @@ var phase: int = 1
 var net_attack_point: Vector3 = Vector3.ZERO:
 	set(value):
 		net_attack_point = value
-		if not has_simulation_authority():
+		# O synchronizer aplica-o ao nascer, antes do _ready (avisos ainda por criar).
+		if not has_simulation_authority() and is_node_ready():
 			_refresh_remote_visuals()
 
 var _state_time: float = 0.0
@@ -128,6 +129,8 @@ func _ready() -> void:
 	add_child(_warning2)
 	boss_defeated.connect(_report_defeat_to_core)
 	_enter_state(State.EMERGE)
+	if not has_simulation_authority():
+		_refresh_remote_visuals()
 
 
 func setup_network() -> void:

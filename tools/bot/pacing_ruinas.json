@@ -1,0 +1,113 @@
+{
+	"scene": "res://world/map_ruinas.tscn",
+	"dump_every": 300,
+	"screenshot_every": 300,
+	"steps": [
+		{
+			"t": 0.2,
+			"set_state": {
+				"unlocked_maps": [
+					"campo",
+					"ruinas"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole"
+				],
+				"upgrade_levels": {
+					"detector": 3,
+					"backpack": 3,
+					"shovel": 1
+				},
+				"team_money": 0
+			}
+		},
+		{
+			"t": 1.0,
+			"dump": "00_spawn"
+		},
+		{
+			"t": 1.2,
+			"loop": [
+				{
+					"fight": 10,
+					"radius": 6,
+					"if": "enemy_dist<=5"
+				},
+				{
+					"goto_sell": true,
+					"timeout": 60,
+					"if": [
+						"deliverable>=1",
+						"free_slots<=0"
+					]
+				},
+				{
+					"sell": true,
+					"timeout": 5,
+					"if": [
+						"deliverable>=1",
+						"sell_dist<=2"
+					]
+				},
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 10.5,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>10.5"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 10.5,
+					"timeout": 40,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=10.5"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "smart",
+					"timeout": 30,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 10,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "money>=999999",
+			"timeout": 900
+		},
+		{
+			"t": 0,
+			"screenshot": "99_final"
+		},
+		{
+			"t": 0,
+			"dump": "99_final"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}

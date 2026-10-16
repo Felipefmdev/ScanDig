@@ -267,3 +267,62 @@ Leitura:
   baratear a pá, o pinpointer e a mochila na Praia, ou baixar o desbloqueio do Campo; subir o
   valor do pool da Praia (contradiz a decisão B); ou aceitar uma Praia mais longa e deixar
   parte dos upgrades para o Campo.
+
+## Jogo completo (#62, 2026-10-16)
+
+> Bot = **limite inferior** (sabe onde estão os spots, não se distrai, compra tudo de uma vez).
+> Corrido em headless com `--fixed-fps 60`: o DebugBridge mede agora o **tempo de jogo** (soma
+> dos delta), por isso 15 min de jogo correm em ~45 s reais. O bot usa um save isolado por
+> processo (`user://test_saves/bot_<pid>/`) e já não toca no save do jogador.
+
+### Ritmo dos 5 mapas (`tools/bot/pacing_<mapa>.json`)
+Cada roteiro põe o jogador no mapa com os upgrades que teria comprado no anterior e faz o ciclo
+detetar → cavar → vender durante 15 min. O tempo do mapa é o gasto previsto nele (upgrades +
+desbloqueio do seguinte) a dividir pela renda medida (2–3 amostras por mapa).
+
+| Mapa | upgrades à chegada | R$/min | itens/min | R$/item vendido | mortes/15 min | gasto no mapa | tempo (bot) | alvo |
+|---|---|---|---|---|---|---|---|---|
+| Praia | — | 22 | 2,5 | ~9 | 0 | 2.700 | **124 min** | 60–80 |
+| Campo | det 1, moch 1, pá 1 | 127 | 2,3 | ~55 | 1 | 11.700 | 92 min | 80–100 |
+| Ruínas | det 3, moch 3, pá 1 | 1.336 | 2,3 | ~573 | 7,5 | 25.000 | **19 min** | 90–110 |
+| Geleira | det 4, moch 4, pá 2 | 2.849 | 2,8 | ~1.124 | 7 | 73.000 | **26 min** | 90–110 |
+| Cratera | det 5, moch 5, pá 2, pin 1 | 2.552 | 1,4 | ~1.986 | 14 | 55.000 | **22 min** | 90–120 |
+
+**Total de bot: ~4 h 43 min** de escavação, mais ~2–4 min por chefe (o bot vence o do Campo em
+40 s) e as missões. A soma até bate com o limite inferior de 7–9 h para um humano, mas a
+**distribuição está errada**: os mapas 1–2 levam 216 min e os 3–5 só 67 min, contra ~140 e
+~290 previstos. A causa é a curva de valores, não o ritmo de escavação (o bot faz 2,3–2,8
+itens/min em todos os mapas):
+- Praia e Campo pagam 3–5x **menos** por item do que a tabela da secção 2 (~50 / ~150): as
+  primeiras descobertas vão para o museu e o pool da Praia é quase só latas.
+- Das Ruínas em diante, o valor por item salta ~10x mas os gastos só sobem 2–3x.
+- Proposta na **#64** (Dev B): ~3,5x nos desbloqueios e upgrades dos mapas 3–5 (ou ÷3 nos
+  valores dos itens desses mapas) e Praia ~2x mais rica ou Campo mais barato.
+- As mortes nos mapas 3–5 são quase todas da mordida sem aviso do Crawler e do Lobo de Gelo
+  (**#63**). Num humano isso alonga esses mapas, mas pela frustração e não pelo desenho.
+
+### Varredura de bugs
+- **Solo (25 roteiros, headless):** 0 `SCRIPT ERROR`, 0 erros de script. Dois roteiros
+  estavam frágeis perante os empurrões da #57: `campo_quest_solo` (o jogador era atirado da torre
+  de fardos antes de olhar para o círculo; agora repete teleporte + olhar num loop) e
+  `praia_quest_solo` (a defesa do barco perde-se ~1 em 3 em solo, equilíbrio apertado e não
+  bug). Os passos falhados dos `praia_300_*` (1–3) são spots fora do alcance, como antes.
+- **Coop (9 pares Praia/Campo, headless):** o cliente dava `SCRIPT ERROR` ("hide_warning in base
+  Nil") porque o setter de `net_attack_point` corria antes do `_ready`. Corrigido no Corvo-Rei, no
+  Polvo e no Espantalho (Dev_Player) e na Múmia (Dev_Detector). Depois disso, os 9 pares passam
+  sem erros. O `coop_campo` falhava por uma corrida de tempos no roteiro (o host saía antes de o
+  cliente ver a flag); isso foi corrigido no roteiro. Uma vez a Key2 ficou "sem foco" e não
+  se reproduziu em 3 corridas. O coop dos mapas 3–5 fica com o Dev_Detector.
+- **Chefes sem `boss_defeated` (Dev_Detector):** a Morsa Anciã, o Mamute, o Yeti, O Que Dorme e
+  O Eco nunca emitiam o sinal no host com frames reais (sem troféu nem progresso). Corrigido, com
+  o teste `test_boss_death_real_frames.gd`.
+- Janela: o Vulkan dá milhares de `swap_chain_resize ... ERR_CANT_CREATE` quando a janela do bot
+  está em segundo plano nesta máquina. É do ambiente, não do jogo.
+
+### Fluxo pela UI (`tools/bot/ui_flow.json`)
+Passos novos no DebugBridge: `ui_tab`, `ui_select` e `ui_press` emitem os mesmos sinais que um
+clique, e há a condição `in_expedition`. O roteiro faz lobby → aba Expedições → escolher o mapa →
+**Partir** → (na Praia cava, apanha e entrega uma lata) → **Voltar à base** → resumo do dia
+(**Fechar**), nos 5 mapas, e acaba no Museu e na Loja. Tudo passa: os resumos mostram o dia, o
+ganho e a lata doada ao museu (+R$ 3), e o progresso comprado pela UI (desbloquear o Campo)
+mantém-se depois de ir e voltar. Capturas em `.bot_runs/ui_flow_*`.

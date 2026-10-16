@@ -11,7 +11,7 @@ const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
 	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore", "fight",
 	"host", "join", "start_expedition", "sleep", "face_player", "goto_player",
-	"interact", "call",
+	"interact", "call", "ui_tab", "ui_select", "ui_press",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
@@ -20,7 +20,7 @@ const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop", "sleep"]
 const CONDITION_VARS: PackedStringArray = [
 	"money", "inventory", "enemies", "spots", "time", "health",
 	"nearest_spot", "free_slots", "deliverable", "sell_dist", "pickup_dist", "enemy_dist", "players",
-	"wave_round", "wave_phase", "wave_left", "bosses",
+	"wave_round", "wave_phase", "wave_left", "bosses", "in_expedition",
 ]
 ## Variáveis com prefixo (#39): flag_<bandeira do WorldFlags> (1/0) e quest_<nome do NPC>
 ## (estado da missão 0..4: OFFER, ACTIVE, READY, EVENT, DONE).
@@ -52,6 +52,10 @@ const GOTO_SPOT_DISTANCE: float = 1.0
 var _run_dir: String = ""
 var _log_file: FileAccess = null
 var _start_msec: int = 0
+## #62: relógio do roteiro em tempo de JOGO (soma dos delta). À velocidade normal é igual ao real;
+## com --fixed-fps 60 em headless o jogo corre mais depressa que o relógio e os tempos medidos
+## (ritmo, timeouts) continuam a ser minutos de jogo.
+var _game_time: float = 0.0
 var _executed: int = 0
 var _errors: PackedStringArray = []
 var _screenshots: PackedStringArray = []
@@ -324,6 +328,18 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			if not _is_number(value) or float(value) < 0.0:
 				return "'sleep' deve ser um numero >= 0"
 			step["seconds"] = float(value)
+		"ui_tab", "ui_press":
+			if not value is String or (value as String).is_empty():
+				return "'%s' deve ser um texto (titulo da aba / nome ou texto do botao)" % kind
+			step["target"] = value
+		"ui_select":
+			if not value is String or (value as String).is_empty():
+				return "'ui_select' deve ser o nome da lista (ItemList/OptionButton)"
+			var item: Variant = d.get("item", "")
+			if not item is String or (item as String).is_empty():
+				return "'item' deve ser o texto (parte) da linha a escolher"
+			step["target"] = value
+			step["item"] = item
 		"face_player", "goto_player":
 			if not value is String or value != "remote":
 				return "'%s' so aceita \"remote\"" % kind
@@ -419,6 +435,11 @@ func _run(script_path: String) -> void:
 	var parsed: Dictionary = parse_script(JSON.parse_string(text) if not text.is_empty() else null)
 	_open_run_dir(script_path)
 	_log("roteiro: %s" % script_path)
+	# #62: o bot nunca toca no save do jogador (user://scandig_save.json). Save isolado e vazio
+	# por processo (host e convidado do coop não partilham); assim o set_state também não é
+	# esmagado pelo save do disco ao começar a primeira expedição.
+	if SaveManager.instance != null:
+		SaveManager.instance.use_test_save_dir("bot_%d" % OS.get_process_id())
 	if not parsed["ok"]:
 		for e: String in parsed["errors"]:
 			_error(e)
@@ -462,7 +483,9 @@ func _start_monitoring() -> void:
 			(n as SellPoint).items_delivered.connect(_on_items_delivered)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if _start_msec > 0:
+		_game_time += delta
 	if not _monitoring:
 		return
 	var now: float = _elapsed()
@@ -531,7 +554,7 @@ func _fail(msg: String) -> void:
 
 
 func _elapsed() -> float:
-	return (Time.get_ticks_msec() - _start_msec) / 1000.0
+	return _game_time
 
 
 func _wait_until_time(t: float) -> void:
@@ -591,6 +614,15 @@ func _execute(step: Dictionary) -> void:
 			await _join(step["ip"], step["port"], step["timeout"])
 		"start_expedition":
 			await _start_expedition(step["map_id"], step["timeout"])
+		"ui_tab":
+			_ui_tab(step["target"])
+			# O TabContainer só mostra a página nova no frame seguinte.
+			await get_tree().process_frame
+			await get_tree().process_frame
+		"ui_select":
+			_ui_select(step["target"], step["item"])
+		"ui_press":
+			_ui_press(step["target"])
 		"sleep":
 			await _sleep(step["seconds"])
 		"face_player":
@@ -1121,6 +1153,9 @@ func _condition_value(var_name: String) -> float:
 			if var_name == "wave_round":
 				return float(wave.round_number)
 			return float(wave.phase) if var_name == "wave_phase" else float(wave.enemies_left)
+		"in_expedition":
+			var sm: SessionManager = SessionManager.instance
+			return 1.0 if sm != null and sm.is_in_expedition() else 0.0
 		"bosses":
 			var alive: int = 0
 			for n: Node in get_tree().get_nodes_in_group(&"bosses"):
@@ -1278,7 +1313,10 @@ func _interact_with(target_name: String, walk: bool, timeout: float) -> void:
 	for i: int in 3:
 		await get_tree().process_frame
 	if Interactable.get_focused() != it:
-		_fail("interact: '%s' sem foco (alvo do proprio jogador ou fora do cone)" % target_name)
+		var fo: Interactable = Interactable.get_focused()
+		_fail("interact: '%s' sem foco (alvo do proprio jogador ou fora do cone; alvo em %s, jogador em %s, a %.1f m, ativo=%s, focado=%s)" % [
+			target_name, _vec(focus), _vec(player.global_position), player.global_position.distance_to(focus),
+			it.active, String(fo.name) if fo != null else "nenhum"])
 	await _hold_action("interact", TAP_SECONDS)
 	await get_tree().process_frame
 
@@ -1362,6 +1400,84 @@ func _start_expedition(map_id: String, timeout: float) -> void:
 			return
 		await get_tree().process_frame
 	_log("  expedicao em %s" % get_tree().current_scene.scene_file_path)
+
+
+# --- UI (#62): os mesmos sinais que um clique do jogador ----------------------
+
+## Muda o TabContainer visível que tem uma aba com este título.
+func _ui_tab(title: String) -> void:
+	for tc: Node in _find_all(get_tree().root, func(n: Node) -> bool: return n is TabContainer and (n as Control).is_visible_in_tree()):
+		var t: TabContainer = tc as TabContainer
+		for i: int in t.get_tab_count():
+			if t.get_tab_title(i) == title:
+				t.current_tab = i
+				_log("  aba '%s'" % title)
+				return
+	_fail("ui_tab: nenhuma aba visivel '%s'" % title)
+
+
+## Escolhe a 1.ª linha de uma ItemList/OptionButton (pelo nome do nó) cujo texto contém `item`.
+func _ui_select(list_name: String, item: String) -> void:
+	var node: Node = _find_control(list_name)
+	if node is ItemList:
+		var il: ItemList = node as ItemList
+		for i: int in il.item_count:
+			if il.get_item_text(i).contains(item):
+				il.select(i)
+				il.item_selected.emit(i)
+				_log("  '%s' -> '%s'" % [list_name, il.get_item_text(i)])
+				return
+	elif node is OptionButton:
+		var ob: OptionButton = node as OptionButton
+		for i: int in ob.item_count:
+			if ob.get_item_text(i).contains(item):
+				ob.select(i)
+				ob.item_selected.emit(i)
+				_log("  '%s' -> '%s'" % [list_name, ob.get_item_text(i)])
+				return
+	var rows: PackedStringArray = []
+	if node is ItemList:
+		for i: int in (node as ItemList).item_count:
+			rows.append((node as ItemList).get_item_text(i))
+	_fail("ui_select: '%s' sem linha com '%s' (linhas: %s; no %s)" % [list_name, item, " | ".join(rows), "encontrado" if node != null else "nao encontrado/visivel"])
+
+
+## Carrega num botão visível e ativo, pelo nome do nó ou por parte do texto.
+func _ui_press(target: String) -> void:
+	var btn: BaseButton = _find_control(target) as BaseButton
+	if btn == null:
+		for n: Node in _find_all(get_tree().root, func(x: Node) -> bool:
+				return x is Button and (x as Button).is_visible_in_tree() and (x as Button).text.contains(target)):
+			btn = n as BaseButton
+			break
+	if btn == null:
+		_fail("ui_press: botao '%s' nao encontrado/visivel" % target)
+		return
+	if btn.disabled:
+		_fail("ui_press: botao '%s' desativado (%s)" % [target, (btn as Button).text if btn is Button else ""])
+		return
+	btn.pressed.emit()
+	_log("  carregou '%s'" % ((btn as Button).text if btn is Button else String(btn.name)))
+
+
+## Control visível com este nome de nó.
+func _find_control(node_name: String) -> Node:
+	for n: Node in _find_all(get_tree().root, func(x: Node) -> bool:
+			return x is Control and String(x.name) == node_name and (x as Control).is_visible_in_tree()):
+		return n
+	return null
+
+
+func _find_all(root: Node, pred: Callable) -> Array[Node]:
+	var out: Array[Node] = []
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if pred.call(n):
+			out.append(n)
+		for c: Node in n.get_children():
+			stack.append(c)
+	return out
 
 
 ## Vira o jogador local para o jogador remoto mais próximo (para capturas em coop).

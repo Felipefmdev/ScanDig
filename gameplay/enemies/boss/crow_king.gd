@@ -98,7 +98,8 @@ var phase: int = 1
 var net_attack_point: Vector3 = Vector3.ZERO:
 	set(value):
 		net_attack_point = value
-		if not has_simulation_authority():
+		# O synchronizer aplica-o ao nascer, antes do _ready (avisos ainda por criar).
+		if not has_simulation_authority() and is_node_ready():
 			_refresh_remote_visuals()
 var net_attack_dir: Vector3 = Vector3.FORWARD
 ## Replicada: ferramenta que leva no bico (&"" = nenhuma; &"?" = pá/sem modelo).
@@ -145,6 +146,8 @@ func _ready() -> void:
 		# Chega do alto, a voar para o círculo.
 		global_position = _home + Vector3(0.0, circle_height + 10.0, 18.0)
 	_enter_state(State.ARRIVE)
+	if not has_simulation_authority():
+		_refresh_remote_visuals()
 
 
 func setup_network() -> void:
