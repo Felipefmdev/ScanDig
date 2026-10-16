@@ -23,6 +23,7 @@ CoreSave="*res://core/save_manager.gd"
 CoreSession="*res://core/session_manager.gd"
 CoreSettings="*res://core/settings_manager.gd"
 CoreSessionUI="*res://ui/session_ui.tscn"
+CorePauseMenu="*res://ui/pause_menu.tscn"
 DebugBridge="*res://gameplay/debug/debug_bridge.gd"
 
 [display]

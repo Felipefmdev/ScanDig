@@ -1,0 +1,323 @@
+class_name SettingsMenu
+extends PanelContainer
+
+## Tela de Configurações (#77): abas Vídeo / Áudio / Controles / Jogabilidade. Só fala com o
+## SettingsManager. As mudanças ficam pendentes até Aplicar; modo de janela e resolução pedem
+## confirmação e voltam sozinhos em 10 s.
+
+signal closed
+
+const WINDOW_LABELS: Dictionary = {"windowed": "Janela", "fullscreen": "Tela cheia", "borderless": "Tela cheia sem borda"}
+const QUALITY_LABELS: Dictionary = {"low": "Baixa", "medium": "Média", "high": "Alta"}
+const AUDIO_LABELS: Dictionary = {"master": "Volume geral", "music": "Música", "sfx": "Efeitos"}
+const TAB_VIDEO: int = 0
+const TAB_AUDIO: int = 1
+
+var tabs: TabContainer = null
+var window_mode_option: OptionButton = null
+var resolution_option: OptionButton = null
+var vsync_check: CheckBox = null
+var fps_option: OptionButton = null
+var ui_scale_slider: HSlider = null
+var ui_scale_value: Label = null
+var quality_option: OptionButton = null
+var audio_sliders: Dictionary = {}
+var audio_values: Dictionary = {}
+var apply_button: Button = null
+var defaults_button: Button = null
+var back_button: Button = null
+var confirm_panel: PanelContainer = null
+var confirm_label: Label = null
+var keep_button: Button = null
+var revert_button: Button = null
+
+var _resolutions: Array[Vector2i] = []
+var _trial_left: float = 0.0
+
+
+func _ready() -> void:
+	theme_type_variation = &"WornPanel"
+	custom_minimum_size = Vector2(640, 0)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	_build()
+	var sm: SettingsManager = SettingsManager.instance
+	if sm != null:
+		sm.video_trial_finished.connect(_on_video_trial_finished)
+	refresh()
+
+
+func _process(delta: float) -> void:
+	if confirm_panel == null or not confirm_panel.visible:
+		return
+	_trial_left = maxf(_trial_left - delta, 0.0)
+	confirm_label.text = "Manter este modo de vídeo?\nVoltando ao anterior em %d s." % ceili(_trial_left)
+
+
+# --- Montagem ------------------------------------------------------------------
+
+func _margin(child: Control, size: int) -> MarginContainer:
+	var margin: MarginContainer = MarginContainer.new()
+	for side: String in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, size)
+	margin.add_child(child)
+	return margin
+
+
+func _row(grid: GridContainer, text: String, control: Control) -> void:
+	var label: Label = Label.new()
+	label.text = text
+	grid.add_child(label)
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(control)
+
+
+func _option(items: Array) -> OptionButton:
+	var option: OptionButton = OptionButton.new()
+	option.focus_mode = Control.FOCUS_NONE
+	for item: Variant in items:
+		option.add_item(str(item))
+	return option
+
+
+func _slider_row(grid: GridContainer, text: String, min_value: float, max_value: float, step: float) -> Array:
+	var box: HBoxContainer = HBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	var slider: HSlider = HSlider.new()
+	slider.min_value = min_value
+	slider.max_value = max_value
+	slider.step = step
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slider.focus_mode = Control.FOCUS_NONE
+	var value: Label = Label.new()
+	value.custom_minimum_size = Vector2(64, 0)
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	box.add_child(slider)
+	box.add_child(value)
+	_row(grid, text, box)
+	return [slider, value]
+
+
+func _grid() -> GridContainer:
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 24)
+	grid.add_theme_constant_override("v_separation", 12)
+	return grid
+
+
+func _build() -> void:
+	var box: VBoxContainer = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	add_child(_margin(box, 18))
+
+	var title: Label = Label.new()
+	title.text = "Configurações"
+	title.theme_type_variation = &"TitleLabel"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+
+	tabs = TabContainer.new()
+	tabs.custom_minimum_size = Vector2(0, 300)
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(tabs)
+
+	# Vídeo
+	var video: GridContainer = _grid()
+	window_mode_option = _option(WINDOW_LABELS.values())
+	window_mode_option.item_selected.connect(func(_i: int) -> void: _update_resolution_enabled())
+	_row(video, "Modo de janela", window_mode_option)
+	_resolutions = SettingsManager.available_resolutions()
+	var res_labels: Array = []
+	for res: Vector2i in _resolutions:
+		res_labels.append("%d × %d" % [res.x, res.y])
+	resolution_option = _option(res_labels)
+	_row(video, "Resolução", resolution_option)
+	vsync_check = CheckBox.new()
+	vsync_check.text = "Ligado"
+	vsync_check.focus_mode = Control.FOCUS_NONE
+	_row(video, "VSync", vsync_check)
+	var fps_labels: Array = []
+	for fps: int in SettingsManager.FPS_LIMITS:
+		fps_labels.append("Ilimitado" if fps == 0 else str(fps))
+	fps_option = _option(fps_labels)
+	_row(video, "Limite de FPS", fps_option)
+	var scale_row: Array = _slider_row(video, "Escala da interface", 90.0, 130.0, 5.0)
+	ui_scale_slider = scale_row[0]
+	ui_scale_value = scale_row[1]
+	ui_scale_slider.value_changed.connect(func(v: float) -> void: ui_scale_value.text = "%d %%" % int(v))
+	quality_option = _option(QUALITY_LABELS.values())
+	_row(video, "Qualidade gráfica", quality_option)
+	var video_page: MarginContainer = _margin(video, 14)
+	video_page.name = "Vídeo"
+	tabs.add_child(video_page)
+
+	# Áudio
+	var audio: GridContainer = _grid()
+	for key: String in AUDIO_LABELS.keys():
+		var row: Array = _slider_row(audio, AUDIO_LABELS[key], 0.0, 100.0, 5.0)
+		var slider: HSlider = row[0]
+		var value: Label = row[1]
+		slider.value_changed.connect(func(v: float) -> void: value.text = "Mudo" if v <= 0.0 else "%d %%" % int(v))
+		audio_sliders[key] = slider
+		audio_values[key] = value
+	var audio_page: MarginContainer = _margin(audio, 14)
+	audio_page.name = "Áudio"
+	tabs.add_child(audio_page)
+
+	# Etapas 2 e 3 (#77).
+	for tab_name: String in ["Controles", "Jogabilidade"]:
+		var soon: Label = Label.new()
+		soon.text = "Em breve."
+		soon.theme_type_variation = &"HintLabel"
+		var page: MarginContainer = _margin(soon, 14)
+		page.name = tab_name
+		tabs.add_child(page)
+		tabs.set_tab_disabled(tabs.get_tab_count() - 1, true)
+
+	var buttons: HBoxContainer = HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 12)
+	defaults_button = Button.new()
+	defaults_button.text = "Restaurar padrão"
+	back_button = Button.new()
+	back_button.text = "Voltar"
+	apply_button = Button.new()
+	apply_button.text = "Aplicar"
+	apply_button.theme_type_variation = &"PrimaryButton"
+	for button: Button in [defaults_button, back_button, apply_button]:
+		button.custom_minimum_size = Vector2(0, 44)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.focus_mode = Control.FOCUS_NONE
+		buttons.add_child(button)
+	box.add_child(buttons)
+	defaults_button.pressed.connect(_on_defaults_pressed)
+	back_button.pressed.connect(_on_back_pressed)
+	apply_button.pressed.connect(_on_apply_pressed)
+
+	# Confirmação do modo de vídeo (por cima das abas).
+	confirm_panel = PanelContainer.new()
+	confirm_panel.theme_type_variation = &"WornPanel"
+	confirm_panel.visible = false
+	var confirm_box: VBoxContainer = VBoxContainer.new()
+	confirm_box.add_theme_constant_override("separation", 12)
+	confirm_label = Label.new()
+	confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	confirm_box.add_child(confirm_label)
+	var confirm_buttons: HBoxContainer = HBoxContainer.new()
+	confirm_buttons.add_theme_constant_override("separation", 12)
+	keep_button = Button.new()
+	keep_button.text = "Manter"
+	keep_button.theme_type_variation = &"PrimaryButton"
+	revert_button = Button.new()
+	revert_button.text = "Voltar ao anterior"
+	for button: Button in [revert_button, keep_button]:
+		button.custom_minimum_size = Vector2(0, 44)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.focus_mode = Control.FOCUS_NONE
+		confirm_buttons.add_child(button)
+	confirm_box.add_child(confirm_buttons)
+	confirm_panel.add_child(_margin(confirm_box, 18))
+	box.add_child(confirm_panel)
+	keep_button.pressed.connect(func() -> void: SettingsManager.instance.confirm_video_trial())
+	revert_button.pressed.connect(func() -> void: SettingsManager.instance.revert_video_trial())
+
+
+# --- Valores -------------------------------------------------------------------
+
+## Mostra os valores atuais do SettingsManager (descarta o que estava pendente).
+func refresh() -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null:
+		return
+	var video: Dictionary = sm.get_section(SettingsManager.VIDEO)
+	window_mode_option.select(maxi(WINDOW_LABELS.keys().find(video["window_mode"]), 0))
+	var res_index: int = _resolutions.find(video["resolution"])
+	if res_index < 0:
+		res_index = _resolutions.find(Vector2i(1280, 720))
+	if res_index >= 0:
+		resolution_option.select(res_index)
+	vsync_check.button_pressed = bool(video["vsync"])
+	fps_option.select(maxi(SettingsManager.FPS_LIMITS.find(int(video["max_fps"])), 0))
+	ui_scale_slider.value = roundf(float(video["ui_scale"]) * 100.0)
+	ui_scale_value.text = "%d %%" % int(ui_scale_slider.value)
+	quality_option.select(maxi(QUALITY_LABELS.keys().find(video["quality"]), 0))
+	_update_resolution_enabled()
+	var audio: Dictionary = sm.get_section(SettingsManager.AUDIO)
+	for key: String in audio_sliders.keys():
+		var slider: HSlider = audio_sliders[key]
+		slider.value = roundf(float(audio[key]) * 100.0)
+		(audio_values[key] as Label).text = "Mudo" if slider.value <= 0.0 else "%d %%" % int(slider.value)
+
+
+func pending_video() -> Dictionary:
+	var values: Dictionary = {
+		"window_mode": WINDOW_LABELS.keys()[maxi(window_mode_option.selected, 0)],
+		"vsync": vsync_check.button_pressed,
+		"max_fps": SettingsManager.FPS_LIMITS[maxi(fps_option.selected, 0)],
+		"ui_scale": ui_scale_slider.value / 100.0,
+		"quality": QUALITY_LABELS.keys()[maxi(quality_option.selected, 0)],
+	}
+	if resolution_option.selected >= 0 and resolution_option.selected < _resolutions.size():
+		values["resolution"] = _resolutions[resolution_option.selected]
+	return values
+
+
+func pending_audio() -> Dictionary:
+	var values: Dictionary = {}
+	for key: String in audio_sliders.keys():
+		values[key] = (audio_sliders[key] as HSlider).value / 100.0
+	return values
+
+
+func _update_resolution_enabled() -> void:
+	# Resolução só vale em janela; em tela cheia vale a do monitor.
+	resolution_option.disabled = WINDOW_LABELS.keys()[maxi(window_mode_option.selected, 0)] != "windowed"
+
+
+# --- Botões --------------------------------------------------------------------
+
+func _on_apply_pressed() -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null:
+		return
+	sm.set_section(SettingsManager.AUDIO, pending_audio())
+	var video: Dictionary = pending_video()
+	if SettingsManager.needs_video_trial(sm.get_section(SettingsManager.VIDEO), video):
+		_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
+		confirm_panel.visible = true
+		tabs.visible = false
+		sm.begin_video_trial(video)
+	else:
+		sm.set_section(SettingsManager.VIDEO, video)
+
+
+func _on_defaults_pressed() -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null:
+		return
+	if tabs.current_tab == TAB_AUDIO:
+		sm.restore_defaults(SettingsManager.AUDIO)
+	elif tabs.current_tab == TAB_VIDEO:
+		var defaults: Dictionary = (SettingsManager.DEFAULTS[SettingsManager.VIDEO] as Dictionary).duplicate()
+		if SettingsManager.needs_video_trial(sm.get_section(SettingsManager.VIDEO), defaults):
+			_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
+			confirm_panel.visible = true
+			tabs.visible = false
+			sm.begin_video_trial(defaults)
+		else:
+			sm.restore_defaults(SettingsManager.VIDEO)
+	refresh()
+
+
+func _on_back_pressed() -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm != null and sm.is_video_trial_active():
+		sm.revert_video_trial()
+	refresh()
+	closed.emit()
+
+
+func _on_video_trial_finished(_kept: bool) -> void:
+	confirm_panel.visible = false
+	tabs.visible = true
+	refresh()

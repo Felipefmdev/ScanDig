@@ -3,7 +3,7 @@
 extends SceneTree
 
 const THEME_PATH: String = "res://ui/theme/scandig_theme.tres"
-const SCENES: Array[String] = ["res://ui/hud.tscn", "res://ui/multiplayer_menu.tscn", "res://ui/base_station_ui.tscn", "res://ui/session_ui.tscn"]
+const SCENES: Array[String] = ["res://ui/hud.tscn", "res://ui/multiplayer_menu.tscn", "res://ui/base_station_ui.tscn", "res://ui/session_ui.tscn", "res://ui/pause_menu.tscn"]
 
 var _fails: int = 0
 var _theme: Theme = null

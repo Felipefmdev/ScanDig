@@ -157,6 +157,17 @@ func _run() -> void:
 	await _shot("barras")
 	bars_layer.queue_free()
 
+	# Menu de pausa e Configurações (#77), por cima da expedição.
+	var pause: PauseMenu = PauseMenu.instance
+	if pause != null and pause.open():
+		await _shot("pausa")
+		pause.settings_button.pressed.emit()
+		await _shot("config_video")
+		pause.settings_menu.tabs.current_tab = 1
+		await _shot("config_audio")
+		pause.settings_menu.tabs.current_tab = 0
+		pause.close()
+
 
 	session.set("_current_map", null)
 	ui._refresh_expedition_bar()
