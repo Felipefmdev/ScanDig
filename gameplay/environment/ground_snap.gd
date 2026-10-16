@@ -12,7 +12,7 @@ extends Node3D
 
 @export var sink: float = 0.05
 ## Que chão usar: Praia (BeachTerrain) ou Campo (FieldTerrain).
-@export_enum("Praia", "Campo") var terrain: int = 0
+@export_enum("Praia", "Campo", "Ruinas") var terrain: int = 0
 
 
 func _ready() -> void:
@@ -34,4 +34,9 @@ func snap() -> void:
 
 
 func _height(x: float, z: float) -> float:
-	return FieldTerrain.height_at(x, z) if terrain == 1 else BeachTerrain.height_at(x, z)
+	match terrain:
+		1:
+			return FieldTerrain.height_at(x, z)
+		2:
+			return RuinsTerrain.height_at(x, z)
+	return BeachTerrain.height_at(x, z)

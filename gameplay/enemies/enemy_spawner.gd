@@ -37,6 +37,8 @@ const KIND_SCENES: Dictionary = {
 	&"crow": "res://gameplay/enemies/crow/crow.tscn",
 	&"crow_king": "res://gameplay/enemies/boss/crow_king.tscn",
 	&"scarecrow": "res://gameplay/enemies/boss/scarecrow.tscn",
+	&"stone_guardian": "res://gameplay/enemies/stone_guardian/stone_guardian.tscn",
+	&"bat": "res://gameplay/enemies/bat/bat.tscn",
 }
 
 ## Inimigo base do mapa (níveis de ameaça e ambiente) e o "resistente" a partir do nível 2.

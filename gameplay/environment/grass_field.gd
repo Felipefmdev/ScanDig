@@ -17,7 +17,7 @@ const GREEN_LIGHT: Color = Color(0.4, 0.62, 0.16)
 @export var exclusion_zones: Array[Vector3] = []
 @export var max_x: float = 24.0
 ## Que chão usar: Praia (BeachTerrain) ou Campo (FieldTerrain).
-@export_enum("Praia", "Campo") var terrain: int = 0
+@export_enum("Praia", "Campo", "Ruinas") var terrain: int = 0
 @export var color_dark: Color = GREEN_DARK
 @export var color_light: Color = GREEN_LIGHT
 
@@ -75,7 +75,12 @@ func rebuild() -> void:
 
 
 func _height(x: float, z: float) -> float:
-	return FieldTerrain.height_at(x, z) if terrain == 1 else BeachTerrain.height_at(x, z)
+	match terrain:
+		1:
+			return FieldTerrain.height_at(x, z)
+		2:
+			return RuinsTerrain.height_at(x, z)
+	return BeachTerrain.height_at(x, z)
 
 
 func _excluded(x: float, z: float) -> bool:

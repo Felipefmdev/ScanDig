@@ -34,6 +34,18 @@ func show_circle(center: Vector3, radius: float) -> void:
 	visible = true
 
 
+## Faixa retangular de `start` ao longo de `dir` (investidas, rolar).
+func show_line(start: Vector3, dir: Vector3, length: float, width: float = 1.4) -> void:
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(width, 0.02, length)
+	mesh = box
+	var d: Vector3 = Vector3(dir.x, 0.0, dir.z).normalized()
+	var basis: Basis = Basis.looking_at(d, Vector3.UP) if d.length_squared() > 0.001 else Basis.IDENTITY
+	global_transform = Transform3D(basis, start + d * length * 0.5 + Vector3.UP * 0.04)
+	_time = 0.0
+	visible = true
+
+
 func hide_warning() -> void:
 	visible = false
 

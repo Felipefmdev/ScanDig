@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://gameplay/enemies/bat/bat.gd" id="1_bat"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bat"]
+size = Vector3(0.7, 0.3, 0.5)
+
+[node name="Bat" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 0
+script = ExtResource("1_bat")
+circle_radius = 3.5
+circle_height = 3.0
+fly_speed = 8.0
+dive_speed = 12.0
+circle_time_min = 1.5
+circle_time_max = 3.0
+peck_damage = 5.0
+max_dives = 8
+max_health = 15.0
+death_color = Color(0.25, 0.2, 0.22, 1)
+stun_fx_height = 0.3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_bat")

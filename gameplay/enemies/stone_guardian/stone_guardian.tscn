@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://gameplay/enemies/stone_guardian/stone_guardian.gd" id="1_sg"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sg"]
+size = Vector3(1.0, 2.2, 0.8)
+
+[node name="StoneGuardian" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 1
+script = ExtResource("1_sg")
+max_health = 140.0
+death_color = Color(0.68, 0.63, 0.55, 1)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+shape = SubResource("BoxShape3D_sg")

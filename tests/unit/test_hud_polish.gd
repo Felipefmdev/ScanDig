@@ -77,3 +77,12 @@ func test_avatar_head_stays_on_the_neck_when_looking_down() -> void:
 	var torso_top: Vector3 = torso.position + Vector3(0.0, 0.31, 0.0)
 	assert_almost_eq(pivot.position.distance_to(torso_top), 0.0, 0.001)
 	assert_lt(avatar.get_node(^"UpperBody").rotation.x, 0.0, "a olhar para baixo inclina o tronco")
+
+
+func test_knockback_pushes_and_removes_control_for_a_while() -> void:
+	# #57: empurrão dos inimigos; só o dono aplica (aqui offline = local).
+	var player: Player = _spawn_player()
+	player.apply_knockback(Vector3(8.0, 5.0, 0.0), 0.05)
+	assert_almost_eq(player.velocity.x, 8.0, 0.001)
+	assert_gt(player._knockback_time, 0.0, "a voar sem controlo")
+	assert_lte(player._knockback_time, Player.KNOCKBACK_TIME_MAX)

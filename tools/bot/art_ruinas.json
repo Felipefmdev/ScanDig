@@ -1,0 +1,26 @@
+{
+	"scene": "res://world/map_ruinas.tscn",
+	"steps": [
+		{"t": 0.5, "teleport": [-2.0, 0.6, 10.0]},
+		{"t": 0.6, "look_at": [0.0, 1.5, -14.0]},
+		{"t": 2.5, "screenshot": "01_patio_templo"},
+		{"t": 2.6, "dump": "01_patio_templo"},
+		{"t": 2.8, "teleport": [0.0, 1.6, -15.5]},
+		{"t": 2.9, "look_at": [0.0, 1.8, -26.0]},
+		{"t": 4.4, "screenshot": "02_salao_trono"},
+		{"t": 4.5, "teleport": [-12.0, 0.6, -3.0]},
+		{"t": 4.6, "look_at": [-22.0, -1.0, -6.0]},
+		{"t": 6.1, "screenshot": "03_cripta"},
+		{"t": 6.2, "teleport": [12.0, 0.6, -10.0]},
+		{"t": 6.3, "look_at": [20.0, 0.5, -15.0]},
+		{"t": 7.8, "screenshot": "04_patio_guardiao"},
+		{"t": 7.9, "teleport": [5.0, 0.6, 9.0]},
+		{"t": 8.0, "look_at": [8.5, 0.8, 6.0]},
+		{"t": 9.5, "screenshot": "05_base_banca"},
+		{"t": 9.6, "teleport": [20.0, 1.5, 20.0]},
+		{"t": 9.7, "look_at": [-5.0, 0.5, -10.0]},
+		{"t": 11.2, "screenshot": "06_vista_geral"},
+		{"t": 11.3, "dump": "06_vista_geral"},
+		{"t": 11.6, "quit": true}
+	]
+}

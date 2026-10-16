@@ -7,6 +7,8 @@
 		{"t": 4.6, "screenshot": "04_inimigos"},
 		{"t": 5.8, "screenshot": "05_kit_materiais"},
 		{"t": 7.0, "screenshot": "06_caranguejo_tras"},
-		{"t": 7.3, "quit": true}
+		{"t": 8.2, "screenshot": "07_ruinas_inimigos"},
+		{"t": 9.4, "screenshot": "08_chefes_campo"},
+		{"t": 9.7, "quit": true}
 	]
 }

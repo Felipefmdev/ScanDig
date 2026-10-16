@@ -483,6 +483,18 @@ func _deal_damage(target: Node, amount: float) -> void:
 	target.call("take_damage", final_amount)
 
 
+## Empurra o jogador (#57, caos How to Fish): impulso em m/s e tremor da câmara. A física do
+## jogador é do dono: num jogador de outro peer vai por RPC (como o apply_damage). Sem
+## Player.apply_knockback (versões antigas, testes) não faz nada.
+func _knockback(target: Node, impulse: Vector3, shake: float = 0.0) -> void:
+	if target == null or not target.has_method(&"apply_knockback"):
+		return
+	if NetVisibility.is_online(multiplayer) and target.get_multiplayer_authority() != multiplayer.get_unique_id():
+		target.rpc_id(target.get_multiplayer_authority(), &"apply_knockback", impulse, shake)
+		return
+	target.call(&"apply_knockback", impulse, shake)
+
+
 ## Regista um material para o flash de dano. Toon (ShaderMaterial): anima flash_amount 1 → 0.
 ## StandardMaterial3D: albedo_color é animado de volta à cor base.
 func _register_flash_material(mat: Material) -> void:

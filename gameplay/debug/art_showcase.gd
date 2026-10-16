@@ -16,6 +16,11 @@ const SUBJECTS: Array = [
 	["res://gameplay/enemies/snake/snake.tscn", Vector3(18.0, 0.0, 0.0), 0.0],
 	["res://gameplay/enemies/seagull/seagull.tscn", Vector3(20.0, 0.6, 0.0), 0.0],
 	["res://gameplay/enemies/boss/giant_mole.tscn", Vector3(25.0, 0.0, 0.0), 0.0],
+	["res://gameplay/enemies/stone_guardian/stone_guardian.tscn", Vector3(32.0, 0.0, 0.0), 0.0],
+	["res://gameplay/enemies/bat/bat.tscn", Vector3(34.5, 1.2, 0.0), 0.0],
+	["res://gameplay/enemies/crow/crow.tscn", Vector3(36.5, 1.2, 0.0), 0.0],
+	["res://gameplay/enemies/boss/crow_king.tscn", Vector3(41.0, 1.0, 0.0), 0.0],
+	["res://gameplay/enemies/boss/scarecrow.tscn", Vector3(46.0, 0.0, 0.0), 0.0],
 ]
 const KIT: Array[StringName] = [&"metal_rust", &"wood", &"paint_red", &"paint_green", &"carapace", &"vertex"]
 
@@ -27,6 +32,8 @@ const SHOTS: Array = [
 	[Vector3(12.5, 6.0, -21.0), Vector3(12.5, 0.6, 0.0), 45.0],
 	[Vector3(5.0, 2.4, 1.0), Vector3(5.0, 0.5, 6.0), 45.0],
 	[Vector3(-1.3, 0.9, 1.2), Vector3(0.0, 0.3, 0.0), 40.0],
+	[Vector3(34.0, 2.2, -5.0), Vector3(33.0, 1.0, 0.0), 42.0],
+	[Vector3(43.5, 3.5, -8.0), Vector3(43.5, 1.2, 0.0), 45.0],
 ]
 
 var _cam: Camera3D = null

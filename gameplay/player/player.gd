@@ -54,6 +54,12 @@ const TOOL_SLINGSHOT: StringName = &"estilingue"
 const TOOL_REPELLENT: StringName = &"repelente"
 const TOOL_NET_TRAP: StringName = &"armadilha_rede"
 const TOOL_MEDKIT: StringName = &"kit_medico"
+const TOOL_LANTERN: StringName = &"lanterna_magnesio"
+## Recarga do clarão da Lanterna de Magnésio (#42).
+const LANTERN_COOLDOWN: float = 4.0
+## Empurrão (#57): segundos sem controlo por m/s de impulso, e o máximo.
+const KNOCKBACK_TIME_PER_SPEED: float = 0.05
+const KNOCKBACK_TIME_MAX: float = 0.9
 ## Modelos na mão (#37) das ferramentas sem nó próprio no player.tscn (o estilingue tem).
 const MEDKIT_MODEL: Script = preload("res://gameplay/weapons/medkit/medkit_model.gd")
 const REPELLENT_MODEL: Script = preload("res://gameplay/weapons/repellent/repellent_model.gd")
@@ -127,6 +133,8 @@ var held_tool_id: StringName = &"":
 var _dig_cooldown: float = 0.0
 var _attack_cooldown: float = 0.0
 var _shake_tween: Tween = null
+## #57: tempo a voar depois de um empurrão (sem controlo nem atrito no chão).
+var _knockback_time: float = 0.0
 var _threat_fill_style: StyleBoxFlat = null
 var _spawn_transform: Transform3D = Transform3D.IDENTITY
 var _target_pickup: ItemPickup = null
@@ -313,7 +321,9 @@ func _physics_process(delta: float) -> void:
 	var input_dir: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
-	if direction != Vector3.ZERO:
+	if _knockback_time > 0.0:
+		_knockback_time -= delta
+	elif direction != Vector3.ZERO:
 		velocity.x = direction.x * speed
 		velocity.z = direction.z * speed
 	else:
@@ -750,6 +760,18 @@ func _shake_camera(strength: float, duration: float) -> void:
 func apply_damage(amount: float, _from: Vector3 = Vector3.INF) -> void:
 	if is_local():
 		take_damage(amount)
+
+
+## #57: empurrão exagerado (inimigos/chefes). Como apply_damage: quem acerta chama
+## `apply_knockback.rpc_id(dono, impulse, shake)` num jogador remoto; só o dono aplica.
+@rpc("any_peer", "call_local", "reliable")
+func apply_knockback(impulse: Vector3, shake: float = 0.0) -> void:
+	if not is_local() or health <= 0.0:
+		return
+	velocity += impulse
+	_knockback_time = clampf(impulse.length() * KNOCKBACK_TIME_PER_SPEED, 0.15, KNOCKBACK_TIME_MAX)
+	if shake > 0.0:
+		_shake_camera(shake, 0.3)
 
 
 func take_damage(amount: float) -> void:
@@ -1209,6 +1231,8 @@ func _handle_use_tool_action() -> void:
 	match c.tool_id:
 		TOOL_SLINGSHOT:
 			_fire_slingshot()
+		TOOL_LANTERN:
+			_flash_lantern(c)
 		TOOL_REPELLENT:
 			_use_repellent()
 			_consume(c)
@@ -1223,6 +1247,19 @@ func _handle_use_tool_action() -> void:
 			SFX.play_ui(SFX.MEDKIT)
 			_show_temporary_message("🩹 +%d de vida" % int(medkit_heal), Color(0.5, 1.0, 0.55), 1.2)
 			_consume(c)
+
+
+## Clarão em cone (LanternFlash, Dev_Detector): atordoa e espanta; em coop o stun vai ao host.
+func _flash_lantern(c: CarriedItem) -> void:
+	var hit: int = LanternFlash.fire(camera.global_position, -camera.global_transform.basis.z, self)
+	if hit < 0:
+		return
+	_use_cooldown = LANTERN_COOLDOWN
+	if c.tool_data.charges > 0:
+		_consume(c)
+		_use_cooldown = LANTERN_COOLDOWN
+	if hit > 0:
+		_show_temporary_message("Flash! %d atordoado%s" % [hit, "" if hit == 1 else "s"], Color(1.0, 0.95, 0.6), 1.2)
 
 
 ## Gasta uma carga do item selecionado; remove-o do slot quando acaba.
