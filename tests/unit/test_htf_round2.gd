@@ -236,3 +236,35 @@ func test_player_detects_style_kills() -> void:
 	assert_true(player.on_style_kill("", player.global_position + Vector3(20, 0, 0)).has("longe"), "de longe")
 	player._style_kill_times.clear()
 	assert_true(player.on_style_kill("arremesso", player.global_position).has("arremesso"))
+
+
+# --- HUD dos sistemas novos --------------------------------------------------
+
+func test_extra_hud_shows_throw_charge_and_weight() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	assert_not_null(player.throw_charge_bar)
+	assert_not_null(player.boss_timer_label)
+	player._drop_holding = true
+	player._drop_hold = player.throw_charge_delay + player.throw_charge_time
+	player._update_extra_hud()
+	assert_true(player.throw_charge_bar.visible, "barra de carga visível ao segurar Q")
+	player._drop_holding = false
+	player._drop_hold = 0.0
+	player._update_extra_hud()
+	assert_false(player.throw_charge_bar.visible)
+	player.inventory.add_item(_find(ItemData.SizeCategory.GRANDE))
+	assert_string_contains(player._hunger_label.text, "pesado")
+
+
+func test_boss_timer_label_counts_down() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	var boss: EnemyBase = (load("res://gameplay/enemies/boss/king_crab.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child_autofree(boss)
+	boss.global_position = player.global_position + Vector3(5, 0, 0)
+	await get_tree().physics_frame
+	boss.boss_time = EnemyBase.BOSS_TIME_LIMIT - 75.0
+	player._update_extra_hud()
+	assert_true(player.boss_timer_label.visible)
+	assert_string_contains(player.boss_timer_label.text, "1:15")

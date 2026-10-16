@@ -369,6 +369,7 @@ func _ready() -> void:
 	add_child(_hit_feedback)
 	_setup_tool_sway()
 	_setup_nearby_items_ui()
+	_setup_extra_hud()
 	_setup_settings()
 
 	_apply_backpack_capacity()
@@ -567,6 +568,7 @@ func _process(_delta: float) -> void:
 				interact_prompt.text = "💀 Estás caído! Aguarda que um colega te leve à base."
 		return
 	update_tool_sway(_delta)
+	_update_extra_hud()
 	_update_interaction_target()
 
 
@@ -1454,6 +1456,65 @@ func _refresh_hunger_hud() -> void:
 	_hunger_bar.value = hunger
 	var low: bool = hunger <= max_hunger * 0.25
 	_hunger_label.text = ("🍖 Fome: %d / %d" % [int(ceilf(hunger)), int(max_hunger)]) + ("  (com fome!)" if low else "")
+	if is_overloaded():
+		_hunger_label.text += "   🎒 pesado"
+	elif backpack_weight_multiplier() < 1.0:
+		_hunger_label.text += "   🎒 -%d%%" % int(round((1.0 - backpack_weight_multiplier()) * 100.0))
+
+
+## HUD extra (estudo How to Fish): carga do arremesso e cronómetro do chefe.
+var throw_charge_bar: ProgressBar = null
+var boss_timer_label: Label = null
+
+
+func _setup_extra_hud() -> void:
+	var hud: Node = get_node_or_null(^"HUD")
+	if hud == null:
+		return
+	throw_charge_bar = ProgressBar.new()
+	throw_charge_bar.name = "ThrowCharge"
+	throw_charge_bar.show_percentage = false
+	throw_charge_bar.max_value = 1.0
+	throw_charge_bar.step = 0.01
+	throw_charge_bar.custom_minimum_size = Vector2(90, 6)
+	throw_charge_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	throw_charge_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	throw_charge_bar.position += Vector2(-45, 22)
+	var fill: StyleBoxFlat = StyleBoxFlat.new()
+	fill.bg_color = UiPalette.GOLD
+	throw_charge_bar.add_theme_stylebox_override(&"fill", fill)
+	throw_charge_bar.visible = false
+	hud.add_child(throw_charge_bar)
+	boss_timer_label = Label.new()
+	boss_timer_label.name = "BossTimer"
+	boss_timer_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	boss_timer_label.position = Vector2(268, 101)
+	boss_timer_label.custom_minimum_size = Vector2(120, 0)
+	boss_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	boss_timer_label.add_theme_font_size_override(&"font_size", 18)
+	boss_timer_label.add_theme_color_override(&"font_color", UiPalette.PAPER)
+	boss_timer_label.add_theme_color_override(&"font_outline_color", UiPalette.INK)
+	boss_timer_label.add_theme_constant_override(&"outline_size", 5)
+	boss_timer_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_timer_label.visible = false
+	hud.add_child(boss_timer_label)
+
+
+func _update_extra_hud() -> void:
+	if throw_charge_bar != null:
+		var charge: float = get_throw_charge()
+		throw_charge_bar.visible = charge > 0.0
+		throw_charge_bar.value = charge
+	if boss_timer_label != null:
+		var left: float = -1.0
+		for n: Node in get_tree().get_nodes_in_group(&"bosses"):
+			var b: EnemyBase = n as EnemyBase
+			if b != null and b.is_alive() and b.global_position.distance_to(global_position) < 60.0:
+				left = maxf(left, b.boss_time_left())
+		boss_timer_label.visible = left >= 0.0
+		if left >= 0.0:
+			boss_timer_label.text = "⏳ %d:%02d" % [int(left) / 60, int(left) % 60]
+			boss_timer_label.add_theme_color_override(&"font_color", UiPalette.RED_BURNT if left <= 60.0 else UiPalette.PAPER)
 
 
 func _on_health_changed(current: float, max_value: float) -> void:
@@ -1971,6 +2032,7 @@ func _update_interaction_target() -> void:
 func _on_inventory_changed() -> void:
 	var was_overloaded: bool = _was_overloaded
 	_was_overloaded = is_overloaded()
+	_refresh_hunger_hud()
 	if _was_overloaded and not was_overloaded:
 		_show_temporary_message("🎒 Achado pesado: não dá para correr.", UiPalette.ORANGE, 1.6)
 	_update_session_hud()

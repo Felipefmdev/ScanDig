@@ -115,7 +115,14 @@ func _fill_slot(i: int) -> void:
 		swatch.color = COLOR_TOOL
 		name_label.text = c.get_display_name()
 		name_label.add_theme_color_override("font_color", COLOR_TOOL)
-		value_label.text = "🔧 ferramenta"
+		if c.wear >= 0:
+			# Desgaste (armas): % que falta, vermelho quando está a acabar.
+			var ratio: float = c.wear_ratio()
+			value_label.text = "🔧 %d%%" % int(ceilf(ratio * 100.0))
+			value_label.add_theme_color_override("font_color", UiPalette.RED_BURNT if ratio <= 0.2 else Color(0.9, 0.9, 0.9))
+		else:
+			value_label.text = "🔧 ferramenta"
+			value_label.remove_theme_color_override("font_color")
 	else:
 		swatch.color = ItemPickup.make_material(c.item, c.is_rare_variant).albedo_color
 		name_label.text = c.get_display_name()

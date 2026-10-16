@@ -198,6 +198,9 @@ func _physics_process(delta: float) -> void:
 	if not has_simulation_authority():
 		if not _dead:
 			_update_remote_motion(delta)
+		# Cliente: conta o tempo do chefe por si (só o host decide a fuga) para o HUD.
+		if is_in_group(&"bosses") and not _dead:
+			boss_time += delta
 		# Cliente: a vida replicada chegou a 0 antes do despawn do host; o voo é local.
 		if health <= 0.0 and not _flung and _uses_default_death():
 			spawn_particles(global_position + Vector3.UP * 0.25, death_color, 28, 3.5)
