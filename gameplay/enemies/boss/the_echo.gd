@@ -9,6 +9,8 @@ extends EnemyBase
 ##  - Ataques caóticos e telegrafados estilo "How to Fish":
 ##      * TELETRANSPORTE: desfaz-se em estilhaços no ar e remonta noutra posição;
 ##      * ONDAS SÓNICAS EM ANEL: emite pulsos de ressonância com recuo e knockback extremo;
+##      * ECOS ATRASADOS (#57): marca 3 círculos onde o jogador ESTEVE nos últimos segundos e
+##        rebentam um a um (0,35 s) a atirá-lo ao ar — quem fica parado leva com todos;
 ##      * CORO DE RESSONÂNCIA: após a onda máxima, fica DESPEDAÇADA/TONTA (SHATTERED_DIZZY,
 ##        dano a 2,5x e guarda completamente aberta);
 ##  - Troféu ao morrer: 'cristal_eco'.
@@ -16,7 +18,7 @@ extends EnemyBase
 signal boss_defeated(boss_id: StringName)
 signal health_changed(current: float, max_value: float)
 
-enum State { EMERGE, HOVER, TELEPORT, SONIC_RING_TELE, SONIC_RING, SHATTERED_DIZZY, DYING }
+enum State { EMERGE, HOVER, TELEPORT, SONIC_RING_TELE, SONIC_RING, SHATTERED_DIZZY, DYING, ECHO_TELE, ECHO_BURST }
 
 const BOSS_ID: StringName = &"the_echo"
 const BOSS_NAME: String = "O ECO"
@@ -33,6 +35,13 @@ const WEAK_POINT_FACTOR: float = 2.5
 const SONIC_RADIUS: float = 5.5
 const HOVER_ALTITUDE: float = 2.2
 const PHASE_TWO_RATIO: float = 0.5
+## Ecos atrasados.
+const ECHO_COUNT: int = 3
+const ECHO_RADIUS: float = 1.8
+const ECHO_RECORD_INTERVAL: float = 0.6
+const ECHO_TELE_TIME: float = 1.1
+const ECHO_GAP: float = 0.35
+const ECHO_DAMAGE: float = 10.0
 
 @export var move_speed: float = 2.8
 @export var turn_speed: float = 5.0
@@ -63,6 +72,16 @@ var _sonic_rings: Array[MeshInstance3D] = []
 var _ring_scales: Array[float] = []
 var _mat: ShaderMaterial = null
 var _glow_mat: ShaderMaterial = null
+## Replicado: onde rebentam os ecos (os clientes desenham os avisos).
+var net_echo_points: PackedVector3Array = PackedVector3Array():
+	set(value):
+		net_echo_points = value
+		if not has_simulation_authority() and is_node_ready():
+			_refresh_echo_warnings()
+var _trail: Array[Vector3] = []
+var _trail_timer: float = 0.0
+var _echo_warnings: Array[GroundWarning] = []
+var _echo_done: int = 0
 
 
 func _ready() -> void:
@@ -78,6 +97,10 @@ func _ready() -> void:
 	add_child(_hud)
 	_warning = GroundWarning.new()
 	add_child(_warning)
+	for i: int in ECHO_COUNT:
+		var w: GroundWarning = GroundWarning.new()
+		add_child(w)
+		_echo_warnings.append(w)
 	boss_defeated.connect(_report_defeat_to_core)
 	_enter_state(State.EMERGE)
 
@@ -85,6 +108,7 @@ func _ready() -> void:
 func setup_network() -> void:
 	super.setup_network()
 	_add_synced_property(".:net_attack_point")
+	_add_synced_property(".:net_echo_points")
 
 
 func _enemy_physics(delta: float) -> void:
@@ -114,7 +138,16 @@ func _enemy_physics(delta: float) -> void:
 			_process_sonic_ring(delta)
 		State.SHATTERED_DIZZY:
 			_process_shattered_dizzy(delta)
+		State.ECHO_TELE:
+			for w: GroundWarning in _echo_warnings:
+				if w.visible:
+					w.pulse(delta)
+			if _state_time >= ECHO_TELE_TIME * speed_k:
+				_enter_state(State.ECHO_BURST)
+		State.ECHO_BURST:
+			_process_echo_burst()
 
+	_record_trail(delta)
 	_animate(delta)
 
 
@@ -124,6 +157,9 @@ func _process(delta: float) -> void:
 		_hud.set_health(health)
 		if _warning.visible:
 			_warning.pulse(delta)
+		for w: GroundWarning in _echo_warnings:
+			if w.visible:
+				w.pulse(delta)
 	elif state == State.DYING and _dead:
 		_process_dying(delta)
 
@@ -132,6 +168,11 @@ func _enter_state(new_state: State) -> void:
 	state = new_state
 	_state_time = 0.0
 	_hit_done = false
+	_echo_done = 0
+	if not _echo_warnings.is_empty() and has_simulation_authority():
+		if new_state == State.ECHO_TELE:
+			net_echo_points = echo_points_from_trail()
+		_refresh_echo_warnings()
 
 	match state:
 		State.EMERGE:
@@ -177,8 +218,10 @@ func _process_hover(delta: float) -> void:
 
 	if _state_time >= 2.0:
 		_attack_cycle += 1
-		if _attack_cycle % 2 == 1:
+		if _attack_cycle % 3 == 1:
 			_enter_state(State.TELEPORT)
+		elif _attack_cycle % 3 == 2 and _trail.size() >= 2:
+			_enter_state(State.ECHO_TELE)
 		else:
 			_enter_state(State.SONIC_RING_TELE)
 
@@ -254,6 +297,62 @@ func _update_sonic_rings(delta: float) -> void:
 			ring.queue_free()
 			_sonic_rings.remove_at(i)
 			_ring_scales.remove_at(i)
+
+
+# ---------------------------------------------------------------------------
+# #57: ecos atrasados
+# ---------------------------------------------------------------------------
+
+## Host: guarda onde o alvo pisou (no chão), de ECHO_RECORD_INTERVAL em ECHO_RECORD_INTERVAL.
+func _record_trail(delta: float) -> void:
+	_trail_timer -= delta
+	if _trail_timer > 0.0:
+		return
+	_trail_timer = ECHO_RECORD_INTERVAL
+	var t: Node3D = _update_target(0.0)
+	if t == null:
+		return
+	var p: Vector3 = t.global_position
+	_trail.append(Vector3(p.x, _ground_height(p, p.y), p.z))
+	while _trail.size() > ECHO_COUNT + 2:
+		_trail.remove_at(0)
+
+
+## Os ECHO_COUNT pontos mais antigos do rasto (o mais velho rebenta primeiro).
+func echo_points_from_trail() -> PackedVector3Array:
+	var out: PackedVector3Array = PackedVector3Array()
+	var start: int = maxi(_trail.size() - ECHO_COUNT, 0)
+	for i: int in range(start, _trail.size()):
+		out.append(_trail[i])
+	return out
+
+
+func _refresh_echo_warnings() -> void:
+	var on: bool = state == State.ECHO_TELE or state == State.ECHO_BURST
+	for i: int in _echo_warnings.size():
+		if on and i < net_echo_points.size() and i >= _echo_done:
+			_echo_warnings[i].show_circle(net_echo_points[i], ECHO_RADIUS)
+		else:
+			_echo_warnings[i].hide_warning()
+
+
+func _process_echo_burst() -> void:
+	var due: int = mini(int(_state_time / ECHO_GAP) + 1, net_echo_points.size())
+	while _echo_done < due:
+		var p: Vector3 = net_echo_points[_echo_done]
+		_echo_done += 1
+		_spawn_sonic_ring(p + Vector3.UP * 0.1)
+		spawn_particles(p + Vector3.UP * 0.3, RESONANCE_GLOW, 24, 6.0)
+		SFX.play_at(SFX.SHELL_KNOCK, p, 4.0)
+		for pl: Node3D in _players_within(p, ECHO_RADIUS):
+			_deal_damage(pl, ECHO_DAMAGE)
+			var out: Vector3 = pl.global_position - p
+			out.y = 0.0
+			out = out.normalized() if out.length_squared() > 0.01 else Vector3.FORWARD
+			_knockback(pl, out * 4.0 + Vector3.UP * 11.0, 0.12)
+		_refresh_echo_warnings()
+	if _echo_done >= net_echo_points.size() and _state_time >= ECHO_GAP * float(net_echo_points.size()) + 0.3:
+		_enter_state(State.HOVER)
 
 
 func _process_shattered_dizzy(_delta: float) -> void:
@@ -348,6 +447,7 @@ func _on_remote_state(new_state: int) -> void:
 	_state_time = 0.0
 	_hud.visible = state != State.EMERGE and state != State.DYING
 	_refresh_remote_visuals()
+	_refresh_echo_warnings()
 
 
 # ---------------------------------------------------------------------------
@@ -437,3 +537,4 @@ func _animate(delta: float) -> void:
 			var f: Node3D = _fragments[i]
 			var ang: float = float(i) * (TAU / 6.0) + _anim_time * 3.0
 			f.position = Vector3(cos(ang) * 1.6, 0.8 + sin(ang * 3.0) * 0.6, sin(ang) * 1.6)
+

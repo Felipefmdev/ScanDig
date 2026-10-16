@@ -1898,16 +1898,17 @@ func _build_ink_overlay() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ink_layer.add_child(root)
 	var size: Vector2 = get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280, 720)
-	# Manchas de tinta (polígonos irregulares) a tapar ~metade do ecrã, mais no centro.
-	for i: int in 7:
+	# Manchas de tinta (#57): ~30-35 % do ecrã, mais para os lados (o centro fica legível).
+	var spots: Array[Vector2] = [Vector2(0.18, 0.3), Vector2(0.82, 0.62), Vector2(0.3, 0.78), Vector2(0.7, 0.22)]
+	for c01: Vector2 in spots:
 		var blot: Polygon2D = Polygon2D.new()
-		var c: Vector2 = Vector2(randf_range(0.15, 0.85) * size.x, randf_range(0.2, 0.8) * size.y)
-		var r: float = randf_range(0.12, 0.22) * size.y
+		var c: Vector2 = Vector2((c01.x + randf_range(-0.05, 0.05)) * size.x, (c01.y + randf_range(-0.05, 0.05)) * size.y)
+		var r: float = randf_range(0.2, 0.22) * size.y
 		var pts: PackedVector2Array = []
 		for k: int in 12:
 			var ang: float = TAU * float(k) / 12.0
-			pts.append(c + Vector2(cos(ang), sin(ang)) * r * randf_range(0.7, 1.25))
+			pts.append(c + Vector2(cos(ang), sin(ang)) * r * randf_range(0.8, 1.15))
 		blot.polygon = pts
-		blot.color = Color(0.04, 0.02, 0.07, 0.93)
+		blot.color = Color(0.04, 0.02, 0.07, 0.9)
 		root.add_child(blot)
 	add_child(_ink_layer)

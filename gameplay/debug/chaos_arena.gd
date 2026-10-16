@@ -15,9 +15,16 @@ const PLAYER_SCENE: PackedScene = preload("res://gameplay/player/player.tscn")
 ## id -> [cena, ataques (estado a forçar, por ordem), chão de erva?]
 const BOSSES: Dictionary = {
 	"king_crab": ["res://gameplay/enemies/boss/king_crab.tscn", ["SPIN_TELEGRAPH", "BELLY_TELEGRAPH", "THROW_TELEGRAPH"], false],
-	"octopus": ["res://gameplay/enemies/boss/octopus.tscn", ["SPIN_TELEGRAPH", "GRAB_TELEGRAPH", "INK_TELEGRAPH"], false],
+	"octopus": ["res://gameplay/enemies/boss/octopus.tscn", ["SHIELD", "INK_TELEGRAPH", "GRAB_TELEGRAPH"], false],
 	"giant_mole": ["res://gameplay/enemies/boss/giant_mole.tscn", ["BURROW", "ROCK_TELEGRAPH", "BURROW"], true],
 	"crow_king": ["res://gameplay/enemies/boss/crow_king.tscn", ["STEAL_TELEGRAPH", "TELEGRAPH", "TORNADO_TELEGRAPH"], true],
+	"ancient_guardian": ["res://gameplay/enemies/boss/ancient_guardian.tscn", ["STOMP_TELE", "BOWL_TELE", "SPIN_TELE"], false],
+	"idol_mummy": ["res://gameplay/enemies/boss/idol_mummy.tscn", ["PULL_TELE", "TORNADO_TELE", "SUMMON_TELE"], false],
+	"frozen_mammoth": ["res://gameplay/enemies/boss/frozen_mammoth.tscn", ["CHARGE_TELE", "STOMP_TELE", "CHARGE_TELE"], false],
+	"cave_yeti": ["res://gameplay/enemies/boss/cave_yeti.tscn", ["BOWLING_TELE", "BELLY_JUMP_TELE", "HELICOPTER_TELE"], false],
+	"ancient_walrus": ["res://gameplay/enemies/boss/ancient_walrus.tscn", ["SLIDE_TELE", "THROW_ICE_TELE", "CRUSH_TELE"], false],
+	"the_sleeper": ["res://gameplay/enemies/boss/the_sleeper.tscn", ["CRYSTAL_SPIKES_TELE", "GRAVITY_INVERT_TELE", "METEOR_TELE"], false],
+	"the_echo": ["res://gameplay/enemies/boss/the_echo.tscn", ["SONIC_RING_TELE", "ECHO_TELE", "TELEPORT"], false],
 	"scarecrow": ["res://gameplay/enemies/boss/scarecrow.tscn", ["STRAW_OUT", "THROW_TELEGRAPH", "WHIRL_TELEGRAPH"], true],
 }
 const MOBS: Array = [

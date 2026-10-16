@@ -225,24 +225,38 @@ func _process_charge(delta: float) -> void:
 	_apply_gravity(delta)
 	velocity.x = net_attack_dir.x * CHARGE_SPEED
 	velocity.z = net_attack_dir.z * CHARGE_SPEED
-	move_and_slide()
 
-	# Colisão com jogadores: arremesso estrondoso pelos ares
+	# Colisão com jogadores: arremesso estrondoso pelos ares (antes de mover: o corpo do
+	# jogador travava o mamute antes de contar o golpe)
 	for p: Node3D in _all_players():
 		if _hit_targets.has(p):
 			continue
 		var d: Vector3 = p.global_position - global_position
 		d.y = 0.0
-		if d.length() <= 2.8:
+		if d.length() <= 3.3:
 			_hit_targets.append(p)
 			_deal_damage(p, charge_damage)
 			# Lança o jogador alto com tromba e presas!
-			_knockback(p, net_attack_dir * 14.0 + Vector3.UP * 11.0, 0.3)
+			# Para o lado de fora da faixa (#57): à frente o mamute apanhava-o e prendia-o.
+			var side: Vector3 = net_attack_dir.cross(Vector3.UP)
+			if side.dot(d) < 0.0:
+				side = -side
+			_knockback(p, side * 11.0 + net_attack_dir * 5.0 + Vector3.UP * 11.0, 0.3)
 			spawn_particles(p.global_position + Vector3.UP * 1.0, ICE_HIGHLIGHT, 20, 5.0)
 
-	# Se colidir contra parede ou completar o percurso, bate e FICA PRESO
-	if _state_time >= (CHARGE_RANGE / CHARGE_SPEED) or (is_on_wall() and _state_time > 0.2):
+	move_and_slide()
+	# Se colidir contra parede ou completar o percurso, bate e FICA PRESO (um jogador no
+	# caminho não conta como parede)
+	if _state_time >= (CHARGE_RANGE / CHARGE_SPEED) or (is_on_wall() and _state_time > 0.2 and not _wall_is_player()):
 		_enter_state(State.STUCK)
+
+
+func _wall_is_player() -> bool:
+	for i: int in get_slide_collision_count():
+		var c: Object = get_slide_collision(i).get_collider()
+		if c is Node and ((c as Node).is_in_group(&"players") or (c as Node).is_in_group(&"player")):
+			return true
+	return false
 
 
 func _process_stuck(delta: float) -> void:

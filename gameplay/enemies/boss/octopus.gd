@@ -10,14 +10,15 @@ extends EnemyBase
 ## Caos (#57), intercalado com os golpes: HÉLICE (abre os 8 tentáculos e sai a rodar pela
 ## praia como um pião/helicóptero, atira quem apanha; acaba tonto e volta ao sítio), AGARRÃO
 ## (círculo; quem lá ficar é agarrado e atirado ao mar) e TINTA (faixa à frente; quem apanha
-## fica com o ecrã meio preto, Player.apply_ink).
+## fica com manchas de tinta no ecrã, Player.apply_ink) e ESCUDO DE TÁBUAS (ergue 3 tábuas do
+## navio à frente: golpes de frente quase não contam; depois atira-as em leque, 3 faixas).
 ## Coop (#24): IA no host; o ponto do golpe (net_attack_point) e o estado vão para os clientes,
 ## que desenham o aviso e o tentáculo.
 
 signal boss_defeated(boss_id: StringName)
 signal health_changed(current: float, max_value: float)
 
-enum State { EMERGE, IDLE, TELEGRAPH, SLAM, STUCK, DYING, SPIN_TELEGRAPH, SPIN, RETURN, GRAB_TELEGRAPH, GRAB, INK_TELEGRAPH, INK }
+enum State { EMERGE, IDLE, TELEGRAPH, SLAM, STUCK, DYING, SPIN_TELEGRAPH, SPIN, RETURN, GRAB_TELEGRAPH, GRAB, INK_TELEGRAPH, INK, SHIELD, PLANK_TELEGRAPH, PLANK_THROW }
 
 const CrabModel := preload("res://gameplay/enemies/crab/crab_model.gd")
 const BOSS_ID: StringName = &"octopus"
@@ -35,8 +36,20 @@ const SPIN_SPEED: float = 6.5
 const GRAB_RADIUS: float = 1.8
 const INK_LENGTH: float = 11.0
 const INK_WIDTH: float = 3.0
-const INK_SECONDS: float = 3.5
-const ATTACK_CYCLE: Array[int] = [State.TELEGRAPH, State.SPIN_TELEGRAPH, State.TELEGRAPH, State.GRAB_TELEGRAPH, State.INK_TELEGRAPH]
+const INK_SECONDS: float = 2.5
+const ATTACK_CYCLE: Array[int] = [State.TELEGRAPH, State.SPIN_TELEGRAPH, State.TELEGRAPH, State.GRAB_TELEGRAPH, State.INK_TELEGRAPH, State.SHIELD]
+## Tábuas do navio: escudo e leque atirado.
+const PLANK_COUNT: int = 3
+const PLANK_SPREAD: float = 0.38
+const PLANK_LENGTH: float = 13.0
+const PLANK_SPEED: float = 16.0
+const PLANK_HIT_RADIUS: float = 1.0
+const SHIELD_TIME: float = 3.0
+## Fração do dano que passa pelo escudo (golpes de frente).
+const SHIELD_FACTOR: float = 0.2
+const WOOD: Color = Color(0.5, 0.33, 0.18)
+const WOOD_DARK: Color = Color(0.36, 0.22, 0.12)
+const IRON: Color = Color(0.45, 0.45, 0.47)
 
 const SKIN: Color = Color(0.62, 0.22, 0.42)
 const SKIN_DARK: Color = Color(0.44, 0.13, 0.32)
@@ -56,6 +69,7 @@ const PUPIL: Color = Color(0.04, 0.04, 0.05)
 @export var spin_time: float = 3.2
 @export var grab_damage: float = 10.0
 @export var ink_damage: float = 6.0
+@export var plank_damage: float = 12.0
 
 var state: State = State.EMERGE
 var phase: int = 1
@@ -83,6 +97,9 @@ var _cycle_index: int = 0
 var _hit_list: Array[Node] = []
 var _spin_dir: Vector3 = Vector3.ZERO
 var _ink_fx: CPUParticles3D = null
+var _planks: Array[Node3D] = []
+var _plank_hit: Array[Node] = []
+var _plank_warnings: Array[GroundWarning] = []
 
 
 func _ready() -> void:
@@ -92,6 +109,7 @@ func _ready() -> void:
 	death_color = SKIN
 	_build_model()
 	_build_hud()
+	_build_planks()
 	for i: int in 2:
 		var w: GroundWarning = GroundWarning.new()
 		add_child(w)
@@ -149,11 +167,29 @@ func _enemy_physics(delta: float) -> void:
 				_do_ink()
 			if _state_time >= 0.9:
 				_enter_state(State.IDLE)
+		State.SHIELD:
+			_face_target(delta)
+			if _state_time >= SHIELD_TIME:
+				var t: Node3D = _update_target(0.0)
+				var to: Vector3 = (t.global_position - global_position) if t != null else -global_transform.basis.z
+				to.y = 0.0
+				net_attack_dir = to.normalized() if to.length_squared() > 0.01 else -global_transform.basis.z
+				_enter_state(State.PLANK_TELEGRAPH)
+		State.PLANK_TELEGRAPH:
+			_pulse_warnings(delta)
+			for w: GroundWarning in _plank_warnings:
+				w.pulse(delta)
+			_face_point(global_position + net_attack_dir, delta)
+			if _state_time >= telegraph_time * (0.8 if phase == 2 else 1.0):
+				_enter_state(State.PLANK_THROW)
+		State.PLANK_THROW:
+			_process_plank_throw()
 
 
 func _process(delta: float) -> void:
 	_anim_time += delta
 	_animate(delta)
+	_animate_planks(delta)
 	if state == State.DYING and _dead:
 		_state_time += delta
 		_process_dying()
@@ -200,6 +236,13 @@ func _enter_state(s: State) -> void:
 		State.GRAB, State.INK:
 			_hit_done = false
 			_hide_warnings()
+		State.SHIELD:
+			_hide_warnings()
+			SFX.play_at(SFX.SHELL_KNOCK, global_position, 3.0)
+		State.PLANK_THROW:
+			_plank_hit.clear()
+			SFX.play_at(SFX.EMERGE_SAND, global_position, 4.0)
+	_refresh_plank_warnings()
 	_refresh_slam_tentacles()
 
 
@@ -291,8 +334,23 @@ func _can_be_stunned() -> bool:
 	return state != State.EMERGE and state != State.DYING
 
 
-func _modify_damage(amount: float, _from: Vector3) -> float:
+func _modify_damage(amount: float, from: Vector3) -> float:
+	if is_shielded_from(from):
+		return amount * SHIELD_FACTOR
 	return amount * WEAK_POINT_MULTIPLIER if is_weak_point_exposed() else amount
+
+
+## Escudo de tábuas: só tapa a frente (cone de ~120°); por trás/pelos lados entra tudo.
+func is_shielded_from(from: Vector3) -> bool:
+	if state != State.SHIELD and state != State.PLANK_TELEGRAPH:
+		return false
+	if not from.is_finite():
+		return true
+	var d: Vector3 = from - global_position
+	d.y = 0.0
+	if d.length_squared() < 0.01:
+		return true
+	return d.normalized().dot(-global_transform.basis.z) > 0.5
 
 
 func stun(seconds: float) -> void:
@@ -384,6 +442,7 @@ func _on_remote_state(new_state: int) -> void:
 
 func _refresh_remote_visuals() -> void:
 	_attack_points = [net_attack_point]
+	_refresh_plank_warnings()
 	if state in [State.TELEGRAPH, State.SPIN_TELEGRAPH, State.GRAB_TELEGRAPH, State.INK_TELEGRAPH]:
 		_show_warnings()
 	else:
@@ -694,6 +753,121 @@ func _spray_ink(origin: Vector3, dir: Vector3) -> void:
 	_ink_fx.global_transform = Transform3D(Basis.looking_at(-dir + Vector3.UP * 0.15, Vector3.UP), origin + Vector3.UP * 1.6 + dir * 1.2)
 	_ink_fx.direction = Vector3(0.0, 0.0, 1.0)
 	_ink_fx.restart()
+
+
+# ---------------------------------------------------------------------------
+# #57: escudo de tábuas do navio e leque atirado
+# ---------------------------------------------------------------------------
+
+func plank_dirs() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var base: Vector3 = Vector3(net_attack_dir.x, 0.0, net_attack_dir.z).normalized()
+	if base.length_squared() < 0.01:
+		base = Vector3.FORWARD
+	for i: int in PLANK_COUNT:
+		out.append(base.rotated(Vector3.UP, (float(i) - float(PLANK_COUNT - 1) * 0.5) * PLANK_SPREAD))
+	return out
+
+
+func _plank_origin() -> Vector3:
+	return _ground_point(global_position) + Vector3.UP * 1.2
+
+
+func _refresh_plank_warnings() -> void:
+	if _plank_warnings.is_empty():
+		return
+	var on: bool = state == State.PLANK_TELEGRAPH or state == State.PLANK_THROW
+	var dirs: Array[Vector3] = plank_dirs()
+	for i: int in _plank_warnings.size():
+		if on:
+			_plank_warnings[i].show_line(_ground_point(global_position) + dirs[i] * 1.5, dirs[i], PLANK_LENGTH, PLANK_HIT_RADIUS * 2.0)
+		else:
+			_plank_warnings[i].hide_warning()
+
+
+## As tábuas voam a rodopiar pelas faixas; cada uma bate uma vez em cada jogador.
+func _process_plank_throw() -> void:
+	var d: float = _state_time * PLANK_SPEED
+	var dirs: Array[Vector3] = plank_dirs()
+	for i: int in dirs.size():
+		var p: Vector3 = _plank_origin() + dirs[i] * (1.5 + d)
+		for pl: Node3D in _players_within(p, PLANK_HIT_RADIUS):
+			if _plank_hit.has(pl):
+				continue
+			_plank_hit.append(pl)
+			_deal_damage(pl, plank_damage)
+			_knockback(pl, dirs[i] * 10.0 + Vector3.UP * 6.0, 0.08)
+	if d >= PLANK_LENGTH:
+		for i: int in dirs.size():
+			spawn_particles(_plank_origin() + dirs[i] * (1.5 + PLANK_LENGTH), WOOD, 14, 3.0)
+		_enter_state(State.IDLE)
+
+
+## Posição/rotação das tábuas (host e clientes, a partir do estado replicado).
+func _animate_planks(delta: float) -> void:
+	if _planks.is_empty():
+		return
+	var shown: bool = state in [State.SHIELD, State.PLANK_TELEGRAPH, State.PLANK_THROW]
+	var dirs: Array[Vector3] = plank_dirs()
+	var fwd: Vector3 = -global_transform.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized() if fwd.length_squared() > 0.01 else Vector3.FORWARD
+	var side: Vector3 = fwd.cross(Vector3.UP)
+	for i: int in _planks.size():
+		var pk: Node3D = _planks[i]
+		pk.visible = shown
+		if not shown:
+			continue
+		var off: float = float(i) - float(PLANK_COUNT - 1) * 0.5
+		match state:
+			State.SHIELD:
+				# Muralha à frente, seguras pelos tentáculos, a abanar
+				var p: Vector3 = global_position + fwd * 2.2 + side * off * 0.95 + Vector3.UP * (1.4 + sin(_anim_time * 3.0 + off) * 0.08)
+				pk.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP) * Basis(Vector3.FORWARD, off * 0.12), p)
+			State.PLANK_TELEGRAPH:
+				var t: float = clampf(_state_time / telegraph_time, 0.0, 1.0)
+				var p: Vector3 = global_position + Vector3.UP * (2.0 + 1.6 * t) + side * off * 1.2 - fwd * 0.6 * t
+				pk.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP) * Basis(Vector3.RIGHT, -0.8 * t), p)
+			State.PLANK_THROW:
+				var p: Vector3 = _plank_origin() + dirs[i] * (1.5 + minf(_state_time * PLANK_SPEED, PLANK_LENGTH))
+				pk.global_transform = Transform3D(Basis(Vector3.UP, atan2(dirs[i].x, dirs[i].z)) * Basis(Vector3.RIGHT, _state_time * 18.0), p)
+	if state == State.SHIELD:
+		# Dois tentáculos da frente esticados a segurar as tábuas
+		for k: int in [0, 7]:
+			if k < _tentacles.size():
+				_tentacles[k].rotation.x = lerpf(_tentacles[k].rotation.x, 0.5, clampf(delta * 8.0, 0.0, 1.0))
+
+
+## Tábua do navio (polvo_naufragio.jpg): três ripas castanhas gastas, pregadas por duas cintas
+## de ferro cinzento, uma ponta partida em bico.
+func _build_planks() -> void:
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
+	mat.set_shader_parameter(&"chip_amount", 0.3)
+	mat.set_shader_parameter(&"chip_color", Color(0.28, 0.18, 0.1))
+	for i: int in PLANK_COUNT:
+		var st: SurfaceTool = SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for k: int in 3:
+			var x: float = (float(k) - 1.0) * 0.27
+			var h: float = 1.5 - 0.18 * float((k + i) % 3)
+			var c: Color = WOOD if (k + i) % 2 == 0 else WOOD_DARK
+			LowPolyMesh.box(st, Vector3(x, h * 0.5 - 0.75, 0.0), Vector3(0.25, h, 0.07), Basis(Vector3.FORWARD, 0.02 * float(k - 1)), c)
+			# Ponta partida (bico de lascas)
+			LowPolyMesh.prism(st, Vector3(x, h - 0.75, 0.0), Vector3(x + 0.04, h - 0.75 + 0.2, 0.0), 0.08, 0.0, 3, c)
+		for y: float in [-0.45, 0.3]:
+			var iron: Color = Color(IRON.r, IRON.g, IRON.b, 0.0)
+			LowPolyMesh.box(st, Vector3(0.0, y, -0.05), Vector3(0.86, 0.09, 0.03), Basis.IDENTITY, iron)
+			for k: int in 3:
+				LowPolyMesh.box(st, Vector3((float(k) - 1.0) * 0.27, y, -0.07), Vector3(0.04, 0.04, 0.02), Basis.IDENTITY, Color(0.2, 0.2, 0.22, 0.0))
+		var mi: MeshInstance3D = _commit(st, "Plank%d" % i, mat)
+		mi.top_level = true
+		mi.visible = false
+		add_child(mi)
+		_planks.append(mi)
+	for i: int in PLANK_COUNT:
+		var w: GroundWarning = GroundWarning.new()
+		add_child(w)
+		_plank_warnings.append(w)
 
 
 func _build_hud() -> void:

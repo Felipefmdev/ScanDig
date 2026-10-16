@@ -400,3 +400,41 @@ func test_crow_spiral_ends_with_peck_and_lift() -> void:
 	assert_true(_step_until(crow, Seagull.State.SPIRAL, 2.0))
 	assert_true(_step_until(crow, Seagull.State.CIRCLE, Crow.SPIRAL_TIME + 1.0))
 	assert_gt(dummy.biggest_knockback().y, 5.0, "bicada no fim da espiral atira ao ar")
+
+
+func test_octopus_plank_shield_blocks_front_then_throws_fan() -> void:
+	var octo: Octopus = _spawn(OCTOPUS_SCENE) as Octopus
+	octo.wake_immediately()
+	dummy.global_position = Vector3(0.0, 0.0, -6.0)
+	octo.call("_enter_state", Octopus.State.SHIELD)
+	_step(octo, 0.5)
+	var front: Vector3 = octo.global_position - octo.global_transform.basis.z * 3.0
+	var back: Vector3 = octo.global_position + octo.global_transform.basis.z * 3.0
+	assert_true(octo.is_shielded_from(front), "de frente as tábuas tapam")
+	assert_false(octo.is_shielded_from(back), "por trás não")
+	var hp: float = octo.health
+	octo.take_damage(10.0, front)
+	assert_almost_eq(hp - octo.health, 10.0 * Octopus.SHIELD_FACTOR, 0.01)
+	assert_true(_step_until(octo, Octopus.State.PLANK_TELEGRAPH, Octopus.SHIELD_TIME + 1.0))
+	assert_eq(octo.plank_dirs().size(), Octopus.PLANK_COUNT)
+	assert_true(_step_until(octo, Octopus.State.IDLE, 4.0))
+	assert_gt(dummy.biggest_knockback().length(), 8.0, "a tábua do meio acerta no jogador")
+
+
+func test_ink_is_shorter_now() -> void:
+	assert_almost_eq(Octopus.INK_SECONDS, 2.5, 0.01)
+
+
+func test_echo_delayed_echoes_burst_where_player_was() -> void:
+	var echo: TheEcho = _spawn(preload("res://gameplay/enemies/boss/the_echo.tscn")) as TheEcho
+	_step(echo, echo.emerge_time + 0.1)
+	# Rasto: o jogador passou por três sítios e ficou parado no último.
+	for x: float in [-3.0, 0.0, 3.0]:
+		dummy.global_position = Vector3(x, 0.0, 4.0)
+		echo._trail_timer = 0.0
+		echo._record_trail(DT)
+	echo.call("_enter_state", TheEcho.State.ECHO_TELE)
+	assert_eq(echo.net_echo_points.size(), TheEcho.ECHO_COUNT)
+	assert_almost_eq(echo.net_echo_points[0].x, -3.0, 0.01, "o mais antigo rebenta primeiro")
+	assert_true(_step_until(echo, TheEcho.State.HOVER, 4.0))
+	assert_gt(dummy.biggest_knockback().y, 10.0, "o eco onde ficou parado atira-o ao ar")
