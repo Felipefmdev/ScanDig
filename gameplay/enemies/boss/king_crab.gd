@@ -8,6 +8,10 @@ extends EnemyBase
 ##   - INVESTIDA: carrega de lado numa linha marcada (charge_damage); repete 2x na fase 2.
 ##   - REFORÇOS: a 66% e 33% de vida chama 2-3 caranguejos.
 ##   - FASE 2 abaixo de 50%: mais rápido e com menos pausa entre ataques.
+##   - CAOS (#57, alterna com os de cima): PIÃO (gira de pinças abertas e ricocheteia nas
+##     palmeiras), BARRIGADA (salta e aterra de barriga com onda de areia) e ATIRAR
+##     CARANGUEJOS (3 círculos; os pequenos caem lá e ficam a lutar). Depois do pião e da
+##     barrigada fica TONTO (dano x2). Todos empurram o jogador (EnemyBase._knockback).
 ## A rede atordoa no máximo NET_STUN_CAP s; o repelente (flee_from) não o afeta.
 ## IA: máquina de estados simples (ver State) — o ciclo é linear (aproximar → telegrafar →
 ## atacar → recuperar), por isso uma behaviour tree (Beehave) só acrescentava uma dependência.
@@ -27,6 +31,13 @@ enum State {
 	RECOVER,
 	SUMMON,
 	DYING,
+	SPIN_TELEGRAPH,
+	SPIN,
+	BELLY_TELEGRAPH,
+	BELLY,
+	THROW_TELEGRAPH,
+	THROW,
+	DIZZY,
 }
 
 const BOSS_ID: StringName = &"king_crab"
@@ -39,6 +50,19 @@ const CHARGE_HIT_RADIUS: float = 1.6
 const REINFORCE_THRESHOLDS: Array[float] = [0.66, 0.33]
 const PHASE_TWO_RATIO: float = 0.5
 const CROWN_ITEM: ItemData = preload("res://items/catalog/coroa_caranguejo_rei.tres")
+## #57: pião, barrigada e caranguejos atirados.
+const SPIN_RADIUS: float = 2.4
+const SPIN_SPEED: float = 7.5
+const BELLY_RADIUS: float = 3.6
+const BELLY_HEIGHT: float = 4.5
+const BELLY_AIR_TIME: float = 0.85
+const THROW_COUNT: int = 3
+const THROW_RADIUS: float = 1.3
+const THROW_SPREAD: float = 2.2
+const THROW_AIR_TIME: float = 0.7
+## Não atira mais se já houver tantos caranguejos na cena.
+const THROW_MAX_CRABS: int = 8
+const CHAOS_ATTACKS: Array[int] = [State.SPIN_TELEGRAPH, State.BELLY_TELEGRAPH, State.THROW_TELEGRAPH]
 const CRAB_SCENE: PackedScene = preload("res://gameplay/enemies/crab/crab.tscn")
 
 const GOLD: Color = Color(1.0, 0.78, 0.12)
@@ -58,6 +82,11 @@ const WARN_COLOR: Color = Color(1.0, 0.12, 0.08, 0.45)
 @export var phase_two_recover_time: float = 1.0
 @export var emerge_time: float = 2.0
 @export var slam_trigger_distance: float = 4.0
+@export var spin_damage: float = 14.0
+@export var spin_time: float = 3.6
+@export var belly_damage: float = 22.0
+@export var throw_damage: float = 8.0
+@export var dizzy_time: float = 2.2
 
 @onready var body_root: Node3D = $BodyRoot
 @onready var big_claw: Node3D = $BodyRoot/BigClaw
@@ -92,6 +121,14 @@ var _surface_y: float = 0.0
 var _warn: MeshInstance3D = null
 var _warn_mat: StandardMaterial3D = null
 var _walk_time: float = 0.0
+var _attack_count: int = 0
+var _chaos_index: int = 0
+var _hit_list: Array[Node] = []
+var _spin_dir: Vector3 = Vector3.ZERO
+var _belly_from: Vector3 = Vector3.ZERO
+var _hit_done: bool = false
+var _warns_extra: Array[GroundWarning] = []
+var _flying_crabs: Array[Node3D] = []
 
 
 func _ready() -> void:
@@ -127,12 +164,27 @@ func _enemy_physics(delta: float) -> void:
 			_process_summon(delta)
 		State.DYING:
 			_process_dying(delta)
+		State.SPIN_TELEGRAPH, State.BELLY_TELEGRAPH, State.THROW_TELEGRAPH:
+			_process_chaos_telegraph(delta)
+		State.SPIN:
+			_process_spin(delta)
+		State.BELLY:
+			_process_belly()
+		State.THROW:
+			_process_throw(delta)
+		State.DIZZY:
+			_process_dizzy(delta)
 
 
 func _enter_state(new_state: State) -> void:
 	state = new_state
 	_state_time = 0.0
 	_set_warning_visible(false)
+	for w: GroundWarning in _warns_extra:
+		w.hide_warning()
+	_hit_done = false
+	_hit_list.clear()
+	body_root.rotation.y = 0.0
 	match new_state:
 		State.EMERGE:
 			_surface_y = global_position.y
@@ -170,6 +222,40 @@ func _enter_state(new_state: State) -> void:
 		State.DYING:
 			collision_shape.disabled = true
 			velocity = Vector3.ZERO
+		State.SPIN_TELEGRAPH:
+			collision_shape.disabled = false
+			velocity = Vector3.ZERO
+			net_attack_point = global_position
+			_show_circle_warning(global_position, SPIN_RADIUS)
+		State.SPIN:
+			var target: Node3D = _update_target(1.0)
+			var to_t: Vector3 = (target.global_position - global_position) if target != null else -global_transform.basis.z
+			to_t.y = 0.0
+			_spin_dir = to_t.normalized() if to_t.length_squared() > 0.01 else Vector3.FORWARD
+			SFX.play_at(SFX.CRAB_PINCH, global_position, 4.0)
+		State.BELLY_TELEGRAPH:
+			collision_shape.disabled = false
+			velocity = Vector3.ZERO
+			var target: Node3D = _update_target(1.0)
+			var p: Vector3 = target.global_position if target != null else global_position
+			net_attack_point = Vector3(p.x, _surface_y, p.z)
+			_show_circle_warning(net_attack_point, BELLY_RADIUS)
+		State.BELLY:
+			_belly_from = global_position
+			collision_shape.disabled = true
+		State.THROW_TELEGRAPH:
+			collision_shape.disabled = false
+			velocity = Vector3.ZERO
+			var target: Node3D = _update_target(1.0)
+			var p: Vector3 = target.global_position if target != null else global_position - global_transform.basis.z * 5.0
+			net_attack_point = Vector3(p.x, _surface_y, p.z)
+			_show_throw_warnings()
+		State.THROW:
+			_show_throw_warnings()
+		State.DIZZY:
+			collision_shape.disabled = false
+			velocity = Vector3.ZERO
+			SFX.play_at(SFX.SHELL_KNOCK, global_position, 3.0)
 		_:
 			collision_shape.disabled = false
 
@@ -203,14 +289,21 @@ func _process_approach(delta: float) -> void:
 	var dist: float = to_t.length()
 	var dir: Vector3 = to_t / dist if dist > 0.01 else Vector3.ZERO
 
+	# #57: um ataque em cada dois é caótico (pião → barrigada → caranguejos, em roda).
+	if _attack_count % 2 == 1 and _state_time > 0.8:
+		_attack_count += 1
+		_enter_state(next_chaos_attack())
+		return
 	# Escolhe o ataque: perto → esmagar; longe → investida. Alterna para não repetir.
 	if dist <= slam_trigger_distance and not _last_attack_was_slam:
 		_last_attack_was_slam = true
+		_attack_count += 1
 		_enter_state(State.SLAM_TELEGRAPH)
 		return
 	if (dist > slam_trigger_distance or _last_attack_was_slam) and _state_time > 1.0:
 		_last_attack_was_slam = false
 		_charges_left = get_charge_repeats()
+		_attack_count += 1
 		_enter_state(State.CHARGE_TELEGRAPH)
 		return
 
@@ -244,6 +337,7 @@ func _do_slam_impact() -> void:
 	spawn_particles(_slam_point + Vector3.UP * 0.1, Color(0.85, 0.74, 0.5), 40, 5.0)
 	for n: Node3D in _players_within(_slam_point, SLAM_RADIUS):
 		_deal_damage(n, slam_damage)
+		_knockback(n, _away(_slam_point, n) * 7.0 + Vector3.UP * 6.0, 0.08)
 
 
 ## Ponto fraco: pinça presa na areia, sem se mexer, leva dano x2.
@@ -279,6 +373,7 @@ func _process_charge(delta: float) -> void:
 	if not _charge_hit:
 		for n: Node3D in _players_within(global_position, CHARGE_HIT_RADIUS):
 			_deal_damage(n, charge_damage)
+			_knockback(n, _charge_dir * 12.0 + Vector3.UP * 5.0, 0.07)
 			_charge_hit = true
 	var travelled: float = Vector2(global_position.x - _charge_start.x, global_position.z - _charge_start.z).length()
 	if travelled >= charge_length or (is_on_wall() and _state_time > 0.2):
@@ -337,7 +432,7 @@ func get_charge_repeats() -> int:
 
 
 func is_weak_point_exposed() -> bool:
-	return state == State.SLAM_STUCK
+	return state == State.SLAM_STUCK or state == State.DIZZY
 
 
 ## Começa já acordado (testes / debug), sem a animação de sair da areia.
@@ -417,6 +512,7 @@ func _on_died() -> void:
 
 
 func _process(delta: float) -> void:
+	_animate_chaos(delta)
 	if state == State.DYING and _dead:
 		_state_time += delta
 		_process_dying(delta)
@@ -446,6 +542,17 @@ func _refresh_remote_warning() -> void:
 		State.CHARGE_TELEGRAPH:
 			var dir: Vector3 = net_attack_dir if net_attack_dir.length_squared() > 0.01 else global_transform.basis.x
 			_show_line_warning(net_attack_point, dir.normalized(), charge_length)
+		State.SPIN_TELEGRAPH:
+			_show_circle_warning(net_attack_point, SPIN_RADIUS)
+		State.BELLY_TELEGRAPH, State.BELLY:
+			if state == State.BELLY_TELEGRAPH:
+				_show_circle_warning(net_attack_point, BELLY_RADIUS)
+			_belly_from = global_position
+	if state == State.THROW_TELEGRAPH or state == State.THROW:
+		_show_throw_warnings()
+	else:
+		for w: GroundWarning in _warns_extra:
+			w.hide_warning()
 
 
 func setup_network() -> void:
@@ -481,6 +588,11 @@ func _report_defeat_to_core(boss_id: StringName) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_warning_marker() -> void:
+	for i: int in THROW_COUNT:
+		var w: GroundWarning = GroundWarning.new()
+		add_child(w)
+		_warns_extra.append(w)
+	_build_flying_crabs()
 	_warn = MeshInstance3D.new()
 	_warn.name = "Warning"
 	_warn.top_level = true
@@ -579,3 +691,246 @@ func _build_model() -> void:
 	var claw_basis: Basis = Basis(Vector3.RIGHT, -1.05) * Basis(Vector3.UP, -0.35) * sc
 	CrabModel.big_claw(cst, Transform3D(claw_basis, Vector3(-0.25, -0.2, 0.0)), pal)
 	big_claw.add_child(LowPolyMesh.commit(cst, "Mesh", mat))
+
+
+# ---------------------------------------------------------------------------
+# #57: pião, barrigada e caranguejos atirados (estilo How to Fish)
+# ---------------------------------------------------------------------------
+
+## Próximo ataque caótico (roda pela lista; público para os testes).
+func next_chaos_attack() -> State:
+	var s: State = CHAOS_ATTACKS[_chaos_index % CHAOS_ATTACKS.size()] as State
+	_chaos_index += 1
+	# Sem espaço para mais caranguejos: salta o atirar.
+	if s == State.THROW_TELEGRAPH and _crab_count() >= THROW_MAX_CRABS:
+		return State.SPIN_TELEGRAPH
+	return s
+
+
+## Onde caem os caranguejos atirados: um no alvo e dois à volta (os clientes refazem-nos a
+## partir do net_attack_point).
+func throw_points() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for i: int in THROW_COUNT:
+		var ang: float = TAU * float(i) / float(THROW_COUNT) + 0.4
+		out.append(net_attack_point + Vector3(cos(ang), 0.0, sin(ang)) * (THROW_SPREAD if i > 0 else 0.0))
+	return out
+
+
+func _process_chaos_telegraph(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	move_and_slide()
+	var to_p: Vector3 = net_attack_point - global_position
+	if state != State.SPIN_TELEGRAPH:
+		_turn_towards(Vector3(to_p.x, 0.0, to_p.z), 0.0, turn_speed * 2.0, delta)
+	_pulse_warning()
+	for w: GroundWarning in _warns_extra:
+		if w.visible:
+			w.pulse(delta)
+	if _state_time < telegraph_time * (0.8 if phase == 2 else 1.0):
+		return
+	match state:
+		State.SPIN_TELEGRAPH:
+			_enter_state(State.SPIN)
+		State.BELLY_TELEGRAPH:
+			_enter_state(State.BELLY)
+		State.THROW_TELEGRAPH:
+			_enter_state(State.THROW)
+
+
+## Pião: gira de pinças abertas e ricocheteia nas paredes/palmeiras; bate a cada volta.
+func _process_spin(delta: float) -> void:
+	_apply_gravity(delta)
+	var speed: float = SPIN_SPEED * (1.2 if phase == 2 else 1.0)
+	velocity.x = _spin_dir.x * speed
+	velocity.z = _spin_dir.z * speed
+	move_and_slide()
+	if is_on_wall():
+		var n: Vector3 = get_wall_normal()
+		n.y = 0.0
+		if n.length_squared() > 0.01:
+			_spin_dir = _spin_dir.bounce(n.normalized()).normalized()
+			spawn_particles(global_position + Vector3.UP * 0.8, Color(0.85, 0.74, 0.5), 10, 3.0)
+			SFX.play_at(SFX.SHELL_KNOCK, global_position, 2.0)
+	# Puxa a direção um pouco para o alvo (para não fugir da arena).
+	var target: Node3D = _update_target(delta)
+	if target != null:
+		var to_t: Vector3 = target.global_position - global_position
+		to_t.y = 0.0
+		if to_t.length_squared() > 0.01:
+			_spin_dir = _spin_dir.slerp(to_t.normalized(), clampf(0.6 * delta, 0.0, 1.0)).normalized()
+	for p: Node3D in _players_within(global_position, SPIN_RADIUS):
+		if _hit_list.has(p):
+			continue
+		_hit_list.append(p)
+		_deal_damage(p, spin_damage)
+		var out: Vector3 = _away(global_position, p)
+		_knockback(p, (out + out.cross(Vector3.UP)) * 9.0 + Vector3.UP * 7.0, 0.08)
+	if fmod(_state_time, 0.8) < delta:
+		_hit_list.clear()
+	if _state_time >= spin_time:
+		_enter_state(State.DIZZY)
+
+
+## Barrigada: arco até ao ponto marcado e aterra de barriga com onda de areia.
+func _process_belly() -> void:
+	var t: float = clampf(_state_time / BELLY_AIR_TIME, 0.0, 1.0)
+	var p: Vector3 = _belly_from.lerp(net_attack_point, t)
+	p.y = lerpf(_belly_from.y, _surface_y, t) + sin(t * PI) * BELLY_HEIGHT
+	global_position = p
+	if t >= 1.0 and not _hit_done:
+		_hit_done = true
+		_belly_impact()
+		_enter_state(State.DIZZY)
+
+
+func _belly_impact() -> void:
+	SFX.play_at(SFX.EMERGE_SAND, net_attack_point, 8.0)
+	var thud: AudioStreamPlayer3D = SFX.play_at(SFX.SHELL_KNOCK, net_attack_point, 6.0)
+	if thud != null:
+		thud.pitch_scale *= 0.6
+	# Onda de areia: anel de partículas à volta do impacto.
+	for k: int in 10:
+		var ang: float = TAU * float(k) / 10.0
+		spawn_particles(net_attack_point + Vector3(cos(ang), 0.1, sin(ang)) * BELLY_RADIUS * 0.7, Color(0.85, 0.74, 0.5), 8, 5.0)
+	for n: Node3D in _players_within(net_attack_point, BELLY_RADIUS):
+		_deal_damage(n, belly_damage)
+		_knockback(n, _away(net_attack_point, n) * 10.0 + Vector3.UP * 9.0, 0.12)
+
+
+## Atira THROW_COUNT caranguejos: voam em arco da pinça e ficam a lutar onde caem.
+func _process_throw(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	move_and_slide()
+	for w: GroundWarning in _warns_extra:
+		if w.visible:
+			w.pulse(delta)
+	if _state_time >= THROW_AIR_TIME and not _hit_done:
+		_hit_done = true
+		for p: Vector3 in throw_points():
+			spawn_particles(p + Vector3.UP * 0.1, Color(0.85, 0.74, 0.5), 10, 3.0)
+			for n: Node3D in _players_within(p, THROW_RADIUS):
+				_deal_damage(n, throw_damage)
+				_knockback(n, _away(p, n) * 6.0 + Vector3.UP * 5.0, 0.05)
+			_land_thrown_crab(p)
+		_enter_state(State.RECOVER)
+
+
+func _land_thrown_crab(pos: Vector3) -> void:
+	if _crab_count() >= THROW_MAX_CRABS:
+		return
+	if _spawn_minion(&"crab", pos) != null:
+		return
+	var parent: Node = get_parent()
+	if parent == null:
+		return
+	var crab: Crab = CRAB_SCENE.instantiate() as Crab
+	crab.spawn_level = 0
+	parent.add_child(crab)
+	crab.global_position = pos
+
+
+func _crab_count() -> int:
+	var n: int = 0
+	if not is_inside_tree():
+		return 0
+	for e: Node in get_tree().get_nodes_in_group(GROUP):
+		if e is Crab and not e.is_queued_for_deletion():
+			n += 1
+	return n
+
+
+## Tonto (a espernear): ponto fraco, dano x2.
+func _process_dizzy(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	move_and_slide()
+	if _state_time >= dizzy_time * (0.75 if phase == 2 else 1.0):
+		_enter_state(State.RECOVER)
+
+
+func _away(from: Vector3, n: Node3D) -> Vector3:
+	var d: Vector3 = n.global_position - from
+	d.y = 0.0
+	return d.normalized() if d.length_squared() > 0.01 else -global_transform.basis.z
+
+
+func _show_throw_warnings() -> void:
+	var pts: Array[Vector3] = throw_points()
+	for i: int in _warns_extra.size():
+		_warns_extra[i].show_circle(pts[i], THROW_RADIUS)
+
+
+## Animação (host e clientes) a partir do estado: gira, encolhe para saltar, espernea.
+func _animate_chaos(delta: float) -> void:
+	if body_root == null:
+		return
+	var remote: bool = not has_simulation_authority()
+	if remote and state in [State.THROW_TELEGRAPH, State.THROW, State.DIZZY, State.SPIN, State.BELLY]:
+		_state_time += delta
+	match state:
+		State.SPIN_TELEGRAPH:
+			body_root.rotation.y += delta * 6.0 * clampf(_state_time / telegraph_time, 0.0, 1.0)
+			big_claw.rotation.z = -0.6
+		State.SPIN:
+			body_root.rotation.y += delta * 20.0
+			big_claw.rotation.z = -0.6
+		State.BELLY_TELEGRAPH:
+			body_root.position.y = -0.35 * clampf(_state_time / telegraph_time, 0.0, 1.0)
+			body_root.position.x = sin(_state_time * 40.0) * 0.05
+		State.BELLY:
+			body_root.position = Vector3.ZERO
+			body_root.rotation.x = lerpf(body_root.rotation.x, -1.2, clampf(delta * 8.0, 0.0, 1.0))
+		State.THROW_TELEGRAPH:
+			big_claw.rotation.x = lerpf(0.0, -1.5, clampf(_state_time / telegraph_time, 0.0, 1.0))
+		State.DIZZY:
+			body_root.rotation.x = lerpf(body_root.rotation.x, 0.0, clampf(delta * 6.0, 0.0, 1.0))
+			body_root.rotation.z = sin(_state_time * 16.0) * 0.22
+			body_root.position = Vector3.ZERO
+		State.DYING:
+			pass
+		_:
+			body_root.rotation.x = lerpf(body_root.rotation.x, 0.0, clampf(delta * 6.0, 0.0, 1.0))
+			big_claw.rotation.z = lerpf(big_claw.rotation.z, 0.0, clampf(delta * 6.0, 0.0, 1.0))
+	_animate_flying_crabs()
+
+
+## Caranguejos pequenos a voar da pinça para os círculos (só visual; os reais nascem ao cair).
+func _animate_flying_crabs() -> void:
+	var flying: bool = state == State.THROW and _state_time < THROW_AIR_TIME
+	var pts: Array[Vector3] = throw_points()
+	var from: Vector3 = big_claw.global_position + Vector3.UP * 0.8
+	for i: int in _flying_crabs.size():
+		var c: Node3D = _flying_crabs[i]
+		c.visible = flying
+		if not flying:
+			continue
+		var t: float = clampf(_state_time / THROW_AIR_TIME + float(i) * 0.04, 0.0, 1.0)
+		var p: Vector3 = from.lerp(pts[i], t)
+		p.y += sin(t * PI) * 3.5
+		c.global_position = p
+		c.rotation = Vector3(t * TAU * 2.0, float(i), t * TAU)
+
+
+## Caranguejos atirados: as mesmas peças do Caranguejo (CrabModel, referência gaivota/caranguejo).
+func _build_flying_crabs() -> void:
+	var mat: ShaderMaterial = CrabModel.make_material()
+	var pal: Dictionary = CrabModel.PALETTE_CRAB
+	for i: int in THROW_COUNT:
+		var st: SurfaceTool = SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		CrabModel.body(st, Transform3D.IDENTITY, pal)
+		for side: float in [-1.0, 1.0]:
+			var pivot: Vector3 = CrabModel.PIVOT_LEGS_LEFT if side < 0.0 else CrabModel.PIVOT_LEGS_RIGHT
+			CrabModel.legs(st, Transform3D(Basis.IDENTITY, pivot), side, pal)
+			CrabModel.small_claw(st, Transform3D(Basis.IDENTITY, Vector3(0.24 * side, 0.2, -0.15)), pal)
+		var mi: MeshInstance3D = LowPolyMesh.commit(st, "FlyingCrab%d" % i, mat)
+		mi.top_level = true
+		mi.visible = false
+		add_child(mi)
+		_flying_crabs.append(mi)

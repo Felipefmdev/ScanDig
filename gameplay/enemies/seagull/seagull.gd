@@ -9,6 +9,9 @@ extends EnemyBase
 ## jogador o host chama target._steal_from (rpc_id ao dono, ou direto se o jogador for o do
 ## host) e fica a pairar (WAIT_LOOT) até o dono responder request_seagull_loot(dict do item,
 ## ou {} se não havia nada). O item roubado é replicado como has_stolen (só visual).
+## #57: um mergulho em cada dois é KAMIKAZE: círculo no chão onde o jogador estava, mergulho a
+## pique; acerta = atira o jogador; falha = fica com o bico ESPETADO na areia (a espernear,
+## presa fácil). O corvo (subclasse) troca-o pela ESPIRAL do bando à volta do jogador.
 
 enum State {
 	CIRCLE,
@@ -16,7 +19,18 @@ enum State {
 	ESCAPE,
 	FALL,
 	WAIT_LOOT,
+	KAMIKAZE_TELEGRAPH,
+	KAMIKAZE,
+	STUCK,
+	SPIRAL_TELEGRAPH,
+	SPIRAL,
 }
+
+const KAMIKAZE_TELEGRAPH_TIME: float = 0.9
+const KAMIKAZE_SPEED: float = 16.0
+const KAMIKAZE_RADIUS: float = 1.3
+const STUCK_TIME: float = 2.6
+const KAMIKAZE_DAMAGE: float = 8.0
 
 @export var circle_radius: float = 6.0
 ## Altura do voo em círculo acima do jogador.
@@ -73,11 +87,21 @@ var _fall_ground_y: float = 0.0
 var _wing_left: Node3D = null
 var _wing_right: Node3D = null
 var _loot_visual: MeshInstance3D = null
+## Replicado (#57): ponto do mergulho kamikaze / centro da espiral (aviso nos clientes).
+var net_dive_point: Vector3 = Vector3.ZERO:
+	set(value):
+		net_dive_point = value
+		if not has_simulation_authority() and is_node_ready():
+			_refresh_dive_warning()
+var _dive_warning: GroundWarning = null
+var _hit_done: bool = false
 
 
 func _ready() -> void:
 	super._ready()
 	_build_model()
+	_dive_warning = GroundWarning.new()
+	add_child(_dive_warning)
 	SFX.play_at(SFX.SEAGULL_CAW, global_position, 2.0)
 	_orbit_dir = 1.0 if randf() < 0.5 else -1.0
 	_circle_left = randf_range(circle_time_min, circle_time_max)
@@ -106,6 +130,14 @@ func _enemy_physics(delta: float) -> void:
 			_process_fall(delta)
 		State.WAIT_LOOT:
 			_process_wait_loot(delta)
+		State.KAMIKAZE_TELEGRAPH:
+			_process_kamikaze_telegraph(delta)
+		State.KAMIKAZE:
+			_process_kamikaze(delta)
+		State.STUCK:
+			_process_stuck(delta)
+		State.SPIRAL_TELEGRAPH, State.SPIRAL:
+			_process_spiral(delta)
 
 	_animate_wings(delta)
 
@@ -113,6 +145,8 @@ func _enemy_physics(delta: float) -> void:
 func _enter_state(new_state: State) -> void:
 	state = new_state
 	_state_time = 0.0
+	_hit_done = false
+	_refresh_dive_warning()
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +167,7 @@ func _process_circle(delta: float) -> void:
 	if _circle_left <= 0.0:
 		_dives += 1
 		SFX.play_at(SFX.SEAGULL_DIVE, global_position)
-		_enter_state(State.DIVE)
+		_enter_state(_choose_dive(target))
 
 
 func _process_dive(delta: float) -> void:
@@ -241,6 +275,113 @@ func _process_escape(delta: float) -> void:
 func setup_network() -> void:
 	super.setup_network()
 	_add_synced_property(".:has_stolen")
+	_add_synced_property(".:net_dive_point")
+
+
+# ---------------------------------------------------------------------------
+# #57: kamikaze e bico espetado
+# ---------------------------------------------------------------------------
+
+## Que mergulho fazer (o corvo troca o kamikaze pela espiral). O 2.º, 4.º... é kamikaze, mas
+## nunca com um item no bico.
+func _choose_dive(target: Node3D) -> State:
+	if has_stolen or _dives % 2 == 1:
+		return State.DIVE
+	net_dive_point = _ground_point(target.global_position)
+	return State.KAMIKAZE_TELEGRAPH
+
+
+func _ground_point(p: Vector3) -> Vector3:
+	return Vector3(p.x, _ground_height(p, p.y), p.z)
+
+
+## Pára no ar por cima do ponto, a gritar, antes de mergulhar a pique.
+func _process_kamikaze_telegraph(delta: float) -> void:
+	_fly_towards(net_dive_point + Vector3.UP * 6.0, fly_speed * 1.5, delta, 5.0)
+	_dive_warning.pulse(delta)
+	if _state_time >= KAMIKAZE_TELEGRAPH_TIME:
+		SFX.play_at(SFX.SEAGULL_CAW, global_position, 4.0)
+		_enter_state(State.KAMIKAZE)
+
+
+func _process_kamikaze(delta: float) -> void:
+	var to: Vector3 = net_dive_point + Vector3.UP * 0.25 - global_position
+	if to.length() > 0.3 and _state_time < 2.0:
+		velocity = to.normalized() * KAMIKAZE_SPEED
+		global_position += velocity * minf(delta, to.length() / KAMIKAZE_SPEED)
+		_face_velocity(delta * 3.0)
+		# Apanha quem estiver no caminho, já perto do chão
+		if not _hit_done and to.length() < 3.0:
+			for p: Node3D in _players_within(global_position, KAMIKAZE_RADIUS):
+				_hit_kamikaze(p)
+		return
+	# Chegou ao chão: acerta ou espeta-se.
+	if not _hit_done:
+		for p: Node3D in _players_within(net_dive_point, KAMIKAZE_RADIUS):
+			_hit_kamikaze(p)
+	if _hit_done:
+		_after_failed_dive()
+	else:
+		global_position = net_dive_point + Vector3.UP * 0.25
+		velocity = Vector3.ZERO
+		spawn_particles(net_dive_point + Vector3.UP * 0.1, Color(0.85, 0.74, 0.5), 16, 3.0)
+		SFX.play_at(SFX.EMERGE_SAND, net_dive_point, 2.0)
+		_enter_state(State.STUCK)
+
+
+func _hit_kamikaze(p: Node3D) -> void:
+	if _hit_done:
+		return
+	_hit_done = true
+	_deal_damage(p, KAMIKAZE_DAMAGE)
+	var dir: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
+	dir = dir.normalized() if dir.length_squared() > 0.01 else Vector3.FORWARD
+	_knockback(p, dir * 7.0 + Vector3.UP * 6.0, 0.06)
+	SFX.play_at(SFX.SEAGULL_CAW, global_position, 4.0)
+
+
+## Bico espetado na areia: a espernear (rabo para o ar); presa fácil até se soltar.
+func _process_stuck(delta: float) -> void:
+	velocity = Vector3.ZERO
+	_animate_stuck(delta)
+	if _state_time >= STUCK_TIME:
+		spawn_particles(global_position, Color(0.85, 0.74, 0.5), 10, 2.5)
+		rotation.z = 0.0
+		velocity = Vector3.UP * 4.0
+		_after_failed_dive()
+
+
+func _animate_stuck(_delta: float) -> void:
+	rotation.x = -1.25 + sin(_state_time * 9.0) * 0.08
+	rotation.z = sin(_state_time * 16.0) * 0.3
+	if _wing_left != null:
+		var f: float = sin(_state_time * 22.0) * 0.6
+		_wing_left.rotation = Vector3(0.0, 0.0, f)
+		_wing_right.rotation = Vector3(0.0, 0.0, -f)
+
+
+func is_beak_stuck() -> bool:
+	return state == State.STUCK
+
+
+## Espiral do bando (só o corvo a usa; a gaivota nunca escolhe este estado).
+func _process_spiral(_delta: float) -> void:
+	_after_failed_dive()
+
+
+func _refresh_dive_warning() -> void:
+	if _dive_warning == null:
+		return
+	match state:
+		State.KAMIKAZE_TELEGRAPH, State.KAMIKAZE:
+			_dive_warning.show_circle(net_dive_point, KAMIKAZE_RADIUS)
+		_:
+			_warning_for_state()
+
+
+## Ganchos para a subclasse mostrar avisos próprios.
+func _warning_for_state() -> void:
+	_dive_warning.hide_warning()
 
 
 ## Abatida: cai a rodopiar e, ao tocar no chão, larga o item roubado.
@@ -300,6 +441,20 @@ func _process(delta: float) -> void:
 	if state == State.FALL and _dead:
 		_state_time += delta
 		_process_fall(delta)
+	elif not has_simulation_authority():
+		_state_time += delta
+		if _dive_warning != null and _dive_warning.visible:
+			_dive_warning.pulse(delta)
+		if state == State.STUCK:
+			_animate_stuck(delta)
+
+
+## Cliente: estado novo do host (aviso no chão e bico espetado).
+func _on_remote_state(_new_state: int) -> void:
+	_state_time = 0.0
+	_refresh_dive_warning()
+	if state != State.STUCK and state != State.FALL:
+		rotation.z = 0.0
 
 
 func _find_ground_y() -> float:
@@ -422,3 +577,4 @@ func _show_loot() -> void:
 		_loot_visual.material_override = ItemPickup.make_material(stolen.item, stolen.is_rare_variant)
 	_loot_visual.position = Vector3(0.0, -0.06, -0.5)
 	add_child(_loot_visual)
+

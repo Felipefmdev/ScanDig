@@ -4,6 +4,9 @@ extends EnemyBase
 ## Cobra do Campo Antigo: rápida e frágil. Persegue, enrola-se (aviso) e dá um bote em linha
 ## reta. Quando é atordoada (rede/estilingue) e o atordoamento acaba, foge e some na erva.
 ## Também se vai embora quando a ameaça que a fez surgir baixa (como o caranguejo).
+## #57: de meia distância, um ataque em cada dois é a MOLA: encolhe-se toda (círculo onde vai
+## cair), salta em arco e, se cair em cima do jogador, ENROLA-SE nele (Player.apply_snare:
+## anda a 25 %, abanar as teclas solta-o). Quando o jogador se solta, a cobra é atirada e fica tonta.
 
 enum State {
 	EMERGE,
@@ -13,7 +16,20 @@ enum State {
 	RECOVER,
 	FLEE,
 	LEAVE,
+	SPRING_COIL,
+	SPRING,
+	WRAP,
 }
+
+const SPRING_COIL_TIME: float = 0.8
+const SPRING_AIR_TIME: float = 0.6
+const SPRING_HEIGHT: float = 2.4
+const SPRING_MIN_DIST: float = 2.6
+const SPRING_MAX_DIST: float = 6.5
+const WRAP_RADIUS: float = 1.1
+const WRAP_TIME: float = 3.0
+## Distância do jogador ao nó a partir da qual a cobra é sacudida (ele soltou-se).
+const WRAP_BREAK: float = 1.3
 
 const SEGMENTS: int = 7
 const SEGMENT_SPACING: float = 0.16
@@ -52,6 +68,12 @@ var _wiggle: float = 0.0
 var _body_root: Node3D = null
 var _segments: Array[Node3D] = []
 var _collision: CollisionShape3D = null
+var _strikes: int = 0
+var _spring_from: Vector3 = Vector3.ZERO
+var _spring_to: Vector3 = Vector3.ZERO
+var _wrapped: Node3D = null
+var _wrap_bite: float = 0.0
+var _warning: GroundWarning = null
 
 
 func _ready() -> void:
@@ -59,6 +81,8 @@ func _ready() -> void:
 	stun_fx_height = 0.45
 	_collision = get_node_or_null(^"CollisionShape3D") as CollisionShape3D
 	_build_model()
+	_warning = GroundWarning.new()
+	add_child(_warning)
 	if DisturbanceMeter.instance != null:
 		DisturbanceMeter.instance.threshold_cleared.connect(_on_threshold_cleared)
 	_enter_state(State.EMERGE)
@@ -81,11 +105,19 @@ func _enemy_physics(delta: float) -> void:
 			_process_flee(delta)
 		State.LEAVE:
 			_process_leave()
+		State.SPRING_COIL:
+			_process_spring_coil(delta)
+		State.SPRING:
+			_process_spring()
+		State.WRAP:
+			_process_wrap(delta)
 
 
 func _enter_state(new_state: State) -> void:
 	state = new_state
 	_state_time = 0.0
+	if _warning != null:
+		_warning.hide_warning()
 	match new_state:
 		State.EMERGE, State.LEAVE:
 			velocity = Vector3.ZERO
@@ -100,6 +132,18 @@ func _enter_state(new_state: State) -> void:
 		State.STRIKE:
 			_strike_start = global_position
 			_bit = false
+		State.SPRING_COIL:
+			velocity = Vector3.ZERO
+			_warning.show_circle(_spring_to, WRAP_RADIUS)
+		State.SPRING:
+			_spring_from = global_position
+			if _collision != null:
+				_collision.disabled = true
+		State.WRAP:
+			velocity = Vector3.ZERO
+			_wrap_bite = 0.6
+			if _collision != null:
+				_collision.disabled = true
 		_:
 			if _collision != null:
 				_collision.disabled = false
@@ -128,7 +172,12 @@ func _process_chase(delta: float) -> void:
 	to_t.y = 0.0
 	var dist: float = to_t.length()
 	if dist <= strike_range:
+		_strikes += 1
 		_enter_state(State.COIL)
+		return
+	if _strikes % 2 == 1 and dist >= SPRING_MIN_DIST and dist <= SPRING_MAX_DIST and is_on_floor():
+		_strikes += 1
+		start_spring(target.global_position)
 		return
 	var dir: Vector3 = to_t / dist if dist > 0.001 else Vector3.ZERO
 	velocity.x = dir.x * move_speed
@@ -169,6 +218,105 @@ func _process_strike(delta: float) -> void:
 	if travelled >= strike_length or _bit or (is_on_wall() and _state_time > 0.1):
 		_segments[0].position.y = 0.12
 		_enter_state(State.RECOVER)
+
+
+## Mola (#57) para o ponto dado (público para testes/bot).
+func start_spring(at: Vector3) -> void:
+	_spring_to = Vector3(at.x, _ground_height(at, global_position.y), at.z)
+	var to: Vector3 = _spring_to - global_position
+	to.y = 0.0
+	if to.length_squared() > 0.01:
+		_strike_dir = to.normalized()
+	_enter_state(State.SPRING_COIL)
+
+
+## Encolhe-se como uma mola (achata e treme) virada para o ponto.
+func _process_spring_coil(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	move_and_slide()
+	_turn_towards(_strike_dir, 0.0, turn_speed * 2.0, delta)
+	_warning.pulse(delta)
+	var t: float = clampf(_state_time / SPRING_COIL_TIME, 0.0, 1.0)
+	_body_root.scale = Vector3(1.0 + 0.3 * t, 1.0 - 0.45 * t, 1.0 - 0.5 * t)
+	_body_root.position.x = sin(_state_time * 70.0) * 0.02 * t
+	if _state_time >= SPRING_COIL_TIME:
+		_body_root.position.x = 0.0
+		_body_root.scale = Vector3.ONE
+		_enter_state(State.SPRING)
+
+
+## Salto em arco, esticada como uma mola solta.
+func _process_spring() -> void:
+	var t: float = clampf(_state_time / SPRING_AIR_TIME, 0.0, 1.0)
+	var p: Vector3 = _spring_from.lerp(_spring_to, t)
+	p.y += sin(t * PI) * SPRING_HEIGHT
+	global_position = p
+	_body_root.scale = Vector3(0.8, 0.8, 1.0 + sin(t * PI) * 0.6)
+	_body_root.rotation.x = lerpf(0.6, -0.6, t)
+	if t < 1.0:
+		return
+	_body_root.scale = Vector3.ONE
+	_body_root.rotation.x = 0.0
+	for p2: Node3D in _players_within(_spring_to, WRAP_RADIUS):
+		_wrapped = p2
+		_player_effect(p2, &"apply_snare", [WRAP_TIME])
+		_deal_damage(p2, bite_damage * 0.5)
+		SFX.play_at(SFX.CRAB_PINCH, global_position, 0.0, 0.2)
+		_enter_state(State.WRAP)
+		return
+	_enter_state(State.RECOVER)
+
+
+## Enrolada no jogador: roda à volta das pernas dele e morde de vez em quando. Se ele se
+## afastar (soltou-se a abanar) é sacudida e fica tonta.
+func _process_wrap(delta: float) -> void:
+	if _wrapped == null or not is_instance_valid(_wrapped) or _state_time >= WRAP_TIME:
+		_release_wrap(false)
+		return
+	var feet: Vector3 = _wrapped.global_position
+	var d: Vector3 = feet - global_position
+	d.y = 0.0
+	if d.length() > WRAP_BREAK:
+		_release_wrap(true)
+		return
+	# Segue-o devagar (ele anda a 25 %): quem abana as teclas solta-se e afasta-se.
+	global_position = global_position.lerp(Vector3(feet.x, feet.y + 0.35, feet.z), clampf(2.5 * delta, 0.0, 1.0))
+	_body_root.rotation.y += delta * 9.0
+	_wiggle += delta * 20.0
+	for i: int in _segments.size():
+		var a: float = float(i) / float(_segments.size()) * TAU
+		_segments[i].position = Vector3(cos(a + _wiggle * 0.2) * 0.32, 0.12 + float(i) * 0.06, sin(a + _wiggle * 0.2) * 0.32)
+	_wrap_bite -= delta
+	if _wrap_bite <= 0.0:
+		_wrap_bite = 1.0
+		_deal_damage(_wrapped, bite_damage * 0.25)
+
+
+func _release_wrap(flung: bool) -> void:
+	var from: Vector3 = _wrapped.global_position if _wrapped != null and is_instance_valid(_wrapped) else global_position
+	_wrapped = null
+	_reset_segments()
+	_body_root.rotation.y = 0.0
+	var away: Vector3 = global_position - from
+	away.y = 0.0
+	away = away.normalized() if away.length_squared() > 0.01 else -global_transform.basis.z
+	global_position = Vector3(global_position.x, _ground_height(global_position, global_position.y - 0.35), global_position.z)
+	_enter_state(State.RECOVER)
+	if flung:
+		velocity = away * 6.0 + Vector3.UP * 4.0
+		spawn_particles(global_position, SCALE_GREEN, 10, 3.0)
+		stun(1.5)
+
+
+func _reset_segments() -> void:
+	for i: int in _segments.size():
+		_segments[i].position = Vector3(0, 0.12 if i == 0 else 0.07, float(i) * SEGMENT_SPACING - 0.45)
+
+
+func is_wrapping() -> bool:
+	return state == State.WRAP
 
 
 func _process_recover(delta: float) -> void:
@@ -221,7 +369,15 @@ func _can_take_damage() -> bool:
 
 
 func _can_be_stunned() -> bool:
-	return state != State.EMERGE and state != State.LEAVE
+	return state != State.EMERGE and state != State.LEAVE and state != State.SPRING
+
+
+## Atordoada: deixa-se ir com o sacudidela em vez de travar a seco.
+func _stunned_physics(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = move_toward(velocity.x, 0.0, 10.0 * delta)
+	velocity.z = move_toward(velocity.z, 0.0, 10.0 * delta)
+	move_and_slide()
 
 
 ## Cliente: colisão e cabeça levantada no bote (o resto chega pelo synchronizer).
@@ -230,9 +386,15 @@ func _on_remote_state(new_state: int) -> void:
 		_collision.disabled = new_state == State.EMERGE or new_state == State.LEAVE
 	_segments[0].position.y = 0.3 if new_state == State.COIL else 0.12
 	_body_root.visible = new_state != State.LEAVE
+	_body_root.scale = Vector3(1.3, 0.55, 0.5) if new_state == State.SPRING_COIL else Vector3.ONE
+	if new_state != State.WRAP:
+		_reset_segments()
+		_body_root.rotation.y = 0.0
 
 
 func _on_stunned() -> void:
+	if state == State.WRAP:
+		_release_wrap(false)
 	_segments[0].position.y = 0.12
 	_body_root.scale = Vector3.ONE
 
@@ -245,7 +407,9 @@ func _on_stun_ended() -> void:
 
 
 func _on_flee_started() -> void:
-	if state == State.CHASE or state == State.COIL or state == State.STRIKE or state == State.RECOVER:
+	if state == State.WRAP:
+		_release_wrap(false)
+	if state in [State.CHASE, State.COIL, State.STRIKE, State.RECOVER, State.SPRING_COIL]:
 		_segments[0].position.y = 0.12
 		_body_root.scale = Vector3.ONE
 		_enter_state(State.FLEE)
@@ -293,3 +457,4 @@ func _animate_slither(delta: float, speed: float) -> void:
 	_wiggle += delta * 12.0 * speed
 	for i: int in _segments.size():
 		_segments[i].position.x = sin(_wiggle - float(i) * 0.9) * 0.06 * float(i) / float(SEGMENTS)
+

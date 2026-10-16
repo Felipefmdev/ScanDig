@@ -8,13 +8,16 @@ extends EnemyBase
 ##     DIZZY_TIME s (dano a dobrar);
 ##   - ABÓBORA: atira-a ao sítio onde o jogador está (círculo + arco visível), rebenta em
 ##     PUMPKIN_RADIUS.
+## Caos (#57): a abóbora SALTA (2.º círculo mais à frente) e REBENTA em sementes; DESMANCHA-SE
+## em palha e remonta noutro sítio (círculo onde vai aparecer, atira quem lá estiver); RODOPIO
+## de braços abertos a correr para o jogador e depois fica tonto.
 ## Chama corvos aos 66 % e 33 %. Ao morrer desfaz-se em palha e larga a Lanterna do Espantalho.
 ## Coop (#24): IA no host; estado e ponto do ataque (net_attack_point) vão para os clientes.
 
 signal boss_defeated(boss_id: StringName)
 signal health_changed(current: float, max_value: float)
 
-enum State { EMERGE, WALK, SWEEP_TELEGRAPH, SWEEP, DIZZY, THROW_TELEGRAPH, THROW, DYING }
+enum State { EMERGE, WALK, SWEEP_TELEGRAPH, SWEEP, DIZZY, THROW_TELEGRAPH, THROW, DYING, STRAW_OUT, STRAW_IN, WHIRL_TELEGRAPH, WHIRL }
 
 const BOSS_ID: StringName = &"scarecrow"
 const BOSS_NAME: String = "ESPANTALHO DESPERTO"
@@ -25,6 +28,16 @@ const PUMPKIN_RADIUS: float = 2.0
 const WEAK_POINT_MULTIPLIER: float = 2.0
 const REINFORCE_THRESHOLDS: Array[float] = [0.66, 0.33]
 const PHASE_TWO_RATIO: float = 0.5
+## #57: abóbora saltitona, palha e rodopio.
+const BOUNCE_DISTANCE: float = 3.2
+const BOUNCE_RADIUS: float = 1.2
+const STRAW_RADIUS: float = 2.4
+const STRAW_TIME: float = 1.1
+const STRAW_DISTANCE: float = 3.5
+const WHIRL_RADIUS: float = 2.0
+const WHIRL_SPEED: float = 5.5
+const WHIRL_TIME: float = 3.0
+const THROW_FLIGHT: float = 0.9
 
 const SACK: Color = Color(0.72, 0.6, 0.4)
 const PATCH_RED: Color = Color(0.7, 0.2, 0.15)
@@ -49,6 +62,8 @@ const GLOW: Color = Color(1.0, 0.75, 0.2)
 ## Distância a partir da qual atira abóboras em vez de varrer.
 @export var throw_distance: float = 5.0
 @export var attack_cooldown: float = 1.2
+@export var whirl_damage: float = 12.0
+@export var straw_damage: float = 10.0
 
 var state: State = State.EMERGE
 var phase: int = 1
@@ -70,6 +85,10 @@ var _scythe: Node3D = null
 var _pumpkin: MeshInstance3D = null
 var _throw_from: Vector3 = Vector3.ZERO
 var _anim_time: float = 0.0
+var _warning2: GroundWarning = null
+var _hit_list: Array[Node] = []
+var _attack_count: int = 0
+var _straw_fx: CPUParticles3D = null
 
 
 func _ready() -> void:
@@ -82,6 +101,8 @@ func _ready() -> void:
 	add_child(_hud)
 	_warning = GroundWarning.new()
 	add_child(_warning)
+	_warning2 = GroundWarning.new()
+	add_child(_warning2)
 	boss_defeated.connect(_report_defeat_to_core)
 	_enter_state(State.EMERGE)
 
@@ -118,16 +139,40 @@ func _enemy_physics(delta: float) -> void:
 				_enter_state(State.WALK)
 		State.THROW_TELEGRAPH:
 			_warning.pulse(delta)
+			_warning2.pulse(delta)
 			if _state_time >= throw_telegraph * (0.8 if phase == 2 else 1.0):
 				_enter_state(State.THROW)
 		State.THROW:
-			if not _hit_done and _state_time >= 0.1:
+			_warning.pulse(delta)
+			_warning2.pulse(delta)
+			# 1.º toque: salta (pequeno); 2.º: rebenta em sementes.
+			if _hit_list.is_empty() and _state_time >= 0.1:
+				_hit_list.append(self)
+				_damage_circle(net_attack_point, BOUNCE_RADIUS, pumpkin_damage * 0.4, 5.0)
+				spawn_particles(net_attack_point + Vector3.UP * 0.2, Color(0.5, 0.42, 0.25), 10, 2.5)
+				_warning.hide_warning()
+			if not _hit_done and _state_time >= 0.1 + THROW_FLIGHT * 0.7:
 				_hit_done = true
-				_damage_circle(net_attack_point, PUMPKIN_RADIUS, pumpkin_damage)
-				spawn_particles(net_attack_point + Vector3.UP * 0.2, PUMPKIN, 20, 3.5)
-			if _state_time >= 0.4:
+				_explode_pumpkin(bounce_point())
+			if _state_time >= 0.1 + THROW_FLIGHT * 0.7 + 0.3:
 				_cooldown = attack_cooldown * 0.6
 				_enter_state(State.WALK)
+		State.STRAW_OUT:
+			if _state_time >= STRAW_TIME * (0.8 if phase == 2 else 1.0):
+				_enter_state(State.STRAW_IN)
+		State.STRAW_IN:
+			if not _hit_done and _state_time >= 0.15:
+				_hit_done = true
+				_damage_circle(global_position, STRAW_RADIUS, straw_damage, 9.0)
+			if _state_time >= 0.6:
+				_cooldown = attack_cooldown * 0.5
+				_enter_state(State.WALK)
+		State.WHIRL_TELEGRAPH:
+			_warning.pulse(delta)
+			if _state_time >= sweep_telegraph * (0.75 if phase == 2 else 1.0):
+				_enter_state(State.WHIRL)
+		State.WHIRL:
+			_process_whirl(delta)
 
 
 func _process_walk(delta: float) -> void:
@@ -145,11 +190,24 @@ func _process_walk(delta: float) -> void:
 	var dir: Vector3 = to / dist if dist > 0.01 else Vector3.ZERO
 	_turn_towards(dir, 0.0, turn_speed, delta)
 	if _cooldown <= 0.0:
+		# #57: um ataque em cada três é caótico (palha ou rodopio).
+		if _attack_count % 3 == 2:
+			_attack_count += 1
+			if dist >= throw_distance or _attack_count % 2 == 0:
+				var behind: Vector3 = target.global_position + dir * STRAW_DISTANCE
+				net_attack_point = Vector3(behind.x, _ground_height(behind, _surface_y), behind.z)
+				_enter_state(State.STRAW_OUT)
+			else:
+				net_attack_point = global_position
+				_enter_state(State.WHIRL_TELEGRAPH)
+			return
 		if dist <= SWEEP_RADIUS * 0.85:
+			_attack_count += 1
 			_enter_state(State.SWEEP_TELEGRAPH)
 			return
 		if dist >= throw_distance:
 			# Os pés do jogador (um raio ao chão bateria no próprio jogador, que está na camada 1).
+			_attack_count += 1
 			net_attack_point = target.global_position
 			_enter_state(State.THROW_TELEGRAPH)
 			return
@@ -176,6 +234,10 @@ func _enter_state(s: State) -> void:
 	state = s
 	_state_time = 0.0
 	_hit_done = false
+	_hit_list.clear()
+	_warning2.hide_warning()
+	if _body_root != null:
+		_body_root.visible = s != State.STRAW_OUT
 	match s:
 		State.EMERGE:
 			_surface_y = global_position.y
@@ -187,14 +249,31 @@ func _enter_state(s: State) -> void:
 		State.SWEEP_TELEGRAPH:
 			net_attack_point = global_position
 			_warning.show_circle(global_position, SWEEP_RADIUS)
-		State.THROW_TELEGRAPH:
-			_throw_from = global_position + Vector3.UP * 2.0
-			_warning.show_circle(net_attack_point, PUMPKIN_RADIUS)
-		State.SWEEP, State.THROW, State.DIZZY:
+		State.THROW_TELEGRAPH, State.THROW:
+			if s == State.THROW_TELEGRAPH:
+				_throw_from = global_position + Vector3.UP * 2.0
+			_warning.show_circle(net_attack_point, BOUNCE_RADIUS)
+			_warning2.show_circle(bounce_point(), PUMPKIN_RADIUS)
+		State.SWEEP, State.DIZZY:
+			_warning.hide_warning()
+		State.STRAW_OUT:
+			# Desmancha-se: nuvem de palha aqui, círculo onde vai remontar.
+			collision_layer = 0
+			_burst_straw(global_position)
+			_warning.show_circle(net_attack_point, STRAW_RADIUS)
+		State.STRAW_IN:
+			_warning.hide_warning()
+			if has_simulation_authority():
+				global_position = net_attack_point
+			collision_layer = 8
+			_burst_straw(net_attack_point)
+		State.WHIRL_TELEGRAPH:
+			_warning.show_circle(global_position, WHIRL_RADIUS)
+		State.WHIRL:
 			_warning.hide_warning()
 
 
-func _damage_circle(center: Vector3, radius: float, damage: float) -> void:
+func _damage_circle(center: Vector3, radius: float, damage: float, push: float = 6.0) -> void:
 	var players: Array[Node] = get_tree().get_nodes_in_group(&"players")
 	if players.is_empty():
 		players = get_tree().get_nodes_in_group(&"player")
@@ -206,6 +285,8 @@ func _damage_circle(center: Vector3, radius: float, damage: float) -> void:
 		d.y = 0.0
 		if d.length() <= radius:
 			_deal_damage(pl, damage)
+			var out: Vector3 = d.normalized() if d.length_squared() > 0.01 else -global_transform.basis.z
+			_knockback(pl, out * push + Vector3.UP * push * 0.8, 0.06)
 
 
 # ---------------------------------------------------------------------------
@@ -216,12 +297,88 @@ func is_phase_two() -> bool:
 	return health < max_health * PHASE_TWO_RATIO
 
 
+## Onde a abóbora salta depois do 1.º toque (continua na direção do lançamento).
+func bounce_point() -> Vector3:
+	var dir: Vector3 = net_attack_point - Vector3(_throw_from.x, net_attack_point.y, _throw_from.z)
+	dir.y = 0.0
+	dir = dir.normalized() if dir.length_squared() > 0.01 else -global_transform.basis.z
+	var p: Vector3 = net_attack_point + dir * BOUNCE_DISTANCE
+	return Vector3(p.x, _ground_height(p, net_attack_point.y), p.z)
+
+
+func _explode_pumpkin(at: Vector3) -> void:
+	_damage_circle(at, PUMPKIN_RADIUS, pumpkin_damage, 8.0)
+	spawn_particles(at + Vector3.UP * 0.3, PUMPKIN, 24, 5.0)
+	# Sementes claras a voar em todas as direções
+	spawn_particles(at + Vector3.UP * 0.4, Color(0.98, 0.93, 0.75), 30, 7.0)
+	SFX.play_at(SFX.EMERGE_SAND, at, 6.0)
+
+
+## Rodopio de braços abertos: corre para o alvo a girar, atira quem toca; no fim fica tonto.
+func _process_whirl(delta: float) -> void:
+	_apply_gravity(delta)
+	var target: Node3D = _update_target(delta)
+	if target != null:
+		var to: Vector3 = target.global_position - global_position
+		to.y = 0.0
+		var dir: Vector3 = to.normalized() if to.length() > 0.2 else Vector3.ZERO
+		var speed: float = WHIRL_SPEED * (1.2 if phase == 2 else 1.0)
+		velocity.x = lerpf(velocity.x, dir.x * speed, clampf(2.5 * delta, 0.0, 1.0))
+		velocity.z = lerpf(velocity.z, dir.z * speed, clampf(2.5 * delta, 0.0, 1.0))
+	move_and_slide()
+	for p: Node3D in _players_within(global_position, WHIRL_RADIUS):
+		if _hit_list.has(p):
+			continue
+		_hit_list.append(p)
+		_deal_damage(p, whirl_damage)
+		var out: Vector3 = p.global_position - global_position
+		out.y = 0.0
+		out = out.normalized() if out.length_squared() > 0.01 else Vector3.FORWARD
+		_knockback(p, (out + out.cross(Vector3.UP)) * 9.0 + Vector3.UP * 7.0, 0.08)
+	if fmod(_state_time, 0.9) < delta:
+		_hit_list.clear()
+	if _state_time >= WHIRL_TIME:
+		velocity = Vector3.ZERO
+		_enter_state(State.DIZZY)
+
+
+func _burst_straw(at: Vector3) -> void:
+	if not is_inside_tree():
+		return
+	spawn_particles(at + Vector3.UP * 1.2, STRAW, 36, 4.5)
+	spawn_particles(at + Vector3.UP * 0.6, SACK, 12, 3.0)
+	if _straw_fx == null:
+		_straw_fx = CPUParticles3D.new()
+		_straw_fx.name = "StrawCloud"
+		_straw_fx.top_level = true
+		_straw_fx.one_shot = true
+		_straw_fx.explosiveness = 0.9
+		_straw_fx.amount = 40
+		_straw_fx.lifetime = 1.2
+		_straw_fx.spread = 180.0
+		_straw_fx.initial_velocity_min = 2.0
+		_straw_fx.initial_velocity_max = 5.0
+		_straw_fx.gravity = Vector3(0.0, -3.0, 0.0)
+		_straw_fx.angular_velocity_min = -400.0
+		_straw_fx.angular_velocity_max = 400.0
+		# Fios de palha (prismas finos amarelos)
+		var st: SurfaceTool = SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		LowPolyMesh.prism(st, Vector3(0.0, -0.14, 0.0), Vector3(0.0, 0.14, 0.0), 0.015, 0.0, 4, STRAW)
+		var mesh: Mesh = ToonKit.commit(st)
+		mesh.surface_set_material(0, LowPolyMesh.make_material())
+		_straw_fx.mesh = mesh
+		add_child(_straw_fx)
+	_straw_fx.global_position = at + Vector3.UP * 1.2
+	_straw_fx.restart()
+
+
 func is_weak_point_exposed() -> bool:
 	return state == State.DIZZY
 
 
 func _can_take_damage() -> bool:
-	return state != State.EMERGE and state != State.DYING
+	return state != State.EMERGE and state != State.DYING and state != State.STRAW_OUT
 
 
 func _can_be_stunned() -> bool:
@@ -293,15 +450,27 @@ func _on_remote_state(new_state: int) -> void:
 	_hud.visible = new_state != State.EMERGE and new_state != State.DYING
 	if new_state == State.THROW_TELEGRAPH:
 		_throw_from = global_position + Vector3.UP * 2.0
+	if _body_root != null:
+		_body_root.visible = new_state != State.STRAW_OUT
+	if new_state == State.STRAW_OUT:
+		_burst_straw(global_position)
+	elif new_state == State.STRAW_IN:
+		_burst_straw(net_attack_point)
 	_refresh_remote_visuals()
 
 
 func _refresh_remote_visuals() -> void:
+	_warning2.hide_warning()
 	match state:
 		State.SWEEP_TELEGRAPH:
 			_warning.show_circle(net_attack_point, SWEEP_RADIUS)
 		State.THROW_TELEGRAPH:
-			_warning.show_circle(net_attack_point, PUMPKIN_RADIUS)
+			_warning.show_circle(net_attack_point, BOUNCE_RADIUS)
+			_warning2.show_circle(bounce_point(), PUMPKIN_RADIUS)
+		State.STRAW_OUT:
+			_warning.show_circle(net_attack_point, STRAW_RADIUS)
+		State.WHIRL_TELEGRAPH:
+			_warning.show_circle(net_attack_point, WHIRL_RADIUS)
 		_:
 			_warning.hide_warning()
 
@@ -328,19 +497,41 @@ func _animate(delta: float) -> void:
 			_scythe.rotation.y = lerpf(_scythe.rotation.y, 1.2, clampf(6.0 * delta, 0.0, 1.0))
 		State.SWEEP:
 			_body_root.rotation.y += delta * 22.0
+		State.WHIRL_TELEGRAPH:
+			_body_root.rotation.y += delta * 8.0 * clampf(_state_time / sweep_telegraph, 0.0, 1.0)
+			_body_root.rotation.z = sin(_anim_time * 30.0) * 0.06
+		State.WHIRL:
+			# Braços abertos a girar como um pião, inclinado para a frente
+			_body_root.rotation.y += delta * 18.0
+			_body_root.rotation.z = sin(_anim_time * 6.0) * 0.15
+			_body_root.position.y = absf(sin(_anim_time * 10.0)) * 0.15
+		State.STRAW_IN:
+			# Remonta: cresce do chão com um esticão
+			var k: float = clampf(_state_time / 0.35, 0.0, 1.0)
+			_body_root.scale = Vector3(1.0 + (1.0 - k) * 0.4, k * (1.0 + sin(k * PI) * 0.25), 1.0 + (1.0 - k) * 0.4).max(Vector3.ONE * 0.05)
 		State.DIZZY:
 			_body_root.rotation.y = lerpf(_body_root.rotation.y, 0.0, clampf(3.0 * delta, 0.0, 1.0))
 			_body_root.rotation.z = sin(_anim_time * 9.0) * 0.25
 		_:
 			_body_root.rotation.z = lerpf(_body_root.rotation.z, 0.0, clampf(4.0 * delta, 0.0, 1.0))
-	# Abóbora em arco (telegrafado: na mão; THROW: chega ao ponto)
-	if state == State.THROW_TELEGRAPH or state == State.THROW:
+	if state != State.STRAW_IN:
+		_body_root.scale = Vector3.ONE
+	# Abóbora em arco (telegrafado: na mão; THROW: chega ao ponto, salta e rebenta)
+	if state == State.THROW_TELEGRAPH or (state == State.THROW and _state_time < 0.1 + THROW_FLIGHT * 0.7):
 		var total: float = throw_telegraph * (0.8 if phase == 2 else 1.0)
-		var t: float = clampf(_state_time / total, 0.0, 1.0) if state == State.THROW_TELEGRAPH else 1.0
-		var p: Vector3 = _throw_from.lerp(net_attack_point, t)
-		p.y += sin(t * PI) * 3.0
+		var p: Vector3
+		if state == State.THROW_TELEGRAPH:
+			var t: float = clampf(_state_time / total, 0.0, 1.0)
+			p = _throw_from.lerp(net_attack_point, t)
+			p.y += sin(t * PI) * 3.0
+		elif _state_time < 0.1:
+			p = net_attack_point
+		else:
+			var b: float = clampf((_state_time - 0.1) / (THROW_FLIGHT * 0.7), 0.0, 1.0)
+			p = net_attack_point.lerp(bounce_point(), b)
+			p.y += sin(b * PI) * 1.6
 		_pumpkin.visible = true
-		_pumpkin.global_position = p
+		_pumpkin.global_position = p + Vector3.UP * 0.2
 		_pumpkin.rotation.x += delta * 8.0
 	elif _pumpkin != null:
 		_pumpkin.visible = false
@@ -431,3 +622,4 @@ func _commit(st: SurfaceTool, part_name: String, mat: Material) -> MeshInstance3
 	mi.mesh = ToonKit.commit(st)
 	mi.material_override = mat
 	return mi
+

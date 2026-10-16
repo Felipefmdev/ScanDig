@@ -107,6 +107,11 @@ func _enter_state(new_state: State) -> void:
 			spawn_particles(_erupt_point + Vector3.UP * 0.1, DIRT, 24, 4.0)
 			for p: Node3D in _players_within(_erupt_point, erupt_radius):
 				_deal_damage(p, erupt_damage)
+				# #57: lança o jogador ao ar (pequeno), quase na vertical.
+				var out: Vector3 = p.global_position - _erupt_point
+				out.y = 0.0
+				out = out.normalized() if out.length_squared() > 0.01 else Vector3.FORWARD
+				_knockback(p, out * 2.5 + Vector3.UP * 9.0, 0.06)
 		State.DIG_DOWN, State.LEAVE:
 			SFX.play_at(SFX.EMERGE_SAND, global_position)
 			spawn_particles(Vector3(global_position.x, _ground_y + 0.05, global_position.z), DIRT, 12, 2.0)
@@ -144,6 +149,8 @@ func _process_telegraph(delta: float) -> void:
 func _process_erupt() -> void:
 	var t: float = clampf(_state_time / erupt_time, 0.0, 1.0)
 	global_position = Vector3(_erupt_point.x, _ground_y - UNDERGROUND_DEPTH * (1.0 - t), _erupt_point.z)
+	# Sai disparada como uma rolha (#57)
+	_body_root.position.y = sin(t * PI) * 0.6
 	if t >= 1.0:
 		_enter_state(State.EXPOSED)
 

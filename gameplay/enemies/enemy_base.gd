@@ -712,6 +712,17 @@ func _knockback(target: Node, impulse: Vector3, shake: float = 0.0) -> void:
 	target.call(&"apply_knockback", impulse, shake)
 
 
+## Efeito no dono do jogador (#57: apply_ink, apply_disarm, apply_snare, end_disarm...). Como o
+## _knockback: num jogador de outro peer vai por RPC. Sem o método não faz nada.
+func _player_effect(target: Node, method: StringName, args: Array = []) -> void:
+	if target == null or not target.has_method(method):
+		return
+	if NetVisibility.is_online(multiplayer) and target.get_multiplayer_authority() != multiplayer.get_unique_id():
+		target.callv(&"rpc_id", [target.get_multiplayer_authority(), method] + args)
+		return
+	target.callv(method, args)
+
+
 ## Regista um material para o flash de dano. Toon (ShaderMaterial): anima flash_amount 1 → 0.
 ## StandardMaterial3D: albedo_color é animado de volta à cor base.
 func _register_flash_material(mat: Material) -> void:

@@ -4,6 +4,8 @@ extends EnemyBase
 ## Primeiro inimigo do "subsolo acorda": sai da areia quando a ameaça sobe,
 ## persegue o jogador de lado, belisca e volta a enterrar-se quando a ameaça baixa.
 ## Com flee_from (repelente) foge da origem e depois enterra-se.
+## #57: de vez em quando entra em CORRIDA DE LADO frenética (faixa marcada, patas a tremer
+## antes): atira o jogador e choca com os outros caranguejos (ficam ambos tontos).
 
 enum State {
 	EMERGE,
@@ -11,7 +13,14 @@ enum State {
 	ATTACK,
 	BURROW,
 	FLEE,
+	RUSH_TELEGRAPH,
+	RUSH,
 }
+
+const RUSH_TELEGRAPH_TIME: float = 0.6
+const RUSH_SPEED: float = 7.5
+const RUSH_TIME: float = 1.3
+const RUSH_WIDTH: float = 1.0
 
 @export var move_speed: float = 1.9
 @export var turn_speed: float = 8.0
@@ -52,11 +61,20 @@ var _attack_timer: float = 0.0
 var _state_time: float = 0.0
 var _scuttle_time: float = 0.0
 var _surface_y: float = 0.0
+## Segundos até poder voltar a fazer a corrida de lado (aleatório).
+var rush_cooldown: float = 0.0
+var _rush_dir: Vector3 = Vector3.ZERO
+var _rush_hit: Array[Node] = []
+var _rush_warning: GroundWarning = null
 
 
 func _ready() -> void:
 	super._ready()
 	_build_model()
+	rush_cooldown = randf_range(4.0, 9.0)
+	if walk_sideways:
+		_rush_warning = GroundWarning.new()
+		add_child(_rush_warning)
 
 	if DisturbanceMeter.instance != null:
 		DisturbanceMeter.instance.threshold_cleared.connect(_on_threshold_cleared)
@@ -80,6 +98,10 @@ func _enemy_physics(delta: float) -> void:
 			_process_burrow()
 		State.FLEE:
 			_process_flee(delta)
+		State.RUSH_TELEGRAPH:
+			_process_rush_telegraph(delta)
+		State.RUSH:
+			_process_rush(delta)
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +111,8 @@ func _enemy_physics(delta: float) -> void:
 func _enter_state(new_state: State) -> void:
 	state = new_state
 	_state_time = 0.0
+	if _rush_warning != null:
+		_rush_warning.hide_warning()
 	match new_state:
 		State.EMERGE:
 			_surface_y = global_position.y
@@ -100,6 +124,14 @@ func _enter_state(new_state: State) -> void:
 			_surface_y = global_position.y
 			collision_shape.disabled = true
 			velocity = Vector3.ZERO
+			_emit_sand_puff()
+		State.RUSH_TELEGRAPH:
+			collision_shape.disabled = false
+			velocity = Vector3.ZERO
+			_rush_warning.show_line(global_position, _rush_dir, RUSH_SPEED * RUSH_TIME, RUSH_WIDTH * 2.0)
+		State.RUSH:
+			collision_shape.disabled = false
+			_rush_hit.clear()
 			_emit_sand_puff()
 		_:
 			collision_shape.disabled = false
@@ -139,6 +171,10 @@ func _process_chase(delta: float) -> void:
 
 	if dist <= attack_range:
 		_enter_state(State.ATTACK)
+		return
+	rush_cooldown -= delta
+	if walk_sideways and rush_cooldown <= 0.0 and dist >= 2.5 and dist <= 9.0:
+		start_rush(to_target / dist)
 		return
 
 	var dir: Vector3 = to_target / dist if dist > 0.001 else Vector3.ZERO
@@ -194,6 +230,74 @@ func _process_flee(delta: float) -> void:
 	move_and_slide()
 	_turn_towards(dir, PI * 0.5 if walk_sideways else 0.0, turn_speed, delta)
 	_animate_scuttle(delta * 1.4)
+
+
+## Corrida de lado (#57) na direção dada (público para testes/bot).
+func start_rush(dir: Vector3) -> void:
+	if _rush_warning == null:
+		return
+	rush_cooldown = randf_range(7.0, 12.0)
+	_rush_dir = Vector3(dir.x, 0.0, dir.z).normalized()
+	_enter_state(State.RUSH_TELEGRAPH)
+
+
+func _process_rush_telegraph(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	move_and_slide()
+	_turn_towards(_rush_dir, PI * 0.5, turn_speed, delta)
+	_rush_warning.pulse(delta)
+	# Patas a tremer e a carapaça a vibrar antes de arrancar
+	_animate_scuttle(delta * 4.0)
+	body_root.position.x = sin(_state_time * 60.0) * 0.03
+	if _state_time >= RUSH_TELEGRAPH_TIME:
+		body_root.position.x = 0.0
+		_enter_state(State.RUSH)
+
+
+func _process_rush(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = _rush_dir.x * RUSH_SPEED
+	velocity.z = _rush_dir.z * RUSH_SPEED
+	move_and_slide()
+	_turn_towards(_rush_dir, PI * 0.5, turn_speed * 2.0, delta)
+	_animate_scuttle(delta * 5.0)
+	if int(_state_time * 12.0) % 3 == 0:
+		_emit_sand_puff()
+	for p: Node3D in _players_within(global_position, RUSH_WIDTH):
+		if _rush_hit.has(p):
+			continue
+		_rush_hit.append(p)
+		_deal_damage(p, attack_damage * 0.6)
+		_knockback(p, _rush_dir * 8.0 + Vector3.UP * 5.0, 0.05)
+	# Choca com outros caranguejos: ambos tontos e o outro sai disparado.
+	var crashed: bool = false
+	for n: Node in get_tree().get_nodes_in_group(GROUP):
+		var other: Crab = n as Crab
+		if other == null or other == self or _rush_hit.has(other) or not other.is_alive():
+			continue
+		var d: Vector3 = other.global_position - global_position
+		if Vector2(d.x, d.z).length() <= RUSH_WIDTH + 0.7 and absf(d.y) < 1.5:
+			_rush_hit.append(other)
+			other.velocity += _rush_dir * 6.0 + Vector3.UP * 4.0
+			other.stun(1.0)
+			crashed = true
+	if crashed or (is_on_wall() and _state_time > 0.15) or _state_time >= RUSH_TIME:
+		if crashed or is_on_wall():
+			SFX.play_at(SFX.SHELL_KNOCK, global_position, 2.0)
+			_enter_state(State.CHASE)
+			stun(1.0)
+		else:
+			_enter_state(State.CHASE)
+
+
+## Tonto: deixa-se ir com o empurrão (choque de outro caranguejo) em vez de travar a seco.
+func _stunned_physics(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = move_toward(velocity.x, 0.0, 12.0 * delta)
+	velocity.z = move_toward(velocity.z, 0.0, 12.0 * delta)
+	move_and_slide()
 
 
 func _pinch() -> void:
@@ -299,3 +403,4 @@ func _add_part(parent: Node3D, part_name: String, mesh: Mesh) -> MeshInstance3D:
 	mi.material_override = body_material
 	parent.add_child(mi)
 	return mi
+

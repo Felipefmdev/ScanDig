@@ -88,6 +88,9 @@ const LANTERN_COOLDOWN: float = 4.0
 ## Empurrão (#57): segundos sem controlo por m/s de impulso, e o máximo.
 const KNOCKBACK_TIME_PER_SPEED: float = 0.05
 const KNOCKBACK_TIME_MAX: float = 0.9
+## Teto da velocidade depois de empurrões acumulados (m/s).
+const KNOCKBACK_MAX_FLAT: float = 14.0
+const KNOCKBACK_MAX_UP: float = 12.0
 ## Modelos na mão (#37) das ferramentas sem nó próprio no player.tscn (o estilingue tem).
 const MEDKIT_MODEL: Script = preload("res://gameplay/weapons/medkit/medkit_model.gd")
 const REPELLENT_MODEL: Script = preload("res://gameplay/weapons/repellent/repellent_model.gd")
@@ -166,6 +169,12 @@ var _attack_cooldown: float = 0.0
 var _shake_tween: Tween = null
 ## #57: tempo a voar depois de um empurrão (sem controlo nem atrito no chão).
 var _knockback_time: float = 0.0
+## #57: preso (cobra enrolada, abanar as teclas solta), sem ferramenta (Corvo-Rei roubou-a) e
+## tinta do polvo no ecrã. Tudo só no dono, posto pelos RPC apply_snare/apply_disarm/apply_ink.
+var _snare_time: float = 0.0
+var _disarm_time: float = 0.0
+var _ink_time: float = 0.0
+var _ink_layer: CanvasLayer = null
 var _threat_fill_style: StyleBoxFlat = null
 var _spawn_transform: Transform3D = Transform3D.IDENTITY
 var _target_pickup: ItemPickup = null
@@ -352,6 +361,7 @@ func _physics_process(delta: float) -> void:
 	var input_dir: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
+	direction = _apply_chaos_effects(direction, delta)
 	if _knockback_time > 0.0:
 		_knockback_time -= delta
 	elif direction != Vector3.ZERO:
@@ -616,7 +626,7 @@ static func _line_count(labels: Array[Label]) -> int:
 
 
 func _fade_message(label: Label, duration: float) -> void:
-	var old: Tween = label.get_meta(&"fade", null) as Tween
+	var old: Tween = (label.get_meta(&"fade") as Tween) if label.has_meta(&"fade") else null
 	if old != null and old.is_valid():
 		old.kill()
 	var tween: Tween = label.create_tween()
@@ -800,6 +810,9 @@ func apply_knockback(impulse: Vector3, shake: float = 0.0) -> void:
 	if not is_local() or health <= 0.0:
 		return
 	velocity += impulse
+	# Vários empurrões seguidos não se somam sem fim (#57): teto para não sair do mapa.
+	var flat: Vector2 = Vector2(velocity.x, velocity.z).limit_length(KNOCKBACK_MAX_FLAT)
+	velocity = Vector3(flat.x, minf(velocity.y, KNOCKBACK_MAX_UP), flat.y)
 	_knockback_time = clampf(impulse.length() * KNOCKBACK_TIME_PER_SPEED, 0.15, KNOCKBACK_TIME_MAX)
 	if shake > 0.0:
 		_shake_camera(shake, 0.3)
@@ -874,7 +887,7 @@ func _on_health_changed(current: float, max_value: float) -> void:
 # ---------------------------------------------------------------------------
 
 func _handle_attack_action() -> void:
-	if _attack_cooldown > 0.0 or dig_animator.is_playing():
+	if _attack_cooldown > 0.0 or dig_animator.is_playing() or _disarm_time > 0.0:
 		return
 	if Input.is_action_just_pressed("attack"):
 		var c: CarriedItem = inventory.get_selected()
@@ -1283,7 +1296,7 @@ func steal_loot() -> CarriedItem:
 
 
 func _handle_use_tool_action() -> void:
-	if not Input.is_action_just_pressed("use_tool") or _use_cooldown > 0.0:
+	if not Input.is_action_just_pressed("use_tool") or _use_cooldown > 0.0 or _disarm_time > 0.0:
 		return
 	var c: CarriedItem = inventory.get_selected()
 	if c == null or c.tool_data == null:
@@ -1788,3 +1801,113 @@ func _spawn_magnetic_wave(origin: Vector3, forward: Vector3) -> void:
 	t.tween_property(ring, "scale", Vector3(12.0, 1.0, 12.0), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	t.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.35)
 	t.tween_callback(ring.queue_free)
+
+
+# ---------------------------------------------------------------------------
+# #57: efeitos caóticos dos inimigos (só o dono aplica; o host chama por RPC)
+# ---------------------------------------------------------------------------
+
+## Cobra enrolada: anda a 25 % até `seconds` passarem; cada tecla de movimento premida tira
+## SNARE_SHAKE_OFF s (abanar para soltar).
+const SNARE_SHAKE_OFF: float = 0.3
+const SNARE_SPEED_FACTOR: float = 0.25
+const INK_FADE: float = 0.6
+
+
+@rpc("any_peer", "call_local", "reliable")
+func apply_snare(seconds: float) -> void:
+	if not is_local() or health <= 0.0:
+		return
+	_snare_time = maxf(_snare_time, clampf(seconds, 0.0, 4.0))
+	_show_temporary_message("🐍 Uma cobra enrolou-se em ti! Abana (WASD)!", Color(0.6, 1.0, 0.45), 1.6)
+
+
+## Corvo-Rei roubou a ferramenta: sem atacar nem usar ferramentas durante `seconds`.
+@rpc("any_peer", "call_local", "reliable")
+func apply_disarm(seconds: float) -> void:
+	if not is_local() or health <= 0.0:
+		return
+	_disarm_time = maxf(_disarm_time, clampf(seconds, 0.0, 8.0))
+	if tool_view != null:
+		tool_view.visible = false
+	_show_temporary_message("👑 O Corvo-Rei roubou-te a ferramenta! Acerta-lhe!", Color(1.0, 0.55, 0.35), 2.0)
+
+
+## Corvo-Rei largou a ferramenta (levou um golpe): volta já à mão.
+@rpc("any_peer", "call_local", "reliable")
+func end_disarm() -> void:
+	if is_local() and _disarm_time > 0.0:
+		_disarm_time = 0.0
+		_update_tool_in_hand()
+
+
+## Tinta do polvo: manchas pretas a tapar parte do ecrã durante `seconds`.
+@rpc("any_peer", "call_local", "reliable")
+func apply_ink(seconds: float) -> void:
+	if not is_local() or health <= 0.0:
+		return
+	_ink_time = maxf(_ink_time, clampf(seconds, 0.0, 6.0))
+	_build_ink_overlay()
+	_shake_camera(0.04, 0.3)
+
+
+func is_snared() -> bool:
+	return _snare_time > 0.0
+
+
+func is_disarmed() -> bool:
+	return _disarm_time > 0.0
+
+
+func is_inked() -> bool:
+	return _ink_time > 0.0
+
+
+## Corre no _physics_process do dono: conta os tempos e trava o andar enquanto enrolado.
+func _apply_chaos_effects(direction: Vector3, delta: float) -> Vector3:
+	if _disarm_time > 0.0:
+		_disarm_time -= delta
+		if _disarm_time <= 0.0:
+			_update_tool_in_hand()
+	if _ink_time > 0.0:
+		_ink_time -= delta
+		if _ink_layer != null:
+			_ink_layer.get_child(0).modulate.a = clampf(_ink_time / INK_FADE, 0.0, 1.0)
+			if _ink_time <= 0.0:
+				_ink_layer.queue_free()
+				_ink_layer = null
+	if _snare_time <= 0.0:
+		return direction
+	_snare_time -= delta
+	for action: StringName in [&"move_left", &"move_right", &"move_forward", &"move_backward"]:
+		if Input.is_action_just_pressed(action):
+			_snare_time -= SNARE_SHAKE_OFF
+	if _snare_time <= 0.0:
+		_show_temporary_message("Soltaste-te!", Color(0.8, 1.0, 0.7), 0.8)
+	return direction * SNARE_SPEED_FACTOR
+
+
+func _build_ink_overlay() -> void:
+	if _ink_layer != null:
+		return
+	_ink_layer = CanvasLayer.new()
+	_ink_layer.name = "InkOverlay"
+	_ink_layer.layer = 5
+	var root: Control = Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ink_layer.add_child(root)
+	var size: Vector2 = get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280, 720)
+	# Manchas de tinta (polígonos irregulares) a tapar ~metade do ecrã, mais no centro.
+	for i: int in 7:
+		var blot: Polygon2D = Polygon2D.new()
+		var c: Vector2 = Vector2(randf_range(0.15, 0.85) * size.x, randf_range(0.2, 0.8) * size.y)
+		var r: float = randf_range(0.12, 0.22) * size.y
+		var pts: PackedVector2Array = []
+		for k: int in 12:
+			var ang: float = TAU * float(k) / 12.0
+			pts.append(c + Vector2(cos(ang), sin(ang)) * r * randf_range(0.7, 1.25))
+		blot.polygon = pts
+		blot.color = Color(0.04, 0.02, 0.07, 0.93)
+		root.add_child(blot)
+	add_child(_ink_layer)

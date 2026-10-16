@@ -1,0 +1,177 @@
+{
+	"scene": "res://gameplay/debug/chaos_arena.tscn",
+	"steps": [
+		{
+			"t": 1.6,
+			"screenshot": "00"
+		},
+		{
+			"t": 2.05,
+			"screenshot": "01"
+		},
+		{
+			"t": 2.5,
+			"screenshot": "02"
+		},
+		{
+			"t": 2.95,
+			"screenshot": "03"
+		},
+		{
+			"t": 3.4,
+			"screenshot": "04"
+		},
+		{
+			"t": 3.85,
+			"screenshot": "05"
+		},
+		{
+			"t": 4.3,
+			"screenshot": "06"
+		},
+		{
+			"t": 4.75,
+			"screenshot": "07"
+		},
+		{
+			"t": 5.2,
+			"screenshot": "08"
+		},
+		{
+			"t": 5.65,
+			"screenshot": "09"
+		},
+		{
+			"t": 6.1,
+			"screenshot": "10"
+		},
+		{
+			"t": 6.55,
+			"screenshot": "11"
+		},
+		{
+			"t": 7.0,
+			"screenshot": "12"
+		},
+		{
+			"t": 7.45,
+			"screenshot": "13"
+		},
+		{
+			"t": 7.9,
+			"screenshot": "14"
+		},
+		{
+			"t": 8.35,
+			"screenshot": "15"
+		},
+		{
+			"t": 8.8,
+			"screenshot": "16"
+		},
+		{
+			"t": 9.25,
+			"screenshot": "17"
+		},
+		{
+			"t": 9.7,
+			"screenshot": "18"
+		},
+		{
+			"t": 10.15,
+			"screenshot": "19"
+		},
+		{
+			"t": 10.6,
+			"screenshot": "20"
+		},
+		{
+			"t": 11.05,
+			"screenshot": "21"
+		},
+		{
+			"t": 11.5,
+			"screenshot": "22"
+		},
+		{
+			"t": 11.95,
+			"screenshot": "23"
+		},
+		{
+			"t": 12.4,
+			"screenshot": "24"
+		},
+		{
+			"t": 12.85,
+			"screenshot": "25"
+		},
+		{
+			"t": 13.3,
+			"screenshot": "26"
+		},
+		{
+			"t": 13.75,
+			"screenshot": "27"
+		},
+		{
+			"t": 14.2,
+			"screenshot": "28"
+		},
+		{
+			"t": 14.65,
+			"screenshot": "29"
+		},
+		{
+			"t": 15.1,
+			"screenshot": "30"
+		},
+		{
+			"t": 15.55,
+			"screenshot": "31"
+		},
+		{
+			"t": 16.0,
+			"screenshot": "32"
+		},
+		{
+			"t": 16.45,
+			"screenshot": "33"
+		},
+		{
+			"t": 16.9,
+			"screenshot": "34"
+		},
+		{
+			"t": 17.35,
+			"screenshot": "35"
+		},
+		{
+			"t": 17.8,
+			"screenshot": "36"
+		},
+		{
+			"t": 18.25,
+			"screenshot": "37"
+		},
+		{
+			"t": 18.7,
+			"screenshot": "38"
+		},
+		{
+			"t": 19.15,
+			"screenshot": "39"
+		},
+		{
+			"t": 19.6,
+			"screenshot": "40"
+		},
+		{
+			"t": 19.8,
+			"dump": "final"
+		},
+		{
+			"t": 20.0,
+			"quit": true
+		}
+	]
+}

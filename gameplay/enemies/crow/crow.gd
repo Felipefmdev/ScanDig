@@ -5,6 +5,9 @@ extends Seagull
 ## (peck_damage) e volta a subir. Quem leva uma chave da Dona Lurdes no bico (carries_key,
 ## replicado) não desiste nem foge: só a larga quando é abatido (DropOnDeath põe a chave onde
 ## caiu). Abate-se no mergulho com a pá, ou no ar com o estilingue.
+## #57: em vez do kamikaze da gaivota, faz a ESPIRAL: círculo à volta do jogador e o corvo
+## (todo o bando, se houver vários) voa em espiral cada vez mais apertada e baixa à volta dele
+## e no fim bica e atira-o ao ar.
 
 const BLACK: Color = Color(0.1, 0.1, 0.13)
 const BLUE_BLACK: Color = Color(0.16, 0.18, 0.26)
@@ -24,6 +27,13 @@ var carries_key: bool = false:
 			_refresh_key()
 
 var _key_visual: Node3D = null
+var _spiral_angle: float = 0.0
+
+const SPIRAL_TELEGRAPH_TIME: float = 0.8
+const SPIRAL_TIME: float = 2.4
+const SPIRAL_START_RADIUS: float = 3.6
+const SPIRAL_END_RADIUS: float = 1.0
+const SPIRAL_HIT_RADIUS: float = 1.5
 
 
 func _ready() -> void:
@@ -39,6 +49,52 @@ func setup_network() -> void:
 ## Bica em vez de roubar.
 func _grab(target: Node3D) -> void:
 	_on_loot_reply(null, target)
+
+
+## Um mergulho em cada dois é a espiral (#57).
+func _choose_dive(target: Node3D) -> State:
+	if _dives % 2 == 1:
+		return State.DIVE
+	net_dive_point = _ground_point(target.global_position)
+	var rel: Vector3 = global_position - target.global_position
+	_spiral_angle = atan2(rel.z, rel.x)
+	return State.SPIRAL_TELEGRAPH
+
+
+## Espiral à volta do jogador (o centro segue-o): raio e altura descem até bicar.
+func _process_spiral(delta: float) -> void:
+	var target: Node3D = _target if is_instance_valid(_target) else null
+	if target == null:
+		_after_failed_dive()
+		return
+	net_dive_point = _ground_point(target.global_position)
+	var t: float = 0.0 if state == State.SPIRAL_TELEGRAPH else clampf(_state_time / SPIRAL_TIME, 0.0, 1.0)
+	var radius: float = lerpf(SPIRAL_START_RADIUS, SPIRAL_END_RADIUS, t * t)
+	var height: float = lerpf(2.6, 1.1, t)
+	_spiral_angle += _orbit_dir * delta * lerpf(2.5, 6.0, t)
+	var goal: Vector3 = net_dive_point + Vector3(cos(_spiral_angle) * radius, height, sin(_spiral_angle) * radius)
+	_fly_towards(goal, fly_speed * 2.2, delta, 8.0)
+	_dive_warning.show_circle(net_dive_point, SPIRAL_START_RADIUS * 0.6)
+	_dive_warning.pulse(delta)
+	if state == State.SPIRAL_TELEGRAPH:
+		if _state_time >= SPIRAL_TELEGRAPH_TIME:
+			SFX.play_at(SFX.SEAGULL_CAW, global_position, 2.0)
+			_enter_state(State.SPIRAL)
+		return
+	if _state_time >= SPIRAL_TIME:
+		for p: Node3D in _players_within(global_position, SPIRAL_HIT_RADIUS + 0.5):
+			_deal_damage(p, peck_damage)
+			var swirl: Vector3 = (p.global_position - net_dive_point).cross(Vector3.UP).normalized() * _orbit_dir
+			_knockback(p, swirl * 5.0 + Vector3.UP * 7.0, 0.05)
+		velocity = Vector3.UP * 5.0
+		_after_failed_dive()
+
+
+func _warning_for_state() -> void:
+	if state == State.SPIRAL_TELEGRAPH or state == State.SPIRAL:
+		_dive_warning.show_circle(net_dive_point, SPIRAL_START_RADIUS * 0.6)
+	else:
+		_dive_warning.hide_warning()
 
 
 ## Quem leva chave nunca foge (nem com o repelente: só se afasta e volta).
@@ -109,3 +165,4 @@ func _build_crow_wing(side: float, mat: Material) -> Node3D:
 	pivot.add_child(LowPolyMesh.commit(st, "Mesh", mat))
 	add_child(pivot)
 	return pivot
+
