@@ -40,6 +40,8 @@ const RANGE_LANTERN: float = 11.0      # 9.0 + 2.0 (lanterna de magnésio)
 const RANGE_SLINGSHOT: float = 24.0    # 22.0 + 2.0 (estilingue / projéteis)
 const RANGE_REPELLENT: float = 7.5     # 5.5 + 2.0 (repelente de caranguejo)
 const RANGE_NET_TRAP: float = 4.5      # 1.6 + 0.75 + 2.0 (armadilha de rede)
+const RANGE_HARPOON: float = 16.0      # 14.0 + 2.0 (arpão de corda)
+const RANGE_MAGNETIC_PULSE: float = 10.0 # 8.0 + 2.0 (pulso magnético)
 ## Teto máximo absoluto de alcance (estilingue) e dano (pá melhorada / forcado).
 const REQUEST_MAX_RANGE: float = 24.0
 const REQUEST_MAX_DAMAGE: float = 35.0
@@ -397,50 +399,74 @@ func get_peer_max_range(peer_id: int, request_type: StringName = &"") -> float:
 		&"hit":
 			if held == &"estilingue":
 				return RANGE_SLINGSHOT
+			if held == &"arpao_corda":
+				return RANGE_HARPOON
 			if held == &"forcado":
 				return RANGE_PITCHFORK
 			if held == &"armadilha_rede":
 				return RANGE_NET_TRAP
+			if held == &"pulso_magnetico":
+				return RANGE_MAGNETIC_PULSE
 			if _peer_has_inventory_tool(player, &"estilingue"):
 				return RANGE_SLINGSHOT
+			if _peer_has_inventory_tool(player, &"arpao_corda"):
+				return RANGE_HARPOON
 			if _peer_has_inventory_tool(player, &"forcado"):
 				return RANGE_PITCHFORK
 			if _peer_has_inventory_tool(player, &"armadilha_rede"):
 				return RANGE_NET_TRAP
+			if _peer_has_inventory_tool(player, &"pulso_magnetico"):
+				return RANGE_MAGNETIC_PULSE
 			return RANGE_SHOVEL
 		&"stun":
+			if held == &"arpao_corda":
+				return RANGE_HARPOON
 			if held == &"lanterna_magnesio":
 				return RANGE_LANTERN
 			if held == &"forcado":
 				return RANGE_PITCHFORK
 			if held == &"armadilha_rede":
 				return RANGE_NET_TRAP
+			if held == &"pulso_magnetico":
+				return RANGE_MAGNETIC_PULSE
+			if _peer_has_inventory_tool(player, &"arpao_corda"):
+				return RANGE_HARPOON
 			if _peer_has_inventory_tool(player, &"lanterna_magnesio"):
 				return RANGE_LANTERN
 			if _peer_has_inventory_tool(player, &"forcado"):
 				return RANGE_PITCHFORK
 			if _peer_has_inventory_tool(player, &"armadilha_rede"):
 				return RANGE_NET_TRAP
+			if _peer_has_inventory_tool(player, &"pulso_magnetico"):
+				return RANGE_MAGNETIC_PULSE
 			return RANGE_SHOVEL
 		&"flee":
 			if held == &"lanterna_magnesio":
 				return RANGE_LANTERN
 			if held == &"repelente":
 				return RANGE_REPELLENT
+			if held == &"pulso_magnetico":
+				return RANGE_MAGNETIC_PULSE
 			if _peer_has_inventory_tool(player, &"lanterna_magnesio"):
 				return RANGE_LANTERN
 			if _peer_has_inventory_tool(player, &"repelente"):
 				return RANGE_REPELLENT
+			if _peer_has_inventory_tool(player, &"pulso_magnetico"):
+				return RANGE_MAGNETIC_PULSE
 			return RANGE_REPELLENT
 		_:
 			if held == &"estilingue" or _peer_has_inventory_tool(player, &"estilingue"):
 				return RANGE_SLINGSHOT
+			if held == &"arpao_corda" or _peer_has_inventory_tool(player, &"arpao_corda"):
+				return RANGE_HARPOON
 			if held == &"lanterna_magnesio" or _peer_has_inventory_tool(player, &"lanterna_magnesio"):
 				return RANGE_LANTERN
 			if held == &"repelente" or _peer_has_inventory_tool(player, &"repelente"):
 				return RANGE_REPELLENT
 			if held == &"forcado" or _peer_has_inventory_tool(player, &"forcado"):
 				return RANGE_PITCHFORK
+			if held == &"pulso_magnetico" or _peer_has_inventory_tool(player, &"pulso_magnetico"):
+				return RANGE_MAGNETIC_PULSE
 			return RANGE_SHOVEL
 
 
@@ -480,7 +506,9 @@ func get_peer_max_damage(peer_id: int) -> float:
 	elif held == &"forcado":
 		return 35.0
 	elif held == &"arpao_corda":
-		return 20.0
+		return 40.0
+	elif held == &"pulso_magnetico":
+		return 35.0
 
 	return shovel_dmg
 

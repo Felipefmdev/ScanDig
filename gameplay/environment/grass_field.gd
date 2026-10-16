@@ -7,6 +7,7 @@ extends MultiMeshInstance3D
 ## BeachTerrain.height_at(). Espalha os tufos em manchas à volta de `cluster_centers`.
 
 const GlacierTerrain = preload("res://gameplay/environment/glacier_terrain.gd")
+const CraterTerrain = preload("res://gameplay/environment/crater_terrain.gd")
 
 const GREEN_DARK: Color = Color(0.12, 0.3, 0.08)
 const GREEN_LIGHT: Color = Color(0.4, 0.62, 0.16)
@@ -18,8 +19,8 @@ const GREEN_LIGHT: Color = Color(0.4, 0.62, 0.16)
 ## Zonas sem relva (x, z, raio): base, banca, arena do chefe, praia molhada.
 @export var exclusion_zones: Array[Vector3] = []
 @export var max_x: float = 24.0
-## Que chão usar: Praia (BeachTerrain), Campo (FieldTerrain), Ruinas ou Geleira.
-@export_enum("Praia", "Campo", "Ruinas", "Geleira") var terrain: int = 0
+## Que chão usar: Praia (BeachTerrain), Campo (FieldTerrain), Ruinas, Geleira ou Cratera.
+@export_enum("Praia", "Campo", "Ruinas", "Geleira", "Cratera") var terrain: int = 0
 @export var color_dark: Color = GREEN_DARK
 @export var color_light: Color = GREEN_LIGHT
 
@@ -84,6 +85,8 @@ func _height(x: float, z: float) -> float:
 			return RuinsTerrain.height_at(x, z)
 		3:
 			return GlacierTerrain.height_at(x, z)
+		4:
+			return CraterTerrain.height_at(x, z)
 	return BeachTerrain.height_at(x, z)
 
 

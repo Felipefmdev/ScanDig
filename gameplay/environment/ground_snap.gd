@@ -11,10 +11,11 @@ extends Node3D
 ## O script fica @tool só para ser a mesma classe no editor (os mapas usam-no); lá não faz nada.
 
 const GlacierTerrain = preload("res://gameplay/environment/glacier_terrain.gd")
+const CraterTerrain = preload("res://gameplay/environment/crater_terrain.gd")
 
 @export var sink: float = 0.05
-## Que chão usar: Praia (BeachTerrain), Campo (FieldTerrain), Ruinas ou Geleira.
-@export_enum("Praia", "Campo", "Ruinas", "Geleira") var terrain: int = 0
+## Que chão usar: Praia (BeachTerrain), Campo (FieldTerrain), Ruinas, Geleira ou Cratera.
+@export_enum("Praia", "Campo", "Ruinas", "Geleira", "Cratera") var terrain: int = 0
 
 
 func _ready() -> void:
@@ -43,4 +44,6 @@ func _height(x: float, z: float) -> float:
 			return RuinsTerrain.height_at(x, z)
 		3:
 			return GlacierTerrain.height_at(x, z)
+		4:
+			return CraterTerrain.height_at(x, z)
 	return BeachTerrain.height_at(x, z)

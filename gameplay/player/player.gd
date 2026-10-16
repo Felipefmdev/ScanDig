@@ -55,6 +55,15 @@ signal died
 @export var harpoon_pull_force: float = 14.0
 @export var harpoon_stun: float = 0.8
 
+@export_group("Pulso Magnético")
+@export var magnetic_pulse_damage: float = 35.0
+@export var magnetic_pulse_enemy_range: float = 7.5
+@export var magnetic_pulse_pickup_range: float = 12.0
+@export var magnetic_pulse_cooldown: float = 1.2
+@export_range(-1.0, 1.0, 0.05) var magnetic_pulse_cone_dot: float = 0.5
+@export var magnetic_pulse_knockback: float = 16.0
+@export var magnetic_pulse_stun: float = 0.6
+
 @export_group("Som")
 @export var footsteps_enabled: bool = true
 ## Volume dos passos na areia (dB). Baixo de propósito: é um som repetitivo.
@@ -73,6 +82,7 @@ const TOOL_MEDKIT: StringName = &"kit_medico"
 const TOOL_LANTERN: StringName = &"lanterna_magnesio"
 const TOOL_FORCADO: StringName = &"forcado"
 const TOOL_HARPOON: StringName = &"arpao_corda"
+const TOOL_PULSE: StringName = &"pulso_magnetico"
 ## Recarga do clarão da Lanterna de Magnésio (#42).
 const LANTERN_COOLDOWN: float = 4.0
 ## Empurrão (#57): segundos sem controlo por m/s de impulso, e o máximo.
@@ -83,6 +93,7 @@ const MEDKIT_MODEL: Script = preload("res://gameplay/weapons/medkit/medkit_model
 const REPELLENT_MODEL: Script = preload("res://gameplay/weapons/repellent/repellent_model.gd")
 const PITCHFORK_MODEL: Script = preload("res://gameplay/weapons/pitchfork/pitchfork_model.gd")
 const HARPOON_MODEL: Script = preload("res://gameplay/weapons/harpoon/harpoon_model.gd")
+const PULSE_MODEL: Script = preload("res://gameplay/weapons/magnetic_pulse/magnetic_pulse_model.gd")
 ## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
 const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
 const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
@@ -873,6 +884,9 @@ func _handle_attack_action() -> void:
 		elif c != null and c.tool_id == TOOL_HARPOON:
 			if _use_cooldown <= 0.0:
 				_fire_harpoon()
+		elif c != null and c.tool_id == TOOL_PULSE:
+			if _use_cooldown <= 0.0:
+				_fire_magnetic_pulse()
 		else:
 			_perform_attack()
 
@@ -1164,6 +1178,12 @@ func _setup_held_models() -> void:
 	if "show_left_hand" in harpoon_model:
 		harpoon_model.set("show_left_hand", true)
 	_held_models[TOOL_HARPOON] = harpoon_model
+	# Pulso Magnético com a pega na mão direita e a mão esquerda por baixo das bobinas
+	var pulse_pose: Transform3D = Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-6.0)).rotated(Vector3.UP, deg_to_rad(6.0)).scaled(Vector3.ONE * 0.8), Vector3(0.03, -0.07, -0.16))
+	var pulse_model: Node3D = _add_held_model(PULSE_MODEL, pulse_pose)
+	if "show_left_hand" in pulse_model:
+		pulse_model.set("show_left_hand", true)
+	_held_models[TOOL_PULSE] = pulse_model
 	_update_tool_in_hand()
 
 
@@ -1291,6 +1311,8 @@ func _handle_use_tool_action() -> void:
 			_attack_pitchfork()
 		TOOL_HARPOON:
 			_fire_harpoon()
+		TOOL_PULSE:
+			_fire_magnetic_pulse()
 
 
 ## Clarão em cone (LanternFlash, Dev_Detector): atordoa e espanta; em coop o stun vai ao host.
@@ -1642,3 +1664,127 @@ func _update_footsteps(delta: float) -> void:
 	if _step_distance >= STEP_LENGTH:
 		_step_distance = 0.0
 		SFX.play_at(SFX.FOOTSTEP_SAND, global_position, footsteps_volume_db + randf_range(-1.5, 1.5), 0.05)
+
+
+## Disparo do Pulso Magnético (#44): onda expansiva eletromagnética.
+## Empurra criaturas/inimigos num raio de ~7.5m (dano, knockback forte e stun curto).
+## Puxa todos os itens metálicos (ItemPickup) num raio de ~12m para perto do jogador.
+## Suporta coop via request_hit/request_stun nos inimigos replicados.
+func fire_magnetic_pulse() -> int:
+	_use_cooldown = magnetic_pulse_cooldown
+	_attack_cooldown = magnetic_pulse_cooldown
+
+	# Animação de disparo com recuo elétrico no ToolView
+	if tool_view != null:
+		var t: Tween = create_tween()
+		var recoil: Vector3 = _tool_view_rest + Vector3(0.0, 0.04, 0.16)
+		t.tween_property(tool_view, "position", recoil, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.parallel().tween_property(tool_view, "rotation:x", 0.14, 0.05)
+		t.tween_property(tool_view, "position", _tool_view_rest, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		t.parallel().tween_property(tool_view, "rotation:x", 0.0, 0.28)
+
+	var fwd: Vector3 = -camera.global_basis.z if camera != null else -global_basis.z
+	var fwd_flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	if fwd_flat.is_zero_approx():
+		fwd_flat = Vector3.FORWARD
+	var origin: Vector3 = camera.global_position if camera != null else global_position
+
+	_spawn_magnetic_wave(origin + fwd * 0.5, fwd)
+
+	var enemy_hits: int = 0
+	var pulled_pickups: int = 0
+
+	# 1. Empurra criaturas/inimigos num cone/raio de ~7.5m
+	for n: Node in get_tree().get_nodes_in_group("enemies"):
+		if not (n is Node3D):
+			continue
+		var enemy: Node3D = n as Node3D
+		if enemy.has_method("is_alive") and not enemy.call("is_alive"):
+			continue
+		var to_e: Vector3 = enemy.global_position - origin
+		var dist: float = to_e.length()
+		var to_e_flat: Vector3 = Vector3(to_e.x, 0.0, to_e.z)
+		var dist_flat: float = to_e_flat.length()
+		if dist > magnetic_pulse_enemy_range:
+			continue
+		var dot: float = fwd_flat.dot(to_e_flat / maxf(dist_flat, 0.001))
+		# Cone frontal amplo ou proximidade imediata (< 2.5m em toda a volta)
+		if dot < magnetic_pulse_cone_dot and dist > 2.5:
+			continue
+
+		var push_dir: Vector3 = to_e.normalized() if dist > 0.05 else fwd
+		push_dir.y = 0.35
+		push_dir = push_dir.normalized()
+
+		if enemy.has_method("request_hit") and not (enemy.has_method("has_simulation_authority") and enemy.call("has_simulation_authority")):
+			enemy.call("request_hit", magnetic_pulse_damage, origin)
+		elif enemy.has_method("take_damage"):
+			enemy.call("take_damage", magnetic_pulse_damage, origin)
+
+		if enemy.has_method("request_stun") and not (enemy.has_method("has_simulation_authority") and enemy.call("has_simulation_authority")):
+			enemy.call("request_stun", magnetic_pulse_stun)
+		elif enemy.has_method("stun"):
+			enemy.call("stun", magnetic_pulse_stun)
+
+		if enemy.has_method("apply_knockback"):
+			enemy.call("apply_knockback", push_dir * magnetic_pulse_knockback + Vector3.UP * 3.5, 0.1)
+		if enemy is CharacterBody3D:
+			var cb: CharacterBody3D = enemy as CharacterBody3D
+			cb.velocity += push_dir * magnetic_pulse_knockback + Vector3.UP * 3.0
+			cb.move_and_collide(push_dir * (magnetic_pulse_knockback * 0.15))
+
+		enemy_hits += 1
+
+	# 2. Puxa todos os itens metálicos ItemPickup num raio de ~12m
+	for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+		var pickup: ItemPickup = n as ItemPickup
+		if pickup == null or not is_instance_valid(pickup):
+			continue
+		var to_p: Vector3 = pickup.global_position - origin
+		var dist_p: float = to_p.length()
+		if dist_p > magnetic_pulse_pickup_range or dist_p < 0.2:
+			continue
+
+		var pull_dest: Vector3 = global_position + Vector3.UP * 0.35 - fwd_flat * 0.3
+		pickup.linear_velocity = (pull_dest - pickup.global_position).normalized() * 12.0 + Vector3.UP * 2.5
+		var t_p: Tween = pickup.create_tween()
+		t_p.tween_property(pickup, "global_position", pull_dest, 0.38).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		pulled_pickups += 1
+
+	_shake_camera(0.04, 0.22)
+	SFX.play_ui(SFX.STONE_IMPACT, 2.0, 0.15)
+	if enemy_hits > 0 or pulled_pickups > 0:
+		_show_temporary_message("⚡ Pulso Magnético! (%d repelidos, %d atraídos)" % [enemy_hits, pulled_pickups], Color(0.65, 0.85, 1.0), 1.1)
+	else:
+		_show_temporary_message("⚡ Pulso Magnético disparado!", Color(0.6, 0.8, 1.0), 0.8)
+
+	return enemy_hits + pulled_pickups
+
+
+func _fire_magnetic_pulse() -> void:
+	fire_magnetic_pulse()
+
+
+func _spawn_magnetic_wave(origin: Vector3, forward: Vector3) -> void:
+	var parent: Node = get_parent() if get_parent() != null else self
+	var ring: MeshInstance3D = MeshInstance3D.new()
+	var torus: TorusMesh = TorusMesh.new()
+	torus.inner_radius = 0.25
+	torus.outer_radius = 0.45
+	ring.mesh = torus
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(0.35, 0.95, 1.0, 0.8)
+	ring.material_override = mat
+
+	ring.global_position = origin
+	var up_target: Vector3 = forward.normalized()
+	if not up_target.is_zero_approx():
+		ring.quaternion = Quaternion(Vector3.UP, up_target)
+
+	parent.add_child(ring)
+	var t: Tween = ring.create_tween()
+	t.tween_property(ring, "scale", Vector3(12.0, 1.0, 12.0), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.35)
+	t.tween_callback(ring.queue_free)

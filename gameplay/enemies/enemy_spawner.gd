@@ -47,6 +47,10 @@ const KIND_SCENES: Dictionary = {
 	&"frozen_mammoth": "res://gameplay/enemies/boss/frozen_mammoth.tscn",
 	&"ancient_walrus": "res://gameplay/enemies/boss/ancient_walrus.tscn",
 	&"cave_yeti": "res://gameplay/enemies/boss/cave_yeti.tscn",
+	&"crawler": "res://gameplay/enemies/crawler/crawler.tscn",
+	&"floater": "res://gameplay/enemies/floater/floater.tscn",
+	&"the_sleeper": "res://gameplay/enemies/boss/the_sleeper.tscn",
+	&"the_echo": "res://gameplay/enemies/boss/the_echo.tscn",
 }
 
 ## Inimigo base do mapa (níveis de ameaça e ambiente) e o "resistente" a partir do nível 2.

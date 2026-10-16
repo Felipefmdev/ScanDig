@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/enemies/boss/the_echo.gd" id="1_echo"]
+
+[node name="TheEcho" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 1
+script = ExtResource("1_echo")
+max_health = 1250.0
+death_color = Color(0.25, 0.95, 0.9, 1)

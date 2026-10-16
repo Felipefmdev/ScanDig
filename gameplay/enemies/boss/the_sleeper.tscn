@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/enemies/boss/the_sleeper.gd" id="1_sleeper"]
+
+[node name="TheSleeper" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 1
+script = ExtResource("1_sleeper")
+max_health = 1600.0
+death_color = Color(0.68, 0.2, 0.98, 1)
