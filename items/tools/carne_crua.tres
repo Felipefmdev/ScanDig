@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+[ext_resource type="PackedScene" path="res://gameplay/weapons/dynamite/raw_meat_world.tscn" id="2_world"]
 
 [resource]
 script = ExtResource("1_tool")
@@ -15,3 +16,4 @@ heal_amount = 6.0
 hunger_restore = 10.0
 spoil_seconds = 40.0
 nausea_chance = 0.25
+world_scene = ExtResource("2_world")

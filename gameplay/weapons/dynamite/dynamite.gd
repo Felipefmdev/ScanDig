@@ -19,6 +19,7 @@ const SELF_DAMAGE: float = 10.0
 ## Bem mais alto que uma pazada (8): explodir o chão acorda o subsolo.
 const NOISE: float = 30.0
 const COLOR: Color = Color(0.85, 0.2, 0.15)
+const MODEL: Script = preload("res://gameplay/weapons/dynamite/dynamite_model.gd")
 
 var thrower: Node3D = null
 var _fuse_left: float = FUSE
@@ -37,23 +38,16 @@ func _ready() -> void:
 	cap.height = 0.3
 	col.shape = cap
 	add_child(col)
-	var mesh: MeshInstance3D = MeshInstance3D.new()
-	var cyl: CylinderMesh = CylinderMesh.new()
-	cyl.top_radius = 0.05
-	cyl.bottom_radius = 0.05
-	cyl.height = 0.3
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = COLOR
-	cyl.material = mat
-	mesh.mesh = cyl
-	add_child(mesh)
+	var model: Node3D = MODEL.new()
+	model.position = Vector3(0, -0.06, 0)
+	add_child(model)
 	_spark = CPUParticles3D.new()
 	_spark.amount = 12
 	_spark.lifetime = 0.25
 	_spark.direction = Vector3.UP
 	_spark.initial_velocity_min = 0.6
 	_spark.initial_velocity_max = 1.4
-	_spark.position = Vector3(0, 0.17, 0)
+	_spark.position = Vector3(0.16, 0.08, 0.0)
 	var spark_mesh: BoxMesh = BoxMesh.new()
 	spark_mesh.size = Vector3(0.02, 0.02, 0.02)
 	var spark_mat: StandardMaterial3D = StandardMaterial3D.new()

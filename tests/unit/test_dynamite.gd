@@ -73,3 +73,13 @@ func test_blast_digs_nearby_spot() -> void:
 	var out: Dictionary = DYNAMITE.apply_blast(get_tree(), Vector3.ZERO, null)
 	assert_eq(out["spots"], 1, "o buraco perto explodiu")
 	assert_eq(spot.dirt_layers, 0, "todas as camadas de uma vez")
+
+
+func test_dynamite_and_meat_have_models() -> void:
+	for id: String in ["dinamite", "carne_crua"]:
+		var td: ToolData = load("res://items/tools/%s.tres" % id) as ToolData
+		assert_not_null(td.world_scene, "%s tem modelo de chão" % id)
+		var inst: Node3D = td.world_scene.instantiate() as Node3D
+		add_child_autofree(inst)
+		var meshes: Array[Node] = inst.find_children("*", "MeshInstance3D", true, false)
+		assert_gt(meshes.size(), 1, "%s montou malhas" % id)
