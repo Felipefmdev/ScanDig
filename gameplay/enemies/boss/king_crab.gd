@@ -663,7 +663,7 @@ func _build_model() -> void:
 	CrabModel.body(st, Transform3D(sc, Vector3.ZERO), pal)
 	for side: float in [-1.0, 1.0]:
 		var pivot: Vector3 = CrabModel.PIVOT_LEGS_LEFT if side < 0.0 else CrabModel.PIVOT_LEGS_RIGHT
-		CrabModel.legs(st, Transform3D(sc, pivot * MODEL_SCALE), side, pal)
+		CrabModel.legs(st, Transform3D(sc, pivot * MODEL_SCALE), side, pal, 1.8)
 	# Pinça pequena à esquerda (a gigante é o nó BigClaw, à direita)
 	CrabModel.small_claw(st, Transform3D(sc, Vector3(-0.24, 0.2, -0.15) * MODEL_SCALE), pal)
 	# Picos escuros nos bicos da carapaça
@@ -683,12 +683,20 @@ func _build_model() -> void:
 		var b: Vector3 = crown_c + Vector3(cos(ang) * 0.34, 0.2, sin(ang) * 0.34)
 		LowPolyMesh.prism(st, b, b + Vector3(0, 0.28, 0), 0.09, 0.0, 4, gold)
 		LowPolyMesh.box(st, crown_c + Vector3(cos(ang) * 0.4, 0.1, sin(ang) * 0.4), Vector3(0.08, 0.08, 0.08), Basis(Vector3.UP, ang), gem_red)
+	# Sobrancelhas zangadas por cima dos olhos e cracas na carapaça (#61, caranguejo_rei.jpg)
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(0.1 * side, 0.565, -0.16) * MODEL_SCALE, Vector3(0.09, 0.02, 0.03) * MODEL_SCALE,
+			Basis(Vector3.FORWARD, -0.45 * side), Color(0.12, 0.07, 0.05, 0.0))
+	for k: int in 7:
+		var ang: float = TAU * float(k) / 7.0 + 0.4
+		var b: Vector3 = Vector3(cos(ang) * 0.2, 0.3, sin(ang) * 0.14 + 0.03) * MODEL_SCALE
+		LowPolyMesh.prism(st, b, b + Vector3(0, 0.07, 0), 0.05, 0.025, 6, Color(0.82, 0.78, 0.66, 0.0))
 	body_root.add_child(LowPolyMesh.commit(st, "Body", mat))
 
-	# Pinça gigante: a da referência, deitada para a frente (+Y do desenho -> frente e cima)
+	# Pinça gigante: a da referência, erguida ao alto (#61; antes deitada para a frente)
 	var cst: SurfaceTool = SurfaceTool.new()
 	cst.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var claw_basis: Basis = Basis(Vector3.RIGHT, -1.05) * Basis(Vector3.UP, -0.35) * sc
+	var claw_basis: Basis = Basis(Vector3.RIGHT, -0.3) * Basis(Vector3.UP, -0.35) * sc
 	CrabModel.big_claw(cst, Transform3D(claw_basis, Vector3(-0.25, -0.2, 0.0)), pal)
 	big_claw.add_child(LowPolyMesh.commit(cst, "Mesh", mat))
 

@@ -33,9 +33,9 @@ const PALETTE_CRAB: Dictionary = {
 }
 const PALETTE_HERMIT: Dictionary = {
 	"name": "hermit",
-	"shell": Color(0.82, 0.38, 0.45),
-	"leg": Color(0.74, 0.3, 0.38),
-	"claw": Color(0.86, 0.42, 0.46),
+	"shell": Color(0.78, 0.44, 0.56),
+	"leg": Color(0.58, 0.36, 0.52),
+	"claw": Color(0.82, 0.48, 0.58),
 	"mouth": Color(0.55, 0.1, 0.12),
 	"mouth_dark": Color(0.3, 0.04, 0.06),
 	"eye": Color(0.98, 0.97, 0.93),
@@ -43,9 +43,9 @@ const PALETTE_HERMIT: Dictionary = {
 }
 const PALETTE_KING: Dictionary = {
 	"name": "king",
-	"shell": Color(0.84, 0.22, 0.1),
-	"leg": Color(0.74, 0.18, 0.08),
-	"claw": Color(0.88, 0.28, 0.12),
+	"shell": Color(0.86, 0.36, 0.1),
+	"leg": Color(0.78, 0.3, 0.08),
+	"claw": Color(0.9, 0.42, 0.13),
 	"mouth": Color(0.5, 0.06, 0.06),
 	"mouth_dark": Color(0.28, 0.02, 0.03),
 	"eye": Color(0.98, 0.97, 0.93),
@@ -140,7 +140,8 @@ static func body(st: SurfaceTool, xf: Transform3D, p: Dictionary) -> void:
 
 ## 4 patas finas de um lado, relativas ao pivô (PIVOT_LEGS_*): sobem até ao joelho e descem
 ## em ponta até ao chão (y = -0.2 relativo ao pivô).
-static func legs(st: SurfaceTool, xf: Transform3D, side: float, p: Dictionary) -> void:
+## thick: multiplica a grossura (o rei tem patas mais grossas, #61).
+static func legs(st: SurfaceTool, xf: Transform3D, side: float, p: Dictionary, thick: float = 1.0) -> void:
 	var leg: Color = p["leg"]
 	var zs: Array[float] = [-0.1, 0.0, 0.09, 0.18]
 	var yaws: Array[float] = [-0.55, -0.18, 0.18, 0.55]
@@ -149,8 +150,8 @@ static func legs(st: SurfaceTool, xf: Transform3D, side: float, p: Dictionary) -
 		var hip: Vector3 = Vector3(0.0, 0.0, zs[k])
 		var knee: Vector3 = hip + d * 0.2 + Vector3(0.0, 0.13, 0.0)
 		var foot: Vector3 = hip + d * 0.38 + Vector3(0.0, -0.2, 0.0)
-		_prism(st, xf, hip, knee, 0.024, 0.02, 5, leg)
-		_prism(st, xf, knee, foot, 0.021, 0.0, 5, leg)
+		_prism(st, xf, hip, knee, 0.024 * thick, 0.02 * thick, 5, leg)
+		_prism(st, xf, knee, foot, 0.021 * thick, 0.0, 5, leg)
 
 
 ## Pinça pequena, baixa e à frente, relativa ao pivô (desenhada para -X; o modelo espelha-a).
