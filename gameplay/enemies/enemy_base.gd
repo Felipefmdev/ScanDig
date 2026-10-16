@@ -56,6 +56,50 @@ const REQUEST_MAX_FLEE: float = 10.0
 @export var stun_fx_height: float = 0.6
 
 var health: float = 50.0
+## Estudo How to Fish: o chefe dura BOSS_TIME_LIMIT s (como os 300 s deles). Passado isso,
+## cansa e foge; o altar/gatilho rearma-se para tentar de novo. Só no host.
+const BOSS_TIME_LIMIT: float = 300.0
+const BOSS_WARNINGS: Array[float] = [60.0, 10.0]
+signal left_fight
+var boss_time: float = 0.0
+var _boss_warned: int = 0
+
+
+func boss_time_left() -> float:
+	return maxf(BOSS_TIME_LIMIT - boss_time, 0.0)
+
+
+func _tick_boss_timer(delta: float) -> void:
+	if not is_in_group(&"bosses") or not is_alive():
+		return
+	boss_time += delta
+	while _boss_warned < BOSS_WARNINGS.size() and boss_time_left() <= BOSS_WARNINGS[_boss_warned]:
+		_rpc_boss_notice.rpc("⏳ O chefe está a cansar-se: %d s para fugir!" % int(BOSS_WARNINGS[_boss_warned]))
+		_boss_warned += 1
+	if boss_time >= BOSS_TIME_LIMIT:
+		leave_fight()
+
+
+## Foge sem morrer: sem troféu, sem defeated_bosses. Quem o acordou rearma-se (left_fight).
+func leave_fight() -> void:
+	if _dead:
+		return
+	_dead = true
+	_rpc_boss_notice.rpc("💨 O chefe cansou e fugiu! Acorde-o de novo para tentar outra vez.")
+	spawn_particles(global_position + Vector3.UP * 0.5, death_color, 40, 4.0)
+	left_fight.emit()
+	queue_free()
+
+
+@rpc("authority", "call_local", "reliable")
+func _rpc_boss_notice(text: String) -> void:
+	if not is_inside_tree():
+		return
+	for n: Node in get_tree().get_nodes_in_group(&"player"):
+		if n.has_method("_show_temporary_message"):
+			n.call("_show_temporary_message", text, UiPalette.ORANGE, 3.0)
+
+
 ## Origem do último golpe (para a morte voar para o lado certo).
 var _last_hit_from: Vector3 = Vector3.INF
 var _flung: bool = false
@@ -161,6 +205,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if _dead:
 		return
+	_tick_boss_timer(delta)
 	if _flee_left > 0.0:
 		_flee_left -= delta
 	if _stun_left > 0.0:

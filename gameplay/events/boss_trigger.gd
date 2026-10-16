@@ -109,7 +109,28 @@ func trigger() -> void:
 		HostSync.broadcast(self, &"_rpc_night", [true])
 	if boss.has_signal(&"died"):
 		boss.connect(&"died", _on_boss_died)
+	if boss.has_signal(&"left_fight"):
+		boss.connect(&"left_fight", _on_boss_left)
 	boss_spawned.emit(boss)
+
+
+## Volta a acordar sozinho (gatilho por bandeira) passado isto depois de o chefe fugir.
+const REARM_DELAY: float = 20.0
+
+
+## O chefe cansou e fugiu: volta a poder ser acordado. Missão: falha (o NPC deixa repetir).
+## Bandeira já resolvida: o chefe volta sozinho passado REARM_DELAY.
+func _on_boss_left() -> void:
+	triggered = false
+	boss = null
+	if night:
+		_set_night(false)
+		HostSync.broadcast(self, &"_rpc_night", [false])
+	finished.emit(false)
+	if trigger_flag != &"" and is_inside_tree() and HostSync.is_host(self):
+		get_tree().create_timer(REARM_DELAY).timeout.connect(func() -> void:
+			if is_inside_tree() and not triggered:
+				trigger())
 
 
 func _on_boss_died() -> void:

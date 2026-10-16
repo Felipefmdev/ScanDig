@@ -115,3 +115,49 @@ func test_every_spawner_kind_is_known_or_boss() -> void:
 		var is_boss: bool = GameState.EXTRA_BOSSES.has(k) or GameState.MAP_UNLOCK_BOSSES.values().any(
 			func(e: Dictionary) -> bool: return e["boss_id"] == k)
 		assert_true(GameState.CREATURES.has(k) or is_boss, "%s no diário ou é chefe" % k)
+
+
+# --- 5. Chefe que vai embora -------------------------------------------------
+
+func test_boss_leaves_after_time_limit_without_counting_as_defeat() -> void:
+	var boss: EnemyBase = (load("res://gameplay/enemies/boss/king_crab.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child_autofree(boss)
+	await get_tree().physics_frame
+	assert_true(boss.is_in_group(&"bosses"))
+	watch_signals(boss)
+	boss.boss_time = EnemyBase.BOSS_TIME_LIMIT - 0.01
+	boss._tick_boss_timer(0.1)
+	assert_signal_emitted(boss, "left_fight")
+	assert_signal_not_emitted(boss, "died", "fugir não é morrer")
+	assert_true(boss.is_queued_for_deletion())
+
+
+func test_altar_rearms_when_boss_leaves() -> void:
+	var altar: BossAltar = BossAltar.new()
+	add_child_autofree(altar)
+	await get_tree().process_frame
+	for i: int in BuriedSpot.MAX_DIRT_LAYERS:
+		altar.dig(false)
+	assert_true(altar._woken, "acordou ao cavar até ao fim")
+	assert_false(altar.is_queued_for_deletion(), "o altar não some")
+	altar.rearm()
+	assert_false(altar._woken)
+	assert_eq(altar.dirt_layers, BuriedSpot.MAX_DIRT_LAYERS, "terra de volta")
+	assert_true(altar.is_in_group("buried_spots"), "volta ao radar")
+	for n: Node in get_tree().get_nodes_in_group(&"bosses"):
+		n.queue_free()
+
+
+func test_trigger_rearms_and_fails_quest_event_when_boss_leaves() -> void:
+	var trig: BossTrigger = BossTrigger.new()
+	trig.boss_kind = &"octopus"
+	add_child_autofree(trig)
+	await get_tree().process_frame
+	watch_signals(trig)
+	trig.trigger()
+	assert_true(trig.triggered)
+	var boss: EnemyBase = trig.boss as EnemyBase
+	assert_not_null(boss)
+	boss.leave_fight()
+	assert_false(trig.triggered, "pode ser acordado de novo")
+	assert_signal_emitted_with_parameters(trig, "finished", [false])

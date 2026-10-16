@@ -18,6 +18,8 @@ signal remote_dig_result(result: Dictionary)
 @export_range(0.0, 1.0, 0.01) var rare_variant_chance: float = 0.05
 
 const RARE_VALUE_MULTIPLIER: float = 3.0
+## Falso no BossAltar: o altar fica na cena para poder ser rearmado se o chefe fugir.
+var free_on_reveal: bool = true
 ## Bónus para escavações perfeitas (integridade 100%).
 const PERFECT_BONUS_MULTIPLIER: float = 1.25
 ## Host: distância máxima jogador→spot aceite num request_dig (dig_range 1.8 + folga de rede).
@@ -364,7 +366,9 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 		item_revealed.emit(item, final_val, integrity)
 		# A venda já não é automática: o item salta como ItemPickup, vai para a
 		# mochila (E) e só é entregue ao GameState num SellPoint.
-		if is_inside_tree() and get_tree() != null:
+		if not free_on_reveal:
+			pass
+		elif is_inside_tree() and get_tree() != null:
 			get_tree().create_timer(4.0).timeout.connect(queue_free)
 		else:
 			queue_free()

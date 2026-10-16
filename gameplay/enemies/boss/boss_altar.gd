@@ -28,6 +28,7 @@ var _woken: bool = false
 func _ready() -> void:
 	item = null
 	rare_variant_chance = 0.0
+	free_on_reveal = false
 	super._ready()
 	if boss_scene == null:
 		boss_scene = BOSS_SCENE
@@ -69,7 +70,35 @@ func _wake_boss() -> void:
 	# Mesmo caminho dos gatilhos de chefe (#39): EnemySpawner replicado, ou local sem spawner.
 	var boss: Node3D = BossTrigger.spawn_boss(self, _boss_kind(), global_transform * boss_offset,
 		global_rotation.y, boss_scene)
+	if boss != null and boss.has_signal(&"left_fight"):
+		boss.connect(&"left_fight", rearm)
 	boss_spawned.emit(boss)
+
+
+## O chefe cansou e fugiu (EnemyBase.BOSS_TIME_LIMIT): o altar volta a ter terra para cavar.
+func rearm() -> void:
+	_set_rearmed()
+	if _is_host() and is_inside_tree() and NetVisibility.is_online(multiplayer):
+		for peer_id: int in multiplayer.get_peers():
+			if NetVisibility.is_peer_ready(multiplayer, peer_id):
+				_rpc_rearm.rpc_id(peer_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_rearm() -> void:
+	_set_rearmed()
+
+
+func _set_rearmed() -> void:
+	_woken = false
+	_is_revealed = false
+	dirt_layers = MAX_DIRT_LAYERS
+	integrity = 1.0
+	if not is_in_group("buried_spots"):
+		add_to_group("buried_spots")
+	if _label != null:
+		_label.text = label_text
+		_label.modulate = Color.WHITE
 
 
 ## Kind do EnemySpawner correspondente a boss_scene ("" se não houver).
