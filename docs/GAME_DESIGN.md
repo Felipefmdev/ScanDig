@@ -41,10 +41,10 @@ Referências: `caranguejo.jpg`, `pa.jpg`, `kit_medico.jpg`, `repelente.jpg`, `es
 | # | Mapa | Tempo | Inimigos | Chefe principal | Chefe escondido | Arma exclusiva | Desbloqueio |
 | :- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | Praia | 60–70 min | Caranguejo, Ermitão, Gaivota | Caranguejo-Rei (investidas, enxame) | Polvo do Naufrágio | **Estilingue** (+ Armadilha de Rede) | Início |
-| 2 | Campo Antigo | 80–90 min | Cobra, Toupeira, Corvo | Toupeira Gigante (túneis, irrompe) | Espantalho Desperto | **Forcado** (corpo a corpo de alcance, empurra) | R$ 2.000 + Caranguejo-Rei |
+| 2 | Campo Antigo | 80–90 min | Cobra, Toupeira, Corvo | Toupeira Gigante (túneis, irrompe) | Espantalho Desperto | **Forcado** (corpo a corpo de alcance, empurra) | R$ 800 + Caranguejo-Rei |
 | 3 | Ruínas | 90–100 min | Guardião de pedra, Morcego | Guardião Ancestral (pontos fracos que acendem, placas) | Múmia do Ídolo | **Lanterna de Magnésio** (flash em cone que atordoa; morcegos fogem) | R$ 8.000 + Toupeira Gigante |
-| 4 | **Geleira Eterna** (novo) | 90–100 min | Lobo do gelo, Pinguim-ladrão, Morsa | Mamute Congelado (gelo que racha, avalanche) | Yeti da Gruta | **Arpão de Corda** (puxa inimigos e itens) | R$ 20.000 + Guardião Ancestral |
-| 5 | Cratera | 100–120 min | Criaturas estranhas (rastejantes, flutuantes) | O Que Dorme Lá Em Baixo (fases no fundo da cratera) | O Eco | **Pulso Magnético** (empurra criaturas, puxa metal) | R$ 55.000 + Mamute Congelado |
+| 4 | **Geleira Eterna** (novo) | 90–100 min | Lobo do gelo, Pinguim-ladrão, Morsa | Mamute Congelado (gelo que racha, avalanche) | Yeti da Gruta | **Arpão de Corda** (puxa inimigos e itens) | R$ 70.000 + Guardião Ancestral |
+| 5 | Cratera | 100–120 min | Criaturas estranhas (rastejantes, flutuantes) | O Que Dorme Lá Em Baixo (fases no fundo da cratera) | O Eco | **Pulso Magnético** (empurra criaturas, puxa metal) | R$ 190.000 + Mamute Congelado |
 
 Total da história ≈ 7–8 h; com missões e segredos ≈ 8–9 h.
 
@@ -119,8 +119,8 @@ Total da história ≈ 7–8 h; com missões e segredos ≈ 8–9 h.
 
 ## 6. Pedidos ao Dev B (core/ui)
 
-- `MapData` do 5.º mapa (`geleira`) e custos de desbloqueio na ordem acima (Geleira R$ 20.000,
-  Cratera R$ 55.000); `required_detector_level` por mapa.
+- `MapData` do 5.º mapa (`geleira`) e custos de desbloqueio na ordem acima (Geleira R$ 70.000,
+  Cratera R$ 190.000; valores do #64, fonte: docs/PACING.md); `required_detector_level` por mapa.
 - `ToolData` das armas novas (forcado, lanterna_magnesio, arpao_corda, pulso_magnetico) e a banca por
   mapa (#25): cada mapa vende as armas anteriores + a sua.
 - API de missões: `request_complete_quest(quest_id)` validada no host (recompensa uma só vez) e flags
