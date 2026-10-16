@@ -1,0 +1,20 @@
+{
+	"scene": "res://world/map_campo.tscn",
+	"steps": [
+		{"t": 0.2, "set_state": {"team_money": 5000}},
+		{"t": 1.0, "teleport": [5.0, 0.5, 1.0]},
+		{"t": 1.05, "look_at": [7.5, 0.7, 1.0]},
+		{"t": 1.6, "screenshot": "01_campo_banca"},
+		{"t": 1.8, "teleport": [6.3, 0.5, 1.0]},
+		{"t": 1.85, "look_at": [7.5, 0.55, 1.0]},
+		{"t": 2.2, "screenshot": "02_forcado_offer"},
+		{"t": 2.4, "tap": "interact"},
+		{"t": 2.8, "dump": "03_forcado_comprado"},
+		{"t": 3.2, "screenshot": "04_forcado_na_mao"},
+		{"t": 3.5, "tap": "use_tool"},
+		{"t": 3.6, "screenshot": "05_forcado_estocada"},
+		{"t": 4.2, "tap": "attack"},
+		{"t": 4.8, "dump": "99_final"},
+		{"t": 5.2, "quit": true}
+	]
+}

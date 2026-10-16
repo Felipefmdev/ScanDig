@@ -1,4 +1,4 @@
-[gd_scene load_steps=46 format=3 uid="uid://djlnpnnc3081a"]
+[gd_scene load_steps=54 format=3 uid="uid://djlnpnnc3081a"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -31,6 +31,12 @@
 [ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
 [ext_resource type="PackedScene" path="res://gameplay/quests/campo/campo_secrets.tscn" id="q_campo_secrets"]
 [ext_resource type="Environment" uid="uid://4chyvbdu60mc" path="res://world/environment_campo.tres" id="w_env_campo"]
+[ext_resource type="Script" path="res://items/shop_offer.gd" id="s_shop_offer"]
+[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="t_estilingue"]
+[ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
+[ext_resource type="Resource" path="res://items/tools/forcado.tres" id="t_forcado"]
+[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
+[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
 
 [sub_resource type="CylinderShape3D" id="Shape_trunk"]
 height = 3.0
@@ -88,6 +94,12 @@ size = Vector3(0.75, 0.68, 0.75)
 [sub_resource type="BoxShape3D" id="Shape_sell_crate"]
 size = Vector3(0.62, 0.45, 0.76)
 
+[sub_resource type="BoxShape3D" id="Shape_shop_counter"]
+size = Vector3(4.2, 0.54, 0.9)
+
+[sub_resource type="BoxShape3D" id="Shape_shop_blocker"]
+size = Vector3(5.2, 0.3, 3.5)
+
 [node name="MapCampo" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -112,7 +124,7 @@ script = ExtResource("env_grass")
 cluster_centers = Array[Vector3]([Vector3(-21.329, 0.14088, 2.4435), Vector3(0.66207, 20.16, 2.8329), Vector3(15.869, 2.6774, 4.4917), Vector3(12.91, 15.014, 2.6111), Vector3(-14.564, 6.3954, 3.8429), Vector3(-21.799, 17.739, 4.0219), Vector3(-2.8193, 17.627, 3.9337), Vector3(10.37, 10.046, 2.6452), Vector3(26.875, 24.042, 3.7122), Vector3(17.088, 27.981, 3.4159), Vector3(0.7609, -23.726, 2.8643), Vector3(-8.9379, 3.2172, 4.2097), Vector3(-11.641, -2.3829, 2.8985), Vector3(21.083, 11.423, 2.955), Vector3(4.3357, -26.615, 2.8261), Vector3(23.869, -1.1654, 2.3509), Vector3(-25.262, 11.461, 3.1879), Vector3(6.8493, -1.6777, 4.3553), Vector3(-1.0017, -15.18, 4.0643), Vector3(21.612, 7.0935, 3.1949), Vector3(24.05, 27.285, 2.237), Vector3(-3.7483, -11.515, 2.4315), Vector3(8.716, 5.4473, 2.2551), Vector3(-0.58702, 23.605, 2.4952), Vector3(22.807, 18.559, 3.846), Vector3(-10.267, 23.341, 3.5836), Vector3(-22.587, 13.863, 4.4467), Vector3(-27.214, -27.988, 3.0407), Vector3(4.5158, 24.202, 4.0714), Vector3(14.104, 25.557, 3.6574), Vector3(4.6517, 15.094, 3.7713), Vector3(9.4391, 24.363, 3.6763), Vector3(-16.985, -27.209, 4.4194), Vector3(-22.056, 21.715, 2.9586), Vector3(-25.123, -8.567, 2.7175), Vector3(-8.2094, 15.094, 3.3104), Vector3(-26.556, 0.58172, 4.5499), Vector3(-9.7416, -21.203, 4.3082), Vector3(25.132, 4.0106, 3.8475), Vector3(-5.6472, -17.052, 4.2671), Vector3(-4.8111, -23.595, 3.8354), Vector3(15.694, -4.7187, 4.417), Vector3(16.61, 16.616, 3.1337), Vector3(-15.045, 25.406, 4.473), Vector3(-19.221, 3.4721, 3.0552), Vector3(-12.986, 3.1211, 3.9649)])
 tufts_per_cluster = 120
 seed_value = 21
-exclusion_zones = Array[Vector3]([Vector3(0, 0, 2.5), Vector3(3.5, 3.5, 4.5), Vector3(-18, -18, 7), Vector3(3.5, 3.5, 1.5), Vector3(2.4, 2.2, 1.5), Vector3(1.3, 0.9, 1.5), Vector3(0.2, -0.4, 1.5), Vector3(-0.9, -1.7, 1.5), Vector3(-2, -3, 1.5), Vector3(-2, -3, 1.5), Vector3(-3.2, -4.1, 1.5), Vector3(-4.4, -5.2, 1.5), Vector3(-5.6, -6.3, 1.5), Vector3(-6.8, -7.4, 1.5), Vector3(-8, -8.5, 1.5), Vector3(-8, -8.5, 1.5), Vector3(-9.2, -9.6, 1.5), Vector3(-10.4, -10.7, 1.5), Vector3(-11.6, -11.8, 1.5), Vector3(-12.8, -12.9, 1.5), Vector3(-14, -14, 1.5), Vector3(-14, -14, 1.5), Vector3(-15.333, -15.333, 1.5), Vector3(-16.667, -16.667, 1.5), Vector3(-18, -18, 1.5), Vector3(-18, -18, 1.5), Vector3(-17, -19.5, 1.5), Vector3(-16, -21, 1.5), Vector3(-15, -22.5, 1.5), Vector3(-14, -24, 1.5), Vector3(-14, -24, 1.5), Vector3(-13, -25.4, 1.5), Vector3(-12, -26.8, 1.5), Vector3(-11, -28.2, 1.5), Vector3(-10, -29.6, 1.5), Vector3(-9, -31, 1.5), Vector3(11.5, -23.5, 2.2), Vector3(11.5, -20.5, 2.2), Vector3(11.5, -17.5, 2.2), Vector3(11.5, -14.5, 2.2), Vector3(11.5, -11.5, 2.2), Vector3(14.5, -23.5, 2.2), Vector3(14.5, -20.5, 2.2), Vector3(14.5, -17.5, 2.2), Vector3(14.5, -14.5, 2.2), Vector3(14.5, -11.5, 2.2), Vector3(17.5, -23.5, 2.2), Vector3(17.5, -20.5, 2.2), Vector3(17.5, -17.5, 2.2), Vector3(17.5, -14.5, 2.2), Vector3(17.5, -11.5, 2.2), Vector3(20.5, -23.5, 2.2), Vector3(20.5, -20.5, 2.2), Vector3(20.5, -17.5, 2.2), Vector3(20.5, -14.5, 2.2), Vector3(20.5, -11.5, 2.2), Vector3(23.5, -23.5, 2.2), Vector3(23.5, -20.5, 2.2), Vector3(23.5, -17.5, 2.2), Vector3(23.5, -14.5, 2.2), Vector3(23.5, -11.5, 2.2)])
+exclusion_zones = Array[Vector3]([Vector3(0, 0, 2.5), Vector3(3.5, 3.5, 4.5), Vector3(7.5, 1.0, 3.5), Vector3(-18, -18, 7), Vector3(3.5, 3.5, 1.5), Vector3(2.4, 2.2, 1.5), Vector3(1.3, 0.9, 1.5), Vector3(0.2, -0.4, 1.5), Vector3(-0.9, -1.7, 1.5), Vector3(-2, -3, 1.5), Vector3(-2, -3, 1.5), Vector3(-3.2, -4.1, 1.5), Vector3(-4.4, -5.2, 1.5), Vector3(-5.6, -6.3, 1.5), Vector3(-6.8, -7.4, 1.5), Vector3(-8, -8.5, 1.5), Vector3(-8, -8.5, 1.5), Vector3(-9.2, -9.6, 1.5), Vector3(-10.4, -10.7, 1.5), Vector3(-11.6, -11.8, 1.5), Vector3(-12.8, -12.9, 1.5), Vector3(-14, -14, 1.5), Vector3(-14, -14, 1.5), Vector3(-15.333, -15.333, 1.5), Vector3(-16.667, -16.667, 1.5), Vector3(-18, -18, 1.5), Vector3(-18, -18, 1.5), Vector3(-17, -19.5, 1.5), Vector3(-16, -21, 1.5), Vector3(-15, -22.5, 1.5), Vector3(-14, -24, 1.5), Vector3(-14, -24, 1.5), Vector3(-13, -25.4, 1.5), Vector3(-12, -26.8, 1.5), Vector3(-11, -28.2, 1.5), Vector3(-10, -29.6, 1.5), Vector3(-9, -31, 1.5), Vector3(11.5, -23.5, 2.2), Vector3(11.5, -20.5, 2.2), Vector3(11.5, -17.5, 2.2), Vector3(11.5, -14.5, 2.2), Vector3(11.5, -11.5, 2.2), Vector3(14.5, -23.5, 2.2), Vector3(14.5, -20.5, 2.2), Vector3(14.5, -17.5, 2.2), Vector3(14.5, -14.5, 2.2), Vector3(14.5, -11.5, 2.2), Vector3(17.5, -23.5, 2.2), Vector3(17.5, -20.5, 2.2), Vector3(17.5, -17.5, 2.2), Vector3(17.5, -14.5, 2.2), Vector3(17.5, -11.5, 2.2), Vector3(20.5, -23.5, 2.2), Vector3(20.5, -20.5, 2.2), Vector3(20.5, -17.5, 2.2), Vector3(20.5, -14.5, 2.2), Vector3(20.5, -11.5, 2.2), Vector3(23.5, -23.5, 2.2), Vector3(23.5, -20.5, 2.2), Vector3(23.5, -17.5, 2.2), Vector3(23.5, -14.5, 2.2), Vector3(23.5, -11.5, 2.2)])
 max_x = 30.0
 terrain = 1
 color_dark = Color(0.16, 0.28, 0.07, 1)
@@ -1507,6 +1519,84 @@ billboard = 1
 modulate = Color(1, 0.88, 0.35, 1)
 text = "ENTREGA [E]"
 font_size = 56
+outline_size = 14
+
+[node name="Banca" type="Node3D" parent="."]
+transform = Transform3D(6.1232e-17, 0, 1, 0, 1, 0, -1, 0, 6.1232e-17, 7.5, 0, 1)
+
+[node name="Counter" type="StaticBody3D" parent="Banca" groups=["spot_blockers"]]
+
+[node name="Collision" type="CollisionShape3D" parent="Banca/Counter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.27, 0)
+shape = SubResource("Shape_shop_counter")
+
+[node name="Crate1" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, -1.52, 0, 0)
+
+[node name="Crate2" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, -0.76, 0, 0)
+
+[node name="Crate3" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, 0, 0, 0)
+
+[node name="Crate4" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, 0.76, 0, 0)
+
+[node name="Crate5" parent="Banca/Counter" instance=ExtResource("k_crate")]
+transform = Transform3D(4.2863e-17, 0, 0.7, 0, 0.7, 0, -0.7, 0, 4.2863e-17, 1.52, 0, 0)
+
+[node name="SpotBlocker" type="StaticBody3D" parent="Banca" groups=["spot_blockers"]]
+
+[node name="Collision" type="CollisionShape3D" parent="Banca/SpotBlocker"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0.4)
+shape = SubResource("Shape_shop_blocker")
+
+[node name="Barrel" parent="Banca" instance=ExtResource("k_barrel")]
+transform = Transform3D(0.46985, 0, 0.17101, 0, 0.5, 0, -0.17101, 0, 0.46985, 2.3, 0, 0.6)
+
+[node name="Hay" type="StaticBody3D" parent="Banca" groups=["spot_blockers"]]
+transform = Transform3D(0.95534, 0, 0.29552, 0, 1, 0, -0.29552, 0, 0.95534, -2.3, 0.5, 0.5)
+
+[node name="Collision" type="CollisionShape3D" parent="Banca/Hay"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0)
+shape = SubResource("Shape_hay")
+
+[node name="Mesh" type="MeshInstance3D" parent="Banca/Hay"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("Mesh_hay")
+
+[node name="Offer1" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0.54, 0.05)
+script = ExtResource("s_shop_offer")
+tool_data = ExtResource("t_estilingue")
+
+[node name="Offer2" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.54, 0.05)
+script = ExtResource("s_shop_offer")
+tool_data = ExtResource("t_armadilha_rede")
+
+[node name="Offer3" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54, 0.05)
+script = ExtResource("s_shop_offer")
+tool_data = ExtResource("t_forcado")
+
+[node name="Offer4" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.54, 0.05)
+script = ExtResource("s_shop_offer")
+tool_data = ExtResource("t_kit_medico")
+
+[node name="Offer5" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0.54, 0.05)
+script = ExtResource("s_shop_offer")
+tool_data = ExtResource("t_repelente")
+
+[node name="Label" type="Label3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+pixel_size = 0.008
+billboard = 1
+modulate = Color(0.55, 0.9, 1, 1)
+text = "LOJA"
+font_size = 64
 outline_size = 14
 
 [node name="Players" type="Node3D" parent="."]

@@ -1,6 +1,6 @@
 extends RefCounted
 
-## Ajudas para os modelos procedurais das ferramentas (pá, kit médico, repelente, estilingue; #37).
+## Ajudas para os modelos procedurais das ferramentas (pá, kit médico, repelente, estilingue, forcado; #37, #38).
 ## As primitivas facetadas são as do LowPolyMesh; aqui ficam as que só as ferramentas usam.
 ##
 ## Regra (#47): tudo o que é gerado entra na árvore SEM owner, por isso o editor nunca grava as

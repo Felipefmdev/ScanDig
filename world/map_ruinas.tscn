@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -17,6 +17,8 @@
 [ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
 [ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
 [ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
+[ext_resource type="Script" path="res://gameplay/enemies/boss/boss_altar.gd" id="b_boss_altar"]
+[ext_resource type="PackedScene" path="res://gameplay/enemies/boss/ancient_guardian.tscn" id="b_guardian_scene"]
 [ext_resource type="Environment" path="res://world/environment_ruinas.tres" id="w_env_ruinas"]
 [ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="t_estilingue"]
 [ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
@@ -24,6 +26,7 @@
 [ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
 [ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
 [ext_resource type="Resource" path="res://items/tools/lanterna_magnesio.tres" id="t_lanterna_magnesio"]
+[ext_resource type="PackedScene" path="res://gameplay/quests/ruinas/ruinas_secrets.tscn" id="q_ruinas_secrets"]
 
 [sub_resource type="BoxShape3D" id="Shape_wall_x"]
 size = Vector3(1, 6, 62)
@@ -251,3 +254,12 @@ script = ExtResource("d_detector_spawn")
 
 [node name="ToonOverride" type="Node" parent="."]
 script = ExtResource("art_toon_override")
+
+[node name="GuardianAltar" type="Area3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 20, 0, -15)
+script = ExtResource("b_boss_altar")
+boss_scene = ExtResource("b_guardian_scene")
+boss_offset = Vector3(0, 0, -2)
+label_text = "O guardião dorme debaixo das lajes... [cavar]"
+
+[node name="RuinasSecrets" parent="." instance=ExtResource("q_ruinas_secrets")]

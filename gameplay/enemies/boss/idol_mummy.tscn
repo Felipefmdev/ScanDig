@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/enemies/boss/idol_mummy.gd" id="1_boss"]
+
+[node name="IdolMummy" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 1
+script = ExtResource("1_boss")
+max_health = 1100.0
+death_color = Color(0.86, 0.82, 0.7, 1)

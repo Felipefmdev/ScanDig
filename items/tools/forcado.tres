@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+[ext_resource type="PackedScene" path="res://gameplay/weapons/pitchfork/pitchfork_world.tscn" id="2_world"]
 
 [resource]
 script = ExtResource("1_tool")
@@ -11,3 +12,4 @@ price = 600
 category = 0
 charges = -1
 color = Color(0.6, 0.45, 0.25, 1)
+world_scene = ExtResource("2_world")

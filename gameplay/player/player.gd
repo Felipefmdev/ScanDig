@@ -39,6 +39,14 @@ signal died
 @export var net_trap_distance: float = 1.6
 @export var medkit_heal: float = 40.0
 
+@export_group("Forcado")
+@export var pitchfork_damage: float = 35.0
+@export var pitchfork_range: float = 3.2
+@export var pitchfork_cooldown: float = 0.75
+@export_range(-1.0, 1.0, 0.05) var pitchfork_cone_dot: float = 0.55
+@export var pitchfork_knockback: float = 12.0
+@export var pitchfork_stun: float = 0.5
+
 @export_group("Som")
 @export var footsteps_enabled: bool = true
 ## Volume dos passos na areia (dB). Baixo de propósito: é um som repetitivo.
@@ -55,6 +63,7 @@ const TOOL_REPELLENT: StringName = &"repelente"
 const TOOL_NET_TRAP: StringName = &"armadilha_rede"
 const TOOL_MEDKIT: StringName = &"kit_medico"
 const TOOL_LANTERN: StringName = &"lanterna_magnesio"
+const TOOL_FORCADO: StringName = &"forcado"
 ## Recarga do clarão da Lanterna de Magnésio (#42).
 const LANTERN_COOLDOWN: float = 4.0
 ## Empurrão (#57): segundos sem controlo por m/s de impulso, e o máximo.
@@ -63,6 +72,7 @@ const KNOCKBACK_TIME_MAX: float = 0.9
 ## Modelos na mão (#37) das ferramentas sem nó próprio no player.tscn (o estilingue tem).
 const MEDKIT_MODEL: Script = preload("res://gameplay/weapons/medkit/medkit_model.gd")
 const REPELLENT_MODEL: Script = preload("res://gameplay/weapons/repellent/repellent_model.gd")
+const PITCHFORK_MODEL: Script = preload("res://gameplay/weapons/pitchfork/pitchfork_model.gd")
 ## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
 const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
 const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
@@ -846,7 +856,12 @@ func _handle_attack_action() -> void:
 	if _attack_cooldown > 0.0 or dig_animator.is_playing():
 		return
 	if Input.is_action_just_pressed("attack"):
-		_perform_attack()
+		var c: CarriedItem = inventory.get_selected()
+		if c != null and c.tool_id == TOOL_FORCADO:
+			if _use_cooldown <= 0.0:
+				_attack_pitchfork()
+		else:
+			_perform_attack()
 
 
 func get_attack_damage() -> float:
@@ -1124,6 +1139,12 @@ func _setup_held_models() -> void:
 	# Lata agarrada a meio, o rótulo meio virado para a câmara.
 	_held_models[TOOL_REPELLENT] = _add_held_model(REPELLENT_MODEL,
 		Transform3D(Basis(Vector3.UP, -PI * 0.25).scaled(Vector3.ONE * 0.85), Vector3(0.0, -0.09, 0.0)))
+	# Forcado com o cabo a passar pela mão e apontado ligeiramente para a frente e para cima
+	var fork_pose: Transform3D = Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-65.0)).rotated(Vector3.UP, deg_to_rad(15.0)).scaled(Vector3.ONE * 0.7), Vector3(0.02, -0.06, -0.15))
+	var fork_model: Node3D = _add_held_model(PITCHFORK_MODEL, fork_pose)
+	if "show_left_hand" in fork_model:
+		fork_model.set("show_left_hand", true)
+	_held_models[TOOL_FORCADO] = fork_model
 	_update_tool_in_hand()
 
 
@@ -1247,6 +1268,8 @@ func _handle_use_tool_action() -> void:
 			SFX.play_ui(SFX.MEDKIT)
 			_show_temporary_message("🩹 +%d de vida" % int(medkit_heal), Color(0.5, 1.0, 0.55), 1.2)
 			_consume(c)
+		TOOL_FORCADO:
+			_attack_pitchfork()
 
 
 ## Clarão em cone (LanternFlash, Dev_Detector): atordoa e espanta; em coop o stun vai ao host.
@@ -1288,6 +1311,78 @@ func _fire_slingshot() -> void:
 		t.parallel().tween_property(tool_view, "position", _tool_view_rest + Vector3(0, -0.02, 0.06), 0.06)
 		t.tween_property(slingshot_model, "pull", 0.0, 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		t.parallel().tween_property(tool_view, "position", _tool_view_rest, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+## Ataque corpo a corpo de alcance médio do Forcado (#38).
+## Alcance ~3.2m em cone frontal, aplica dano (35), atordoamento breve e knockback forte.
+## Suporta coop via request_hit e request_stun nos inimigos replicados.
+func attack_pitchfork() -> int:
+	_use_cooldown = pitchfork_cooldown
+	_attack_cooldown = pitchfork_cooldown
+
+	# Animação de estocada com o forcado na mão
+	if tool_view != null:
+		var t: Tween = create_tween()
+		var forward_thrust: Vector3 = _tool_view_rest + Vector3(0.0, 0.04, -0.28)
+		t.tween_property(tool_view, "position", forward_thrust, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.parallel().tween_property(tool_view, "rotation:x", -0.12, 0.08)
+		t.tween_property(tool_view, "position", _tool_view_rest, 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		t.parallel().tween_property(tool_view, "rotation:x", 0.0, 0.26)
+
+	var forward: Vector3 = -camera.global_basis.z if camera != null else -global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	var origin: Vector3 = camera.global_position if camera != null else global_position
+	var hits: int = 0
+
+	for n: Node in get_tree().get_nodes_in_group("enemies"):
+		if not (n is Node3D):
+			continue
+		var target: Node3D = n as Node3D
+		if target.has_method("is_alive") and not target.call("is_alive"):
+			continue
+		var to_target: Vector3 = target.global_position - origin
+		to_target.y = 0.0
+		var dist: float = to_target.length()
+		if dist > pitchfork_range:
+			continue
+		if dist > 0.05 and forward.dot(to_target / dist) < pitchfork_cone_dot:
+			continue
+
+		var push_dir: Vector3 = to_target / dist if dist > 0.01 else forward
+
+		# Suporte a coop: no cliente sem autoridade usa request_hit/request_stun para o host
+		if target.has_method("request_hit") and not (target.has_method("has_simulation_authority") and target.call("has_simulation_authority")):
+			target.call("request_hit", pitchfork_damage, origin)
+		elif target.has_method("take_damage"):
+			target.call("take_damage", pitchfork_damage, origin)
+
+		if target.has_method("request_stun") and not (target.has_method("has_simulation_authority") and target.call("has_simulation_authority")):
+			target.call("request_stun", pitchfork_stun)
+		elif target.has_method("stun"):
+			target.call("stun", pitchfork_stun)
+
+		if target.has_method("apply_knockback"):
+			target.call("apply_knockback", push_dir * pitchfork_knockback + Vector3.UP * 2.5, 0.06)
+		if target is CharacterBody3D:
+			var cb: CharacterBody3D = target as CharacterBody3D
+			cb.velocity += push_dir * pitchfork_knockback + Vector3.UP * 2.0
+			cb.move_and_collide(push_dir * (pitchfork_knockback * 0.12))
+
+		hits += 1
+
+	if hits > 0:
+		_shake_camera(0.03, 0.18)
+		SFX.play_ui(SFX.STONE_IMPACT, -2.0, 0.1)
+		_show_temporary_message("🔱 Golpe de Forcado! (%d de dano)" % int(pitchfork_damage), Color(1.0, 0.85, 0.4), 0.9)
+	else:
+		SFX.play_ui(SFX.SLINGSHOT_FIRE, -10.0, 0.2)
+
+	return hits
+
+
+func _attack_pitchfork() -> void:
+	attack_pitchfork()
 
 
 func _use_repellent() -> void:
