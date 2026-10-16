@@ -93,6 +93,12 @@ func _run() -> void:
 	var session: Node = root.get_node(^"CoreSession")
 	session.set("_current_map", load("res://items/maps/praia.tres"))
 	ui._refresh_expedition_bar()
+	# Barra de chefe real (BossHud do gameplay) para conferir que o ExpeditionBar não a cobre.
+	var boss_hud: BossHud = BossHud.create("Caranguejo-Rei", 100.0, UiPalette.RED_BURNT)
+	boss_hud.visible = true
+	boss_hud.set_health(65.0)
+	root.add_child(boss_hud)
+	ui.leave_button.visible = true
 	ui.toast_label.text = "Missão concluída: O anzol de ouro (+R$ 600)"
 	ui.toast_panel.visible = true
 	await _shot("aviso")
@@ -152,6 +158,7 @@ func _run() -> void:
 	ui._refresh_expedition_bar()
 	menu.set_save_manager(null)
 	fake.queue_free()
+	boss_hud.queue_free()
 	GameState.instance.reset_state()
 	quit()
 

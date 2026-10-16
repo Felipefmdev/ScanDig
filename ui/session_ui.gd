@@ -146,7 +146,7 @@ func _refresh_expedition_bar() -> void:
 	if map != null:
 		map_name = map.display_name if not map.display_name.is_empty() else map.id
 	var day: int = GameState.instance.current_day if GameState.instance != null else 1
-	expedition_info_label.text = "Expedição: %s  •  Dia %d" % [map_name, day]
+	expedition_info_label.text = "%s  •  Dia %d" % [map_name, day]
 	return_button.visible = _is_host()
 	return_button.disabled = false
 	leave_button.disabled = false
