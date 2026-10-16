@@ -12,6 +12,7 @@ extends Node3D
 ## Regra (#47): tudo o que é gerado entra na árvore SEM owner.
 
 const ToolMesh = preload("res://gameplay/weapons/tool_mesh.gd")
+const NpcBody := preload("res://gameplay/quests/npc_body.gd")
 
 enum Kind {
 	DRA_VEGA,
@@ -97,89 +98,133 @@ func rebuild() -> void:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "ModelMesh"
 	mi.mesh = ToonKit.commit(st)
-	mi.material_override = ToonKit.vertex_material(true, true)
+	mi.material_override = NpcBody.cloth_material(0.45, Color(0.5, 0.38, 0.24)) if kind == Kind.DRA_VEGA else ToonKit.vertex_material(true, true)
 	add_child(mi)
 
 
-## NPC Dra. Vega (fiel a dra_vega.jpg)
+## NPC Dra. Vega (#61, fiel a dra_vega.jpg): afro enorme castanho, auscultadores laranja de
+## arco escuro, bata branca suja e rasgada até aos joelhos por cima do macacão laranja com
+## arnês e fivela, botas pretas de atacadores, tablet de radar verde na mão esquerda (a direita
+## aponta para o ecrã), mochila-rádio cinzenta com mostrador, cabos vermelhos e antena em
+## zigue-zague, crachá "DRA. VEGA". Cara para -Z (para o jogador).
 func _build_dra_vega(st: SurfaceTool) -> void:
-	# Botas pesadas
+	var skin: Color = Color(0.62, 0.4, 0.27, 0.0)
+	var skin_dark: Color = Color(0.5, 0.31, 0.2, 0.0)
+	var hair: Color = Color(0.33, 0.2, 0.13)
+	var hair_dark: Color = Color(0.22, 0.13, 0.08)
+	var coat: Color = Color(0.9, 0.88, 0.82)
+	var coat_shadow: Color = Color(0.78, 0.75, 0.68)
+	var suit: Color = Color(0.82, 0.42, 0.16)
+	var suit_dark: Color = Color(0.66, 0.32, 0.12)
+	var strap: Color = Color(0.36, 0.3, 0.22)
+	var boot_c: Color = Color(0.17, 0.16, 0.15)
+	var metal: Color = Color(0.5, 0.5, 0.47, 0.0)
+	var pack: Color = Color(0.52, 0.5, 0.42)
+	var cable: Color = Color(0.7, 0.16, 0.12, 0.0)
+	var screen: Color = Color(0.3, 0.85, 0.45, 0.0)
+	var screen_dark: Color = Color(0.08, 0.26, 0.15, 0.0)
+	# Botas de atacadores (bem pesadas)
 	for sx: float in [-1.0, 1.0]:
-		var boot_pos: Vector3 = Vector3(sx * 0.14, 0.1, 0.0)
-		LowPolyMesh.box(st, boot_pos, Vector3(0.16, 0.2, 0.26), Basis.IDENTITY, BOOTS_DARK)
-
-	# Pernas de macacão laranja com faixas utilitárias
+		NpcBody.boot(st, Vector3(sx * 0.13, 0.0, 0.0), boot_c, Color(0.08, 0.08, 0.08, 0.0), 1.1, 0.24)
+	# Pernas do macacão (largas, joelho dobrado) com tiras do arnês nas coxas
 	for sx: float in [-1.0, 1.0]:
-		var leg_p0: Vector3 = Vector3(sx * 0.14, 0.2, 0.0)
-		var leg_p1: Vector3 = Vector3(sx * 0.12, 0.75, 0.0)
-		LowPolyMesh.prism(st, leg_p0, leg_p1, 0.12, 0.14, 6, JUMPSUIT_ORANGE)
-		# Tiras de arnês nas coxas
-		LowPolyMesh.box(st, Vector3(sx * 0.13, 0.5, 0.0), Vector3(0.14, 0.04, 0.15), Basis.IDENTITY, BOOTS_DARK)
-
-	# Tronco: macacão laranja com cinto e fivela
-	var torso_c: Vector3 = Vector3(0.0, 1.05, 0.0)
-	LowPolyMesh.box(st, torso_c, Vector3(0.36, 0.55, 0.24), Basis.IDENTITY, JUMPSUIT_ORANGE)
-	LowPolyMesh.box(st, Vector3(0.0, 0.8, 0.0), Vector3(0.38, 0.08, 0.26), Basis.IDENTITY, BOOTS_DARK)
-	LowPolyMesh.box(st, Vector3(0.0, 0.8, 0.13), Vector3(0.1, 0.09, 0.02), Basis.IDENTITY, METAL_GRAY)
-
-	# Bata branca de cientista por cima do macacão (aberta à frente)
-	LowPolyMesh.box(st, Vector3(-0.16, 0.95, 0.0), Vector3(0.12, 0.72, 0.28), Basis.IDENTITY, LAB_COAT)
-	LowPolyMesh.box(st, Vector3(0.16, 0.95, 0.0), Vector3(0.12, 0.72, 0.28), Basis.IDENTITY, LAB_COAT)
-	LowPolyMesh.box(st, Vector3(0.0, 1.05, -0.11), Vector3(0.38, 0.55, 0.08), Basis.IDENTITY, LAB_COAT)
-
-	# Crachá "DRA. VEGA" no peito
-	LowPolyMesh.box(st, Vector3(0.12, 1.18, 0.13), Vector3(0.08, 0.05, 0.01), Basis.IDENTITY, LAB_COAT)
-	LowPolyMesh.box(st, Vector3(0.12, 1.18, 0.136), Vector3(0.06, 0.03, 0.005), Basis.IDENTITY, Color(0.2, 0.2, 0.2))
-
-	# Mochila com equipamento de rádio nas costas
-	var pack_c: Vector3 = Vector3(0.0, 1.1, -0.2)
-	LowPolyMesh.box(st, pack_c, Vector3(0.32, 0.42, 0.16), Basis.IDENTITY, BACKPACK_RIG)
-	# Dials e caixas na mochila
-	LowPolyMesh.box(st, pack_c + Vector3(0.1, 0.1, -0.09), Vector3(0.08, 0.08, 0.04), Basis.IDENTITY, METAL_GRAY)
-	# Antena em zig-zag subindo da mochila
-	var a0: Vector3 = pack_c + Vector3(0.12, 0.22, 0.0)
-	var a1: Vector3 = a0 + Vector3(0.04, 0.15, 0.0)
-	var a2: Vector3 = a1 + Vector3(-0.06, 0.15, 0.0)
-	var a3: Vector3 = a2 + Vector3(0.04, 0.15, 0.0)
-	LowPolyMesh.prism(st, a0, a1, 0.012, 0.012, 4, ANTENNA_ROD)
-	LowPolyMesh.prism(st, a1, a2, 0.012, 0.012, 4, ANTENNA_ROD)
-	LowPolyMesh.prism(st, a2, a3, 0.012, 0.008, 4, ANTENNA_ROD)
-
-	# Braços com mangas arregaçadas segurando o tablet
-	var arm_l0: Vector3 = Vector3(-0.22, 1.25, 0.0)
-	var hand_l: Vector3 = Vector3(-0.08, 1.05, 0.28)
-	LowPolyMesh.prism(st, arm_l0, hand_l, 0.08, 0.05, 5, LAB_COAT)
-	var arm_r0: Vector3 = Vector3(0.22, 1.25, 0.0)
-	var hand_r: Vector3 = Vector3(0.02, 1.08, 0.26)
-	LowPolyMesh.prism(st, arm_r0, hand_r, 0.08, 0.05, 5, LAB_COAT)
-
-	# Tablet / Scanner com tela verde de radar
-	var pad_c: Vector3 = Vector3(-0.05, 1.05, 0.3)
-	var pad_basis: Basis = Basis(Vector3.RIGHT, deg_to_rad(-30.0)).rotated(Vector3.UP, deg_to_rad(15.0))
-	LowPolyMesh.box(st, pad_c, Vector3(0.22, 0.16, 0.03), pad_basis, RADAR_BODY)
-	LowPolyMesh.box(st, pad_c + Vector3(0.0, 0.01, 0.02), Vector3(0.17, 0.12, 0.01), pad_basis, RADAR_SCREEN)
-
-	# Cabeça, pescoço e rosto
-	LowPolyMesh.prism(st, Vector3(0.0, 1.3, 0.0), Vector3(0.0, 1.4, 0.0), 0.08, 0.08, 6, SKIN_TONE)
-	var head_c: Vector3 = Vector3(0.0, 1.5, 0.0)
-	LowPolyMesh.box(st, head_c, Vector3(0.24, 0.25, 0.22), Basis.IDENTITY, SKIN_TONE)
-	# Sorriso e olhos expressivos
-	LowPolyMesh.box(st, head_c + Vector3(-0.05, 0.02, 0.115), Vector3(0.03, 0.03, 0.01), Basis.IDENTITY, Color(0.1, 0.1, 0.1))
-	LowPolyMesh.box(st, head_c + Vector3(0.05, 0.02, 0.115), Vector3(0.03, 0.03, 0.01), Basis.IDENTITY, Color(0.1, 0.1, 0.1))
-	LowPolyMesh.box(st, head_c + Vector3(0.0, -0.06, 0.115), Vector3(0.08, 0.025, 0.01), Basis.IDENTITY, Color(0.85, 0.35, 0.35))
-
-	# Auscultadores grandes laranjas sobre as orelhas
+		NpcBody.limb(st, Vector3(sx * 0.13, 0.24, 0.0), Vector3(sx * 0.14, 0.48, -0.03), 0.1, 0.11, suit)
+		NpcBody.limb(st, Vector3(sx * 0.14, 0.48, -0.03), Vector3(sx * 0.12, 0.76, 0.0), 0.11, 0.13, suit)
+		LowPolyMesh.box(st, Vector3(sx * 0.13, 0.48, -0.03), Vector3(0.24, 0.05, 0.24), Basis.IDENTITY, suit_dark)
+		LowPolyMesh.box(st, Vector3(sx * 0.13, 0.62, -0.01), Vector3(0.26, 0.045, 0.26), Basis(Vector3.FORWARD, sx * 0.25), strap)
+	# Tronco do macacão (camisola clara no decote) e cinto com fivela
+	NpcBody.blob(st, Vector3(0.0, 0.98, 0.0), Vector3(0.22, 0.27, 0.15), suit, 8)
+	LowPolyMesh.box(st, Vector3(0.0, 1.13, -0.13), Vector3(0.2, 0.12, 0.03), Basis.IDENTITY, Color(0.84, 0.8, 0.72))
+	LowPolyMesh.box(st, Vector3(0.0, 0.78, 0.0), Vector3(0.44, 0.07, 0.3), Basis.IDENTITY, strap)
+	LowPolyMesh.box(st, Vector3(0.0, 0.78, -0.155), Vector3(0.1, 0.075, 0.02), Basis.IDENTITY, metal)
+	# Bata branca aberta: dois painéis da frente até aos joelhos (bainha rasgada) + costas
 	for sx: float in [-1.0, 1.0]:
-		var phone_c: Vector3 = Vector3(sx * 0.15, 1.5, 0.0)
-		LowPolyMesh.box(st, phone_c, Vector3(0.06, 0.12, 0.12), Basis.IDENTITY, HEADPHONE_ORANGE)
-	# Arco superior dos auscultadores
-	LowPolyMesh.prism(st, Vector3(-0.15, 1.58, 0.0), Vector3(0.15, 1.58, 0.0), 0.03, 0.03, 4, HEADPHONE_BAND)
-
-	# Cabelo afro/encaracolado volumoso castanho facetado
-	for i: int in range(12):
-		var ang: float = TAU * float(i) / 12.0
-		var curl_p: Vector3 = head_c + Vector3(cos(ang) * 0.16, sin(ang) * 0.14 + 0.06, -0.04)
-		LowPolyMesh.prism(st, curl_p, curl_p + Vector3(cos(ang) * 0.08, sin(ang) * 0.08, -0.04), 0.08, 0.03, 5, AFRO_HAIR)
+		LowPolyMesh.box(st, Vector3(sx * 0.19, 0.82, -0.08), Vector3(0.13, 0.66, 0.06), Basis(Vector3.FORWARD, sx * 0.08), coat)
+		LowPolyMesh.box(st, Vector3(sx * 0.25, 0.82, 0.04), Vector3(0.05, 0.66, 0.22), Basis(Vector3.FORWARD, sx * 0.1), coat_shadow)
+		# Lapela e bolso
+		LowPolyMesh.box(st, Vector3(sx * 0.13, 1.14, -0.15), Vector3(0.07, 0.14, 0.02), Basis(Vector3.FORWARD, -sx * 0.4), coat_shadow)
+		LowPolyMesh.box(st, Vector3(sx * 0.2, 0.68, -0.115), Vector3(0.1, 0.09, 0.015), Basis.IDENTITY, coat_shadow)
+		# Rasgões em bico na bainha
+		for k: int in 2:
+			var bx: float = sx * (0.14 + 0.08 * float(k))
+			LowPolyMesh.prism(st, Vector3(bx, 0.5, -0.08), Vector3(bx + sx * 0.01, 0.42 - 0.04 * float(k), -0.08), 0.04, 0.0, 3, coat)
+	LowPolyMesh.box(st, Vector3(0.0, 0.84, 0.13), Vector3(0.5, 0.7, 0.05), Basis.IDENTITY, coat)
+	for k: int in 3:
+		var bx: float = -0.16 + 0.16 * float(k)
+		LowPolyMesh.prism(st, Vector3(bx, 0.5, 0.13), Vector3(bx + 0.02, 0.42, 0.13), 0.05, 0.0, 3, coat)
+	# Ombros da bata
+	NpcBody.blob(st, Vector3(0.0, 1.18, 0.0), Vector3(0.27, 0.08, 0.16), coat, 8)
+	# Crachá "DRA. VEGA" ao peito (cartão + faixa escura de texto)
+	LowPolyMesh.box(st, Vector3(-0.15, 1.04, -0.12), Vector3(0.09, 0.055, 0.012), Basis.IDENTITY, Color(0.95, 0.95, 0.92, 0.0))
+	LowPolyMesh.box(st, Vector3(-0.15, 1.04, -0.128), Vector3(0.07, 0.015, 0.006), Basis.IDENTITY, Color(0.15, 0.15, 0.15, 0.0))
+	# Braços: mangas arregaçadas, antebraços de pele; esquerda segura o tablet, direita aponta
+	var tab_c: Vector3 = Vector3(0.1, 1.06, -0.38)
+	var tab_b: Basis = Basis(Vector3.UP, deg_to_rad(-25.0)) * Basis(Vector3.RIGHT, deg_to_rad(-25.0))
+	NpcBody.limb(st, Vector3(0.27, 1.16, 0.0), Vector3(0.3, 0.98, -0.12), 0.075, 0.07, coat)
+	LowPolyMesh.prism(st, Vector3(0.3, 0.98, -0.12), Vector3(0.29, 0.97, -0.15), 0.08, 0.08, 6, coat_shadow)
+	NpcBody.limb(st, Vector3(0.29, 0.97, -0.15), Vector3(0.18, 0.98, -0.34), 0.05, 0.045, skin)
+	NpcBody.hand(st, Vector3(0.17, 0.98, -0.36), 0.045, skin, 1.0)
+	NpcBody.limb(st, Vector3(-0.27, 1.16, 0.0), Vector3(-0.28, 1.0, -0.14), 0.075, 0.07, coat)
+	LowPolyMesh.prism(st, Vector3(-0.28, 1.0, -0.14), Vector3(-0.27, 1.0, -0.17), 0.08, 0.08, 6, coat_shadow)
+	NpcBody.limb(st, Vector3(-0.27, 1.0, -0.17), Vector3(-0.02, 1.05, -0.38), 0.05, 0.04, skin)
+	LowPolyMesh.prism(st, Vector3(-0.02, 1.05, -0.38), Vector3(0.04, 1.04, -0.42), 0.022, 0.012, 4, skin)
+	# Tablet de radar: moldura cinzenta grossa, ecrã verde com cruz, anéis e varrimento
+	LowPolyMesh.box(st, tab_c, Vector3(0.32, 0.22, 0.05), tab_b, metal)
+	var face_n: Vector3 = tab_b * Vector3(0, 0, -1)
+	LowPolyMesh.box(st, tab_c + face_n * 0.022, Vector3(0.24, 0.16, 0.008), tab_b, screen_dark)
+	for r: float in [0.055, 0.035]:
+		LowPolyMesh.box(st, tab_c + face_n * 0.028, Vector3(r * 2.0, 0.008, 0.006), tab_b, screen)
+		LowPolyMesh.box(st, tab_c + face_n * 0.028, Vector3(0.008, r * 2.0, 0.006), tab_b, screen)
+	LowPolyMesh.box(st, tab_c + face_n * 0.03 + tab_b * Vector3(0.025, 0.02, 0), Vector3(0.06, 0.008, 0.006),
+		tab_b * Basis(Vector3.FORWARD, 0.7), screen)
+	# Mochila-rádio: caixa gasta, mostrador redondo, caixa lateral, cabos vermelhos
+	var pc: Vector3 = Vector3(0.02, 1.02, 0.26)
+	LowPolyMesh.box(st, pc, Vector3(0.36, 0.5, 0.2), Basis(Vector3.UP, 0.05), pack)
+	LowPolyMesh.box(st, pc + Vector3(0.0, 0.0, 0.11), Vector3(0.26, 0.36, 0.03), Basis.IDENTITY, Color(0.42, 0.4, 0.34))
+	LowPolyMesh.prism(st, pc + Vector3(0.1, 0.14, 0.12), pc + Vector3(0.1, 0.14, 0.17), 0.06, 0.055, 8, metal)
+	LowPolyMesh.box(st, pc + Vector3(-0.21, -0.08, 0.02), Vector3(0.08, 0.22, 0.14), Basis.IDENTITY, Color(0.3, 0.3, 0.28))
+	LowPolyMesh.box(st, pc + Vector3(0.0, -0.27, 0.0), Vector3(0.3, 0.06, 0.18), Basis.IDENTITY, strap)
+	NpcBody.limb(st, pc + Vector3(0.18, 0.1, 0.05), pc + Vector3(0.22, -0.12, -0.06), 0.012, 0.012, cable, 4)
+	NpcBody.limb(st, pc + Vector3(0.22, -0.12, -0.06), pc + Vector3(0.12, -0.3, -0.18), 0.012, 0.012, cable, 4)
+	# Alças da mochila por cima dos ombros
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(sx * 0.13, 1.17, -0.02), Vector3(0.06, 0.04, 0.34), Basis.IDENTITY, strap)
+	# Antena em zigue-zague a sair do canto da mochila
+	var pts: Array[Vector3] = [pc + Vector3(0.14, 0.25, 0.04)]
+	for k: int in 5:
+		pts.append(pts[-1] + Vector3(0.11 if k % 2 == 0 else -0.1, 0.1, 0.0))
+	for k: int in pts.size() - 1:
+		NpcBody.limb(st, pts[k], pts[k + 1], 0.02, 0.018, Color(0.55, 0.57, 0.6, 0.0), 4)
+	# Pescoço, cabeça e cara (sorriso aberto)
+	NpcBody.limb(st, Vector3(0.0, 1.18, 0.0), Vector3(0.0, 1.28, 0.0), 0.06, 0.06, skin)
+	var head: Vector3 = Vector3(0.0, 1.4, -0.01)
+	NpcBody.blob(st, head, Vector3(0.15, 0.17, 0.15), skin, 8)
+	NpcBody.blob(st, head + Vector3(0, -0.1, -0.03), Vector3(0.1, 0.06, 0.1), skin, 6)
+	NpcBody.nose(st, head, 0.15, skin_dark, 0.9)
+	NpcBody.face(st, head, 0.15, hair_dark, 1)
+	# Afro enorme: nuvem de caracóis facetados à volta e por cima (deixa a cara livre)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 7
+	for k: int in 34:
+		var u: float = rng.randf_range(-0.2, 1.0)  # altura (-0.2 = nuca, 1 = topo)
+		var ang: float = rng.randf_range(0.0, TAU)
+		var ring: float = sqrt(maxf(1.0 - u * u, 0.0))
+		var dir: Vector3 = Vector3(cos(ang) * ring, u, sin(ang) * ring)
+		if dir.z < -0.45 and dir.y < 0.55:
+			continue  # não tapar a cara
+		var c: Vector3 = head + Vector3(0, 0.1, 0.04) + dir * Vector3(0.27, 0.22, 0.24)
+		NpcBody.blob(st, c, Vector3.ONE * rng.randf_range(0.075, 0.1), hair if k % 3 != 0 else hair_dark, 6, 0.012, k)
+	NpcBody.blob(st, head + Vector3(0, 0.12, 0.06), Vector3(0.24, 0.2, 0.22), hair_dark, 8)
+	# Auscultadores: conchas laranja grandes e arco escuro por cima do cabelo
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.prism(st, head + Vector3(sx * 0.15, -0.01, 0.0), head + Vector3(sx * 0.23, -0.01, 0.0), 0.085, 0.075, 8, HEADPHONE_ORANGE)
+		LowPolyMesh.prism(st, head + Vector3(sx * 0.13, -0.01, 0.0), head + Vector3(sx * 0.16, -0.01, 0.0), 0.075, 0.075, 8, HEADPHONE_BAND)
+	var arc_prev: Vector3 = head + Vector3(-0.21, 0.06, 0.0)
+	for k: int in 6:
+		var a: float = PI * float(k + 1) / 6.0
+		var p: Vector3 = head + Vector3(-cos(a) * 0.21, 0.06 + sin(a) * 0.36, 0.0)
+		NpcBody.limb(st, arc_prev, p, 0.025, 0.025, HEADPHONE_BAND, 5)
+		arc_prev = p
 
 
 ## Antena repetidora para calibração na missão "Sinal no fundo"

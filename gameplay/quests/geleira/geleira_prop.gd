@@ -38,6 +38,7 @@ enum Kind {
 }
 
 const ToolMesh = preload("res://gameplay/weapons/tool_mesh.gd")
+const NpcBody := preload("res://gameplay/quests/npc_body.gd")
 
 # Paleta Geleira
 const SNOW_WHITE: Color = Color(0.95, 0.97, 1.0)
@@ -112,7 +113,7 @@ func rebuild() -> void:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
 	mi.mesh = ToonKit.commit(st)
-	mi.material_override = _shared_material()
+	mi.material_override = NpcBody.cloth_material(0.25) if kind == Kind.BJORN else _shared_material()
 	add_child(mi)
 
 	if kind == Kind.HEARTH_FIREPLACE:
@@ -138,68 +139,101 @@ static func _shared_material() -> ShaderMaterial:
 # Construtores procedimentais de modelos 3D
 # ---------------------------------------------------------------------------
 
-## NPC Velho Björn (fiel a velho_bjorn.jpg)
+## NPC Velho Björn (#61, fiel a velho_bjorn.jpg): velho atarracado e largo, gorro de malha bege
+## com zigue-zague e pompom, cara redonda e corada de nariz grande, barba branca comprida com
+## duas tranças presas por contas de bronze e turquesa, casaco de peles castanho remendado com
+## gola e punhos de pelo creme, luvas verde-oliva, calças escuras, botas castanhas, caneca de
+## madeira a fumegar (+X, à esquerda no ecrã) e picareta (-X). Cara para -Z.
 func _bjorn(st: SurfaceTool) -> void:
-	# Botas com orla de pelo branco
+	var coat: Color = Color(0.48, 0.36, 0.24)
+	var coat_dark: Color = Color(0.38, 0.27, 0.17)
+	var patch: Color = Color(0.56, 0.46, 0.34)
+	var fur: Color = Color(0.86, 0.8, 0.68)
+	var fur_dark: Color = Color(0.72, 0.66, 0.54)
+	var pants: Color = Color(0.3, 0.3, 0.24)
+	var boots: Color = Color(0.4, 0.27, 0.17)
+	var mitten: Color = Color(0.42, 0.4, 0.24)
+	var knit: Color = Color(0.72, 0.64, 0.5)
+	var knit_dark: Color = Color(0.5, 0.42, 0.3)
+	var skin: Color = Color(0.9, 0.66, 0.54, 0.0)
+	var cheek: Color = Color(0.9, 0.48, 0.42, 0.0)
+	var beard: Color = Color(0.95, 0.94, 0.9, 0.0)
+	var beard_shade: Color = Color(0.82, 0.8, 0.76, 0.0)
+	var bead_a: Color = Color(0.3, 0.62, 0.6, 0.0)
+	var bead_b: Color = Color(0.66, 0.46, 0.24, 0.0)
+	var wood: Color = Color(0.52, 0.34, 0.18)
+	var iron: Color = Color(0.42, 0.43, 0.45, 0.0)
+	var steam: Color = Color(0.9, 0.9, 0.9, 0.0)
+	# Botas largas com orla de pelo e calças grossas
 	for sx: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(sx * 0.16, 0.06, -0.04), Vector3(0.14, 0.12, 0.22), Basis.IDENTITY, BROWN_DARK)
-		LowPolyMesh.prism(st, Vector3(sx * 0.16, 0.12, 0.0), Vector3(sx * 0.16, 0.16, 0.0), 0.10, 0.10, 6, FUR_WHITE)
-		LowPolyMesh.prism(st, Vector3(sx * 0.16, 0.16, 0.0), Vector3(sx * 0.16, 0.40, 0.0), 0.09, 0.11, 6, Color(0.32, 0.35, 0.34))
-
-	# Tronco robusto e casacão de couro com orla de pele branca
-	LowPolyMesh.prism(st, Vector3(0.0, 0.40, 0.0), Vector3(0.0, 0.88, 0.0), 0.28, 0.25, 7, BROWN_LEATHER)
-	# Barra de pelo na base do casaco
-	LowPolyMesh.prism(st, Vector3(0.0, 0.38, 0.0), Vector3(0.0, 0.45, 0.0), 0.30, 0.29, 7, FUR_WHITE)
-	# Gola larga de pele branca em volta do pescoço
-	LowPolyMesh.prism(st, Vector3(0.0, 0.84, 0.0), Vector3(0.0, 0.98, 0.0), 0.30, 0.26, 7, FUR_WHITE)
-
-	# Cabeça, bochechas rosadas e nariz redondo avermelhado
-	LowPolyMesh.prism(st, Vector3(0.0, 0.92, 0.0), Vector3(0.0, 1.15, 0.0), 0.18, 0.16, 7, SKIN_TONE)
-	# Bochechas e nariz
-	LowPolyMesh.prism(st, Vector3(0.0, 1.03, -0.17), Vector3(0.0, 1.03, -0.22), 0.045, 0.02, 5, CHEEK_RED)
-	LowPolyMesh.prism(st, Vector3(-0.09, 1.04, -0.14), Vector3(-0.09, 1.04, -0.17), 0.035, 0.01, 4, CHEEK_RED)
-	LowPolyMesh.prism(st, Vector3(0.09, 1.04, -0.14), Vector3(0.09, 1.04, -0.17), 0.035, 0.01, 4, CHEEK_RED)
-
-	# Barba branca volumosa e bigode
-	LowPolyMesh.prism(st, Vector3(0.0, 1.0, -0.10), Vector3(0.0, 0.52, -0.14), 0.20, 0.05, 5, BEARD_WHITE)
-	# Duas tranças laterais com anéis decorativos (castanho e turquesa)
+		NpcBody.boot(st, Vector3(sx * 0.16, 0.0, 0.0), boots, Color(0.2, 0.13, 0.08, 0.0), 1.3, 0.22)
+		LowPolyMesh.prism(st, Vector3(sx * 0.16, 0.22, 0.02), Vector3(sx * 0.16, 0.3, 0.02), 0.13, 0.12, 7, fur_dark)
+		NpcBody.limb(st, Vector3(sx * 0.16, 0.28, 0.02), Vector3(sx * 0.15, 0.55, 0.0), 0.11, 0.13, pants)
+	# Casaco de peles: corpo largo até às coxas, com remendos e costuras
+	NpcBody.blob(st, Vector3(0.0, 0.88, 0.0), Vector3(0.34, 0.42, 0.26), coat, 9, 0.01, 2)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.5, 0.0), Vector3(0.0, 0.68, 0.0), 0.33, 0.34, 9, coat_dark)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.47, 0.0), Vector3(0.0, 0.53, 0.0), 0.34, 0.34, 9, fur)
+	for d: Array in [[Vector3(-0.2, 0.75, -0.21), 0.3], [Vector3(0.22, 0.95, -0.2), -0.2], [Vector3(-0.12, 1.0, 0.24), 0.1]]:
+		LowPolyMesh.box(st, d[0], Vector3(0.11, 0.1, 0.02), Basis(Vector3.FORWARD, d[1]), patch)
+	# Gola de pelo enorme à volta dos ombros
+	for k: int in 10:
+		var a: float = TAU * float(k) / 10.0
+		NpcBody.blob(st, Vector3(cos(a) * 0.27, 1.2 + sin(a * 2.0) * 0.02, sin(a) * 0.2 + 0.02), Vector3(0.1, 0.09, 0.09),
+			fur if k % 2 else fur_dark, 6, 0.01, k)
+	# Braço +X: caneca de madeira a fumegar, levantada à frente
+	NpcBody.limb(st, Vector3(0.32, 1.12, 0.0), Vector3(0.42, 0.9, -0.08), 0.1, 0.1, coat)
+	NpcBody.limb(st, Vector3(0.42, 0.9, -0.08), Vector3(0.4, 1.0, -0.28), 0.1, 0.09, coat)
+	LowPolyMesh.prism(st, Vector3(0.405, 0.98, -0.25), Vector3(0.4, 1.0, -0.3), 0.11, 0.11, 7, fur)
+	NpcBody.hand(st, Vector3(0.39, 1.02, -0.34), 0.07, mitten, 1.0)
+	var mug: Vector3 = Vector3(0.48, 1.05, -0.36)
+	LowPolyMesh.prism(st, mug + Vector3(0, -0.1, 0), mug + Vector3(0, 0.1, 0), 0.08, 0.08, 8, wood)
+	for y: float in [-0.06, 0.06]:
+		LowPolyMesh.prism(st, mug + Vector3(0, y - 0.012, 0), mug + Vector3(0, y + 0.012, 0), 0.085, 0.085, 8, iron)
+	LowPolyMesh.prism(st, mug + Vector3(0, 0.095, 0), mug + Vector3(0, 0.1, 0), 0.065, 0.065, 8, Color(0.36, 0.22, 0.12, 0.0))
+	var sp: Vector3 = mug + Vector3(0, 0.12, 0)
+	for k: int in 4:
+		var np: Vector3 = sp + Vector3(0.04 if k % 2 == 0 else -0.04, 0.07, 0.0)
+		NpcBody.limb(st, sp, np, 0.02, 0.018, steam, 4)
+		sp = np
+	# Braço -X: picareta pendurada ao lado, cabo diagonal
+	NpcBody.limb(st, Vector3(-0.32, 1.12, 0.0), Vector3(-0.42, 0.88, -0.04), 0.1, 0.1, coat)
+	NpcBody.limb(st, Vector3(-0.42, 0.88, -0.04), Vector3(-0.42, 0.7, -0.14), 0.1, 0.09, coat)
+	LowPolyMesh.prism(st, Vector3(-0.42, 0.72, -0.12), Vector3(-0.42, 0.68, -0.16), 0.11, 0.11, 7, fur)
+	NpcBody.hand(st, Vector3(-0.42, 0.64, -0.18), 0.07, mitten, -1.0)
+	var h0: Vector3 = Vector3(-0.62, 0.62, -0.16)
+	var h1: Vector3 = Vector3(-0.3, 0.12, -0.2)
+	NpcBody.limb(st, Vector3(-0.32, 0.65, -0.18), h1 + Vector3(0.02, -0.04, 0), 0.025, 0.025, wood, 5)
+	NpcBody.limb(st, Vector3(-0.32, 0.65, -0.18), h0 + Vector3(0.12, 0.0, 0), 0.025, 0.025, wood, 5)
+	LowPolyMesh.prism(st, h1 + Vector3(-0.02, -0.02, 0), h1 + Vector3(-0.1, 0.35, 0), 0.03, 0.0, 4, iron)
+	LowPolyMesh.prism(st, h1 + Vector3(-0.02, -0.02, 0), h1 + Vector3(0.08, -0.12, 0), 0.03, 0.0, 4, iron)
+	# Cabeça redonda, corada, nariz grande e sobrancelhas fartas
+	var head: Vector3 = Vector3(0.0, 1.42, -0.04)
+	NpcBody.blob(st, head, Vector3(0.17, 0.17, 0.16), skin, 8)
+	NpcBody.nose(st, head, 0.17, Color(0.86, 0.5, 0.42, 0.0), 1.5)
+	NpcBody.face(st, head, 0.17, beard, 0, 0.04)
 	for sx: float in [-1.0, 1.0]:
-		var braid_start: Vector3 = Vector3(sx * 0.12, 0.94, -0.10)
-		var braid_mid: Vector3 = Vector3(sx * 0.13, 0.72, -0.12)
-		var braid_end: Vector3 = Vector3(sx * 0.13, 0.56, -0.10)
-		LowPolyMesh.prism(st, braid_start, braid_mid, 0.042, 0.035, 5, BEARD_WHITE)
-		LowPolyMesh.prism(st, braid_mid, braid_mid - Vector3(0.0, 0.025, 0.0), 0.040, 0.040, 5, Color(0.20, 0.65, 0.60))
-		LowPolyMesh.prism(st, braid_mid - Vector3(0.0, 0.025, 0.0), braid_end, 0.032, 0.012, 5, BEARD_WHITE)
-
-	# Gorro de lã de inverno com pompom no topo
-	LowPolyMesh.prism(st, Vector3(0.0, 1.12, 0.0), Vector3(0.0, 1.30, 0.0), 0.19, 0.12, 7, HAT_WOOL)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.30, 0.0), Vector3(0.0, 1.37, 0.0), 0.05, 0.02, 6, FUR_WHITE)
-
-	# Braço direito a segurar a caneca fumegante
-	var r_shoulder: Vector3 = Vector3(0.26, 0.82, 0.0)
-	var r_elbow: Vector3 = Vector3(0.38, 0.68, -0.06)
-	var r_hand: Vector3 = Vector3(0.32, 0.72, -0.22)
-	LowPolyMesh.prism(st, r_shoulder, r_elbow, 0.11, 0.09, 6, BROWN_LEATHER)
-	LowPolyMesh.prism(st, r_elbow, r_hand, 0.09, 0.08, 6, BROWN_LEATHER)
-	LowPolyMesh.prism(st, r_hand, r_hand + Vector3(0.0, 0.0, -0.04), 0.07, 0.06, 5, FUR_WHITE)
-	# Luva / manápula
-	LowPolyMesh.prism(st, r_hand + Vector3(0.0, 0.0, -0.04), r_hand + Vector3(0.0, 0.0, -0.10), 0.06, 0.05, 5, Color(0.55, 0.45, 0.28))
-	# Caneca de madeira com aros metálicos e vapor
-	var mug_c: Vector3 = r_hand + Vector3(0.02, 0.03, -0.15)
-	LowPolyMesh.prism(st, mug_c - Vector3(0.0, 0.07, 0.0), mug_c + Vector3(0.0, 0.07, 0.0), 0.065, 0.065, 7, BROWN_LEATHER)
-	LowPolyMesh.prism(st, mug_c + Vector3(0.0, 0.07, 0.0), mug_c + Vector3(0.0, 0.20, 0.0), 0.04, 0.01, 4, Color(0.95, 0.95, 0.98, 0.6))
-
-	# Braço esquerdo a segurar a picareta de gelo
-	var l_shoulder: Vector3 = Vector3(-0.26, 0.82, 0.0)
-	var l_elbow: Vector3 = Vector3(-0.36, 0.65, -0.04)
-	var l_hand: Vector3 = Vector3(-0.30, 0.45, -0.12)
-	LowPolyMesh.prism(st, l_shoulder, l_elbow, 0.11, 0.09, 6, BROWN_LEATHER)
-	LowPolyMesh.prism(st, l_elbow, l_hand, 0.09, 0.08, 6, BROWN_LEATHER)
-	LowPolyMesh.prism(st, l_hand, l_hand - Vector3(0.0, 0.04, 0.0), 0.07, 0.06, 5, FUR_WHITE)
-	# Cabo e cabeça da picareta
-	LowPolyMesh.prism(st, l_hand + Vector3(0.0, 0.22, 0.0), l_hand - Vector3(0.0, 0.35, 0.0), 0.018, 0.016, 5, BROWN_DARK)
-	var pick_head_c: Vector3 = l_hand + Vector3(0.0, 0.20, 0.0)
-	LowPolyMesh.prism(st, pick_head_c - Vector3(0.14, 0.0, 0.0), pick_head_c + Vector3(0.14, 0.0, 0.0), 0.025, 0.005, 4, IRON_STEEL)
+		NpcBody.blob(st, head + Vector3(sx * 0.1, -0.03, -0.12), Vector3(0.045, 0.035, 0.02), cheek, 6)
+		NpcBody.blob(st, head + Vector3(sx * 0.07, 0.085, -0.15), Vector3(0.05, 0.022, 0.02), beard, 5)
+	# Barba: bigode largo, massa de barba e duas tranças compridas com contas
+	for sx: float in [-1.0, 1.0]:
+		NpcBody.blob(st, head + Vector3(sx * 0.06, -0.06, -0.17), Vector3(0.075, 0.035, 0.035), beard, 6)
+	NpcBody.blob(st, head + Vector3(0.0, -0.14, -0.1), Vector3(0.17, 0.13, 0.1), beard, 8, 0.012, 9)
+	NpcBody.blob(st, head + Vector3(0.0, -0.3, -0.14), Vector3(0.12, 0.12, 0.07), beard_shade, 7, 0.012, 10)
+	for sx: float in [-1.0, 1.0]:
+		var b0: Vector3 = head + Vector3(sx * 0.08, -0.28, -0.16)
+		for k: int in 4:
+			NpcBody.blob(st, b0 + Vector3(0, -0.07 * float(k), -0.005 * float(k)), Vector3(0.035, 0.04, 0.03), beard if k % 2 else beard_shade, 5)
+		LowPolyMesh.prism(st, b0 + Vector3(0, -0.29, -0.02), b0 + Vector3(0, -0.34, -0.02), 0.035, 0.035, 7, bead_a if sx < 0 else bead_b)
+		LowPolyMesh.prism(st, b0 + Vector3(0, -0.36, -0.02), b0 + Vector3(0, -0.4, -0.02), 0.032, 0.032, 7, bead_b if sx < 0 else bead_a)
+		LowPolyMesh.prism(st, b0 + Vector3(0, -0.4, -0.02), b0 + Vector3(0, -0.47, -0.03), 0.03, 0.0, 5, beard)
+	# Gorro de malha bege com aba dobrada, zigue-zague e pompom
+	NpcBody.blob(st, head + Vector3(0, 0.12, 0.01), Vector3(0.175, 0.14, 0.17), knit, 9)
+	LowPolyMesh.prism(st, head + Vector3(0, 0.06, 0.0), head + Vector3(0, 0.13, 0.0), 0.185, 0.18, 10, knit_dark)
+	for k: int in 10:
+		var a: float = TAU * float(k) / 10.0
+		var p: Vector3 = head + Vector3(cos(a) * 0.178, 0.17 + (0.02 if k % 2 else -0.02), sin(a) * 0.17)
+		LowPolyMesh.box(st, p, Vector3(0.03, 0.03, 0.03), Basis(Vector3.UP, -a) * Basis(Vector3.FORWARD, 0.8), knit_dark)
+	NpcBody.blob(st, head + Vector3(0, 0.29, 0.02), Vector3(0.06, 0.06, 0.06), knit, 7, 0.01, 3)
 
 
 ## Lareira acolhedora com braseiro de pedra e fogo que cura devagar

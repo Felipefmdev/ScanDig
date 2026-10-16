@@ -9,6 +9,7 @@ extends Node3D
 enum Kind { FISHERMAN, SHELL_PINK, SHELL_BLUE, SHELL_GOLD, BOTTLE, GOLD_HOOK, BIG_ROCK, SAND_CASTLE, RUBBER_DUCK, CHEST }
 
 const CrabModel := preload("res://gameplay/enemies/crab/crab_model.gd")
+const NpcBody := preload("res://gameplay/quests/npc_body.gd")
 
 const RAINCOAT: Color = Color(0.96, 0.74, 0.14)
 const RAINCOAT_DARK: Color = Color(0.82, 0.56, 0.08)
@@ -87,7 +88,7 @@ func rebuild() -> void:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
 	mi.mesh = ToonKit.commit(st)
-	mi.material_override = _shared_material()
+	mi.material_override = NpcBody.cloth_material(0.25) if kind == Kind.FISHERMAN else _shared_material()
 	add_child(mi)
 
 
@@ -118,36 +119,82 @@ static func _gem(st: SurfaceTool, center: Vector3, radius: Vector3, color: Color
 # Modelos
 # ---------------------------------------------------------------------------
 
-## Pescador Zé sentado (pernas para a frente), oleado amarelo, barba branca, chapéu e cana.
+## Pescador Zé (#61, fiel a pescador_ze.jpg): sentado (no barco do mapa), oleado amarelo de
+## gola escura, calças azul-escuras, botas de borracha verde-escuras, chapéu de balde
+## verde-oliva, óculos de sol pretos, barba e bigode brancos fartos, cana curva com carreto e
+## linha. Cara para -Z.
 func _fisherman(st: SurfaceTool) -> void:
-	# Pernas sentadas e botas
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(st, Vector3(0.12 * side, 0.42, 0.0), Vector3(0.13 * side, 0.4, -0.42), 0.09, 0.08, 6, PANTS)
-		LowPolyMesh.prism(st, Vector3(0.13 * side, 0.4, -0.42), Vector3(0.14 * side, 0.08, -0.48), 0.08, 0.07, 6, PANTS)
-		LowPolyMesh.box(st, Vector3(0.14 * side, 0.06, -0.55), Vector3(0.13, 0.12, 0.22), Basis.IDENTITY, BOOT)
-	# Tronco (oleado) e gola
-	LowPolyMesh.prism(st, Vector3(0.0, 0.35, 0.02), Vector3(0.0, 0.98, 0.0), 0.27, 0.21, 8, RAINCOAT)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.95, 0.0), Vector3(0.0, 1.03, 0.0), 0.2, 0.15, 8, RAINCOAT_DARK)
-	# Braços para a frente a segurar a cana
-	for side: float in [-1.0, 1.0]:
-		var shoulder: Vector3 = Vector3(0.24 * side, 0.9, 0.0)
-		var elbow: Vector3 = Vector3(0.3 * side, 0.7, -0.2)
-		var hand: Vector3 = Vector3(0.1 * side, 0.72, -0.4)
-		LowPolyMesh.prism(st, shoulder, elbow, 0.08, 0.07, 6, RAINCOAT)
-		LowPolyMesh.prism(st, elbow, hand, 0.07, 0.06, 6, RAINCOAT)
-		_gem(st, hand, Vector3(0.06, 0.05, 0.06), SKIN, 6, 3 + int(side))
-	# Cabeça, nariz, olhos, barba
-	_gem(st, Vector3(0.0, 1.2, 0.0), Vector3(0.17, 0.17, 0.16), SKIN, 8, 5)
-	LowPolyMesh.box(st, Vector3(0.0, 1.19, -0.17), Vector3(0.07, 0.08, 0.08), Basis.IDENTITY, Color(0.86, 0.56, 0.44))
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.065 * side, 1.25, -0.145), Vector3(0.035, 0.045, 0.02), Basis.IDENTITY, _c(BLACK))
-	_gem(st, Vector3(0.0, 1.07, -0.08), Vector3(0.16, 0.11, 0.1), BEARD, 7, 6)
-	# Chapéu de pescador (balde + aba)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.3, 0.0), Vector3(0.0, 1.44, 0.0), 0.19, 0.16, 8, RAINCOAT)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.29, 0.0), Vector3(0.0, 1.33, 0.0), 0.31, 0.27, 9, RAINCOAT_DARK)
-	# Cana de pesca (madeira) a apontar para o mar
-	LowPolyMesh.prism(st, Vector3(0.0, 0.7, -0.38), Vector3(0.25, 2.1, -1.6), 0.025, 0.012, 5, WOOD_DARK)
-	LowPolyMesh.prism(st, Vector3(0.03, 0.82, -0.45), Vector3(0.06, 0.86, -0.52), 0.05, 0.05, 6, IRON)
+	var coat: Color = Color(0.82, 0.64, 0.22)
+	var coat_dark: Color = Color(0.66, 0.48, 0.12)
+	var pants: Color = Color(0.17, 0.2, 0.3)
+	var boots: Color = Color(0.2, 0.28, 0.2)
+	var hat: Color = Color(0.36, 0.38, 0.24)
+	var hat_dark: Color = Color(0.26, 0.28, 0.17)
+	var skin: Color = Color(0.85, 0.6, 0.46, 0.0)
+	var beard: Color = Color(0.94, 0.93, 0.9, 0.0)
+	var beard_shade: Color = Color(0.8, 0.79, 0.76, 0.0)
+	var glasses: Color = Color(0.06, 0.06, 0.07, 0.0)
+	var rod: Color = Color(0.42, 0.28, 0.16)
+	var metal: Color = Color(0.55, 0.56, 0.58, 0.0)
+	# Pernas dobradas (sentado num banco a y≈0.42) e botas de borracha
+	for sx: float in [-1.0, 1.0]:
+		NpcBody.limb(st, Vector3(sx * 0.12, 0.44, 0.02), Vector3(sx * 0.14, 0.42, -0.36), 0.1, 0.095, pants)
+		NpcBody.limb(st, Vector3(sx * 0.14, 0.42, -0.36), Vector3(sx * 0.15, 0.16, -0.4), 0.09, 0.085, pants)
+		NpcBody.boot(st, Vector3(sx * 0.15, 0.0, -0.42), boots, Color(0.1, 0.12, 0.1, 0.0), 1.05, 0.26)
+	# Oleado amarelo: tronco largo e curvado para a frente, abas sobre as coxas, botões
+	NpcBody.blob(st, Vector3(0.0, 0.78, 0.02), Vector3(0.27, 0.36, 0.22), coat, 8, 0.01, 3,
+		Basis(Vector3.RIGHT, 0.12))
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(sx * 0.13, 0.48, -0.16), Vector3(0.2, 0.1, 0.3), Basis(Vector3.RIGHT, 0.15), coat)
+		LowPolyMesh.box(st, Vector3(sx * 0.17, 0.72, -0.2), Vector3(0.1, 0.08, 0.02), Basis.IDENTITY, coat_dark)
+	for k: int in 3:
+		LowPolyMesh.box(st, Vector3(0.0, 0.95 - 0.13 * float(k), -0.23), Vector3(0.03, 0.03, 0.02), Basis.IDENTITY, coat_dark)
+	# Gola alta escura
+	LowPolyMesh.prism(st, Vector3(0.0, 1.02, 0.0), Vector3(0.0, 1.12, 0.0), 0.2, 0.17, 8, coat_dark)
+	# Braços para a frente a segurar a cana (mãos juntas no punho)
+	var grip: Vector3 = Vector3(0.05, 0.78, -0.42)
+	for sx: float in [-1.0, 1.0]:
+		var sh: Vector3 = Vector3(0.26 * sx, 0.98, 0.0)
+		var el: Vector3 = Vector3(0.3 * sx, 0.74, -0.18)
+		var hd: Vector3 = grip + Vector3(sx * 0.07, sx * 0.05, 0.0)
+		NpcBody.limb(st, sh, el, 0.1, 0.09, coat)
+		NpcBody.limb(st, el, hd, 0.09, 0.08, coat)
+		LowPolyMesh.prism(st, hd + (el - hd).normalized() * 0.06, hd, 0.085, 0.085, 6, coat_dark)
+		NpcBody.hand(st, hd, 0.055, skin, sx)
+	# Cabeça, nariz grande e bochechas
+	var head: Vector3 = Vector3(0.0, 1.27, -0.04)
+	NpcBody.blob(st, head, Vector3(0.16, 0.17, 0.16), skin, 8)
+	NpcBody.nose(st, head, 0.16, Color(0.82, 0.5, 0.4, 0.0), 1.3)
+	# Óculos de sol: duas lentes pretas largas + ponte
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, head + Vector3(sx * 0.065, 0.035, -0.155), Vector3(0.1, 0.065, 0.02), Basis(Vector3.FORWARD, sx * 0.05), glasses)
+		LowPolyMesh.box(st, head + Vector3(sx * 0.15, 0.04, -0.07), Vector3(0.015, 0.02, 0.16), Basis.IDENTITY, glasses)
+	LowPolyMesh.box(st, head + Vector3(0.0, 0.045, -0.16), Vector3(0.04, 0.015, 0.015), Basis.IDENTITY, glasses)
+	# Barba farta (bolhas brancas) e bigode por cima da boca
+	NpcBody.blob(st, head + Vector3(0.0, -0.1, -0.08), Vector3(0.16, 0.12, 0.12), beard, 8, 0.01, 11)
+	NpcBody.blob(st, head + Vector3(0.0, -0.2, -0.1), Vector3(0.11, 0.09, 0.09), beard_shade, 7, 0.01, 12)
+	for sx: float in [-1.0, 1.0]:
+		NpcBody.blob(st, head + Vector3(sx * 0.05, -0.04, -0.17), Vector3(0.06, 0.03, 0.03), beard, 6)
+		NpcBody.blob(st, head + Vector3(sx * 0.15, 0.0, -0.02), Vector3(0.04, 0.07, 0.06), beard_shade, 6)
+	# Chapéu de balde verde-oliva: copa + aba descaída
+	LowPolyMesh.prism(st, head + Vector3(0, 0.07, 0.0), head + Vector3(0, 0.24, 0.0), 0.17, 0.14, 9, hat)
+	LowPolyMesh.prism(st, head + Vector3(0, 0.05, 0.0), head + Vector3(0, 0.09, 0.0), 0.31, 0.22, 10, hat_dark)
+	LowPolyMesh.prism(st, head + Vector3(0, 0.12, 0.0), head + Vector3(0, 0.15, 0.0), 0.175, 0.175, 9, hat_dark)
+	# Cana curva (vergada pelo peixe): segmentos a subir e a dobrar, argolas e carreto
+	var pts: Array[Vector3] = [grip + Vector3(-0.08, -0.06, 0.08)]
+	var dir: Vector3 = Vector3(0.6, 0.72, -0.35).normalized()
+	for k: int in 7:
+		# Verga para baixo (peixe na linha): roda no plano da cana e da vertical
+		dir = dir.rotated(dir.cross(Vector3.DOWN).normalized(), 0.15)
+		pts.append(pts[-1] + dir * 0.24)
+	for k: int in pts.size() - 1:
+		var r: float = lerpf(0.028, 0.008, float(k) / float(pts.size() - 1))
+		NpcBody.limb(st, pts[k], pts[k + 1], r, r * 0.85, rod, 5)
+		if k >= 2:
+			LowPolyMesh.box(st, pts[k + 1] + Vector3(0, -0.02, 0), Vector3(0.025, 0.03, 0.01), Basis.IDENTITY, metal)
+	LowPolyMesh.prism(st, grip + Vector3(0.0, -0.08, 0.02), grip + Vector3(0.06, -0.08, 0.02), 0.05, 0.05, 8, metal)
+	# Linha a cair da ponta
+	NpcBody.limb(st, pts[-1], pts[-1] + Vector3(0.05, -1.6, -0.2), 0.004, 0.004, Color(0.2, 0.2, 0.2, 0.0), 3)
 
 
 ## Concha-vieira grande, de pé, em leque com nervuras alternadas.

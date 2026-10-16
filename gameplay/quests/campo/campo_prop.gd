@@ -8,6 +8,7 @@ extends Node3D
 enum Kind { LURDES, BELL, WELL, BUCKET, KEY, HAY_ROLL, LOOSE_STONE, CROP_CIRCLE, SHEEP, HAY_BALE }
 
 const CrabModel := preload("res://gameplay/enemies/crab/crab_model.gd")
+const NpcBody := preload("res://gameplay/quests/npc_body.gd")
 
 const DRESS: Color = Color(0.36, 0.5, 0.72)
 const DRESS_DARK: Color = Color(0.26, 0.37, 0.56)
@@ -77,7 +78,7 @@ func rebuild() -> void:
 	mi.name = "Mesh"
 	# O círculo nas searas é desenhado no chão: sem contorno.
 	mi.mesh = ToonKit.commit(st)
-	mi.material_override = _shared_material() if kind != Kind.CROP_CIRCLE else ToonKit.vertex_material(false, true)
+	mi.material_override = NpcBody.cloth_material(0.25) if kind == Kind.LURDES else (_shared_material() if kind != Kind.CROP_CIRCLE else ToonKit.vertex_material(false, true))
 	if kind == Kind.CROP_CIRCLE:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
@@ -111,30 +112,109 @@ static func _gem(st: SurfaceTool, center: Vector3, radius: Vector3, color: Color
 # Modelos
 # ---------------------------------------------------------------------------
 
-## Dona Lurdes: velhota de vestido azul, avental, lenço vermelho na cabeça, cesta no braço.
+## Dona Lurdes (#61, fiel a dona_lurdes.jpg): velhota baixinha e curvada, lenço cinzento atado
+## sob o queixo, óculos redondos, vestido florido vermelho-escuro com flores azuis, avental
+## bege remendado com laço, galochas verdes, cesta de vime com ovos no braço direito e vassoura
+## de palha na mão esquerda. Cara para -Z.
 func _lurdes(st: SurfaceTool) -> void:
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.09 * side, 0.05, -0.04), Vector3(0.1, 0.1, 0.18), Basis.IDENTITY, SHOE)
-	# Saia larga, tronco e avental
-	LowPolyMesh.prism(st, Vector3(0.0, 0.08, 0.0), Vector3(0.0, 0.75, 0.0), 0.34, 0.22, 9, DRESS)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.75, 0.0), Vector3(0.0, 1.18, 0.0), 0.22, 0.18, 8, DRESS_DARK)
-	LowPolyMesh.box(st, Vector3(0.0, 0.5, -0.22), Vector3(0.3, 0.6, 0.04), Basis(Vector3.RIGHT, 0.12), APRON)
-	# Braços: um na cintura, outro com a cesta
-	LowPolyMesh.prism(st, Vector3(-0.2, 1.1, 0.0), Vector3(-0.3, 0.85, -0.05), 0.065, 0.06, 6, DRESS_DARK)
-	LowPolyMesh.prism(st, Vector3(-0.3, 0.85, -0.05), Vector3(-0.18, 0.72, -0.08), 0.06, 0.05, 6, DRESS_DARK)
-	LowPolyMesh.prism(st, Vector3(0.2, 1.1, 0.0), Vector3(0.28, 0.88, -0.12), 0.065, 0.06, 6, DRESS_DARK)
-	_gem(st, Vector3(0.3, 0.84, -0.16), Vector3(0.05, 0.04, 0.05), SKIN, 6, 3)
-	LowPolyMesh.prism(st, Vector3(0.32, 0.62, -0.2), Vector3(0.32, 0.78, -0.2), 0.16, 0.19, 8, WOOD)
-	LowPolyMesh.prism(st, Vector3(0.18, 0.78, -0.2), Vector3(0.46, 0.78, -0.2), 0.012, 0.012, 4, WOOD_DARK)
-	# Cabeça, nariz, olhos, óculos redondos, lenço com nó
-	_gem(st, Vector3(0.0, 1.36, 0.0), Vector3(0.16, 0.17, 0.15), SKIN, 8, 5)
-	LowPolyMesh.box(st, Vector3(0.0, 1.34, -0.16), Vector3(0.06, 0.07, 0.07), Basis.IDENTITY, Color(0.86, 0.58, 0.48))
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.06 * side, 1.4, -0.145), Vector3(0.03, 0.04, 0.02), Basis.IDENTITY, _c(BLACK))
-		LowPolyMesh.prism(st, Vector3(0.06 * side, 1.4, -0.15), Vector3(0.06 * side, 1.4, -0.16), 0.045, 0.045, 7, _c(IRON))
-	_gem(st, Vector3(0.0, 1.47, 0.03), Vector3(0.17, 0.12, 0.16), SCARF, 8, 6)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.3, 0.12), Vector3(0.0, 1.18, 0.2), 0.06, 0.02, 5, SCARF)
-	LowPolyMesh.box(st, Vector3(0.0, 1.38, 0.13), Vector3(0.22, 0.1, 0.05), Basis.IDENTITY, HAIR)
+	var dress: Color = Color(0.44, 0.22, 0.22)
+	var flower: Color = Color(0.35, 0.48, 0.66)
+	var flower2: Color = Color(0.82, 0.62, 0.55)
+	var apron: Color = Color(0.72, 0.64, 0.5)
+	var apron_dark: Color = Color(0.58, 0.5, 0.38)
+	var patch: Color = Color(0.5, 0.44, 0.34)
+	var scarf: Color = Color(0.56, 0.54, 0.5)
+	var scarf_dark: Color = Color(0.42, 0.4, 0.37)
+	var skin: Color = Color(0.9, 0.7, 0.58, 0.0)
+	var skin_dark: Color = Color(0.8, 0.56, 0.46, 0.0)
+	var boots: Color = Color(0.24, 0.38, 0.22)
+	var wicker: Color = Color(0.62, 0.45, 0.24)
+	var wicker_dark: Color = Color(0.46, 0.32, 0.16)
+	var egg: Color = Color(0.96, 0.93, 0.85, 0.0)
+	var wood: Color = Color(0.45, 0.3, 0.16)
+	var straw: Color = Color(0.8, 0.64, 0.34)
+	var metal: Color = Color(0.4, 0.4, 0.42, 0.0)
+	# Galochas verdes (canos largos) e pernas de meia
+	for sx: float in [-1.0, 1.0]:
+		NpcBody.boot(st, Vector3(sx * 0.11, 0.0, 0.0), boots, Color(0.14, 0.2, 0.13, 0.0), 1.0, 0.3)
+		LowPolyMesh.prism(st, Vector3(sx * 0.11, 0.26, 0.02), Vector3(sx * 0.11, 0.31, 0.02), 0.1, 0.1, 7, boots)
+		NpcBody.limb(st, Vector3(sx * 0.11, 0.3, 0.02), Vector3(sx * 0.1, 0.42, 0.02), 0.055, 0.06, skin_dark)
+	# Saia do vestido (tronco de cone) com florinhas
+	LowPolyMesh.prism(st, Vector3(0.0, 0.3, 0.02), Vector3(0.0, 0.82, 0.02), 0.29, 0.2, 9, dress)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 21
+	for k: int in 16:
+		var ang: float = rng.randf_range(0.0, TAU)
+		var y: float = rng.randf_range(0.42, 1.1)
+		var r: float = lerpf(0.28, 0.2, clampf((y - 0.38) / 0.44, 0.0, 1.0)) if y < 0.82 else 0.2
+		var p: Vector3 = Vector3(cos(ang) * r, y, sin(ang) * r + 0.02)
+		var n: Vector3 = Vector3(cos(ang), 0, sin(ang))
+		LowPolyMesh.box(st, p + n * 0.005, Vector3(0.045, 0.045, 0.045), Basis(Vector3.UP, -ang), flower if k % 3 else flower2)
+	# Tronco curvado (corcunda) e peito
+	NpcBody.blob(st, Vector3(0.0, 0.98, 0.04), Vector3(0.21, 0.24, 0.17), dress, 8, 0.0, 1, Basis(Vector3.RIGHT, 0.22))
+	# Avental bege: peitilho + saia do avental com remendo e laço atrás
+	LowPolyMesh.box(st, Vector3(0.0, 1.0, -0.15), Vector3(0.24, 0.24, 0.03), Basis(Vector3.RIGHT, 0.2), apron)
+	LowPolyMesh.box(st, Vector3(0.0, 0.6, -0.2), Vector3(0.36, 0.48, 0.03), Basis(Vector3.RIGHT, -0.1), apron)
+	LowPolyMesh.box(st, Vector3(-0.08, 0.55, -0.225), Vector3(0.1, 0.09, 0.012), Basis(Vector3.FORWARD, 0.1), patch)
+	LowPolyMesh.box(st, Vector3(0.1, 0.7, -0.215), Vector3(0.09, 0.08, 0.012), Basis.IDENTITY, apron_dark)
+	LowPolyMesh.box(st, Vector3(0.0, 0.84, 0.0), Vector3(0.44, 0.04, 0.38), Basis.IDENTITY, apron_dark)
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(sx * 0.06, 0.82, 0.2), Vector3(0.1, 0.06, 0.03), Basis(Vector3.FORWARD, sx * 0.4), apron_dark)
+		NpcBody.limb(st, Vector3(sx * 0.03, 0.81, 0.2), Vector3(sx * 0.05, 0.62, 0.21), 0.02, 0.015, apron_dark, 4)
+	# Braço direito (lado +X, à esquerda no ecrã) dobrado com a cesta pendurada no antebraço
+	NpcBody.limb(st, Vector3(0.22, 1.1, 0.04), Vector3(0.27, 0.9, -0.02), 0.07, 0.06, dress)
+	NpcBody.limb(st, Vector3(0.27, 0.9, -0.02), Vector3(0.2, 0.86, -0.2), 0.055, 0.045, skin)
+	NpcBody.hand(st, Vector3(0.19, 0.87, -0.23), 0.045, skin, 1.0)
+	var bc: Vector3 = Vector3(0.38, 0.66, -0.12)
+	LowPolyMesh.prism(st, bc + Vector3(0, -0.1, 0), bc + Vector3(0, 0.07, 0), 0.12, 0.16, 9, wicker)
+	for k: int in 3:
+		LowPolyMesh.prism(st, bc + Vector3(0, -0.07 + 0.05 * float(k), 0), bc + Vector3(0, -0.05 + 0.05 * float(k), 0),
+			0.13 + 0.012 * float(k), 0.135 + 0.012 * float(k), 9, wicker_dark)
+	for k: int in 5:
+		var a: float = TAU * float(k) / 5.0
+		NpcBody.blob(st, bc + Vector3(cos(a) * 0.07, 0.08, sin(a) * 0.07), Vector3(-0.04, 0.05, 0.04), egg, 6)
+	# Asa da cesta (arco) a passar pelo antebraço
+	var prev: Vector3 = bc + Vector3(0.15, 0.06, 0)
+	for k: int in 6:
+		var a: float = PI * float(k + 1) / 6.0
+		var p: Vector3 = bc + Vector3(cos(a) * 0.15, 0.06 + sin(a) * 0.2, 0)
+		NpcBody.limb(st, prev, p, 0.018, 0.018, wicker_dark, 4)
+		prev = p
+	# Braço esquerdo (-X) caído a segurar a vassoura de pé
+	NpcBody.limb(st, Vector3(-0.22, 1.1, 0.04), Vector3(-0.29, 0.88, 0.0), 0.07, 0.06, dress)
+	NpcBody.limb(st, Vector3(-0.29, 0.88, 0.0), Vector3(-0.33, 0.72, -0.1), 0.055, 0.045, skin)
+	NpcBody.hand(st, Vector3(-0.34, 0.7, -0.12), 0.045, skin, -1.0)
+	var top: Vector3 = Vector3(-0.36, 1.45, -0.14)
+	var bottom: Vector3 = Vector3(-0.4, 0.28, -0.12)
+	NpcBody.limb(st, top, bottom, 0.022, 0.02, wood, 5)
+	LowPolyMesh.prism(st, bottom, bottom + Vector3(0, -0.04, 0), 0.04, 0.045, 6, metal)
+	LowPolyMesh.prism(st, bottom + Vector3(0, -0.03, 0), Vector3(-0.42, 0.0, -0.12), 0.06, 0.13, 7, straw)
+	LowPolyMesh.prism(st, bottom + Vector3(0, -0.12, 0), bottom + Vector3(0, -0.14, 0), 0.075, 0.08, 7, wicker_dark)
+	# Cabeça (inclinada para a frente), bochechas, nariz e sorriso
+	NpcBody.limb(st, Vector3(0.0, 1.12, 0.0), Vector3(0.0, 1.2, -0.03), 0.05, 0.05, skin)
+	var head: Vector3 = Vector3(0.0, 1.31, -0.06)
+	NpcBody.blob(st, head, Vector3(0.14, 0.15, 0.14), skin, 8)
+	NpcBody.nose(st, head, 0.14, skin_dark, 1.0)
+	NpcBody.face(st, head, 0.14, Color(0.8, 0.78, 0.74, 0.0), 2)
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, head + Vector3(sx * 0.085, -0.04, -0.12), Vector3(0.045, 0.03, 0.01), Basis.IDENTITY, Color(0.92, 0.55, 0.5, 0.0))
+	# Óculos redondos (aros finos escuros à volta dos olhos)
+	for sx: float in [-1.0, 1.0]:
+		var c: Vector3 = head + Vector3(sx * 0.05, 0.005, -0.14)
+		for k: int in 8:
+			var a0: float = TAU * float(k) / 8.0
+			var a1: float = TAU * float(k + 1) / 8.0
+			NpcBody.limb(st, c + Vector3(cos(a0), sin(a0), 0) * 0.042, c + Vector3(cos(a1), sin(a1), 0) * 0.042, 0.007, 0.007, metal, 3)
+	LowPolyMesh.box(st, head + Vector3(0, 0.01, -0.145), Vector3(0.03, 0.008, 0.008), Basis.IDENTITY, metal)
+	# Cabelo grisalho a espreitar e lenço cinzento atado sob o queixo (com nó e pontas)
+	LowPolyMesh.box(st, head + Vector3(0, 0.1, -0.12), Vector3(0.18, 0.04, 0.03), Basis.IDENTITY, Color(0.85, 0.84, 0.82, 0.0))
+	NpcBody.blob(st, head + Vector3(0, 0.05, 0.03), Vector3(0.175, 0.17, 0.165), scarf, 8, 0.008, 4)
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, head + Vector3(sx * 0.14, -0.07, -0.06), Vector3(0.04, 0.16, 0.12), Basis(Vector3.FORWARD, sx * 0.15), scarf)
+	NpcBody.blob(st, head + Vector3(0, -0.18, -0.06), Vector3(0.04, 0.035, 0.035), scarf, 6)
+	for sx: float in [-1.0, 1.0]:
+		NpcBody.limb(st, head + Vector3(sx * 0.02, -0.19, -0.07), head + Vector3(sx * 0.06, -0.27, -0.09), 0.025, 0.008, scarf, 4)
+	LowPolyMesh.prism(st, head + Vector3(0, 0.0, 0.16), head + Vector3(0, -0.2, 0.2), 0.1, 0.02, 4, scarf_dark)
 
 
 ## Sino da quinta: pórtico de madeira com telhadinho e sino de bronze.

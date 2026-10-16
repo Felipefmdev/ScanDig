@@ -20,6 +20,7 @@ enum Kind {
 }
 
 const CrabModel := preload("res://gameplay/enemies/crab/crab_model.gd")
+const NpcBody := preload("res://gameplay/quests/npc_body.gd")
 
 const KHAKI: Color = Color(0.82, 0.76, 0.60)
 const KHAKI_DARK: Color = Color(0.64, 0.58, 0.44)
@@ -87,7 +88,7 @@ func rebuild() -> void:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Mesh"
 	mi.mesh = ToonKit.commit(st)
-	mi.material_override = _shared_material()
+	mi.material_override = NpcBody.cloth_material(0.25) if kind == Kind.INES else _shared_material()
 	add_child(mi)
 
 
@@ -111,42 +112,84 @@ static func _c(c: Color) -> Color:
 # Construtores de modelos procedimentais
 # ---------------------------------------------------------------------------
 
-## Arqueóloga Inês: traje de exploradora cáqui, botas de couro, bolsa a tiracolo e chapéu colonial.
+## Arqueóloga Inês (#61, fiel a arqueologa_ines.jpg): chapéu colonial cáqui com óculos de
+## proteção na fita, cabelo castanho apanhado, lenço vermelho-tijolo ao pescoço, camisa cáqui
+## de mangas arregaçadas, calças cargo verde-oliva, botas de couro castanhas, cinto com bolsas e
+## cantil, bolsa de couro a tiracolo (com rolos de papel) e um pincel e um caderno nas mãos.
+## Cara para -Z.
 func _ines(st: SurfaceTool) -> void:
-	# Botas
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.12 * side, 0.06, -0.04), Vector3(0.11, 0.12, 0.2), Basis.IDENTITY, BROWN)
-		LowPolyMesh.prism(st, Vector3(0.12 * side, 0.12, 0.0), Vector3(0.12 * side, 0.65, 0.0), 0.08, 0.09, 6, KHAKI_DARK)
-	# Calções / Cinto
-	LowPolyMesh.box(st, Vector3(0.0, 0.72, 0.0), Vector3(0.36, 0.16, 0.24), Basis.IDENTITY, KHAKI_DARK)
-	LowPolyMesh.box(st, Vector3(0.0, 0.8, 0.0), Vector3(0.38, 0.05, 0.25), Basis.IDENTITY, LEATHER)
-	LowPolyMesh.box(st, Vector3(0.0, 0.8, -0.13), Vector3(0.08, 0.06, 0.03), Basis.IDENTITY, _c(GOLD))
-	# Camisa cáqui com bolsos
-	LowPolyMesh.prism(st, Vector3(0.0, 0.8, 0.0), Vector3(0.0, 1.25, 0.0), 0.24, 0.22, 8, KHAKI)
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.08 * side, 1.08, -0.12), Vector3(0.08, 0.09, 0.03), Basis.IDENTITY, KHAKI_DARK)
-	# Bolsa a tiracolo
-	LowPolyMesh.box(st, Vector3(0.18, 0.72, 0.08), Vector3(0.12, 0.16, 0.16), Basis.IDENTITY, LEATHER)
-	LowPolyMesh.box(st, Vector3(-0.02, 1.06, 0.0), Vector3(0.32, 0.04, 0.26), Basis(Vector3.FORWARD, 0.45), LEATHER)
-	# Braços: um na cintura, outro segurando bloco de notas
-	LowPolyMesh.prism(st, Vector3(-0.2, 1.2, 0.0), Vector3(-0.28, 0.95, -0.04), 0.06, 0.055, 6, KHAKI)
-	LowPolyMesh.prism(st, Vector3(-0.28, 0.95, -0.04), Vector3(-0.16, 0.82, -0.08), 0.055, 0.045, 6, SKIN)
-	LowPolyMesh.prism(st, Vector3(0.2, 1.2, 0.0), Vector3(0.26, 0.98, -0.1), 0.06, 0.055, 6, KHAKI)
-	LowPolyMesh.prism(st, Vector3(0.26, 0.98, -0.1), Vector3(0.18, 0.88, -0.2), 0.055, 0.045, 6, SKIN)
-	# Bloco de notas na mão
-	LowPolyMesh.box(st, Vector3(0.18, 0.9, -0.24), Vector3(0.12, 0.16, 0.03), Basis(Vector3.RIGHT, 0.3), Color(0.94, 0.92, 0.84))
-	# Cabeça, rosto e óculos redondos
-	LowPolyMesh.box(st, Vector3(0.0, 1.4, 0.0), Vector3(0.24, 0.25, 0.22), Basis.IDENTITY, SKIN)
-	LowPolyMesh.box(st, Vector3(0.0, 1.38, -0.12), Vector3(0.05, 0.06, 0.05), Basis.IDENTITY, SKIN.darkened(0.1))
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.06 * side, 1.42, -0.115), Vector3(0.025, 0.03, 0.02), Basis.IDENTITY, _c(BLACK))
-		LowPolyMesh.prism(st, Vector3(0.06 * side, 1.42, -0.12), Vector3(0.06 * side, 1.42, -0.13), 0.04, 0.04, 7, _c(GOLD))
-	LowPolyMesh.box(st, Vector3(0.0, 1.41, 0.1), Vector3(0.26, 0.18, 0.08), Basis.IDENTITY, HAIR)
-	# Chapéu de exploradora (pith helmet)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.5, 0.0), Vector3(0.0, 1.52, 0.0), 0.28, 0.28, 10, KHAKI)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.52, 0.0), Vector3(0.0, 1.66, 0.0), 0.22, 0.14, 9, KHAKI)
-	LowPolyMesh.box(st, Vector3(0.0, 1.53, 0.0), Vector3(0.42, 0.025, 0.46), Basis.IDENTITY, KHAKI)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.53, 0.0), Vector3(0.0, 1.55, 0.0), 0.225, 0.225, 9, LEATHER)
+	var shirt: Color = Color(0.7, 0.62, 0.42)
+	var shirt_dark: Color = Color(0.56, 0.49, 0.32)
+	var pants: Color = Color(0.36, 0.38, 0.24)
+	var pants_dark: Color = Color(0.28, 0.3, 0.18)
+	var leather: Color = Color(0.5, 0.3, 0.16)
+	var leather_dark: Color = Color(0.36, 0.2, 0.1)
+	var hat: Color = Color(0.74, 0.66, 0.46)
+	var hat_band: Color = Color(0.46, 0.38, 0.24)
+	var scarf: Color = Color(0.68, 0.3, 0.18)
+	var skin: Color = Color(0.9, 0.68, 0.54, 0.0)
+	var skin_dark: Color = Color(0.78, 0.55, 0.42, 0.0)
+	var hair: Color = Color(0.4, 0.26, 0.15)
+	var metal: Color = Color(0.5, 0.5, 0.48, 0.0)
+	var lens: Color = Color(0.45, 0.62, 0.62, 0.0)
+	var paper: Color = Color(0.92, 0.88, 0.76, 0.0)
+	# Botas de couro com atacadores e pernas cargo (bolsos laterais)
+	for sx: float in [-1.0, 1.0]:
+		NpcBody.boot(st, Vector3(sx * 0.12, 0.0, 0.0), leather, Color(0.2, 0.12, 0.07, 0.0), 1.05, 0.28)
+		LowPolyMesh.prism(st, Vector3(sx * 0.12, 0.25, 0.02), Vector3(sx * 0.12, 0.3, 0.02), 0.1, 0.1, 7, leather_dark)
+		NpcBody.limb(st, Vector3(sx * 0.12, 0.28, 0.02), Vector3(sx * 0.12, 0.78, 0.0), 0.085, 0.11, pants)
+		LowPolyMesh.box(st, Vector3(sx * 0.21, 0.5, 0.0), Vector3(0.04, 0.12, 0.1), Basis.IDENTITY, pants_dark)
+	# Cinto de couro com fivela, bolsas e cantil
+	LowPolyMesh.box(st, Vector3(0.0, 0.8, 0.0), Vector3(0.36, 0.06, 0.24), Basis.IDENTITY, leather_dark)
+	LowPolyMesh.box(st, Vector3(0.0, 0.8, -0.125), Vector3(0.07, 0.06, 0.02), Basis.IDENTITY, metal)
+	LowPolyMesh.box(st, Vector3(-0.12, 0.74, -0.12), Vector3(0.07, 0.08, 0.05), Basis.IDENTITY, pants_dark)
+	LowPolyMesh.prism(st, Vector3(-0.21, 0.66, 0.0), Vector3(-0.21, 0.8, 0.0), 0.05, 0.045, 7, pants_dark)
+	# Camisa cáqui (tronco) com bolsos ao peito e botões
+	NpcBody.blob(st, Vector3(0.0, 1.0, 0.0), Vector3(0.2, 0.24, 0.13), shirt, 8)
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(sx * 0.09, 1.06, -0.12), Vector3(0.08, 0.07, 0.02), Basis.IDENTITY, shirt_dark)
+	LowPolyMesh.box(st, Vector3(0.0, 0.98, -0.125), Vector3(0.015, 0.26, 0.012), Basis.IDENTITY, shirt_dark)
+	# Correia a tiracolo (ombro -X -> anca +X) e bolsa de couro grande à anca +X com rolos
+	LowPolyMesh.box(st, Vector3(0.0, 1.0, -0.13), Vector3(0.05, 0.5, 0.02), Basis(Vector3.FORWARD, 0.7), leather_dark)
+	var bag: Vector3 = Vector3(0.27, 0.72, -0.04)
+	LowPolyMesh.box(st, bag, Vector3(0.12, 0.22, 0.28), Basis(Vector3.UP, 0.15), leather)
+	LowPolyMesh.box(st, bag + Vector3(0.0, 0.07, -0.02), Vector3(0.13, 0.1, 0.29), Basis(Vector3.UP, 0.15), leather_dark)
+	LowPolyMesh.box(st, bag + Vector3(0.065, 0.0, -0.06), Vector3(0.015, 0.05, 0.04), Basis.IDENTITY, metal)
+	for k: int in 2:
+		NpcBody.limb(st, bag + Vector3(-0.02, 0.1, 0.05 + 0.06 * float(k)), bag + Vector3(-0.06, 0.32, 0.1 + 0.05 * float(k)),
+			0.025, 0.025, paper, 5)
+	# Braço -X: segura o caderno à frente; braço +X: o pincel
+	NpcBody.limb(st, Vector3(-0.21, 1.15, 0.0), Vector3(-0.27, 0.95, -0.04), 0.065, 0.06, shirt)
+	LowPolyMesh.prism(st, Vector3(-0.27, 0.95, -0.04), Vector3(-0.27, 0.93, -0.07), 0.07, 0.07, 6, shirt_dark)
+	NpcBody.limb(st, Vector3(-0.27, 0.93, -0.07), Vector3(-0.22, 1.0, -0.26), 0.045, 0.04, skin)
+	NpcBody.hand(st, Vector3(-0.21, 1.01, -0.28), 0.04, skin, -1.0)
+	LowPolyMesh.box(st, Vector3(-0.21, 1.08, -0.3), Vector3(-0.12, 0.16, 0.03), Basis(Vector3.RIGHT, -0.3), Color(0.34, 0.26, 0.2))
+	LowPolyMesh.box(st, Vector3(-0.21, 1.08, -0.318), Vector3(-0.1, 0.14, 0.008), Basis(Vector3.RIGHT, -0.3), paper)
+	NpcBody.limb(st, Vector3(0.21, 1.15, 0.0), Vector3(0.27, 0.95, -0.03), 0.065, 0.06, shirt)
+	LowPolyMesh.prism(st, Vector3(0.27, 0.95, -0.03), Vector3(0.27, 0.93, -0.06), 0.07, 0.07, 6, shirt_dark)
+	NpcBody.limb(st, Vector3(0.27, 0.93, -0.06), Vector3(0.18, 0.92, -0.24), 0.045, 0.04, skin)
+	NpcBody.hand(st, Vector3(0.17, 0.93, -0.26), 0.04, skin, 1.0)
+	NpcBody.limb(st, Vector3(0.17, 0.88, -0.27), Vector3(0.15, 1.08, -0.3), 0.012, 0.012, Color(0.6, 0.4, 0.2), 4)
+	LowPolyMesh.prism(st, Vector3(0.15, 1.08, -0.3), Vector3(0.145, 1.15, -0.31), 0.025, 0.03, 5, Color(0.3, 0.24, 0.18))
+	# Lenço ao pescoço (nó à frente com pontas)
+	LowPolyMesh.prism(st, Vector3(0.0, 1.16, 0.0), Vector3(0.0, 1.22, 0.0), 0.11, 0.09, 8, scarf)
+	LowPolyMesh.prism(st, Vector3(0.0, 1.17, -0.08), Vector3(0.03, 1.06, -0.12), 0.05, 0.0, 4, scarf)
+	# Cabeça, cara e cabelo (rabo de cavalo atrás)
+	var head: Vector3 = Vector3(0.0, 1.36, -0.01)
+	NpcBody.blob(st, head, Vector3(0.14, 0.16, 0.14), skin, 8)
+	NpcBody.nose(st, head, 0.14, skin_dark, 0.8)
+	NpcBody.face(st, head, 0.14, hair, 2)
+	NpcBody.blob(st, head + Vector3(0, 0.04, 0.03), Vector3(0.15, 0.15, 0.14), hair, 8)
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, head + Vector3(sx * 0.13, -0.02, -0.06), Vector3(0.04, 0.16, 0.08), Basis(Vector3.FORWARD, sx * 0.1), hair)
+	NpcBody.limb(st, head + Vector3(0, -0.02, 0.15), head + Vector3(0, -0.2, 0.19), 0.05, 0.025, hair, 5)
+	# Chapéu colonial: copa arredondada, aba larga, fita escura e óculos de proteção na fita
+	LowPolyMesh.prism(st, head + Vector3(0, 0.1, 0.0), head + Vector3(0, 0.13, 0.0), 0.3, 0.27, 12, hat)
+	NpcBody.blob(st, head + Vector3(0, 0.2, 0.0), Vector3(0.16, 0.1, 0.15), hat, 9)
+	LowPolyMesh.prism(st, head + Vector3(0, 0.12, 0.0), head + Vector3(0, 0.17, 0.0), 0.165, 0.16, 9, hat_band)
+	for sx: float in [-1.0, 1.0]:
+		LowPolyMesh.prism(st, head + Vector3(sx * 0.055, 0.16, -0.14), head + Vector3(sx * 0.055, 0.15, -0.18), 0.045, 0.04, 8, metal)
+		LowPolyMesh.prism(st, head + Vector3(sx * 0.055, 0.15, -0.18), head + Vector3(sx * 0.055, 0.148, -0.185), 0.032, 0.032, 8, lens)
 
 
 ## Tábua com glifos: laje retangular desgastada com runas gravadas a jade e ouro.
