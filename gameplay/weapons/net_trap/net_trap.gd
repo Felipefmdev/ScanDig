@@ -92,11 +92,9 @@ func _build_visual() -> Node3D:
 	for corner: Vector3 in [Vector3(-1, 0, -1), Vector3(1, 0, -1), Vector3(-1, 0, 1), Vector3(1, 0, 1)]:
 		_box(st, corner * size * 0.5 + Vector3(0, 0.035, 0), Vector3(0.07, 0.07, 0.07), WEIGHT)
 	var mi: MeshInstance3D = MeshInstance3D.new()
-	mi.mesh = st.commit()
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.9
-	mi.material_override = mat
+	mi.mesh = ToonKit.commit(st)
+	# #61: toon + contorno como o resto (era StandardMaterial liso)
+	mi.material_override = ToonKit.vertex_material(true, true)
 	root.add_child(mi)
 	return root
 

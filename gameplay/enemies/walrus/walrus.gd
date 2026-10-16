@@ -271,6 +271,12 @@ func _build_model() -> void:
 	LowPolyMesh.box(st, Vector3(-0.25, 0.20, 0.8), Vector3(0.32, 0.08, 0.35), Basis(Vector3.UP, -0.3), FLIPPER_COLOR)
 	LowPolyMesh.box(st, Vector3(0.25, 0.20, 0.8), Vector3(0.32, 0.08, 0.35), Basis(Vector3.UP, 0.3), FLIPPER_COLOR)
 
+	# Placa de gelo partida onde se apoia (morsa.jpg)
+	LowPolyMesh.prism(st, Vector3(0.0, -0.02, 0.1), Vector3(0.0, 0.12, 0.1), 0.95, 0.9, 7, ICE_SHARDS)
+	for k: int in 3:
+		var a: float = 1.2 + 1.4 * float(k)
+		var chip: Vector3 = Vector3(sin(a) * 1.05, 0.06, 0.1 + cos(a) * 1.05)
+		LowPolyMesh.box(st, chip, Vector3(0.14, 0.1, 0.12), Basis(Vector3.UP, a), ICE_SHARDS)
 	_body.add_child(LowPolyMesh.commit(st, "MainMesh", _mat))
 
 	# Barbatanas dianteiras articuladas

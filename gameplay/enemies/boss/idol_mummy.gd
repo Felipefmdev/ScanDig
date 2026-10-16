@@ -29,12 +29,19 @@ const TORNADO_RADIUS: float = 2.8
 const SUMMON_RADIUS: float = 4.0
 
 const LINEN: Color = Color("#b8945a")
-const LINEN_DARK: Color = Color("#8a6a3a")
+const LINEN_MID: Color = Color("#a07a44")
+const LINEN_DARK: Color = Color("#7a5a30")
 const GOLD: Color = Color("#e8b830")
 const GOLD_DARK: Color = Color("#a87818")
 const JADE: Color = Color("#3ad070")
+const JADE_DARK: Color = Color("#1a7a3a")
+const EYE_GREEN: Color = Color("#c8f070")
+## Brilho do ídolo: sempre aceso como na referência, mais forte quando a múmia fica tonta.
+const AMULET_GLOW: Color = Color(0.15, 0.65, 0.25)
+const AMULET_GLOW_EXPOSED: Color = Color(0.5, 1.0, 0.6)
+## Pose de descanso do braço direito: garra levantada à frente da cara.
+const CLAW_REST: Vector3 = Vector3(0.25, 0.0, 0.2)
 const SCARAB_BLUE: Color = Color(0.18, 0.38, 0.78)
-const RED_EYE: Color = Color("#f4f0dc")
 
 @export var move_speed: float = 1.9
 @export var turn_speed: float = 3.5
@@ -84,6 +91,7 @@ var _head: Node3D = null
 var _ribbons: Array[Node3D] = []
 var _pull_bandages: Node3D = null
 var _amulet_mat: ShaderMaterial = null
+var _glow_mat: ShaderMaterial = null
 
 
 func _ready() -> void:
@@ -401,7 +409,7 @@ func _refresh_visuals() -> void:
 			_warning.hide_warning()
 	if _amulet_mat != null:
 		var exposed: bool = state == State.DIZZY
-		_amulet_mat.set_shader_parameter(&"emission_color", Color(0.4, 1.0, 0.6) if exposed else Color(0.05, 0.2, 0.1))
+		_amulet_mat.set_shader_parameter(&"emission_color", AMULET_GLOW_EXPOSED if exposed else AMULET_GLOW)
 
 
 func _refresh_remote_visuals() -> void:
@@ -424,10 +432,10 @@ func _animate(delta: float) -> void:
 			_body_root.position.y = absf(sin(_anim_time * 5.0)) * 0.08
 			_body_root.rotation.z = sin(_anim_time * 2.5) * 0.06
 		State.PULL_TELE:
-			arm_x = -1.57
+			arm_x = 1.57
 			arm_z = 0.2
 		State.PULL:
-			arm_x = -1.7
+			arm_x = 1.7
 			arm_z = 0.1
 		State.SUMMON_TELE, State.SUMMON:
 			arm_x = -2.6
@@ -456,6 +464,8 @@ func _animate(delta: float) -> void:
 	if _arm_left != null and _arm_right != null:
 		_arm_left.rotation = Vector3(arm_x, 0.0, arm_z)
 		_arm_right.rotation = Vector3(arm_x, 0.0, -arm_z)
+		if state == State.EMERGE or state == State.WALK:
+			_arm_right.rotation = CLAW_REST + Vector3(sin(_anim_time * 2.0) * 0.1, 0.0, 0.0)
 	for i: int in _ribbons.size():
 		var r: Node3D = _ribbons[i]
 		if state == State.TORNADO:
@@ -472,6 +482,8 @@ func _animate(delta: float) -> void:
 func _build_model() -> void:
 	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
+	_glow_mat = ToonKit.vertex_material(true, true)
+	_glow_mat.set_shader_parameter(&"emission_color", Color(0.25, 0.9, 0.35))
 
 	var col: CollisionShape3D = CollisionShape3D.new()
 	var cap: CapsuleShape3D = CapsuleShape3D.new()
@@ -485,54 +497,64 @@ func _build_model() -> void:
 	_body_root.name = "BodyRoot"
 	add_child(_body_root)
 
+	# Referência mumia_idolo.jpg: corcunda, ombros largos, braços enormes, tudo enrolado em
+	# ligaduras às riscas (3 tons) com pontas soltas.
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
-	# Pernas com faixas sobrepostas
+	# Pernas curtas e afastadas
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(st, Vector3(0.24 * side, 0.0, 0.0), Vector3(0.24 * side, 0.85, 0.0), 0.16, 0.19, 7, LINEN)
-		LowPolyMesh.prism(st, Vector3(0.24 * side, 0.2, 0.0), Vector3(0.24 * side, 0.4, 0.0), 0.18, 0.17, 7, LINEN_DARK)
-		LowPolyMesh.box(st, Vector3(0.24 * side, 0.08, -0.08), Vector3(0.22, 0.16, 0.32), Basis.IDENTITY, LINEN_DARK)
+		_wrap(st, Vector3(0.26 * side, 0.08, 0.02), Vector3(0.22 * side, 0.8, 0.0), 0.15, 0.19, 5, 1)
+		LowPolyMesh.box(st, Vector3(0.27 * side, 0.07, -0.08), Vector3(0.24, 0.14, 0.34), Basis(Vector3.UP, 0.15 * side), LINEN_DARK)
 
-	# Tronco e peitoral
+	# Anca + tronco dobrado para a frente (corcunda)
 	_torso = Node3D.new()
 	_torso.name = "Torso"
 	_body_root.add_child(_torso)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.8, 0.0), Vector3(0.0, 1.6, 0.0), 0.32, 0.38, 8, LINEN)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.1, 0.0), Vector3(0.0, 1.35, 0.0), 0.36, 0.36, 8, LINEN_DARK)
-	# Colar cerimonial egípcio (ouro)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.55, 0.0), Vector3(0.0, 1.65, 0.0), 0.42, 0.38, 8, GOLD)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.48, 0.0), Vector3(0.0, 1.56, 0.0), 0.40, 0.41, 8, GOLD_DARK)
+	_wrap(st, Vector3(0.0, 0.72, 0.02), Vector3(0.0, 1.05, -0.04), 0.34, 0.33, 2, 0)
+	_wrap(st, Vector3(0.0, 1.0, -0.04), Vector3(0.0, 1.62, -0.3), 0.34, 0.46, 5, 2)
+	# Bossa das costas
+	_wrap(st, Vector3(0.0, 1.3, 0.12), Vector3(0.0, 1.62, 0.0), 0.3, 0.28, 2, 1)
+	# Tanga de ligaduras rasgadas à frente
+	for k: int in 3:
+		var x: float = (float(k) - 1.0) * 0.14
+		LowPolyMesh.prism(st, Vector3(x, 0.8, -0.3), Vector3(x + 0.02, 0.45 - 0.06 * float(k % 2), -0.34), 0.07, 0.02, 4, LINEN_MID if k == 1 else LINEN_DARK)
+	# Faixas diagonais por cima das riscas
+	for k: int in 4:
+		var y: float = 0.9 + 0.17 * float(k)
+		var z: float = -0.3 - 0.07 * float(k)
+		LowPolyMesh.box(st, Vector3(0.0, y, z), Vector3(0.62, 0.05, 0.03), Basis(Vector3.FORWARD, 0.35 if k % 2 == 0 else -0.3), LINEN_DARK)
 
-	# Cabeça com touca faraónica (Nemes)
+	# Cabeça baixa e projetada à frente
 	_head = Node3D.new()
 	_head.name = "Head"
-	_head.position = Vector3(0.0, 1.7, 0.0)
+	_head.position = Vector3(0.0, 1.6, -0.42)
 	_body_root.add_child(_head)
 	var hst: SurfaceTool = SurfaceTool.new()
 	hst.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.box(hst, Vector3(0.0, 0.22, -0.04), Vector3(0.36, 0.38, 0.36), Basis.IDENTITY, LINEN)
-	# Fita de ouro na testa
-	LowPolyMesh.box(hst, Vector3(0.0, 0.36, -0.04), Vector3(0.40, 0.09, 0.38), Basis.IDENTITY, GOLD)
-	# Asas da touca faraónica
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(hst, Vector3(0.22 * side, 0.38, -0.02), Vector3(0.34 * side, 0.05, 0.04), 0.12, 0.06, 5, GOLD_DARK)
-	# Coroa de pontas por cima da fita (referência mumia_idolo.jpg)
+	_wrap(hst, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.42, 0.02), 0.2, 0.19, 3, 0)
+	# Boca aberta com um dente
+	LowPolyMesh.box(hst, Vector3(0.0, 0.1, -0.19), Vector3(0.18, 0.09, 0.02), Basis.IDENTITY, Color(0.2, 0.1, 0.08))
+	LowPolyMesh.box(hst, Vector3(-0.03, 0.135, -0.2), Vector3(0.04, 0.035, 0.02), Basis.IDENTITY, Color(0.95, 0.92, 0.8))
+	# Coroa de ouro com pontas
+	LowPolyMesh.prism(hst, Vector3(0.0, 0.38, 0.02), Vector3(0.0, 0.47, 0.02), 0.21, 0.22, 8, GOLD)
 	for k: int in 5:
 		var a: float = TAU * float(k) / 5.0
-		var base: Vector3 = Vector3(sin(a) * 0.15, 0.4, -0.04 + cos(a) * 0.15)
-		LowPolyMesh.prism(hst, base, base + Vector3(0.0, 0.16, 0.0), 0.06, 0.0, 4, GOLD)
-	# Olhos esbugalhados (brancos) com pupila e boca aberta
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(hst, Vector3(0.09 * side, 0.24, -0.2), Vector3(0.09 * side, 0.24, -0.26), 0.075, 0.075, 8, RED_EYE)
-		LowPolyMesh.box(hst, Vector3(0.09 * side, 0.24, -0.265), Vector3(0.04, 0.04, 0.01), Basis.IDENTITY, Color(0.08, 0.07, 0.06))
-	LowPolyMesh.box(hst, Vector3(0.0, 0.1, -0.225), Vector3(0.14, 0.07, 0.01), Basis.IDENTITY, Color(0.18, 0.1, 0.08))
-
+		var base: Vector3 = Vector3(sin(a) * 0.17, 0.46, 0.02 + cos(a) * 0.17)
+		LowPolyMesh.prism(hst, base, base + Vector3(0.0, 0.15, 0.0), 0.06, 0.0, 4, GOLD)
 	_head.add_child(LowPolyMesh.commit(hst, "HeadMesh", mat))
+	# Olhos grandes, verdes e brilhantes (material próprio com emissão)
+	var est: SurfaceTool = SurfaceTool.new()
+	est.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.prism(est, Vector3(0.085 * side, 0.27, -0.15), Vector3(0.085 * side, 0.27, -0.24), 0.07, 0.07, 8, EYE_GREEN)
+		LowPolyMesh.box(est, Vector3(0.085 * side, 0.27, -0.245), Vector3(0.035, 0.035, 0.01), Basis.IDENTITY, Color(0.04, 0.05, 0.03))
+	_head.add_child(LowPolyMesh.commit(est, "Eyes", _glow_mat))
 
-	# Braços articulados
+	# Braços grandes (pendem até aos joelhos): esquerdo de punho, direito em garra levantada
 	_arm_left = _build_arm(-1.0, mat)
 	_arm_right = _build_arm(1.0, mat)
+	_arm_right.rotation = CLAW_REST
 
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "BodyMesh"
@@ -540,33 +562,34 @@ func _build_model() -> void:
 	mi.material_override = mat
 	_body_root.add_child(mi)
 
-	# Amuleto de Jade no peito (brilha quando tonta)
+	# Ídolo de jade no peito, com cara esculpida, a brilhar (mais forte quando tonta)
 	var ast: SurfaceTool = SurfaceTool.new()
 	ast.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.box(ast, Vector3(0.0, 1.35, -0.36), Vector3(0.18, 0.22, 0.08), Basis.IDENTITY, JADE)
+	var ip: Vector3 = Vector3(0.0, 1.36, -0.66)
+	var tilt: Basis = Basis(Vector3.RIGHT, 0.4)
+	LowPolyMesh.box(ast, ip, Vector3(0.28, 0.34, 0.1), tilt, JADE)
+	LowPolyMesh.box(ast, ip + tilt * Vector3(0.0, 0.17, 0.0), Vector3(0.28, 0.06, 0.07), tilt, JADE)
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.box(ast, ip + tilt * Vector3(0.05 * side, 0.06, -0.04), Vector3(0.06, 0.04, 0.02), tilt, JADE_DARK)
+	LowPolyMesh.box(ast, ip + tilt * Vector3(0.0, -0.01, -0.04), Vector3(0.03, 0.07, 0.02), tilt, JADE_DARK)
+	LowPolyMesh.box(ast, ip + tilt * Vector3(0.0, -0.08, -0.04), Vector3(0.11, 0.03, 0.02), tilt, JADE_DARK)
 	_amulet_mat = ToonKit.vertex_material(true, true)
-	_amulet_mat.set_shader_parameter(&"albedo_color", JADE)
+	_amulet_mat.set_shader_parameter(&"emission_color", AMULET_GLOW)
 	var amulet_mi: MeshInstance3D = MeshInstance3D.new()
 	amulet_mi.name = "JadeAmulet"
 	amulet_mi.mesh = ToonKit.commit(ast)
 	amulet_mi.material_override = _amulet_mat
 	_body_root.add_child(amulet_mi)
 
-	# Fitas/ligaduras soltas penduradas
-	for i: int in 4:
-		var rib: Node3D = Node3D.new()
-		rib.name = "Ribbon%d" % i
-		var side: float = -1.0 if i < 2 else 1.0
-		rib.position = Vector3(0.28 * side, 1.2 - float(i % 2) * 0.3, 0.2)
-		var rst: SurfaceTool = SurfaceTool.new()
-		rst.begin(Mesh.PRIMITIVE_TRIANGLES)
-		LowPolyMesh.box(rst, Vector3(0.0, -0.3, 0.0), Vector3(0.08, 0.6, 0.03), Basis.IDENTITY, LINEN)
-		var rmi: MeshInstance3D = MeshInstance3D.new()
-		rmi.mesh = ToonKit.commit(rst)
-		rmi.material_override = mat
-		rib.add_child(rmi)
-		_body_root.add_child(rib)
-		_ribbons.append(rib)
+	# Pontas de ligadura soltas a pender da cintura e dos braços
+	var anchors: Array[Vector3] = [
+		Vector3(-0.3, 0.86, -0.22), Vector3(0.32, 0.84, -0.18), Vector3(0.05, 0.82, 0.3),
+		Vector3(-0.2, 0.86, 0.26),
+	]
+	for i: int in anchors.size():
+		_ribbons.append(_build_ribbon(_body_root, anchors[i], 0.45 + 0.1 * float(i % 2), mat, i))
+	for arm: Node3D in [_arm_left, _arm_right]:
+		_ribbons.append(_build_ribbon(arm, Vector3(0.1, -0.5, 0.05), 0.4, mat, _ribbons.size()))
 
 	# Faixas estendidas no ataque PULL
 	_pull_bandages = Node3D.new()
@@ -584,14 +607,68 @@ func _build_model() -> void:
 	_body_root.add_child(_pull_bandages)
 
 
+## Membro enrolado em ligaduras: `bands` faixas alternando 3 tons, com o rebordo de cada uma
+## ligeiramente mais largo (ar de tecido sobreposto). `phase` desfasa os tons entre peças.
+func _wrap(st: SurfaceTool, p0: Vector3, p1: Vector3, r0: float, r1: float, bands: int, phase: int) -> void:
+	var tones: Array[Color] = [LINEN, LINEN_MID, LINEN_DARK]
+	for i: int in bands:
+		var t0: float = float(i) / float(bands)
+		var t1: float = float(i + 1) / float(bands)
+		var c: Color = tones[(i + phase) % tones.size()]
+		LowPolyMesh.prism(st, p0.lerp(p1, t0), p0.lerp(p1, t1), lerpf(r0, r1, t0) * 1.06, lerpf(r0, r1, t1), 7, c)
+
+
+func _build_ribbon(parent: Node3D, at: Vector3, length: float, mat: Material, index: int) -> Node3D:
+	var rib: Node3D = Node3D.new()
+	rib.name = "Ribbon%d" % index
+	rib.position = at
+	var rst: SurfaceTool = SurfaceTool.new()
+	rst.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Tira rasgada: dois troços e ponta em bico
+	LowPolyMesh.box(rst, Vector3(0.0, -length * 0.3, 0.0), Vector3(0.09, length * 0.6, 0.025), Basis.IDENTITY, LINEN_MID)
+	LowPolyMesh.box(rst, Vector3(0.015, -length * 0.75, 0.0), Vector3(0.07, length * 0.3, 0.025), Basis(Vector3.FORWARD, 0.15), LINEN_DARK)
+	LowPolyMesh.prism(rst, Vector3(0.025, -length * 0.9, 0.0), Vector3(0.03, -length * 1.05, 0.0), 0.035, 0.0, 3, LINEN_DARK)
+	var rmi: MeshInstance3D = MeshInstance3D.new()
+	rmi.mesh = ToonKit.commit(rst)
+	rmi.material_override = mat
+	rib.add_child(rmi)
+	parent.add_child(rib)
+	return rib
+
+
 func _build_arm(side: float, mat: Material) -> Node3D:
 	var pivot: Node3D = Node3D.new()
 	pivot.name = "ArmLeft" if side < 0.0 else "ArmRight"
-	pivot.position = Vector3(0.44 * side, 1.5, 0.0)
+	pivot.position = Vector3(0.5 * side, 1.52, -0.22)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, -0.65, 0.0), 0.14, 0.11, 6, LINEN)
-	LowPolyMesh.box(st, Vector3(0.0, -0.72, -0.06), Vector3(0.16, 0.18, 0.22), Basis.IDENTITY, LINEN_DARK)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.08, 0.0), Vector3(0.0, -0.1, 0.0), 0.2, 0.2, 7, LINEN_DARK)
+	if side < 0.0:
+		# Braço esquerdo pendente até ao joelho, de punho fechado
+		var elbow: Vector3 = Vector3(-0.04, -0.48, 0.0)
+		var wrist: Vector3 = Vector3(-0.05, -0.95, -0.06)
+		_wrap(st, Vector3.ZERO, elbow, 0.16, 0.15, 3, 1)
+		_wrap(st, elbow, wrist, 0.17, 0.19, 3, 0)
+		LowPolyMesh.prism(st, wrist + Vector3(0.0, 0.09, 0.01), wrist - Vector3(0.0, 0.03, 0.005), 0.215, 0.215, 8, GOLD)
+		var hand: Vector3 = wrist + Vector3(0.0, -0.15, -0.01)
+		LowPolyMesh.box(st, hand, Vector3(0.26, 0.24, 0.26), Basis.IDENTITY, LINEN_MID)
+		LowPolyMesh.box(st, hand + Vector3(0.0, -0.06, -0.13), Vector3(0.24, 0.1, 0.05), Basis.IDENTITY, LINEN_DARK)
+	else:
+		# Braço direito dobrado: antebraço para cima, garra à altura da cara
+		var elbow: Vector3 = Vector3(0.2, -0.42, -0.08)
+		var wrist: Vector3 = Vector3(0.22, 0.02, -0.34)
+		_wrap(st, Vector3.ZERO, elbow, 0.16, 0.15, 3, 1)
+		_wrap(st, elbow, wrist, 0.17, 0.18, 3, 0)
+		var up: Vector3 = (wrist - elbow).normalized()
+		LowPolyMesh.prism(st, wrist - up * 0.1, wrist + up * 0.02, 0.21, 0.21, 8, GOLD)
+		var hand: Vector3 = wrist + up * 0.12
+		LowPolyMesh.box(st, hand, Vector3(0.22, 0.18, 0.12), Basis(Vector3.RIGHT, -0.8), LINEN_MID)
+		for k: int in 4:
+			var knuckle: Vector3 = hand + Vector3((float(k) - 1.5) * 0.055, 0.08, -0.02)
+			var mid: Vector3 = knuckle + Vector3(0.0, 0.12, -0.03)
+			LowPolyMesh.prism(st, knuckle, mid, 0.03, 0.026, 4, LINEN)
+			LowPolyMesh.prism(st, mid, mid + Vector3(0.0, 0.04, -0.09), 0.026, 0.008, 4, LINEN_DARK)
+		LowPolyMesh.prism(st, hand + Vector3(-0.12, 0.0, -0.02), hand + Vector3(-0.2, 0.08, -0.08), 0.03, 0.01, 4, LINEN)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = ToonKit.commit(st)
 	mi.material_override = mat

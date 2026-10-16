@@ -13,6 +13,14 @@ const COIL_BLACK: Color = Color(0.06, 0.06, 0.07)
 const RIM_YELLOW: Color = Color(1.0, 0.78, 0.08)
 const GRIP_BLACK: Color = Color(0.1, 0.1, 0.12)
 const SCREEN_BEZEL: Color = Color(0.02, 0.1, 0.06)
+## #61 (detetor_metais.jpg; cores em sRGB): azul gasto, aço galvanizado, fita adesiva.
+const BLUE: Color = Color(0.36, 0.52, 0.66)
+const BLUE_DARK: Color = Color(0.26, 0.38, 0.5)
+const STEEL: Color = Color(0.66, 0.67, 0.66)
+const STEEL_DARK: Color = Color(0.44, 0.45, 0.45)
+const TAPE: Color = Color(0.72, 0.72, 0.68)
+const TAPE_DARK: Color = Color(0.22, 0.22, 0.22)
+const BUTTON_RED: Color = Color(0.82, 0.2, 0.16)
 
 const COIL_CENTER: Vector3 = Vector3(0.0, -0.7, -0.7)
 ## Pega (por baixo da haste superior): extremidades do eixo.
@@ -50,11 +58,12 @@ func rebuild() -> void:
 
 	# Toon + contorno preto (#36), cores lineares como antes; tinta lascada e ferrugem leves
 	# (nada parece novo, docs/GAME_DESIGN.md §2)
-	var mat: ShaderMaterial = ToonKit.vertex_material(true, false)
-	mat.set_shader_parameter(&"chip_amount", 0.22)
-	mat.set_shader_parameter(&"chip_scale", 22.0)
-	mat.set_shader_parameter(&"rust_amount", 0.12)
-	mat.set_shader_parameter(&"rust_scale", 14.0)
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
+	mat.set_shader_parameter(&"chip_amount", 0.35)
+	mat.set_shader_parameter(&"chip_color", Color(0.5, 0.3, 0.16))
+	mat.set_shader_parameter(&"chip_scale", 14.0)
+	mat.set_shader_parameter(&"rust_amount", 0.3)
+	mat.set_shader_parameter(&"rust_scale", 10.0)
 	mat.set_shader_parameter(&"specular_amount", 0.2)
 
 	_body = MeshInstance3D.new()
@@ -73,51 +82,88 @@ func rebuild() -> void:
 # ---------------------------------------------------------------------------
 
 func _build_body(st: SurfaceTool) -> void:
+	# #61, fiel a detetor_metais.jpg: haste de tubo galvanizado grosso com uniões sextavadas e
+	# fita adesiva cinzenta, curva com punho de fita escura, caixa de controlo azul gasta com fita
+	# nos cantos, botão rodado e dois botões vermelhos, apoio de braço azul em U com correia e
+	# bobina em anel azul (com travessa e suporte aparafusado). Ferrugem por cima de tudo.
 	var box_basis: Basis = Basis(Vector3.RIGHT, deg_to_rad(BOX_TILT_DEG))
 
-	# Apoio de braço (cuff em U) na traseira
-	var cuff_c: Vector3 = Vector3(0.0, -0.075, 0.15)
-	_box(st, cuff_c, Vector3(0.07, 0.01, 0.07), Basis.IDENTITY, NAVY)
-	_box(st, cuff_c + Vector3(-0.037, 0.022, 0.0), Vector3(0.01, 0.04, 0.07), Basis.IDENTITY, NAVY)
-	_box(st, cuff_c + Vector3(0.037, 0.022, 0.0), Vector3(0.01, 0.04, 0.07), Basis.IDENTITY, NAVY)
-	_box(st, cuff_c + Vector3(0.0, 0.006, 0.0), Vector3(0.078, 0.004, 0.025), Basis.IDENTITY, CYAN)
+	# Apoio de braço em U (azul) com correia de fita por cima
+	var cuff_c: Vector3 = Vector3(0.0, -0.07, 0.17)
+	_box(st, cuff_c, Vector3(0.09, 0.012, 0.09), Basis.IDENTITY, BLUE)
+	for sx: float in [-1.0, 1.0]:
+		_box(st, cuff_c + Vector3(sx * 0.048, 0.03, 0.0), Vector3(0.012, 0.065, 0.09), Basis(Vector3.FORWARD, sx * 0.12), BLUE)
+	_box(st, cuff_c + Vector3(0.0, 0.068, 0.0), Vector3(0.1, 0.006, 0.03), Basis.IDENTITY, TAPE)
+	_box(st, cuff_c + Vector3(0.0, -0.025, -0.02), Vector3(0.03, 0.04, 0.05), Basis(Vector3.RIGHT, 0.4), BLUE_DARK)
 
-	# Haste superior (do apoio até à caixa)
-	_prism(st, Vector3(0.0, -0.08, 0.18), Vector3(0.0, 0.005, -0.05), 0.014, 0.014, 8, NAVY)
+	# Haste superior (apoio -> curva) com fita escura e curva para baixo até à caixa
+	_prism(st, Vector3(0.0, -0.08, 0.2), Vector3(0.0, -0.06, 0.08), 0.016, 0.016, 8, STEEL)
+	for k: int in 3:
+		var z: float = 0.18 - 0.03 * float(k)
+		_prism(st, Vector3(0.0, -0.078 + 0.003 * float(k), z), Vector3(0.0, -0.077 + 0.003 * float(k), z - 0.022), 0.019, 0.019, 8, TAPE_DARK)
+	_prism(st, Vector3(0.0, -0.06, 0.08), Vector3(0.0, 0.005, -0.05), 0.017, 0.017, 8, STEEL)
 
-	# Pega por baixo da haste, com tampa ciano
-	_prism(st, GRIP_TOP, GRIP_BOTTOM, 0.017, 0.015, 6, GRIP_BLACK)
-	_prism(st, GRIP_BOTTOM, GRIP_BOTTOM + (GRIP_BOTTOM - GRIP_TOP).normalized() * 0.016, 0.019, 0.017, 6, CYAN)
+	# Pega por baixo da haste: fita escura enrolada
+	_prism(st, GRIP_TOP, GRIP_BOTTOM, 0.02, 0.018, 7, TAPE_DARK)
+	_prism(st, GRIP_BOTTOM, GRIP_BOTTOM + (GRIP_BOTTOM - GRIP_TOP).normalized() * 0.016, 0.021, 0.019, 7, STEEL)
 
-	# Caixa de controlo com faixa ciano e moldura do ecrã
-	_box(st, BOX_CENTER, BOX_SIZE, box_basis, NAVY)
-	_box(st, BOX_CENTER, Vector3(BOX_SIZE.x + 0.006, 0.01, BOX_SIZE.z + 0.006), box_basis, CYAN)
+	# Caixa de controlo azul, cantos com fita, botão rodado e botões vermelhos, cabo
+	_box(st, BOX_CENTER, BOX_SIZE, box_basis, BLUE)
+	_box(st, BOX_CENTER + box_basis * Vector3(0.0, -BOX_SIZE.y * 0.5 - 0.004, 0.0), Vector3(BOX_SIZE.x - 0.02, 0.008, BOX_SIZE.z - 0.02), box_basis, BLUE_DARK)
+	for c: Vector3 in [Vector3(0.06, 0.0, 0.09), Vector3(-0.065, 0.0, -0.08), Vector3(0.07, 0.0, -0.05)]:
+		_box(st, BOX_CENTER + box_basis * c, Vector3(0.035, BOX_SIZE.y + 0.004, 0.03), box_basis * Basis(Vector3.UP, 0.5), TAPE)
 	var top: Vector3 = BOX_CENTER + box_basis * Vector3(0.0, BOX_SIZE.y * 0.5, 0.0)
-	_box(st, top, Vector3(SCREEN_SIZE.x + 0.01, 0.004, SCREEN_SIZE.y + 0.01), box_basis, SCREEN_BEZEL)
-	# Botões
-	for i: int in range(3):
-		var bx: float = -0.03 + 0.03 * float(i)
-		var bpos: Vector3 = BOX_CENTER + box_basis * Vector3(bx, BOX_SIZE.y * 0.5, BOX_SIZE.z * 0.5 - 0.006)
-		_box(st, bpos, Vector3(0.016, 0.01, 0.008), box_basis, CYAN if i == 1 else NAVY_DARK)
+	_box(st, top, Vector3(SCREEN_SIZE.x + 0.012, 0.004, SCREEN_SIZE.y + 0.012), box_basis, SCREEN_BEZEL)
+	var knob: Vector3 = BOX_CENTER + box_basis * Vector3(-0.045, BOX_SIZE.y * 0.5, -BOX_SIZE.z * 0.5 + 0.004)
+	_prism(st, knob, knob + box_basis * Vector3(0.0, 0.018, 0.0), 0.012, 0.011, 8, STEEL_DARK)
+	for i: int in 2:
+		var bpos: Vector3 = BOX_CENTER + box_basis * Vector3(0.01 + 0.025 * float(i), BOX_SIZE.y * 0.5 + 0.003, -BOX_SIZE.z * 0.5 + 0.006)
+		_box(st, bpos, Vector3(0.016, 0.01, 0.01), box_basis, BUTTON_RED)
+	_prism(st, BOX_CENTER + box_basis * Vector3(-0.07, -0.01, 0.05), Vector3(-0.03, -0.06, 0.06), 0.004, 0.004, 4, STEEL_DARK)
 
-	# Haste inferior em dois segmentos com abraçadeira ciano
-	var joint: Vector3 = Vector3(0.0, -0.3, -0.36)
-	var shaft_end: Vector3 = COIL_CENTER + Vector3(0.0, 0.045, 0.05)
-	_prism(st, Vector3(0.0, 0.0, -0.1), joint, 0.013, 0.013, 8, NAVY)
-	var dir: Vector3 = (shaft_end - joint).normalized()
-	_prism(st, joint - dir * 0.03, joint + dir * 0.03, 0.019, 0.019, 8, CYAN)
-	_prism(st, joint, shaft_end, 0.011, 0.011, 8, NAVY)
+	# Haste inferior: tubo galvanizado com uniões sextavadas e voltas de fita cinzenta
+	var shaft_end: Vector3 = COIL_CENTER + Vector3(0.0, 0.055, 0.05)
+	var a: Vector3 = Vector3(0.0, 0.0, -0.1)
+	var dir: Vector3 = (shaft_end - a).normalized()
+	var length: float = (shaft_end - a).length()
+	_prism(st, a, shaft_end, 0.016, 0.014, 8, STEEL)
+	for f: float in [0.08, 0.5]:
+		var p: Vector3 = a + dir * length * f
+		_prism(st, p - dir * 0.025, p + dir * 0.025, 0.026, 0.026, 6, STEEL_DARK)
+	for f: float in [0.28, 0.33, 0.7]:
+		var p: Vector3 = a + dir * length * f
+		_prism(st, p - dir * 0.018, p + dir * 0.018, 0.02, 0.02, 8, TAPE)
 
-	# Garfo (yoke) que liga a haste à bobina
-	_box(st, shaft_end + Vector3(-0.02, -0.02, -0.01), Vector3(0.008, 0.05, 0.05), Basis.IDENTITY, CYAN)
-	_box(st, shaft_end + Vector3(0.02, -0.02, -0.01), Vector3(0.008, 0.05, 0.05), Basis.IDENTITY, CYAN)
+	# Suporte (garfo) aparafusado à bobina
+	for sx: float in [-1.0, 1.0]:
+		_box(st, shaft_end + Vector3(sx * 0.024, -0.026, -0.01), Vector3(0.01, 0.06, 0.06), Basis(Vector3.RIGHT, 0.5), BLUE_DARK)
+	_prism(st, shaft_end + Vector3(-0.034, -0.01, -0.01), shaft_end + Vector3(0.034, -0.01, -0.01), 0.009, 0.009, 6, STEEL_DARK)
+	_prism(st, shaft_end + Vector3(0.034, -0.01, -0.01), shaft_end + Vector3(0.044, -0.01, -0.01), 0.014, 0.014, 6, STEEL_DARK)
 
-	# Bobina: disco preto com aro amarelo
+	# Bobina: anel azul grosso (com furo) e travessa ao meio onde aperta o suporte
 	var up: Vector3 = Vector3(0.0, 1.0, 0.0)
-	_prism(st, COIL_CENTER - up * 0.01, COIL_CENTER + up * 0.01, 0.178, 0.178, 10, RIM_YELLOW)
-	_prism(st, COIL_CENTER - up * 0.016, COIL_CENTER + up * 0.016, 0.166, 0.166, 10, COIL_BLACK)
-	_prism(st, COIL_CENTER + up * 0.016, COIL_CENTER + up * 0.02, 0.06, 0.06, 10, NAVY)
-
+	var r_out: float = 0.18
+	var r_in: float = 0.105
+	var segs: int = 14
+	for i: int in segs:
+		var a0: float = TAU * float(i) / float(segs)
+		var a1: float = TAU * float(i + 1) / float(segs)
+		var p0: Vector3 = Vector3(cos(a0), 0.0, sin(a0))
+		var p1: Vector3 = Vector3(cos(a1), 0.0, sin(a1))
+		var c: Vector3 = COIL_CENTER + (p0 + p1).normalized() * (r_out + r_in) * 0.5
+		var ring_inside: Vector3 = c
+		for y: float in [-0.018, 0.018]:
+			var n: Vector3 = up * signf(y)
+			var q0: Vector3 = COIL_CENTER + p0 * r_in + up * y
+			var q1: Vector3 = COIL_CENTER + p1 * r_in + up * y
+			var q2: Vector3 = COIL_CENTER + p1 * r_out + up * y
+			var q3: Vector3 = COIL_CENTER + p0 * r_out + up * y
+			_quad(st, q0, q1, q2, q3, ring_inside - n * 0.05, BLUE)
+		_quad(st, COIL_CENTER + p0 * r_out - up * 0.018, COIL_CENTER + p1 * r_out - up * 0.018,
+			COIL_CENTER + p1 * r_out + up * 0.018, COIL_CENTER + p0 * r_out + up * 0.018, COIL_CENTER, BLUE_DARK)
+		_quad(st, COIL_CENTER + p0 * r_in - up * 0.018, COIL_CENTER + p1 * r_in - up * 0.018,
+			COIL_CENTER + p1 * r_in + up * 0.018, COIL_CENTER + p0 * r_in + up * 0.018, COIL_CENTER + (p0 + p1) * r_out, BLUE_DARK)
+	_box(st, COIL_CENTER, Vector3(0.05, 0.034, r_in * 2.0 + 0.02), Basis.IDENTITY, BLUE)
 
 
 ## Mão direita (HandModel do Dev_Player) em pose GRIP à volta da pega; o detector fica

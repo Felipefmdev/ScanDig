@@ -31,7 +31,7 @@ const COPPER_DARK: Color = Color(0.55, 0.30, 0.15)
 const CORE_CYAN: Color = Color(0.20, 0.95, 0.90)
 const CORE_GLOW: Color = Color(0.40, 1.0, 0.95)
 const MAGNET_RED: Color = Color(0.82, 0.22, 0.20)
-const MAGNET_TIP: Color = Color(0.78, 0.82, 0.85)
+const MAGNET_TIP: Color = Color(0.9, 0.9, 0.88)
 const BRASS_ACCENT: Color = Color(0.70, 0.55, 0.25)
 
 ## Dimensões principais da arma
@@ -167,7 +167,13 @@ func _build_energy_core() -> void:
 	# Núcleo interior brilhante ciano
 	var core_pos: Vector3 = Vector3(0.0, BODY_Y, CORE_CENTER_Z)
 	var glow_color: Color = CORE_CYAN.lerp(CORE_GLOW, clampf(pulse_glow * 0.5, 0.0, 1.0))
-	LowPolyMesh.box(st, core_pos, CORE_SIZE * 0.88, Basis.IDENTITY, glow_color)
+	# #61: o núcleo é uma peça à parte com cor por vértice limpa e emissão (com o material de
+	# ferrugem da gaiola ficava baço e esverdeado, longe do ciano a brilhar da referência).
+	var core_st: SurfaceTool = ToolMesh.begin()
+	LowPolyMesh.box(core_st, core_pos, CORE_SIZE * 0.88, Basis.IDENTITY, ToolMesh.clean(glow_color))
+	var core_mat: ShaderMaterial = ToonKit.vertex_material(true, true)
+	core_mat.set_shader_parameter(&"emission_color", Color(0.1, 0.55, 0.52))
+	ToolMesh.part(self, "CoreGlow", core_st, core_mat)
 
 	# Estrutura metálica da gaiola protetora com barras diagonais
 	var cage_half_w: float = CORE_SIZE.x * 0.52
@@ -259,7 +265,11 @@ func _build_magnet_fork() -> void:
 	var nozzle_end: Vector3 = Vector3(0.0, BARREL_Y, BARREL_FRONT_Z - 0.04)
 	LowPolyMesh.prism(st, nozzle_start, nozzle_end, BARREL_RADIUS * 0.9, BARREL_RADIUS * 0.8, 8, METAL_DARK)
 
-	_commit_part(st, "MagnetFork", &"metal_rust", MAGNET_RED)
+	# Cores por vértice (vermelho + pontas prateadas): o albedo do kit pintava tudo de vermelho.
+	var fork_mat: ShaderMaterial = ToonKit.vertex_material(true, true)
+	fork_mat.set_shader_parameter(&"chip_amount", 0.3)
+	fork_mat.set_shader_parameter(&"chip_color", BODY_RUST)
+	ToolMesh.part(self, "MagnetFork", st, fork_mat)
 
 
 ## Mão esquerda do explorador segurando por baixo das bobinas

@@ -401,7 +401,8 @@ func _process_dying() -> void:
 	var t: float = clampf(_state_time / 2.5, 0.0, 1.0)
 	_body.position.y = -3.5 * t * t
 	_body.rotation.z = lerpf(0.0, 0.4, t)
-	if _state_time >= 1.2 and _state_time - get_process_delta_time() < 1.2:
+	if _state_time >= 1.2 and not _hit_done:
+		_hit_done = true
 		_hud.visible = false
 		spawn_particles(global_position + Vector3.UP * 2.0, STONE, 50, 6.0)
 		if has_simulation_authority():

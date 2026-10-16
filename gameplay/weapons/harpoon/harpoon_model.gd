@@ -14,9 +14,9 @@ extends Node3D
 
 const ToolMesh = preload("res://gameplay/weapons/tool_mesh.gd")
 
-const WOOD_BASE: Color = Color(0.42, 0.26, 0.14)
+const WOOD_BASE: Color = Color(0.56, 0.33, 0.17)
 const WOOD_DARK: Color = Color(0.28, 0.17, 0.09)
-const METAL_BASE: Color = Color(0.44, 0.46, 0.48)
+const METAL_BASE: Color = Color(0.58, 0.6, 0.62)
 const METAL_DARK: Color = Color(0.28, 0.29, 0.32)
 const METAL_RUST: Color = Color(0.55, 0.26, 0.12)
 const ROPE_COLOR: Color = Color(0.74, 0.64, 0.46)
@@ -32,9 +32,9 @@ const STOCK_BACK_Z: float = 0.34
 const STOCK_DROP_Y: float = -0.07
 
 const SPOOL_CENTER_Z: float = -0.16
-const SPOOL_CENTER_Y: float = -0.04
-const SPOOL_RADIUS: float = 0.052
-const SPOOL_WIDTH: float = 0.075
+const SPOOL_CENTER_Y: float = -0.06
+const SPOOL_RADIUS: float = 0.075
+const SPOOL_WIDTH: float = 0.1
 
 const HARPOON_TIP_Z: float = -0.68
 const HARPOON_SHAFT_RADIUS: float = 0.012
@@ -142,8 +142,14 @@ func _build_metal_barrel_and_frame() -> void:
 		LowPolyMesh.prism(st, Vector3(sx * (BARREL_RADIUS + 0.004), BARREL_Y, SPOOL_CENTER_Z),
 			flange_pos, 0.012, 0.010, 5, METAL_DARK)
 		# Disco / flange lateral do carretel
+		# #61: aro (não disco) para a corda enrolada ficar à vista, como na referência
+		for k: int in 10:
+			var a0: float = TAU * float(k) / 10.0
+			var a1: float = TAU * float(k + 1) / 10.0
+			LowPolyMesh.prism(st, flange_pos + Vector3(0.0, sin(a0), cos(a0)) * SPOOL_RADIUS * 1.08,
+				flange_pos + Vector3(0.0, sin(a1), cos(a1)) * SPOOL_RADIUS * 1.08, 0.008, 0.008, 4, METAL_DARK)
 		LowPolyMesh.prism(st, flange_pos - Vector3(sx * 0.004, 0.0, 0.0), flange_pos + Vector3(sx * 0.004, 0.0, 0.0),
-			SPOOL_RADIUS * 1.08, SPOOL_RADIUS * 1.08, 8, METAL_BASE)
+			SPOOL_RADIUS * 0.3, SPOOL_RADIUS * 0.3, 8, METAL_DARK)
 
 	# Manivela do carretel (no lado direito)
 	var crank_base: Vector3 = spool_c + Vector3(SPOOL_WIDTH * 0.5 + 0.015, 0.0, 0.0)
@@ -167,7 +173,7 @@ func _build_metal_barrel_and_frame() -> void:
 		LowPolyMesh.prism(st, r_pos0, r_pos1, 0.003, 0.003, 4, METAL_BASE)
 
 	var mat: ShaderMaterial = ToolMesh.prop_material(&"metal_rust", METAL_BASE)
-	mat.set_shader_parameter(&"rust_amount", 0.65)
+	mat.set_shader_parameter(&"rust_amount", 0.4)
 	mat.set_shader_parameter(&"rust_color", METAL_RUST)
 	ToolMesh.part(self, "MetalParts", st, mat)
 
@@ -219,8 +225,8 @@ func _build_harpoon_spear() -> void:
 
 	# Ponta da flecha / arpão: ponta central alargada e farpada
 	var tip: Vector3 = Vector3(0.0, BARREL_Y, HARPOON_TIP_Z)
-	var barb_main_left: Vector3 = shaft_head + Vector3(-0.065, 0.0, 0.04)
-	var barb_main_right: Vector3 = shaft_head + Vector3(0.065, 0.0, 0.04)
+	var barb_main_left: Vector3 = shaft_head + Vector3(0.0, -0.065, 0.04)
+	var barb_main_right: Vector3 = shaft_head + Vector3(0.0, 0.065, 0.04)
 
 	# Triângulo central da ponta
 	LowPolyMesh.prism(st, shaft_head, tip, 0.022, 0.002, 4, METAL_BASE)
@@ -229,23 +235,23 @@ func _build_harpoon_spear() -> void:
 	var blade_pts: PackedVector3Array = PackedVector3Array([
 		tip,
 		barb_main_right,
-		shaft_head + Vector3(0.02, 0.0, 0.01),
-		shaft_head - Vector3(0.02, 0.0, -0.01),
+		shaft_head + Vector3(0.0, 0.02, 0.01),
+		shaft_head - Vector3(0.0, 0.02, -0.01),
 		barb_main_left
 	])
-	ToolMesh.slab(st, blade_pts, Vector3.UP, 0.012, METAL_BASE)
+	ToolMesh.slab(st, blade_pts, Vector3.RIGHT, 0.012, METAL_BASE)
 
 	# Farpas serrilhadas secundárias (dentes de trás ao longo da lâmina, fiéis a arpao_corda.jpg)
-	var barb_sec_l: Vector3 = shaft_head + Vector3(-0.045, 0.0, 0.08)
-	var barb_sec_r: Vector3 = shaft_head + Vector3(0.045, 0.0, 0.08)
+	var barb_sec_l: Vector3 = shaft_head + Vector3(0.0, -0.045, 0.08)
+	var barb_sec_r: Vector3 = shaft_head + Vector3(0.0, 0.045, 0.08)
 	var sec_blade_pts: PackedVector3Array = PackedVector3Array([
 		shaft_head,
 		barb_sec_r,
-		shaft_head + Vector3(0.015, 0.0, 0.06),
-		shaft_head - Vector3(0.015, 0.0, -0.06),
+		shaft_head + Vector3(0.0, 0.015, 0.06),
+		shaft_head - Vector3(0.0, 0.015, -0.06),
 		barb_sec_l
 	])
-	ToolMesh.slab(st, sec_blade_pts, Vector3.UP, 0.010, METAL_DARK)
+	ToolMesh.slab(st, sec_blade_pts, Vector3.RIGHT, 0.010, METAL_DARK)
 
 	var mat: ShaderMaterial = ToolMesh.prop_material(&"metal_rust", METAL_BASE)
 	mat.set_shader_parameter(&"rust_amount", 0.55)

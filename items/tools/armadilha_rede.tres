@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+[ext_resource type="PackedScene" path="res://gameplay/weapons/net_trap/net_trap_world.tscn" id="2_world"]
 
 [resource]
 script = ExtResource("1_tool")
@@ -11,3 +12,4 @@ price = 120
 category = 1
 charges = 2
 color = Color(0.85, 0.8, 0.55, 1)
+world_scene = ExtResource("2_world")

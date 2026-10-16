@@ -33,6 +33,9 @@ const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
 const TOOTH_WHITE: Color = Color(0.95, 0.95, 0.90)
 const THERMOS_RED: Color = Color("#c02a2a")
 const THERMOS_SILVER: Color = Color("#a0a4ac")
+## Pose de descanso: braços à frente a abraçar a garrafa térmica (yeti.jpg).
+const ARM_HUG_LEFT: Vector3 = Vector3(1.1, 0.0, 0.75)
+const ARM_HUG_RIGHT: Vector3 = Vector3(1.1, 0.0, -0.75)
 const SNOW_BALL: Color = Color(0.92, 0.96, 1.0)
 
 const WEAK_POINT_FACTOR: float = 2.5
@@ -418,7 +421,8 @@ func _process_dying(_delta: float) -> void:
 	_body.position.y = -2.0 * t * t
 	_body.rotation.z = lerpf(0.0, 0.4, t)
 
-	if _state_time >= 1.2 and _state_time - get_process_delta_time() < 1.2:
+	if _state_time >= 1.2 and not _hit_done:
+		_hit_done = true
 		_hud.visible = false
 		spawn_particles(global_position + Vector3.UP * 1.5, FUR_WHITE, 50, 6.0)
 		if has_simulation_authority():
@@ -476,24 +480,30 @@ func _build_model() -> void:
 	# Corcunda dorsal
 	LowPolyMesh.box(st, Vector3(0.0, 1.35, 0.35), Vector3(1.1, 0.8, 0.6), Basis.IDENTITY, FUR_SHADOW)
 
-	# Ombros largos e peludos
-	LowPolyMesh.box(st, Vector3(0.0, 1.5, 0.0), Vector3(1.7, 0.6, 0.8), Basis.IDENTITY, FUR_WHITE)
+	# Bola de pelo redonda em vez de ombros em caixa (yeti.jpg) + tufos espetados à volta
+	LowPolyMesh.prism(st, Vector3(0.0, 1.05, 0.05), Vector3(0.0, 1.95, 0.0), 1.0, 0.72, 10, FUR_WHITE)
+	for k: int in 16:
+		var a: float = TAU * float(k) / 16.0
+		var y: float = 1.2 + 0.45 * float(k % 3) * 0.5
+		var root: Vector3 = Vector3(sin(a) * 0.82, y, cos(a) * 0.82)
+		var tip: Vector3 = root + Vector3(sin(a) * 0.32, -0.12, cos(a) * 0.32)
+		LowPolyMesh.prism(st, root, tip, 0.2, 0.0, 4, FUR_SHADOW if k % 2 == 0 else FUR_WHITE)
 
 	# Cabeça com pelos espetados
-	LowPolyMesh.prism(st, Vector3(0.0, 1.65, -0.2), Vector3(0.0, 2.15, -0.2), 0.55, 0.40, 6, FUR_WHITE)
+	LowPolyMesh.prism(st, Vector3(0.0, 1.65, -0.2), Vector3(0.0, 2.25, -0.15), 0.62, 0.42, 8, FUR_WHITE)
 
 	# Rosto azul-acinzentado (referência: yeti.jpg)
-	LowPolyMesh.box(st, Vector3(0.0, 1.82, -0.58), Vector3(0.55, 0.48, 0.15), Basis.IDENTITY, SKIN_BLUE)
+	LowPolyMesh.box(st, Vector3(0.0, 1.8, -0.8), Vector3(0.6, 0.55, 0.15), Basis.IDENTITY, SKIN_BLUE)
 
 	# Dois dentes inferiores salientes cómicos
-	LowPolyMesh.prism(st, Vector3(-0.10, 1.66, -0.66), Vector3(-0.10, 1.76, -0.66), 0.04, 0.01, 3, TOOTH_WHITE)
-	LowPolyMesh.prism(st, Vector3(0.10, 1.66, -0.66), Vector3(0.10, 1.76, -0.66), 0.04, 0.01, 3, TOOTH_WHITE)
+	LowPolyMesh.prism(st, Vector3(-0.10, 1.62, -0.89), Vector3(-0.10, 1.72, -0.89), 0.04, 0.01, 3, TOOTH_WHITE)
+	LowPolyMesh.prism(st, Vector3(0.10, 1.62, -0.89), Vector3(0.10, 1.72, -0.89), 0.04, 0.01, 3, TOOTH_WHITE)
 
 	# Olhos arregalados "How to Fish"
-	LowPolyMesh.box(st, Vector3(-0.16, 1.95, -0.66), Vector3(0.14, 0.14, 0.05), Basis.IDENTITY, EYE_WHITE)
-	LowPolyMesh.box(st, Vector3(0.16, 1.95, -0.66), Vector3(0.14, 0.14, 0.05), Basis.IDENTITY, EYE_WHITE)
-	LowPolyMesh.box(st, Vector3(-0.16, 1.95, -0.69), Vector3(0.06, 0.06, 0.02), Basis.IDENTITY, EYE_PUPIL)
-	LowPolyMesh.box(st, Vector3(0.16, 1.95, -0.69), Vector3(0.06, 0.06, 0.02), Basis.IDENTITY, EYE_PUPIL)
+	LowPolyMesh.box(st, Vector3(-0.16, 1.93, -0.89), Vector3(0.17, 0.17, 0.05), Basis.IDENTITY, EYE_WHITE)
+	LowPolyMesh.box(st, Vector3(0.16, 1.93, -0.89), Vector3(0.17, 0.17, 0.05), Basis.IDENTITY, EYE_WHITE)
+	LowPolyMesh.box(st, Vector3(-0.16, 1.93, -0.92), Vector3(0.07, 0.07, 0.02), Basis.IDENTITY, EYE_PUPIL)
+	LowPolyMesh.box(st, Vector3(0.16, 1.93, -0.92), Vector3(0.07, 0.07, 0.02), Basis.IDENTITY, EYE_PUPIL)
 
 	# Pernas peludas curtas e pés largos azuis
 	for s: float in [-1.0, 1.0]:
@@ -505,11 +515,15 @@ func _build_model() -> void:
 	# Braços longos articulados
 	_arm_left = _build_arm(-0.95, "ArmL")
 	_arm_right = _build_arm(0.95, "ArmR")
+	_arm_left.rotation = ARM_HUG_LEFT
+	_arm_right.rotation = ARM_HUG_RIGHT
 
 	# Garrafa térmica vermelha icónica com tampa prateada presa ao cinto/mão
 	_thermos = Node3D.new()
 	_thermos.name = "Thermos"
-	_thermos.position = Vector3(0.35, 0.95, -0.55)
+	# Abraçada ao peito, como na referência
+	_thermos.position = Vector3(0.05, 1.12, -1.0)
+	_thermos.rotation.z = 0.45
 	var st_th: SurfaceTool = SurfaceTool.new()
 	st_th.begin(Mesh.PRIMITIVE_TRIANGLES)
 	# Corpo vermelho
@@ -554,10 +568,11 @@ func _animate(delta: float) -> void:
 		_body.rotation.z = step * 0.08
 		_body.rotation.x = lerp_angle(_body.rotation.x, 0.15, clampf(6.0 * delta, 0.0, 1.0))
 		_body.position.y = absf(sin(_anim_time * 5.0)) * 0.08
+		# Anda agarrado à garrafa térmica: os braços só balançam um pouco
 		if _arm_left != null:
-			_arm_left.rotation.x = step * 0.6
+			_arm_left.rotation = ARM_HUG_LEFT + Vector3(step * 0.12, 0.0, 0.0)
 		if _arm_right != null:
-			_arm_right.rotation.x = -step * 0.6
+			_arm_right.rotation = ARM_HUG_RIGHT - Vector3(step * 0.12, 0.0, 0.0)
 	elif state == State.BOWLING_TELE:
 		# Puxa o braço direito para trás em pose de bowling
 		_body.rotation.x = 0.2

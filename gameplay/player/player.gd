@@ -96,6 +96,8 @@ const MEDKIT_MODEL: Script = preload("res://gameplay/weapons/medkit/medkit_model
 const REPELLENT_MODEL: Script = preload("res://gameplay/weapons/repellent/repellent_model.gd")
 const PITCHFORK_MODEL: Script = preload("res://gameplay/weapons/pitchfork/pitchfork_model.gd")
 const HARPOON_MODEL: Script = preload("res://gameplay/weapons/harpoon/harpoon_model.gd")
+const NET_TRAP_MODEL: Script = preload("res://gameplay/weapons/net_trap/net_trap_model.gd")
+const LANTERN_MODEL: Script = preload("res://gameplay/weapons/lantern/lantern_model.gd")
 const PULSE_MODEL: Script = preload("res://gameplay/weapons/magnetic_pulse/magnetic_pulse_model.gd")
 ## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
 const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
@@ -1197,6 +1199,12 @@ func _setup_held_models() -> void:
 	if "show_left_hand" in pulse_model:
 		pulse_model.set("show_left_hand", true)
 	_held_models[TOOL_PULSE] = pulse_model
+	# #61: Armadilha de Rede (rolo segurado de lado) e Lanterna de Magnésio (pela asa, refletor
+	# para a frente).
+	_held_models[TOOL_NET_TRAP] = _add_held_model(NET_TRAP_MODEL,
+		Transform3D(Basis(Vector3.UP, deg_to_rad(20.0)).scaled(Vector3.ONE * 0.45), Vector3(-0.02, -0.1, -0.06)))
+	_held_models[TOOL_LANTERN] = _add_held_model(LANTERN_MODEL,
+		Transform3D(Basis(Vector3.UP, deg_to_rad(-10.0)).scaled(Vector3.ONE * 0.7), Vector3(0.0, -0.16, -0.06)))
 	_update_tool_in_hand()
 
 

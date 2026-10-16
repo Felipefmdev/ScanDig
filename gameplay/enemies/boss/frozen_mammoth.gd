@@ -402,7 +402,8 @@ func _process_dying(_delta: float) -> void:
 	_body.position.y = -2.5 * t * t
 	_body.rotation.z = lerpf(0.0, 0.35, t)
 
-	if _state_time >= 1.2 and _state_time - get_process_delta_time() < 1.2:
+	if _state_time >= 1.2 and not _hit_done:
+		_hit_done = true
 		_hud.visible = false
 		spawn_particles(global_position + Vector3.UP * 2.0, GLACIER_ICE, 60, 7.0)
 		if has_simulation_authority():
@@ -492,8 +493,17 @@ func _build_model() -> void:
 	# Metade traseira: BLOCO GIGANTE DE GELO GLACIAL (referência: mamute_congelado.jpg)
 	var st_ice: SurfaceTool = SurfaceTool.new()
 	st_ice.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(st_ice, Vector3(0.0, 0.2, 0.3), Vector3(0.0, 2.2, 0.5), 1.6, 1.4, 7, GLACIER_ICE)
-	LowPolyMesh.prism(st_ice, Vector3(0.0, 0.5, 0.8), Vector3(0.0, 2.0, 1.8), 1.5, 1.1, 6, GLACIER_ICE)
+	# Núcleo + pedregulhos facetados sobrepostos: massa de gelo arredondada, não um bloco
+	LowPolyMesh.prism(st_ice, Vector3(0.0, 0.2, 0.5), Vector3(0.0, 2.3, 0.7), 1.5, 1.2, 9, GLACIER_ICE)
+	var lumps: Array[Vector4] = [
+		Vector4(-0.9, 0.7, 1.4, 0.75), Vector4(0.9, 0.7, 1.4, 0.75), Vector4(0.0, 0.9, 2.0, 0.8),
+		Vector4(-1.1, 1.6, 0.6, 0.6), Vector4(1.1, 1.6, 0.6, 0.6), Vector4(0.0, 2.2, 1.1, 0.7),
+		Vector4(-0.6, 2.3, 0.2, 0.5), Vector4(0.6, 2.25, 0.3, 0.5), Vector4(0.0, 1.5, 2.3, 0.6),
+	]
+	for i: int in lumps.size():
+		var l: Vector4 = lumps[i]
+		var c: Vector3 = Vector3(l.x, l.y, l.z)
+		LowPolyMesh.prism(st_ice, c - Vector3(0.0, l.w * 0.7, 0.0), c + Vector3(0.0, l.w * 0.6, 0.0), l.w, l.w * 0.55, 6, ICE_HIGHLIGHT if i % 3 == 0 else GLACIER_ICE)
 	# Cristais pontiagudos saindo do bloco
 	for k: int in 6:
 		var ang: float = float(k) * 1.05
@@ -508,9 +518,20 @@ func _build_model() -> void:
 	_trunk.position = Vector3(0.0, 1.7, -1.9)
 	var st_trunk: SurfaceTool = SurfaceTool.new()
 	st_trunk.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(st_trunk, Vector3(0.0, 0.0, 0.0), Vector3(0.0, -0.5, -0.4), 0.22, 0.16, 5, FUR_DARK)
-	LowPolyMesh.prism(st_trunk, Vector3(0.0, -0.5, -0.4), Vector3(0.0, -0.2, -0.9), 0.16, 0.12, 5, FUR_DARK)
-	LowPolyMesh.prism(st_trunk, Vector3(0.0, -0.2, -0.9), Vector3(0.0, 0.35, -1.1), 0.12, 0.08, 4, FUR_BROWN)
+	# Tromba longa em S: desce, curva para a frente e ergue-se a soprar gelo (mamute_congelado.jpg)
+	var pts: Array[Vector3] = [
+		Vector3(0.0, 0.0, 0.0), Vector3(0.0, -0.55, -0.3), Vector3(0.0, -0.75, -0.75),
+		Vector3(0.0, -0.45, -1.15), Vector3(0.0, 0.1, -1.3), Vector3(0.0, 0.6, -1.25),
+	]
+	for i: int in pts.size() - 1:
+		var r0: float = lerpf(0.24, 0.1, float(i) / float(pts.size() - 1))
+		var r1: float = lerpf(0.24, 0.1, float(i + 1) / float(pts.size() - 1))
+		LowPolyMesh.prism(st_trunk, pts[i], pts[i + 1], r0, r1, 6, FUR_DARK if i % 2 == 0 else FUR_BROWN)
+	LowPolyMesh.prism(st_trunk, pts[5], pts[5] + Vector3(0.0, 0.06, 0.0), 0.13, 0.13, 6, FUR_DARK)
+	# Nuvem de neve a sair da ponta
+	for k: int in 4:
+		var puff: Vector3 = pts[5] + Vector3((float(k) - 1.5) * 0.14, 0.25 + 0.12 * float(k % 2), 0.05)
+		LowPolyMesh.prism(st_trunk, puff - Vector3(0.0, 0.1, 0.0), puff + Vector3(0.0, 0.1, 0.0), 0.12, 0.08, 6, SNOW_WHITE)
 	_trunk.add_child(LowPolyMesh.commit(st_trunk, "TrunkMesh", _mat))
 	_body.add_child(_trunk)
 
