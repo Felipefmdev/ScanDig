@@ -178,6 +178,13 @@ custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
 size_flags_vertical = 3
 
+[node name="MapStatusLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"WarningLabel"
+autowrap_mode = 3
+
 [node name="UnlockMapButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
 unique_name_in_owner = true
 visible = false

@@ -78,7 +78,7 @@ func _run() -> void:
 	gs.request_report_boss_defeated("corvo_falso")
 	_check(gs.defeated_bosses == ["king_crab", "crow_king", "scarecrow"], "crow_king e scarecrow registrados: %s" % str(gs.defeated_bosses))
 	_check(gs.unlocked_maps == ["campo"], "chefes extras não desbloqueiam mapa: %s" % str(gs.unlocked_maps))
-	_check(gs.get_map_unlock_block_reason("ruinas") == "Vença o chefe Toupeira Gigante primeiro.", "ruínas continua pedindo a Toupeira: %s" % gs.get_map_unlock_block_reason("ruinas"))
+	_check(gs.get_map_unlock_block_reason("ruinas") == "Vença o chefe Toupeira Gigante (Campo Antigo) para liberar.", "ruínas continua pedindo a Toupeira: %s" % gs.get_map_unlock_block_reason("ruinas"))
 
 	# Museu: os 6 itens viram descoberta com 50% do valor base; o total do catálogo é o número de arquivos.
 	var catalog_files: int = _count_catalog_files()

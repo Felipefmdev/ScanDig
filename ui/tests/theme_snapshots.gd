@@ -70,6 +70,10 @@ func _run() -> void:
 	var shot_names: Array[String] = ["loja", "museu", "expedicoes"]
 	for i in range(3):
 		tabs.current_tab = i
+		if shot_names[i] == "expedicoes":
+			# Campo Antigo travado pelo chefe: o motivo aparece embaixo da lista (#59).
+			base.map_list.select(1)
+			base.map_list.item_selected.emit(1)
 		await _shot("lobby_%s" % shot_names[i])
 		print("RECT %s %s base %s min_h %d" % [_tag, shot_names[i], _rect(base.get_child(0) as Control), int((base.get_child(0) as Control).get_combined_minimum_size().y)])
 	tabs.current_tab = 0

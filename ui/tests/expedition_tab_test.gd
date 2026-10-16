@@ -37,7 +37,9 @@ func _run() -> void:
 	var unlock_btn: Button = ui.unlock_map_btn
 	var depart_btn: Button = ui.depart_btn
 	var feedback: Label = ui.expedition_feedback_label
+	var status_label: Label = ui.map_status_label
 	_check(unlock_btn != null, "UnlockMapButton presente")
+	_check(status_label != null, "MapStatusLabel presente")
 
 	gs.load_snapshot({"team_money": 2500, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(3)
@@ -54,10 +56,18 @@ func _run() -> void:
 	_check(unlock_btn.visible, "desbloquear visível no Campo")
 	_check(unlock_btn.disabled, "desbloquear desabilitado sem chefe: %s" % unlock_btn.tooltip_text)
 	_check(depart_btn.disabled, "partir desabilitado no Campo bloqueado")
+	# Motivo visível sem passar o mouse; o tooltip continua.
+	var boss_reason: String = "Vença o chefe Caranguejo-Rei (Praia) para liberar."
+	_check(status_label.visible and status_label.text == "🔒 " + boss_reason, "motivo visível no Campo: '%s'" % status_label.text)
+	_check(unlock_btn.tooltip_text == boss_reason, "tooltip do desbloqueio mantido: %s" % unlock_btn.tooltip_text)
+	_select_map(map_list, 0)
+	_check(not status_label.visible, "sem motivo na Praia jogável")
+	_select_map(map_list, 1)
 
 	gs.request_report_boss_defeated("king_crab")
 	await _wait(3)
 	_check(not unlock_btn.disabled, "desbloquear habilitado após chefe")
+	_check(not status_label.visible, "motivo oculto quando dá para desbloquear: '%s'" % status_label.text)
 	_check(unlock_btn.text == "Desbloquear Campo Antigo (R$\u00a01.200)", "texto do botão: %s" % unlock_btn.text)
 
 	unlock_btn.pressed.emit()
@@ -69,11 +79,13 @@ func _run() -> void:
 	_check(not row1_no_detector.begins_with("✔") and not row1_no_detector.contains("🔒"), "item 1 sem detector Nv.2: %s" % row1_no_detector)
 	_select_map(map_list, 1)
 	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível 2.", "partir bloqueado sem detector Nv.2: %s" % depart_btn.tooltip_text)
+	_check(status_label.visible and status_label.text == "🔒 Requer detector nível 2.", "motivo de partir visível: '%s'" % status_label.text)
 	gs.load_snapshot({"upgrade_levels": {"detector": 1}})
 	await _wait(3)
 	_check(map_list.get_item_text(1).begins_with("✔ Campo Antigo"), "item 1 jogável: %s" % map_list.get_item_text(1))
 	_select_map(map_list, 1)
 	_check(not depart_btn.disabled, "partir habilitado no Campo: %s" % depart_btn.tooltip_text)
+	_check(not status_label.visible, "motivo oculto quando dá para partir: '%s'" % status_label.text)
 
 	# Ruínas têm cena (#42): desbloqueada, mas pede o detector Nv.4.
 	gs.request_report_boss_defeated("giant_mole")

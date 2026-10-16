@@ -24,6 +24,7 @@ extends Control
 @onready var map_list: ItemList = _resolve_node("MapList", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapList") as ItemList
 @onready var unlock_map_btn: Button = _resolve_node("UnlockMapButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/UnlockMapButton") as Button
 @onready var depart_btn: Button = _resolve_node("DepartButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/DepartButton") as Button
+@onready var map_status_label: Label = _resolve_node("MapStatusLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapStatusLabel") as Label
 @onready var expedition_feedback_label: Label = _resolve_node("ExpeditionFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/ExpeditionFeedbackLabel") as Label
 
 const SESSION_PATH: NodePath = ^"/root/CoreSession"
@@ -222,6 +223,28 @@ func _get_depart_block_reason(map: MapData) -> String:
 func _refresh_expedition_buttons() -> void:
 	_refresh_unlock_button()
 	_refresh_depart_button()
+	_refresh_map_status_label()
+
+
+## Motivo visível (sem passar o mouse) de não poder desbloquear ou partir para o mapa selecionado.
+## Some quando dá para desbloquear ou partir; os tooltips continuam.
+func _refresh_map_status_label() -> void:
+	if map_status_label == null:
+		return
+	var reason: String = _get_map_status_reason(_get_selected_map())
+	map_status_label.visible = not reason.is_empty()
+	map_status_label.text = "🔒 " + UiFormat.fix_money_spaces(reason) if not reason.is_empty() else ""
+
+
+func _get_map_status_reason(map: MapData) -> String:
+	if map == null:
+		return ""
+	var status: Dictionary = _get_map_status(map)
+	if status.is_empty():
+		return _get_depart_block_reason(map)
+	if not bool(status.get("unlocked", true)):
+		return "" if bool(status.get("can_unlock", false)) else str(status.get("reason", ""))
+	return _get_depart_block_reason(map)
 
 
 func _can_request_unlock() -> bool:

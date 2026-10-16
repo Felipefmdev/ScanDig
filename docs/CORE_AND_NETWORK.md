@@ -129,7 +129,7 @@ Desbloquear é uma compra única, só depois de vencer o chefe exigido. Um mapa 
 - `request_report_boss_defeated(boss_id)` → o host aceita só os `boss_id` de `MAP_UNLOCK_BOSSES` e `EXTRA_BOSSES`, só da própria simulação (nunca de um cliente), sem duplicar e sem dar dinheiro. O gameplay liga o `boss_defeated` de cada chefe a isso.
 - `map_id` vazio, com `/`, `\` ou `..`, inválido como nome de arquivo ou com `MapData.id` diferente é tratado como mapa desconhecido.
 
-Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado."`, `"Vença o chefe <chefe> primeiro."`, `"Saldo insuficiente para desbloquear <nome> (R$ <custo>)."`, sucesso `"<nome> desbloqueado!"`.
+Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado."`, `"Vença o chefe <chefe> (<mapa anterior em MAP_ORDER>) para liberar."`, `"Saldo insuficiente para desbloquear <nome> (R$ <custo>)."`, sucesso `"<nome> desbloqueado!"`.
 
 `SessionManager`:
 - `get_available_maps()` ordenado por `MAP_ORDER`.

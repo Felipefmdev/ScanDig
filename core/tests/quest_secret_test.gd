@@ -67,7 +67,7 @@ func _run() -> void:
 	gs.request_report_boss_defeated("octopus")
 	_check(gs.is_boss_defeated("octopus"), "octopus registrado")
 	_check(gs.unlocked_maps.is_empty(), "octopus não desbloqueia mapa: %s" % str(gs.unlocked_maps))
-	_check(gs.get_map_unlock_block_reason("campo") == "Vença o chefe Caranguejo-Rei primeiro.", "campo continua pedindo o Caranguejo-Rei")
+	_check(gs.get_map_unlock_block_reason("campo") == "Vença o chefe Caranguejo-Rei (Praia) para liberar.", "campo continua pedindo o Caranguejo-Rei")
 	gs.request_report_boss_defeated("chefe_falso")
 	_check(gs.defeated_bosses == ["octopus"], "chefe desconhecido ignorado: %s" % str(gs.defeated_bosses))
 
@@ -99,7 +99,7 @@ func _run() -> void:
 	_check(gs.team_money == 30000 and gs.current_day == 9, "save v3 mantém dinheiro e dia")
 	_check(gs.is_boss_defeated("ancient_guardian"), "save v3 mantém ancient_guardian")
 	_check(gs.get_map_unlock_block_reason("geleira") == "", "ancient_guardian libera a Geleira: %s" % gs.get_map_unlock_block_reason("geleira"))
-	_check(gs.get_map_unlock_block_reason("cratera") == "Vença o chefe Mamute Congelado primeiro.", "cratera pede o Mamute: %s" % gs.get_map_unlock_block_reason("cratera"))
+	_check(gs.get_map_unlock_block_reason("cratera") == "Vença o chefe Mamute Congelado (Geleira Eterna) para liberar.", "cratera pede o Mamute: %s" % gs.get_map_unlock_block_reason("cratera"))
 
 	gs.reset_state()
 	print("RESULT fails=%d" % _fails)

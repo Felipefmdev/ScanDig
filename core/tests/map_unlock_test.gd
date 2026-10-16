@@ -63,12 +63,12 @@ func _run() -> void:
 	var campo: Dictionary = sm.get_map_status("campo")
 	_check(not campo["unlocked"] and campo["has_scene"] and not campo["playable"], "status campo bloqueado, com cena: %s" % str(campo))
 	_check(campo["required_boss_name"] == "Caranguejo-Rei" and not campo["boss_defeated"], "status campo exige Caranguejo-Rei")
-	_check(campo["reason"] == "Vença o chefe Caranguejo-Rei primeiro.", "status campo reason: %s" % str(campo["reason"]))
+	_check(campo["reason"] == "Vença o chefe Caranguejo-Rei (Praia) para liberar.", "status campo reason: %s" % str(campo["reason"]))
 
 	# #45: Geleira entre Ruínas e Cratera; cada mapa pede o chefe do anterior.
 	var geleira: Dictionary = sm.get_map_status("geleira")
 	_check(not geleira["unlocked"] and not geleira["playable"] and geleira["unlock_cost"] == 20000, "status geleira bloqueada: %s" % str(geleira))
-	_check(geleira["required_boss_id"] == "ancient_guardian" and geleira["reason"] == "Vença o chefe Guardião Ancestral primeiro.", "geleira exige Guardião Ancestral: %s" % str(geleira["reason"]))
+	_check(geleira["required_boss_id"] == "ancient_guardian" and geleira["reason"] == "Vença o chefe Guardião Ancestral (Ruínas) para liberar.", "geleira exige Guardião Ancestral: %s" % str(geleira["reason"]))
 	var cratera: Dictionary = sm.get_map_status("cratera")
 	_check(cratera["required_boss_id"] == "frozen_mammoth" and cratera["required_boss_name"] == "Mamute Congelado" and cratera["unlock_cost"] == 55000, "cratera exige Mamute Congelado: %s" % str(cratera))
 
@@ -80,7 +80,7 @@ func _run() -> void:
 	_check(unknown["reason"] == "Mapa desconhecido.", "status xyz reason: %s" % str(unknown["reason"]))
 
 	var result: Dictionary = await _unlock(gs, "campo")
-	_check(result.get("success", true) == false and result.get("message", "") == "Vença o chefe Caranguejo-Rei primeiro.", "desbloqueio sem chefe falha: %s" % str(result.get("message", "")))
+	_check(result.get("success", true) == false and result.get("message", "") == "Vença o chefe Caranguejo-Rei (Praia) para liberar.", "desbloqueio sem chefe falha: %s" % str(result.get("message", "")))
 	_check(gs.team_money == 1000, "dinheiro continua 1000: %d" % gs.team_money)
 
 	await _report_boss(gs, "chefe_falso")

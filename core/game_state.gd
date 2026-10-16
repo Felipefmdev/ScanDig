@@ -234,10 +234,20 @@ func get_map_unlock_block_reason(map_id: String) -> String:
 	if MAP_UNLOCK_BOSSES.has(map_id):
 		var boss: Dictionary = MAP_UNLOCK_BOSSES[map_id]
 		if not is_boss_defeated(str(boss["boss_id"])):
-			return "Vença o chefe %s primeiro." % str(boss["boss_name"])
+			return _boss_block_reason(map_id, str(boss["boss_name"]))
 	if team_money < map_data.unlock_cost:
 		return "Saldo insuficiente para desbloquear %s (%s)." % [map_data.display_name, MoneyFormat.money(map_data.unlock_cost)]
 	return ""
+
+
+## "Vença o chefe <chefe> (<mapa anterior>) para liberar.": o chefe fica no mapa anterior de
+## SessionManager.MAP_ORDER. Nome do mapa entre parênteses: "na/no/nas" mudaria a cada mapa.
+func _boss_block_reason(map_id: String, boss_name: String) -> String:
+	var index: int = SessionManager.MAP_ORDER.find(map_id)
+	var previous: MapData = _load_map(SessionManager.MAP_ORDER[index - 1]) if index > 0 else null
+	if previous == null:
+		return "Vença o chefe %s para liberar." % boss_name
+	return "Vença o chefe %s (%s) para liberar." % [boss_name, previous.display_name]
 
 
 func get_item_display_name(item_id: String) -> String:
