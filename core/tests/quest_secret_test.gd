@@ -42,17 +42,19 @@ func _run() -> void:
 	_quest_signals.clear()
 	_secret_signals.clear()
 
-	# Missão: paga 600 uma vez só.
+	# Missão: paga a recompensa de GameState.QUESTS uma vez só (#64: valor da tabela).
+	var reward: int = int(GameState.QUESTS["ze_anzol"]["reward"])
+	var paid: int = 1000 + reward
 	gs.request_complete_quest("ze_anzol")
 	_check(gs.is_quest_completed("ze_anzol"), "ze_anzol concluída")
-	_check(gs.team_money == 1600, "missão pagou 600: %d" % gs.team_money)
-	_check(_quest_signals == ["ze_anzol:600"], "quest_completed uma vez com 600: %s" % str(_quest_signals))
+	_check(gs.team_money == paid, "missão pagou %d: %d" % [reward, gs.team_money])
+	_check(_quest_signals == ["ze_anzol:%d" % reward], "quest_completed uma vez com %d: %s" % [reward, str(_quest_signals)])
 	gs.request_complete_quest("ze_anzol")
-	_check(gs.team_money == 1600, "segunda chamada não paga: %d" % gs.team_money)
+	_check(gs.team_money == paid, "segunda chamada não paga: %d" % gs.team_money)
 	_check(_quest_signals.size() == 1, "sem sinal repetido: %s" % str(_quest_signals))
 	gs.request_complete_quest("missao_falsa")
 	gs.request_complete_quest("../catalog/alianca_ouro")
-	_check(gs.completed_quests == ["ze_anzol"] and gs.team_money == 1600, "missão desconhecida ignorada: %s" % str(gs.completed_quests))
+	_check(gs.completed_quests == ["ze_anzol"] and gs.team_money == paid, "missão desconhecida ignorada: %s" % str(gs.completed_quests))
 
 	# Segredo: registra uma vez, sem dinheiro; id desconhecido é ignorado.
 	gs.request_report_secret("praia_polvo")
@@ -61,7 +63,7 @@ func _run() -> void:
 	gs.request_report_secret("praia_polvo")
 	gs.request_report_secret("segredo_falso")
 	_check(gs.found_secrets == ["praia_polvo"], "segredo repetido/desconhecido ignorado: %s" % str(gs.found_secrets))
-	_check(_secret_signals.size() == 1 and gs.team_money == 1600, "segredo não paga nem repete sinal")
+	_check(_secret_signals.size() == 1 and gs.team_money == paid, "segredo não paga nem repete sinal")
 
 	# Chefe extra: registrado, sem desbloquear nada.
 	gs.request_report_boss_defeated("octopus")
@@ -85,18 +87,19 @@ func _run() -> void:
 	_secret_signals.clear()
 	_check(save.load_game() == OK, "load_game v4 OK")
 	_check(gs.is_quest_completed("ze_anzol") and gs.is_secret_found("praia_polvo"), "listas voltam do save: %s / %s" % [str(gs.completed_quests), str(gs.found_secrets)])
-	_check(gs.team_money == 1600 and gs.is_boss_defeated("octopus"), "dinheiro e chefes voltam do save")
+	_check(gs.team_money == paid and gs.is_boss_defeated("octopus"), "dinheiro e chefes voltam do save")
 	# A missão carregada não paga de novo.
 	gs.request_complete_quest("ze_anzol")
-	_check(gs.team_money == 1600, "missão do save não paga de novo: %d" % gs.team_money)
+	_check(gs.team_money == paid, "missão do save não paga de novo: %d" % gs.team_money)
 
-	# Save v3: sem as listas novas; ancient_guardian agora libera a Geleira.
-	_check(save.save_to_file({"version": 3, "team_money": 30000, "current_day": 9, "discovered_items": [],
+	# Save v3: sem as listas novas; ancient_guardian agora libera a Geleira (saldo = preço do .tres).
+	var geleira_cost: int = (load("res://items/maps/geleira.tres") as MapData).unlock_cost
+	_check(save.save_to_file({"version": 3, "team_money": geleira_cost, "current_day": 9, "discovered_items": [],
 		"upgrade_levels": {"detector": 4}, "unlocked_maps": ["campo", "ruinas"],
 		"defeated_bosses": ["king_crab", "giant_mole", "ancient_guardian"]}) == OK, "grava save v3")
 	_check(save.load_game() == OK, "load_game v3 OK")
 	_check(gs.completed_quests.is_empty() and gs.found_secrets.is_empty(), "save v3 carrega listas vazias: %s / %s" % [str(gs.completed_quests), str(gs.found_secrets)])
-	_check(gs.team_money == 30000 and gs.current_day == 9, "save v3 mantém dinheiro e dia")
+	_check(gs.team_money == geleira_cost and gs.current_day == 9, "save v3 mantém dinheiro e dia")
 	_check(gs.is_boss_defeated("ancient_guardian"), "save v3 mantém ancient_guardian")
 	_check(gs.get_map_unlock_block_reason("geleira") == "", "ancient_guardian libera a Geleira: %s" % gs.get_map_unlock_block_reason("geleira"))
 	_check(gs.get_map_unlock_block_reason("cratera") == "Vença o chefe Mamute Congelado (Geleira Eterna) para liberar.", "cratera pede o Mamute: %s" % gs.get_map_unlock_block_reason("cratera"))

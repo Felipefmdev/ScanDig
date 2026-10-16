@@ -19,6 +19,10 @@ func _select_map(map_list: ItemList, idx: int) -> void:
 	map_list.select(idx)
 	map_list.item_selected.emit(idx)
 
+## Preços e detector exigido vêm dos .tres dos mapas (#64): o teste confere regras, não preços.
+func _map(map_id: String) -> MapData:
+	return load("res://items/maps/%s.tres" % map_id) as MapData
+
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
@@ -44,7 +48,10 @@ func _run() -> void:
 	_check(status_label.theme_type_variation == &"StatusLabel", "MapStatusLabel usa StatusLabel: %s" % status_label.theme_type_variation)
 	_check(status_label.get_theme_font_size("font_size") == ui.map_list.get_theme_font_size("font_size") and status_label.get_theme_color("font_color").is_equal_approx(UiPalette.RED_BURNT), "MapStatusLabel no tamanho padrão e em RED_BURNT: %d" % status_label.get_theme_font_size("font_size"))
 
-	gs.load_snapshot({"team_money": 2500, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
+	var campo_data: MapData = _map("campo")
+	var ruinas_data: MapData = _map("ruinas")
+	var geleira_data: MapData = _map("geleira")
+	gs.load_snapshot({"team_money": campo_data.unlock_cost + 1300, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(3)
 
 	_check(map_list.item_count == 5, "5 mapas na lista: %d" % map_list.item_count)
@@ -71,7 +78,7 @@ func _run() -> void:
 	await _wait(3)
 	_check(not unlock_btn.disabled, "desbloquear habilitado após chefe")
 	_check(not status_label.visible, "motivo oculto quando dá para desbloquear: '%s'" % status_label.text)
-	_check(unlock_btn.text == "Desbloquear Campo Antigo (R$\u00a01.200)", "texto do botão: %s" % unlock_btn.text)
+	_check(unlock_btn.text == "Desbloquear %s (%s)" % [campo_data.display_name, UiFormat.money(campo_data.unlock_cost)], "texto do botão: %s" % unlock_btn.text)
 
 	unlock_btn.pressed.emit()
 	await _wait(5)
@@ -81,9 +88,9 @@ func _run() -> void:
 	var row1_no_detector: String = map_list.get_item_text(1)
 	_check(not row1_no_detector.begins_with("✔") and not row1_no_detector.contains("🔒"), "item 1 sem detector Nv.2: %s" % row1_no_detector)
 	_select_map(map_list, 1)
-	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível 2.", "partir bloqueado sem detector Nv.2: %s" % depart_btn.tooltip_text)
-	_check(status_label.visible and status_label.text == "🔒 Requer detector nível 2.", "motivo de partir visível: '%s'" % status_label.text)
-	gs.load_snapshot({"upgrade_levels": {"detector": 1}})
+	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível %d." % campo_data.required_detector_level, "partir bloqueado sem o detector do Campo: %s" % depart_btn.tooltip_text)
+	_check(status_label.visible and status_label.text == "🔒 Requer detector nível %d." % campo_data.required_detector_level, "motivo de partir visível: '%s'" % status_label.text)
+	gs.load_snapshot({"upgrade_levels": {"detector": campo_data.required_detector_level - 1}})
 	await _wait(3)
 	_check(map_list.get_item_text(1).begins_with("✔ Campo Antigo"), "item 1 jogável: %s" % map_list.get_item_text(1))
 	_select_map(map_list, 1)
@@ -92,28 +99,28 @@ func _run() -> void:
 
 	# Ruínas têm cena (#42): desbloqueada, mas pede o detector Nv.4.
 	gs.request_report_boss_defeated("giant_mole")
-	gs.load_snapshot({"team_money": 8000})
+	gs.load_snapshot({"team_money": ruinas_data.unlock_cost})
 	await _wait(3)
 	_select_map(map_list, 2)
 	_check(unlock_btn.visible and not unlock_btn.disabled, "desbloquear habilitado nas Ruínas: %s" % unlock_btn.tooltip_text)
 	unlock_btn.pressed.emit()
 	await _wait(5)
 	_check(feedback.text == "Ruínas desbloqueado!", "feedback ruínas: %s" % feedback.text)
-	_check(map_list.get_item_text(2).contains("Detector nível 4") and not map_list.get_item_text(2).contains("Em breve"), "item 2 pede detector Nv.4: %s" % map_list.get_item_text(2))
-	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível 4.", "partir bloqueado nas Ruínas: %s" % depart_btn.tooltip_text)
+	_check(map_list.get_item_text(2).contains("Detector nível %d" % ruinas_data.required_detector_level) and not map_list.get_item_text(2).contains("Em breve"), "item 2 pede detector Nv.4: %s" % map_list.get_item_text(2))
+	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível %d." % ruinas_data.required_detector_level, "partir bloqueado nas Ruínas: %s" % depart_btn.tooltip_text)
 
 	# Geleira tem cena (#45): desbloqueada, mas pede o detector Nv.5 (radar Nv.2 aqui).
 	gs.request_report_boss_defeated("ancient_guardian")
-	gs.load_snapshot({"team_money": 20000})
+	gs.load_snapshot({"team_money": geleira_data.unlock_cost})
 	await _wait(3)
 	_select_map(map_list, 3)
 	_check(unlock_btn.visible and not unlock_btn.disabled, "desbloquear habilitado na Geleira: %s" % unlock_btn.tooltip_text)
 	unlock_btn.pressed.emit()
 	await _wait(5)
 	_check(feedback.text == "Geleira Eterna desbloqueado!", "feedback geleira: %s" % feedback.text)
-	_check(map_list.get_item_text(3).contains("Detector nível 5") and not map_list.get_item_text(3).contains("Em breve"), "item 3 pede detector Nv.5: %s" % map_list.get_item_text(3))
-	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível 5.", "partir bloqueado na Geleira: %s" % depart_btn.tooltip_text)
-	_check(ui.map_status_label.visible and ui.map_status_label.text == "🔒 Requer detector nível 5.", "motivo visível na Geleira: '%s'" % ui.map_status_label.text)
+	_check(map_list.get_item_text(3).contains("Detector nível %d" % geleira_data.required_detector_level) and not map_list.get_item_text(3).contains("Em breve"), "item 3 pede detector Nv.5: %s" % map_list.get_item_text(3))
+	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível %d." % geleira_data.required_detector_level, "partir bloqueado na Geleira: %s" % depart_btn.tooltip_text)
+	_check(ui.map_status_label.visible and ui.map_status_label.text == "🔒 Requer detector nível %d." % geleira_data.required_detector_level, "motivo visível na Geleira: '%s'" % ui.map_status_label.text)
 
 	_select_map(map_list, 0)
 	_check(not depart_btn.disabled, "partir habilitado na Praia: %s" % depart_btn.tooltip_text)

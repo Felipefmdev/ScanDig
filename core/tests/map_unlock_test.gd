@@ -38,6 +38,10 @@ func _report_boss(gs: GameState, boss_id: String) -> void:
 	gs.request_report_boss_defeated(boss_id)
 	await _wait(3)
 
+## Valores de balanceamento vêm dos .tres (#64): o teste confere regras, não preços.
+func _map(map_id: String) -> MapData:
+	return load("res://items/maps/%s.tres" % map_id) as MapData
+
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _wait(10)
@@ -48,7 +52,10 @@ func _run() -> void:
 	_check(gs != null and sm != null, "GameState e SessionManager presentes")
 	gs.map_unlock_result.connect(_on_map_unlock_result)
 	gs.progression_changed.connect(_on_progression_changed)
-	gs.load_snapshot({"team_money": 1000, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
+	var campo_data: MapData = _map("campo")
+	# Saldo um real abaixo do Campo: primeiro trava o chefe, depois o saldo.
+	var short_money: int = campo_data.unlock_cost - 1
+	gs.load_snapshot({"team_money": short_money, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 
 	var ids: Array[String] = []
 	for map_data: MapData in sm.get_available_maps():
@@ -67,10 +74,10 @@ func _run() -> void:
 
 	# #45: Geleira entre Ruínas e Cratera; cada mapa pede o chefe do anterior.
 	var geleira: Dictionary = sm.get_map_status("geleira")
-	_check(not geleira["unlocked"] and not geleira["playable"] and geleira["unlock_cost"] == 20000, "status geleira bloqueada: %s" % str(geleira))
+	_check(not geleira["unlocked"] and not geleira["playable"] and geleira["unlock_cost"] == _map("geleira").unlock_cost, "status geleira bloqueada: %s" % str(geleira))
 	_check(geleira["required_boss_id"] == "ancient_guardian" and geleira["reason"] == "Vença o chefe Guardião Ancestral (Ruínas) para liberar.", "geleira exige Guardião Ancestral: %s" % str(geleira["reason"]))
 	var cratera: Dictionary = sm.get_map_status("cratera")
-	_check(cratera["required_boss_id"] == "frozen_mammoth" and cratera["required_boss_name"] == "Mamute Congelado" and cratera["unlock_cost"] == 55000, "cratera exige Mamute Congelado: %s" % str(cratera))
+	_check(cratera["required_boss_id"] == "frozen_mammoth" and cratera["required_boss_name"] == "Mamute Congelado" and cratera["unlock_cost"] == _map("cratera").unlock_cost, "cratera exige Mamute Congelado: %s" % str(cratera))
 
 	var unknown: Dictionary = sm.get_map_status("xyz")
 	var has_all_keys: bool = true
@@ -81,7 +88,7 @@ func _run() -> void:
 
 	var result: Dictionary = await _unlock(gs, "campo")
 	_check(result.get("success", true) == false and result.get("message", "") == "Vença o chefe Caranguejo-Rei (Praia) para liberar.", "desbloqueio sem chefe falha: %s" % str(result.get("message", "")))
-	_check(gs.team_money == 1000, "dinheiro continua 1000: %d" % gs.team_money)
+	_check(gs.team_money == short_money, "dinheiro continua %d: %d" % [short_money, gs.team_money])
 
 	await _report_boss(gs, "chefe_falso")
 	_check(gs.defeated_bosses.is_empty(), "chefe falso ignorado")
@@ -94,22 +101,23 @@ func _run() -> void:
 	_check(gs.defeated_bosses.size() == 1, "king_crab não duplica: %s" % str(gs.defeated_bosses))
 
 	result = await _unlock(gs, "campo")
-	_check(result.get("success", true) == false and result.get("message", "") == "Saldo insuficiente para desbloquear Campo Antigo (R$" + MoneyFormat.NBSP + "1.200).", "desbloqueio sem saldo falha: %s" % str(result.get("message", "")))
+	_check(result.get("success", true) == false and result.get("message", "") == "Saldo insuficiente para desbloquear %s (%s)." % [campo_data.display_name, MoneyFormat.money(campo_data.unlock_cost)], "desbloqueio sem saldo falha: %s" % str(result.get("message", "")))
 
-	gs.load_snapshot({"team_money": 1700})
+	gs.load_snapshot({"team_money": campo_data.unlock_cost + 500})
 	result = await _unlock(gs, "campo")
 	_check(result.get("success", false) == true and result.get("message", "") == "Campo Antigo desbloqueado!", "desbloqueio campo ok: %s" % str(result.get("message", "")))
 	_check(gs.team_money == 500, "dinheiro 500: %d" % gs.team_money)
 	_check(gs.is_map_unlocked("campo"), "campo desbloqueado")
 
-	# #46: o Campo pede o detector Nv.2 (upgrade nível 1).
+	# O Campo pede o detector do campo.tres (#46: Nv.2, upgrade nível 1).
 	campo = sm.get_map_status("campo")
-	_check(campo["unlocked"] and not campo["playable"] and campo["reason"] == "Requer detector nível 2.", "status campo pede detector Nv.2: %s" % str(campo["reason"]))
+	_check(campo_data.required_detector_level > 1, "campo exige detector acima do inicial: %d" % campo_data.required_detector_level)
+	_check(campo["unlocked"] and not campo["playable"] and campo["reason"] == "Requer detector nível %d." % campo_data.required_detector_level, "status campo pede o detector: %s" % str(campo["reason"]))
 	_check(not sm.can_start_map("campo"), "can_start_map campo false com detector Nv.1")
-	gs.load_snapshot({"upgrade_levels": {"detector": 1}})
+	gs.load_snapshot({"upgrade_levels": {"detector": campo_data.required_detector_level - 1}})
 	campo = sm.get_map_status("campo")
 	_check(campo["unlocked"] and campo["playable"] and campo["reason"] == "", "status campo jogável: %s" % str(campo["reason"]))
-	_check(sm.can_start_map("campo"), "can_start_map campo true com detector Nv.2")
+	_check(sm.can_start_map("campo"), "can_start_map campo true com o detector exigido")
 
 	result = await _unlock(gs, "campo")
 	_check(result.get("success", true) == false and result.get("message", "") == "Campo Antigo já está desbloqueado.", "desbloqueio repetido falha: %s" % str(result.get("message", "")))
@@ -125,25 +133,27 @@ func _run() -> void:
 	_check(saved.get("unlocked_maps", []) == ["campo"], "save unlocked_maps: %s" % str(saved.get("unlocked_maps")))
 	_check(saved.get("defeated_bosses", []) == ["king_crab"], "save defeated_bosses: %s" % str(saved.get("defeated_bosses")))
 
-	# Ruínas têm cena (#42): desbloqueada, mas pede o detector Nv.4.
+	# Ruínas têm cena (#42): desbloqueada, mas pede o detector do ruinas.tres.
+	var ruinas_data: MapData = _map("ruinas")
 	await _report_boss(gs, "giant_mole")
-	gs.load_snapshot({"team_money": 8000})
+	gs.load_snapshot({"team_money": ruinas_data.unlock_cost})
 	result = await _unlock(gs, "ruinas")
 	_check(result.get("success", false) == true and result.get("message", "") == "Ruínas desbloqueado!", "desbloqueio ruinas ok: %s" % str(result.get("message", "")))
 	var ruinas: Dictionary = sm.get_map_status("ruinas")
 	_check(ruinas["unlocked"] and ruinas["has_scene"] and not ruinas["playable"], "status ruinas desbloqueada e com cena: %s" % str(ruinas))
-	_check(ruinas["reason"] == "Requer detector nível 4.", "status ruinas pede detector Nv.4: %s" % str(ruinas["reason"]))
-	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem detector Nv.4")
+	_check(ruinas["reason"] == "Requer detector nível %d." % ruinas_data.required_detector_level, "status ruinas pede o detector: %s" % str(ruinas["reason"]))
+	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem o detector")
 
-	# #49: Geleira paga com o detector equipado Nv.5; com world/map_geleira.tscn (#45) fica jogável.
+	# #49: Geleira paga com o detector exigido; com world/map_geleira.tscn (#45) fica jogável.
+	var geleira_data: MapData = _map("geleira")
 	await _report_boss(gs, "ancient_guardian")
-	gs.load_snapshot({"team_money": 20000, "upgrade_levels": {"detector": 4}})
+	gs.load_snapshot({"team_money": geleira_data.unlock_cost, "upgrade_levels": {"detector": geleira_data.required_detector_level - 1}})
 	result = await _unlock(gs, "geleira")
 	_check(result.get("success", false) == true and result.get("message", "") == "Geleira Eterna desbloqueado!", "desbloqueio geleira ok: %s" % str(result.get("message", "")))
 	geleira = sm.get_map_status("geleira")
 	_check(geleira["unlocked"] and geleira["has_scene"] and geleira["playable"], "status geleira desbloqueada e jogável: %s" % str(geleira))
 	_check(geleira["reason"] == "", "status geleira sem motivo: %s" % str(geleira["reason"]))
-	_check(sm.can_start_map("geleira"), "can_start_map geleira true com detector Nv.5")
+	_check(sm.can_start_map("geleira"), "can_start_map geleira true com o detector exigido")
 
 	gs.reset_state()
 	gs.load_snapshot({"team_money": 300, "current_day": 4, "discovered_items": [], "upgrade_levels": {"detector": 1}})

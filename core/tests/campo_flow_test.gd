@@ -49,7 +49,9 @@ func _run() -> void:
 		return
 	gs.map_unlock_result.connect(_on_map_unlock_result)
 	sm.peer_scene_ready.connect(_on_peer_scene_ready)
-	gs.load_snapshot({"team_money": 1700, "current_day": 1, "discovered_items": [], "upgrade_levels": {"detector": 1}, "unlocked_maps": [], "defeated_bosses": []})
+	# Preço e detector vêm do campo.tres (#64): sobram 500 depois do desbloqueio.
+	var campo_data: MapData = load("res://items/maps/campo.tres") as MapData
+	gs.load_snapshot({"team_money": campo_data.unlock_cost + 500, "current_day": 1, "discovered_items": [], "upgrade_levels": {"detector": campo_data.required_detector_level - 1}, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(3)
 
 	gs.request_report_boss_defeated("king_crab")

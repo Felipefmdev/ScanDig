@@ -25,6 +25,14 @@ func _snapshot(money: int, unlocked_maps: Array, levels: Dictionary = {"detector
 		"defeated_bosses": [],
 	}
 
+## Custos e mapas de trava vêm de GameState.UPGRADES (#64): o teste confere regras, não preços.
+func _cost(upgrade_id: String, level: int) -> String:
+	return UiFormat.money(int(GameState.UPGRADES[upgrade_id]["costs"][level]))
+
+func _lock_name(upgrade_id: String, level: int) -> String:
+	var map_id: String = str(GameState.UPGRADES[upgrade_id]["required_maps"][level])
+	return (load("res://items/maps/%s.tres" % map_id) as MapData).display_name
+
 func _run() -> void:
 	change_scene_to_file("res://world/lobby_base.tscn")
 	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
@@ -47,18 +55,18 @@ func _run() -> void:
 	await _wait(3)
 	_check(not detector.disabled, "detector habilitado sem mapas: %s" % detector.tooltip_text)
 	_check(not detector.text.contains("🔒"), "detector sem cadeado: %s" % detector.text)
-	_check(detector.text.contains("Comprar nível 3 — R$\u00a0700") and detector.text.contains("radar Nv.3"), "detector compra 3: %s" % detector.text)
+	_check(detector.text.contains("Comprar nível 3 — " + _cost("detector", 2)) and detector.text.contains("radar Nv.3"), "detector compra 3: %s" % detector.text)
 	_check(detector.tooltip_text == "Radar: Nv.3 → Nv.4", "tooltip radar: %s" % detector.tooltip_text)
-	_check(backpack.text.contains("🔒 Requer Campo Antigo"), "mochila travada: %s" % backpack.text)
+	_check(backpack.text.contains("🔒 Requer " + _lock_name("backpack", 2)), "mochila travada: %s" % backpack.text)
 	_check(backpack.disabled, "mochila desabilitada")
-	_check(backpack.tooltip_text == "Desbloqueie Campo Antigo primeiro.", "tooltip mochila: %s" % backpack.tooltip_text)
-	_check(not shovel.disabled and shovel.text.contains("Comprar nível 1 — R$\u00a0800"), "pá liberada: %s" % shovel.text)
+	_check(backpack.tooltip_text == "Desbloqueie %s primeiro." % _lock_name("backpack", 2), "tooltip mochila: %s" % backpack.tooltip_text)
+	_check(not shovel.disabled and shovel.text.contains("Comprar nível 1 — " + _cost("shovel", 0)), "pá liberada: %s" % shovel.text)
 
 	# 2. Compra o nível 3: o 4 trava nas Ruínas.
 	detector.pressed.emit()
 	await _wait(5)
 	_check(gs.get_upgrade_level("detector") == 3, "detector nível 3: %d" % gs.get_upgrade_level("detector"))
-	_check(detector.text.contains("🔒 Requer Ruínas") and detector.text.contains("R$\u00a02.000"), "detector travado em Ruínas: %s" % detector.text)
+	_check(detector.text.contains("🔒 Requer " + _lock_name("detector", 3)) and detector.text.contains(_cost("detector", 3)), "detector travado em Ruínas: %s" % detector.text)
 	_check(detector.disabled, "detector desabilitado nas Ruínas")
 
 	# 3. Saldo baixo com o Campo aberto: bloqueio por saldo, sem cadeado.
@@ -72,10 +80,10 @@ func _run() -> void:
 	var levels_4: Dictionary = {"detector": 4, "backpack": 4}
 	gs.load_snapshot(_snapshot(100000, ["campo", "ruinas"], levels_4))
 	await _wait(3)
-	_check(detector.text.contains("🔒 Requer Geleira Eterna") and detector.text.contains("R$ 12.000"), "detector travado na Geleira: %s" % detector.text)
+	_check(detector.text.contains("🔒 Requer " + _lock_name("detector", 4)) and detector.text.contains(_cost("detector", 4)), "detector travado na Geleira: %s" % detector.text)
 	_check(detector.disabled, "detector desabilitado na Geleira")
-	_check(detector.tooltip_text == "Desbloqueie Geleira Eterna primeiro.", "tooltip detector Geleira: %s" % detector.tooltip_text)
-	_check(backpack.text.contains("🔒 Requer Geleira Eterna") and backpack.text.contains("R$ 6.000"), "mochila travada na Geleira: %s" % backpack.text)
+	_check(detector.tooltip_text == "Desbloqueie %s primeiro." % _lock_name("detector", 4), "tooltip detector Geleira: %s" % detector.tooltip_text)
+	_check(backpack.text.contains("🔒 Requer " + _lock_name("backpack", 4)) and backpack.text.contains(_cost("backpack", 4)), "mochila travada na Geleira: %s" % backpack.text)
 	_check(backpack.disabled, "mochila desabilitada na Geleira")
 
 	# 5. Com a Geleira aberta, o detector Nv.5 libera.

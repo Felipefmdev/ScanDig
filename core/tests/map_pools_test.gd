@@ -81,25 +81,21 @@ func _run() -> void:
 	for map_id: String in MAP_IDS:
 		_check_pool(map_id)
 
-	var ruinas: MapData = _load_map("ruinas")
-	var cratera: MapData = _load_map("cratera")
-	var ruinas_avg: float = _pool_average(ruinas)
-	var cratera_avg: float = _pool_average(cratera)
-	_check(ruinas_avg >= 400.0 and ruinas_avg <= 520.0, "média ruinas 400–520: %.1f" % ruinas_avg)
-	_check(cratera_avg >= 1100.0 and cratera_avg <= 1400.0, "média cratera 1100–1400: %.1f" % cratera_avg)
-	_check(_load_map("campo").required_detector_level == 2, "campo exige detector Nv.2: %d" % _load_map("campo").required_detector_level)
-	_check(ruinas.required_detector_level == 4, "ruinas exige detector Nv.4: %d" % ruinas.required_detector_level)
-	_check(cratera.required_detector_level == 6, "cratera exige detector Nv.6: %d" % cratera.required_detector_level)
-	_check(cratera.unlock_cost == 55000, "cratera custa 55000: %d" % cratera.unlock_cost)
-	# Geleira (#49): entre as Ruínas e a Cratera.
+	# Regras de progressão (#64: os valores ficam no economy_anchor_test). Ao longo de MAP_ORDER:
+	# média do pool, preço de desbloqueio e detector exigido nunca diminuem; média sobe sempre.
+	var previous: MapData = null
+	for map_id: String in SessionManager.MAP_ORDER:
+		var map_data: MapData = _load_map(map_id)
+		if map_data == null:
+			continue
+		if previous != null:
+			_check(_pool_average(previous) < _pool_average(map_data), "média %s < %s: %.1f < %.1f" % [previous.id, map_id, _pool_average(previous), _pool_average(map_data)])
+			_check(previous.unlock_cost <= map_data.unlock_cost, "desbloqueio %s <= %s: %d <= %d" % [previous.id, map_id, previous.unlock_cost, map_data.unlock_cost])
+			_check(previous.required_detector_level <= map_data.required_detector_level, "detector %s <= %s: %d <= %d" % [previous.id, map_id, previous.required_detector_level, map_data.required_detector_level])
+			_check(map_data.unlock_cost > 0, "%s tem preço de desbloqueio: %d" % [map_id, map_data.unlock_cost])
+		previous = map_data
 	var geleira: MapData = _load_map("geleira")
 	_check(geleira != null and geleira.id == "geleira" and geleira.display_name == "Geleira Eterna", "geleira carregada")
-	if geleira != null:
-		var geleira_avg: float = _pool_average(geleira)
-		_check(geleira_avg >= 650.0 and geleira_avg <= 950.0, "média geleira 650–950: %.1f" % geleira_avg)
-		_check(ruinas_avg < geleira_avg and geleira_avg < cratera_avg, "ruinas < geleira < cratera: %.1f < %.1f < %.1f" % [ruinas_avg, geleira_avg, cratera_avg])
-		_check(geleira.unlock_cost == 20000, "geleira custa 20000: %d" % geleira.unlock_cost)
-		_check(geleira.required_detector_level == 5, "geleira exige detector Nv.5: %d" % geleira.required_detector_level)
 	for item_id: String in GELEIRA_ITEMS:
 		_check(ResourceLoader.exists(CATALOG_DIR + item_id + ".tres"), "%s no catálogo (#49)" % item_id)
 	# Troféus de chefe ficam fora de qualquer item_pool.
@@ -121,19 +117,55 @@ func _run() -> void:
 
 	# Ordem dos motivos em get_map_status: bloqueado → "Em breve." (sem cena) → detector.
 	# Radar Nv.3 com Ruínas e Geleira desbloqueadas. As duas têm cena (#42/#45), então o motivo é
-	# o detector de cada uma. Todos os mapas já têm cena: nenhum mapa real fica em "Em breve.".
+	# o detector exigido pelo .tres de cada uma.
 	gs.load_snapshot({"team_money": 0, "current_day": 1, "discovered_items": [], "upgrade_levels": {"detector": 2}, "unlocked_maps": ["campo", "ruinas", "geleira"], "defeated_bosses": ["king_crab", "giant_mole", "ancient_guardian"]})
 	await _wait(3)
 	_check(gs.equipped_detector_level == 3, "radar Nv.3: %d" % gs.equipped_detector_level)
-	var status: Dictionary = sm.get_map_status("ruinas")
-	_check(status["unlocked"] and status["has_scene"], "ruinas desbloqueada e com cena: %s" % str(status))
-	_check(status["reason"] == "Requer detector nível 4.", "ruinas pede detector Nv.4: %s" % str(status["reason"]))
-	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false com radar Nv.3")
-	var geleira_status: Dictionary = sm.get_map_status("geleira")
-	_check(geleira_status["unlocked"] and geleira_status["has_scene"], "geleira desbloqueada e com cena: %s" % str(geleira_status))
-	_check(geleira_status["reason"] == "Requer detector nível 5.", "geleira pede detector Nv.5: %s" % str(geleira_status["reason"]))
-	_check(not sm.can_start_map("geleira"), "can_start_map geleira false com radar Nv.3")
+	for map_id: String in ["ruinas", "geleira"]:
+		var map_data: MapData = _load_map(map_id)
+		var map_status: Dictionary = sm.get_map_status(map_id)
+		_check(map_data.required_detector_level > 3, "%s exige mais que o radar Nv.3: %d" % [map_id, map_data.required_detector_level])
+		_check(map_status["unlocked"] and map_status["has_scene"], "%s desbloqueada e com cena: %s" % [map_id, str(map_status)])
+		_check(map_status["reason"] == "Requer detector nível %d." % map_data.required_detector_level, "%s pede o detector do .tres: %s" % [map_id, str(map_status["reason"])])
+		_check(not sm.can_start_map(map_id), "can_start_map %s false com radar Nv.3" % map_id)
+
+	# Todos os mapas reais já têm cena: o "Em breve." usa um mapa falso, gravado só durante o teste.
+	await _check_coming_soon(gs, sm)
 
 	gs.reset_state()
 	print("RESULT fails=%d" % _fails)
 	quit(_fails)
+
+
+const FAKE_MAP_ID: String = "teste_em_breve"
+const FAKE_MAP_PATH: String = "res://items/maps/teste_em_breve.tres"
+
+
+func _remove_fake_map() -> void:
+	if FileAccess.file_exists(FAKE_MAP_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(FAKE_MAP_PATH))
+
+
+## Mapa sem cena (world/map_teste_em_breve.tscn não existe), pago e com detector Nv.9:
+## bloqueado → motivo do desbloqueio; desbloqueado → "Em breve." antes do detector.
+func _check_coming_soon(gs: GameState, sm: SessionManager) -> void:
+	_remove_fake_map()
+	var fake: MapData = MapData.new()
+	fake.id = FAKE_MAP_ID
+	fake.display_name = "Mapa de Teste"
+	fake.unlock_cost = 100
+	fake.required_detector_level = 9
+	_check(ResourceSaver.save(fake, FAKE_MAP_PATH) == OK, "mapa falso gravado")
+	_check(not ResourceLoader.exists(SessionManager.MAP_SCENE_FORMAT % FAKE_MAP_ID), "mapa falso sem cena")
+	gs.load_snapshot({"team_money": 0, "unlocked_maps": [], "defeated_bosses": []})
+	await _wait(2)
+	var locked: Dictionary = sm.get_map_status(FAKE_MAP_ID)
+	_check(not locked["unlocked"] and locked["reason"] == "Saldo insuficiente para desbloquear Mapa de Teste (%s)." % MoneyFormat.money(100), "falso bloqueado: motivo do desbloqueio: %s" % str(locked["reason"]))
+	gs.load_snapshot({"unlocked_maps": [FAKE_MAP_ID]})
+	await _wait(2)
+	var soon: Dictionary = sm.get_map_status(FAKE_MAP_ID)
+	_check(soon["unlocked"] and not soon["has_scene"] and not soon["playable"], "falso desbloqueado e sem cena: %s" % str(soon))
+	_check(soon["reason"] == "Em breve.", "falso: 'Em breve.' antes do detector Nv.9: %s" % str(soon["reason"]))
+	_check(not sm.can_start_map(FAKE_MAP_ID), "can_start_map falso false")
+	_remove_fake_map()
+	_check(not FileAccess.file_exists(FAKE_MAP_PATH), "mapa falso apagado")
