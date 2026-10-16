@@ -245,6 +245,20 @@ func _variation(name: String, base: String) -> void:
 	_theme.set_type_variation(name, base)
 
 
+func _worn_box(tex: Texture2D) -> StyleBoxTexture:
+	var worn: StyleBoxTexture = StyleBoxTexture.new()
+	worn.texture = tex
+	worn.set_texture_margin_all(TEX_MARGIN)
+	worn.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	worn.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	# A textura tem 3 px de sombra à direita/embaixo: o conteúdo fica dentro do papel.
+	worn.content_margin_left = 3
+	worn.content_margin_top = 3
+	worn.content_margin_right = 6
+	worn.content_margin_bottom = 6
+	return worn
+
+
 func _panels() -> void:
 	_theme.set_stylebox("panel", "Panel", _panel_flat(P.PAPER))
 	var container: StyleBoxFlat = _panel_flat(P.PAPER)
@@ -255,18 +269,16 @@ func _panels() -> void:
 	_theme.set_stylebox("panel", "PanelContainer", container)
 
 	# Painéis grandes (Base, menu, resumo do dia, HUD): papel gasto em 9-patch.
-	var worn: StyleBoxTexture = StyleBoxTexture.new()
-	worn.texture = load(WORN_TEXTURE) as Texture2D
-	worn.set_texture_margin_all(TEX_MARGIN)
-	worn.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
-	worn.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
-	# A textura tem 3 px de sombra à direita/embaixo: o conteúdo fica dentro do papel.
-	worn.content_margin_left = 3
-	worn.content_margin_top = 3
-	worn.content_margin_right = 6
-	worn.content_margin_bottom = 6
 	_variation("WornPanel", "PanelContainer")
-	_theme.set_stylebox("panel", "WornPanel", worn)
+	var worn_tex: Texture2D = null
+	if ResourceLoader.exists(WORN_TEXTURE):
+		worn_tex = load(WORN_TEXTURE) as Texture2D
+	if worn_tex == null:
+		# Sem a textura, um StyleBoxTexture vazio deixaria os painéis invisíveis.
+		push_warning("build_theme: %s ausente, WornPanel usa papel liso" % WORN_TEXTURE)
+		_theme.set_stylebox("panel", "WornPanel", _panel_flat(P.PAPER))
+	else:
+		_theme.set_stylebox("panel", "WornPanel", _worn_box(worn_tex))
 
 	var toast: StyleBoxFlat = _panel_flat(P.GREEN_BOTTLE)
 	toast.content_margin_left = 12

@@ -33,6 +33,8 @@ var _session: Node = null
 var _maps: Array[MapData] = []
 
 var _game_state: GameState = null
+## Pasta dos ItemData do Museu; testes podem trocar antes do _ready.
+var catalog_dir: String = "res://items/catalog"
 var _catalog_items: Array[ItemData] = []
 var _pending_purchase: bool = false
 
@@ -369,9 +371,11 @@ func _connect_game_state_signal(signal_name: StringName, callable: Callable) -> 
 
 func _load_catalog() -> void:
 	_catalog_items.clear()
-	var dir: DirAccess = DirAccess.open("res://items/catalog")
+	var dir: DirAccess = DirAccess.open(catalog_dir)
 	if dir == null:
-		push_error("BaseStationUI: Não foi possível abrir res://items/catalog")
+		var err: Error = DirAccess.get_open_error()
+		push_warning("BaseStationUI: catálogo '%s' não abriu (%s); Museu sem itens de teste, Loja segue normal." % [catalog_dir, error_string(err)])
+		_mark_catalog_unavailable("Catálogo de itens indisponível.")
 		return
 	
 	dir.list_dir_begin()
@@ -390,6 +394,19 @@ func _load_catalog() -> void:
 	_catalog_items.sort_custom(func(a: ItemData, b: ItemData) -> bool:
 		return a.display_name < b.display_name
 	)
+	if _catalog_items.is_empty():
+		push_warning("BaseStationUI: catálogo '%s' sem nenhum ItemData (.tres)." % catalog_dir)
+		_mark_catalog_unavailable("Catálogo de itens vazio.")
+
+
+## Museu sem catálogo: avisa na própria aba e trava os botões de teste.
+func _mark_catalog_unavailable(message: String) -> void:
+	if museum_feedback_label != null:
+		museum_feedback_label.text = message
+	if sell_item_btn != null:
+		sell_item_btn.disabled = true
+	if register_item_btn != null:
+		register_item_btn.disabled = true
 
 
 func _setup_shop_buttons() -> void:

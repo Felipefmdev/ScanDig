@@ -18,25 +18,48 @@ const LEAVE_CLIENT_TEXT: String = "Sair da sessão e voltar à base?\nO que esti
 
 static var instance: SessionUI = null
 
-@onready var loading_screen: Control = %LoadingScreen
-@onready var loading_label: Label = %LoadingLabel
-@onready var expedition_bar: Control = %ExpeditionBar
-@onready var expedition_info_label: Label = %ExpeditionInfoLabel
-@onready var return_button: Button = %ReturnButton
-@onready var leave_button: Button = %LeaveButton
-@onready var summary_panel: Control = %SummaryPanel
-@onready var summary_title_label: Label = %SummaryTitleLabel
-@onready var summary_list: ItemList = %SummaryList
-@onready var summary_total_label: Label = %SummaryTotalLabel
-@onready var summary_close_button: Button = %SummaryCloseButton
-@onready var host_lost_panel: Control = %HostLostPanel
-@onready var host_lost_close_button: Button = %HostLostCloseButton
-@onready var leave_confirm_panel: Control = %LeaveConfirmPanel
-@onready var leave_confirm_label: Label = %LeaveConfirmLabel
-@onready var leave_confirm_button: Button = %LeaveConfirmButton
-@onready var leave_cancel_button: Button = %LeaveCancelButton
-@onready var toast_panel: Control = %ToastPanel
-@onready var toast_label: Label = %ToastLabel
+## Nós únicos (%Nome) exigidos pela cena; resolvidos em _bind_nodes().
+const REQUIRED_NODES: Array[String] = [
+	"LoadingScreen",
+	"LoadingLabel",
+	"ExpeditionBar",
+	"ExpeditionInfoLabel",
+	"ReturnButton",
+	"LeaveButton",
+	"SummaryPanel",
+	"SummaryTitleLabel",
+	"SummaryList",
+	"SummaryTotalLabel",
+	"SummaryCloseButton",
+	"HostLostPanel",
+	"HostLostCloseButton",
+	"LeaveConfirmPanel",
+	"LeaveConfirmLabel",
+	"LeaveConfirmButton",
+	"LeaveCancelButton",
+	"ToastPanel",
+	"ToastLabel",
+]
+
+var loading_screen: Control = null
+var loading_label: Label = null
+var expedition_bar: Control = null
+var expedition_info_label: Label = null
+var return_button: Button = null
+var leave_button: Button = null
+var summary_panel: Control = null
+var summary_title_label: Label = null
+var summary_list: ItemList = null
+var summary_total_label: Label = null
+var summary_close_button: Button = null
+var host_lost_panel: Control = null
+var host_lost_close_button: Button = null
+var leave_confirm_panel: Control = null
+var leave_confirm_label: Label = null
+var leave_confirm_button: Button = null
+var leave_cancel_button: Button = null
+var toast_panel: Control = null
+var toast_label: Label = null
 
 var _session: Node = null
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
@@ -63,6 +86,10 @@ func _exit_tree() -> void:
 func _ready() -> void:
 	layer = 50
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if not _bind_nodes():
+		# Cena incompleta: overlay fica inerte em vez de crashar o jogo inteiro.
+		set_process(false)
+		return
 	loading_screen.visible = false
 	summary_panel.visible = false
 	host_lost_panel.visible = false
@@ -81,6 +108,37 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_clear_toasts)
 	# Garante que todos os autoloads já entraram na árvore antes de procurar o CoreSession.
 	_connect_session.call_deferred()
+
+
+## Resolve os nós únicos; retorna falso (com erro listando os ausentes) se faltar algum.
+func _bind_nodes() -> bool:
+	var missing: Array[String] = []
+	for node_name in REQUIRED_NODES:
+		if get_node_or_null("%" + node_name) == null:
+			missing.append(node_name)
+	if not missing.is_empty():
+		push_error("SessionUI: nós ausentes na cena (%s); overlay de sessão desativado." % ", ".join(missing))
+		return false
+	loading_screen = get_node_or_null(^"%LoadingScreen") as Control
+	loading_label = get_node_or_null(^"%LoadingLabel") as Label
+	expedition_bar = get_node_or_null(^"%ExpeditionBar") as Control
+	expedition_info_label = get_node_or_null(^"%ExpeditionInfoLabel") as Label
+	return_button = get_node_or_null(^"%ReturnButton") as Button
+	leave_button = get_node_or_null(^"%LeaveButton") as Button
+	summary_panel = get_node_or_null(^"%SummaryPanel") as Control
+	summary_title_label = get_node_or_null(^"%SummaryTitleLabel") as Label
+	summary_list = get_node_or_null(^"%SummaryList") as ItemList
+	summary_total_label = get_node_or_null(^"%SummaryTotalLabel") as Label
+	summary_close_button = get_node_or_null(^"%SummaryCloseButton") as Button
+	host_lost_panel = get_node_or_null(^"%HostLostPanel") as Control
+	host_lost_close_button = get_node_or_null(^"%HostLostCloseButton") as Button
+	leave_confirm_panel = get_node_or_null(^"%LeaveConfirmPanel") as Control
+	leave_confirm_label = get_node_or_null(^"%LeaveConfirmLabel") as Label
+	leave_confirm_button = get_node_or_null(^"%LeaveConfirmButton") as Button
+	leave_cancel_button = get_node_or_null(^"%LeaveCancelButton") as Button
+	toast_panel = get_node_or_null(^"%ToastPanel") as Control
+	toast_label = get_node_or_null(^"%ToastLabel") as Label
+	return true
 
 
 func _connect_session() -> void:
