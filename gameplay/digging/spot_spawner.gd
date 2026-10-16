@@ -45,8 +45,15 @@ func _ready() -> void:
 		push_warning("[SpotSpawner] map_data não definido; nenhum spot será gerado.")
 		return
 	# Espera a física construir as colisões (CSG) antes de fazer raycasts.
-	await get_tree().physics_frame
-	await get_tree().physics_frame
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.physics_frame
+	if not is_inside_tree():
+		return
+	await tree.physics_frame
+	if not is_inside_tree() or map_data == null:
+		return
 	for i: int in map_data.spot_count:
 		_spawn_spot()
 
