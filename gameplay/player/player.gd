@@ -12,8 +12,30 @@ signal died
 ## Com GameState vem do upgrade "shovel" (1 a 4, ver _apply_shovel_level).
 @export_range(1, 10) var shovel_level: int = 1
 
+@export_group("Movimento")
+## Correr (Shift andando pra frente): mesma proporção 1,5× do andar usada em jogos de coleta.
+@export var sprint_multiplier: float = 1.5
+## Taxas (1/s) de aproximação da velocidade alvo: arranque com peso, parada mais firme.
+@export var ground_acceleration: float = 12.0
+@export var ground_deceleration: float = 16.0
+## Fração do controle no ar.
+@export_range(0.0, 1.0, 0.05) var air_control: float = 0.35
+## Ainda dá pra pular logo depois de sair da borda.
+@export var coyote_time: float = 0.15
+## Pulo apertado um pouco antes de tocar o chão também sai.
+@export var jump_buffer_time: float = 0.12
+## Queda mais pesada que a subida (pulo menos "flutuante").
+@export var fall_gravity_multiplier: float = 1.6
+@export_group("Câmera")
+@export var view_bobbing: bool = true
+## Amplitudes do balanço (m) a velocidade de andar; correndo cresce junto.
+@export var head_bob_vertical: float = 0.035
+@export var head_bob_horizontal: float = 0.02
+
 @export_group("Vida")
 @export var max_health: float = 100.0
+## Janela sem dano depois de um acerto (evita dano em rajada de vários inimigos no mesmo frame).
+@export var invulnerability_after_damage: float = 0.25
 
 @export_group("Golpe com a Pá")
 @export var attack_damage: float = 25.0
@@ -188,6 +210,14 @@ var _held_models: Dictionary = {}
 ## Distância percorrida desde o último passo (sons de passos na areia).
 var _step_distance: float = 0.0
 const STEP_LENGTH: float = 1.15
+## Fase do balanço da câmera (rad): avança PI por passo, o passo toca no vale.
+var _bob_phase: float = 0.0
+var _bob_weight: float = 0.0
+var _coyote_left: float = 0.0
+var _jump_buffer_left: float = 0.0
+var _invulnerable_until_ms: int = 0
+var _hit_feedback: Node = null
+const HIT_FEEDBACK_SCRIPT: Script = preload("res://gameplay/player/hit_feedback.gd")
 var _dig_target: BuriedSpot = null
 var _dig_is_careful: bool = false
 ## Cliente: request_pickup pendente até este instante (evita pedidos repetidos com E).
@@ -245,6 +275,8 @@ func _ready() -> void:
 	_on_health_changed(health, max_health)
 
 	_setup_threat_hud()
+	_hit_feedback = HIT_FEEDBACK_SCRIPT.new()
+	add_child(_hit_feedback)
 
 	_apply_backpack_capacity()
 	_apply_shovel_level()
@@ -300,6 +332,7 @@ func _ensure_default_input_mappings() -> void:
 	_add_mouse_if_empty("use_tool", MOUSE_BUTTON_LEFT)
 	_add_mouse_if_empty("careful_dig", MOUSE_BUTTON_RIGHT)
 	_add_key_if_empty("attack", KEY_F)
+	_add_key_if_empty("sprint", KEY_SHIFT)
 	_add_key_if_empty("interact", KEY_E)
 	_add_key_if_empty("drop", KEY_Q)
 	_add_key_if_empty("slot_1", KEY_1)
@@ -354,11 +387,21 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if not is_on_floor():
-		velocity += get_gravity() * delta
-
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	var on_floor: bool = is_on_floor()
+	if not on_floor:
+		var gravity: Vector3 = get_gravity()
+		if velocity.y < 0.0:
+			gravity *= fall_gravity_multiplier
+		velocity += gravity * delta
+	_coyote_left = coyote_time if on_floor else maxf(_coyote_left - delta, 0.0)
+	if Input.is_action_just_pressed("jump"):
+		_jump_buffer_left = jump_buffer_time
+	else:
+		_jump_buffer_left = maxf(_jump_buffer_left - delta, 0.0)
+	if _jump_buffer_left > 0.0 and _coyote_left > 0.0:
 		velocity.y = jump_velocity
+		_jump_buffer_left = 0.0
+		_coyote_left = 0.0
 
 	var input_dir: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -366,12 +409,8 @@ func _physics_process(delta: float) -> void:
 	direction = _apply_chaos_effects(direction, delta)
 	if _knockback_time > 0.0:
 		_knockback_time -= delta
-	elif direction != Vector3.ZERO:
-		velocity.x = direction.x * speed
-		velocity.z = direction.z * speed
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, speed)
-		velocity.z = move_toward(velocity.z, 0.0, speed)
+		_apply_horizontal_movement(direction, input_dir, on_floor, delta)
 
 	move_and_slide()
 	_update_footsteps(delta)
@@ -828,6 +867,10 @@ func take_damage(amount: float) -> void:
 	# Num jogador remoto a vida não é nossa: quem acerta usa apply_damage.rpc_id(dono).
 	if not is_local() or amount <= 0.0 or health <= 0.0:
 		return
+	var now: int = Time.get_ticks_msec()
+	if now < _invulnerable_until_ms:
+		return
+	_invulnerable_until_ms = now + int(invulnerability_after_damage * 1000.0)
 	health = clampf(health - amount, 0.0, max_health)
 	health_changed.emit(health, max_health)
 	_shake_camera(0.03, 0.25)
@@ -943,11 +986,19 @@ func _on_swing_hit() -> void:
 			target.call("take_damage", damage, global_position)  # EnemyBase: origem do golpe
 		else:
 			target.call("take_damage", damage)
+		_register_hit(target, damage)
 		hits += 1
 
 	if hits > 0:
 		_shake_camera(0.02, 0.15)
-		_show_temporary_message("⚔️ Golpe com a pá! (%d de dano)" % int(damage), Color(1.0, 0.75, 0.4), 0.8)
+
+
+## Hitmarker na mira + número de dano no alvo (só no jogador local).
+func _register_hit(target: Node3D, damage: float) -> void:
+	if _hit_feedback == null or not is_instance_valid(target):
+		return
+	var killed: bool = target.has_method("is_alive") and not bool(target.call("is_alive"))
+	_hit_feedback.show_hit(target.global_position + Vector3.UP * 0.6, damage, killed)
 
 
 # ---------------------------------------------------------------------------
@@ -1424,6 +1475,7 @@ func attack_pitchfork() -> int:
 			target.call("request_hit", pitchfork_damage, origin)
 		elif target.has_method("take_damage"):
 			target.call("take_damage", pitchfork_damage, origin)
+		_register_hit(target, pitchfork_damage)
 
 		if target.has_method("request_stun") and not (target.has_method("has_simulation_authority") and target.call("has_simulation_authority")):
 			target.call("request_stun", pitchfork_stun)
@@ -1560,6 +1612,7 @@ func fire_harpoon() -> int:
 				enemy.call("request_hit", harpoon_damage, origin)
 			elif enemy.has_method("take_damage"):
 				enemy.call("take_damage", harpoon_damage, origin)
+			_register_hit(enemy, harpoon_damage)
 
 			if enemy.has_method("request_stun") and not (enemy.has_method("has_simulation_authority") and enemy.call("has_simulation_authority")):
 				enemy.call("request_stun", harpoon_stun)
@@ -1678,17 +1731,51 @@ func _place_net_trap() -> bool:
 	return true
 
 
-## Passos na areia: um passo a cada STEP_LENGTH metros percorridos no chão
-## (andar mais depressa = ritmo mais rápido).
+## Velocidade alvo: andar, ou correr com Shift indo pra frente (sem correr agachado na escavação).
+func get_target_speed(input_dir: Vector2) -> float:
+	var sprinting: bool = InputMap.has_action("sprint") and Input.is_action_pressed("sprint") 		and input_dir.y < -0.1 and not dig_animator.is_playing()
+	return speed * (sprint_multiplier if sprinting else 1.0)
+
+
+## Aproxima a velocidade horizontal do alvo de forma exponencial (independe do FPS).
+func _apply_horizontal_movement(direction: Vector3, input_dir: Vector2, on_floor: bool, delta: float) -> void:
+	var target: Vector3 = direction * get_target_speed(input_dir)
+	var rate: float = ground_acceleration if direction != Vector3.ZERO else ground_deceleration
+	if not on_floor:
+		rate *= air_control
+	var flat: Vector2 = Vector2(velocity.x, velocity.z).lerp(Vector2(target.x, target.z), 1.0 - exp(-rate * delta))
+	velocity.x = flat.x
+	velocity.z = flat.y
+
+
+## Passos e balanço da câmera na mesma fase: um passo a cada STEP_LENGTH metros,
+## e o som sai quando a câmera chega ao ponto mais baixo (pé tocando o chão).
 func _update_footsteps(delta: float) -> void:
-	var horizontal: Vector2 = Vector2(velocity.x, velocity.z)
-	if not footsteps_enabled or not is_on_floor() or horizontal.length() < 0.5:
-		_step_distance = STEP_LENGTH * 0.6  # o 1.o passo sai pouco depois de arrancar
+	var horizontal: float = Vector2(velocity.x, velocity.z).length()
+	var walking: bool = is_on_floor() and horizontal >= 0.5
+	_bob_weight = move_toward(_bob_weight, 1.0 if walking else 0.0, delta * 6.0)
+	if walking:
+		var prev_step: int = int(floor(_bob_phase / PI))
+		_bob_phase += horizontal * delta * PI / STEP_LENGTH
+		if int(floor(_bob_phase / PI)) != prev_step and footsteps_enabled:
+			SFX.play_at(SFX.FOOTSTEP_SAND, global_position, footsteps_volume_db + randf_range(-1.5, 1.5), 0.05)
+	else:
+		# O 1.o passo sai pouco depois de arrancar.
+		_bob_phase = PI * 0.4
+	_apply_head_bob(horizontal)
+
+
+func _apply_head_bob(horizontal: float) -> void:
+	if camera == null:
 		return
-	_step_distance += horizontal.length() * delta
-	if _step_distance >= STEP_LENGTH:
-		_step_distance = 0.0
-		SFX.play_at(SFX.FOOTSTEP_SAND, global_position, footsteps_volume_db + randf_range(-1.5, 1.5), 0.05)
+	if not view_bobbing:
+		camera.position = Vector3.ZERO
+		return
+	var amp: float = _bob_weight * clampf(horizontal / maxf(speed, 0.01), 0.0, 1.6)
+	# Vertical: |sin| invertido dá um vale por passo; horizontal: um vaivém a cada 2 passos.
+	var y: float = -absf(sin(_bob_phase)) * head_bob_vertical * amp
+	var x: float = sin(_bob_phase * 0.5) * head_bob_horizontal * amp
+	camera.position = Vector3(x, y + head_bob_vertical * amp * 0.5, 0.0)
 
 
 ## Disparo do Pulso Magnético (#44): onda expansiva eletromagnética.
@@ -1745,6 +1832,7 @@ func fire_magnetic_pulse() -> int:
 			enemy.call("request_hit", magnetic_pulse_damage, origin)
 		elif enemy.has_method("take_damage"):
 			enemy.call("take_damage", magnetic_pulse_damage, origin)
+		_register_hit(enemy, magnetic_pulse_damage)
 
 		if enemy.has_method("request_stun") and not (enemy.has_method("has_simulation_authority") and enemy.call("has_simulation_authority")):
 			enemy.call("request_stun", magnetic_pulse_stun)
