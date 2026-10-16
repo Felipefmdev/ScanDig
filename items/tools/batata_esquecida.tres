@@ -6,11 +6,12 @@
 script = ExtResource("1_tool")
 id = &"batata_esquecida"
 display_name = "Batata Esquecida"
-description = "Sobrou de alguma colheita. Recupera 25 de vida."
+description = "Sobrou de alguma colheita. Recupera 25 de vida e mata a fome."
 price = 0
 category = 2
 charges = 1
 color = Color(0.72, 0.55, 0.32, 1)
 heal_amount = 25.0
+hunger_restore = 40.0
 dig_maps = PackedStringArray("campo")
 dig_weight = 1.0

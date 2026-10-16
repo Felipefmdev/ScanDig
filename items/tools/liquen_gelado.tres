@@ -6,11 +6,12 @@
 script = ExtResource("1_tool")
 id = &"liquen_gelado"
 display_name = "Líquen Gelado"
-description = "Crocante de gelo. Recupera 15 de vida."
+description = "Crocante de gelo. Recupera 15 de vida e mata a fome."
 price = 0
 category = 2
 charges = 1
 color = Color(0.6, 0.85, 0.75, 1)
 heal_amount = 15.0
+hunger_restore = 22.0
 dig_maps = PackedStringArray("geleira")
 dig_weight = 2.0

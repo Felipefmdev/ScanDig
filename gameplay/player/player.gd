@@ -37,6 +37,22 @@ signal died
 ## Janela sem dano depois de um acerto (evita dano em rajada de vários inimigos no mesmo frame).
 @export var invulnerability_after_damage: float = 0.25
 
+@export_group("Fome")
+## A fome só corre na expedição (num mapa); no lobby fica parada.
+@export var max_hunger: float = 100.0
+## Pontos de fome perdidos por segundo (100 → 0 em ~16 min).
+@export var hunger_decay_per_sec: float = 0.1
+## Saciado acima desta fração: regenera vida gastando fome.
+@export_range(0.0, 1.0, 0.05) var hunger_regen_threshold: float = 0.6
+@export var regen_interval: float = 2.0
+@export var regen_health: float = 4.0
+@export var regen_hunger_cost: float = 2.0
+## Segundos sem levar dano antes de começar a regenerar.
+@export var regen_delay_after_damage: float = 5.0
+## Faminto (fome 0): dano a cada starve_interval.
+@export var starve_interval: float = 3.0
+@export var starve_damage: float = 4.0
+
 @export_group("Golpe com a Pá")
 @export var attack_damage: float = 25.0
 @export var attack_range: float = 2.2
@@ -222,6 +238,13 @@ var _bob_weight: float = 0.0
 var _coyote_left: float = 0.0
 var _jump_buffer_left: float = 0.0
 var _invulnerable_until_ms: int = 0
+var hunger: float = 100.0
+var _regen_timer: float = 0.0
+var _starve_timer: float = 0.0
+var _last_damage_ms: int = -100000
+var _hunger_bar: ProgressBar = null
+var _hunger_label: Label = null
+signal hunger_changed(current: float, max_value: float)
 var _hit_feedback: Node = null
 const HIT_FEEDBACK_SCRIPT: Script = preload("res://gameplay/player/hit_feedback.gd")
 var _dig_target: BuriedSpot = null
@@ -279,6 +302,8 @@ func _ready() -> void:
 	health = max_health
 	health_changed.connect(_on_health_changed)
 	_on_health_changed(health, max_health)
+	hunger = max_hunger
+	_setup_hunger_hud()
 
 	_setup_threat_hud()
 	_hit_feedback = HIT_FEEDBACK_SCRIPT.new()
@@ -420,6 +445,8 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_update_footsteps(delta)
+	if is_local() and health > 0.0 and _current_map_id() != "":
+		tick_hunger(delta)
 
 	# Aplica balanço procedural (sway) na haste do detector enquanto caminha
 	if detector != null:
@@ -881,6 +908,7 @@ func take_damage(amount: float) -> void:
 	if now < _invulnerable_until_ms:
 		return
 	_invulnerable_until_ms = now + int(invulnerability_after_damage * 1000.0)
+	_last_damage_ms = now
 	health = clampf(health - amount, 0.0, max_health)
 	health_changed.emit(health, max_health)
 	_shake_camera(0.03, 0.25)
@@ -930,7 +958,77 @@ func _respawn() -> void:
 		head.rotation.x = 0.0
 	health = max_health
 	health_changed.emit(health, max_health)
+	set_hunger(max_hunger * 0.5)
 	get_tree().create_timer(0.35).timeout.connect(func() -> void: SFX.play_ui(SFX.RESPAWN, -6.0))
+
+
+## Fome (estilo sobrevivência leve): cai com o tempo; saciado regenera vida, faminto perde.
+func tick_hunger(delta: float) -> void:
+	set_hunger(hunger - hunger_decay_per_sec * delta)
+	if hunger <= 0.0:
+		_regen_timer = 0.0
+		_starve_timer += delta
+		if _starve_timer >= starve_interval:
+			_starve_timer = 0.0
+			_invulnerable_until_ms = 0  # a fome não respeita a janela pós-golpe
+			take_damage(starve_damage)
+			_show_temporary_message("🍽️ Faminto! Cave e coma alguma coisa.", UiPalette.ORANGE, 1.5)
+		return
+	_starve_timer = 0.0
+	var rested: bool = Time.get_ticks_msec() - _last_damage_ms >= int(regen_delay_after_damage * 1000.0)
+	if health < max_health and hunger >= max_hunger * hunger_regen_threshold and rested:
+		_regen_timer += delta
+		if _regen_timer >= regen_interval:
+			_regen_timer = 0.0
+			heal(regen_health)
+			set_hunger(hunger - regen_hunger_cost)
+	else:
+		_regen_timer = 0.0
+
+
+func set_hunger(value: float) -> void:
+	var v: float = clampf(value, 0.0, max_hunger)
+	if is_equal_approx(v, hunger):
+		return
+	hunger = v
+	hunger_changed.emit(hunger, max_hunger)
+	_refresh_hunger_hud()
+
+
+## Barra de fome logo acima da de vida (criada por código: o editor não a grava, #47).
+func _setup_hunger_hud() -> void:
+	var panel: Node = health_bar.get_parent() if health_bar != null else null
+	if panel == null:
+		return
+	_hunger_label = Label.new()
+	_hunger_label.name = "HungerLabel"
+	if health_label != null:
+		for prop: StringName in [&"font_color", &"font_outline_color"]:
+			_hunger_label.add_theme_color_override(prop, health_label.get_theme_color(prop))
+		_hunger_label.add_theme_constant_override(&"outline_size", 6)
+		_hunger_label.add_theme_font_size_override(&"font_size", 16)
+	_hunger_bar = ProgressBar.new()
+	_hunger_bar.name = "HungerBar"
+	_hunger_bar.custom_minimum_size = Vector2(280, 12)
+	_hunger_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hunger_bar.show_percentage = false
+	_hunger_bar.step = 0.01
+	var fill: StyleBoxFlat = StyleBoxFlat.new()
+	fill.bg_color = UiPalette.ORANGE
+	fill.set_corner_radius_all(3)
+	_hunger_bar.add_theme_stylebox_override(&"fill", fill)
+	panel.add_child(_hunger_label)
+	panel.add_child(_hunger_bar)
+	_refresh_hunger_hud()
+
+
+func _refresh_hunger_hud() -> void:
+	if _hunger_bar == null:
+		return
+	_hunger_bar.max_value = max_hunger
+	_hunger_bar.value = hunger
+	var low: bool = hunger <= max_hunger * 0.25
+	_hunger_label.text = ("🍖 Fome: %d / %d" % [int(ceilf(hunger)), int(max_hunger)]) + ("  (com fome!)" if low else "")
 
 
 func _on_health_changed(current: float, max_value: float) -> void:
@@ -1421,13 +1519,15 @@ func _flash_lantern(c: CarriedItem) -> void:
 func eat(c: CarriedItem) -> bool:
 	if c == null or c.tool_data == null or c.tool_data.category != ToolData.Category.FOOD:
 		return false
-	if health >= max_health:
-		_show_temporary_message("Sem fome agora: a vida já está cheia.", Color(0.9, 0.9, 0.9), 1.0)
+	if health >= max_health and hunger >= max_hunger - 0.5:
+		_show_temporary_message("Sem fome agora.", Color(0.9, 0.9, 0.9), 1.0)
 		return false
 	var amount: float = c.tool_data.heal_amount
 	heal(amount)
+	set_hunger(hunger + c.tool_data.hunger_restore)
 	SFX.play_ui(SFX.MEDKIT, -6.0, 0.15)
-	_show_temporary_message("😋 %s: +%d de vida" % [c.tool_name, int(amount)], Color(0.5, 1.0, 0.55), 1.2)
+	_show_temporary_message("😋 %s: +%d vida, +%d saciedade" % [c.tool_name, int(amount), int(c.tool_data.hunger_restore)],
+		Color(0.5, 1.0, 0.55), 1.2)
 	# Sem o aviso "acabou" do _consume: comer é sempre uma unidade só.
 	if c.consume_charge():
 		var idx: int = inventory.slots.find(c)
@@ -1437,6 +1537,14 @@ func eat(c: CarriedItem) -> bool:
 		inventory.notify_changed()
 	_use_cooldown = 0.6
 	return true
+
+
+## Come a primeira comida da mochila (bots e atalhos). Falso se não havia ou não comeu.
+func eat_any_food() -> bool:
+	for c: CarriedItem in inventory.slots:
+		if c != null and c.tool_data != null and c.tool_data.category == ToolData.Category.FOOD:
+			return eat(c)
+	return false
 
 
 ## Comidas que podem sair do chão de `map_id`.

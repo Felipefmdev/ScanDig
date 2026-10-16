@@ -113,7 +113,7 @@ func test_eating_heals_and_consumes() -> void:
 	var worm: ToolData = load("res://items/tools/minhoca.tres") as ToolData
 	var c: CarriedItem = CarriedItem.create_from_tool_data(worm)
 	player.inventory.add_item(c)
-	assert_false(player.eat(c), "vida cheia: não come")
+	assert_false(player.eat(c), "vida e fome cheias: não come")
 	player.health = 50.0
 	assert_true(player.eat(c))
 	assert_almost_eq(player.health, 50.0 + worm.heal_amount, 0.001)
@@ -124,3 +124,56 @@ func test_food_is_not_purchasable() -> void:
 	var td: ToolData = load("res://items/tools/batata_esquecida.tres") as ToolData
 	assert_eq(td.category, ToolData.Category.FOOD)
 	assert_lte(td.price, 0, "GameState recusa compra com preço 0")
+
+
+# --- Fome --------------------------------------------------------------------
+
+func test_hunger_bar_exists_and_tracks_value() -> void:
+	var player: Player = _spawn_player()
+	assert_not_null(player._hunger_bar, "barra de fome no HUD")
+	player.set_hunger(40.0)
+	assert_almost_eq(player._hunger_bar.value, 40.0, 0.001)
+	assert_string_contains(player._hunger_label.text, "40")
+
+
+func test_hunger_decays_and_starving_hurts() -> void:
+	var player: Player = _spawn_player()
+	player.tick_hunger(10.0)
+	assert_almost_eq(player.hunger, player.max_hunger - player.hunger_decay_per_sec * 10.0, 0.01, "cai com o tempo")
+	player.set_hunger(0.0)
+	var hp: float = player.health
+	player.tick_hunger(player.starve_interval + 0.01)
+	assert_lt(player.health, hp, "faminto perde vida")
+
+
+func test_well_fed_regenerates_using_hunger() -> void:
+	var player: Player = _spawn_player()
+	player.health = 50.0
+	player.set_hunger(90.0)
+	player._last_damage_ms = -100000
+	player.tick_hunger(player.regen_interval + 0.01)
+	assert_gt(player.health, 50.0, "saciado regenera")
+	assert_lt(player.hunger, 90.0 - player.hunger_decay_per_sec, "regenerar gasta fome")
+
+
+func test_no_regen_when_hungry_or_recently_hit() -> void:
+	var player: Player = _spawn_player()
+	player.health = 50.0
+	player.set_hunger(30.0)
+	player._last_damage_ms = -100000
+	player.tick_hunger(player.regen_interval + 0.01)
+	assert_almost_eq(player.health, 50.0, 0.001, "com fome não regenera")
+	player.set_hunger(90.0)
+	player._last_damage_ms = Time.get_ticks_msec()
+	player.tick_hunger(player.regen_interval + 0.01)
+	assert_almost_eq(player.health, 50.0, 0.001, "logo depois de apanhar não regenera")
+
+
+func test_eating_restores_hunger_even_at_full_health() -> void:
+	var player: Player = _spawn_player()
+	player.set_hunger(20.0)
+	var potato: ToolData = load("res://items/tools/batata_esquecida.tres") as ToolData
+	var c: CarriedItem = CarriedItem.create_from_tool_data(potato)
+	player.inventory.add_item(c)
+	assert_true(player.eat(c), "vida cheia mas com fome: come")
+	assert_almost_eq(player.hunger, 20.0 + potato.hunger_restore, 0.001)

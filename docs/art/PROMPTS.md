@@ -214,3 +214,97 @@ Itens da Geleira (proposta, ainda não estão no catálogo):
 | bussola_antiga.jpg | an antique explorer compass in a leather case with frost |
 | cenoura_ouro.jpg | a golden carrot from a snowman nose (easter egg) |
 | fossil_gelo.jpg | an ammonite fossil frozen in a block of ice |
+
+## Itens de museu sem modelo (mapas 3–5)
+
+Gerar com estes nomes; depois o modelo low-poly é feito a partir da imagem.
+
+**adaga_cerimonial.jpg**
+```
+An ancient ceremonial dagger with a curved bronze-iron blade, engraved hilt wrapped in faded red cloth and a small turquoise stone in the pommel, sand-worn, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**bussola_congelada.jpg**
+```
+A brass pocket compass trapped inside a cracked block of blue ice, the needle frozen, frost crystals and tiny bubbles in the ice, faint pale glow, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**crampon_enferrujado.jpg**
+```
+An old mountaineering crampon, rusty iron spikes in a hinged frame with frayed leather straps and a bent buckle, bits of ice stuck on it, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**cristal_eco.jpg**
+```
+A tall jagged crystal cluster from a volcanic crater, translucent violet with concentric ripple rings glowing inside like sound waves, dark basalt base, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**cronometro_explorador.jpg**
+```
+A silver explorer's stopwatch on a short chain, round case with a large crown button, cracked glass over a white dial with red second hand, dented and frosted, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**escaravelho_jade.jpg**
+```
+A carved green jade scarab amulet, polished wings with gold-inlaid lines, tiny loop on top for a cord, chipped edges and sand in the grooves, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**geodo_estrelar.jpg**
+```
+A broken-open round geode, rough grey crust outside, inside a cavity full of dark blue crystals with tiny glowing star-like specks, like a night sky, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**idolo_jade.jpg**
+```
+A small squat jade idol statue of a smiling seated figure with big ears and folded arms, deep green stone with gold eye inlays, moss and cracks on the base, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**lanterna_expedicao.jpg**
+```
+An old aluminium kerosene expedition lantern with a wire cage around the glass chimney, dented body, bail handle, faded expedition number painted on the side, frost on top, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**ligaduras_mumia.jpg**
+```
+A bundle of ancient mummy linen bandages loosely rolled, yellowed and torn, with faded painted hieroglyph strips and a small bronze clasp, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**mascara_ouro.jpg**
+```
+A golden funerary mask with calm closed eyes, stylized nose and lips, striped headdress edges, dark blue inlay lines, scratched and slightly dented, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**medalha_polar.jpg**
+```
+A gold medal of a polar expedition hanging from a faded blue and white ribbon, embossed sailing ship and snowflake, engraved rim, tarnished, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**nucleo_adormecido.jpg**
+```
+A large dormant alien-looking core the size of a football, dark obsidian sphere with cracks leaking soft orange magma light, slow breathing glow, rocky crust, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**nucleo_guardiao.jpg**
+```
+A carved stone guardian core, a heavy rune-covered sphere set in a broken stone socket, faint cyan glowing runes, moss and chips on the stone, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, worn and weathered with rust, chipped paint and speckles, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+
+## Comidas escavadas
+
+Comida que sai do chão ao cavar fora de um sinal (curam ao comer).
+
+**minhoca.jpg**
+```
+A plump earthworm wriggling in an S-shape, glossy pinkish segmented body with a lighter band, little clumps of dark soil on it, cute but gross, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, slightly dirty with soil specks, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**tatuira.jpg**
+```
+A tiny beach mole crab (sand crab), oval pale sandy shell, short feathery legs tucked under, a few grains of wet sand on it, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, slightly dirty with soil specks, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**marisco.jpg**
+```
+A closed mussel/clam shell, dark purple-blue ridged shell with a pearly edge, small strand of seaweed and wet sand stuck to it, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, slightly dirty with soil specks, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**batata_esquecida.jpg**
+```
+A forgotten lumpy potato dug from a field, brown skin with dirt patches and a couple of small sprouting eyes, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, slightly dirty with soil specks, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**cogumelo_cripta.jpg**
+```
+A cluster of three pale cave mushrooms growing from a chunk of old stone, creamy caps with faint bluish spots, thin stems, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, slightly dirty with soil specks, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**liquen_gelado.jpg**
+```
+A clump of frosty arctic lichen on a small flat stone, mint green and grey branching tufts covered in tiny ice crystals, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, slightly dirty with soil specks, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```
+**larva_termica.jpg**
+```
+A chubby volcanic grub larva, segmented orange-red body glowing softly from inside like embers, small dark head, resting on a bit of black ash, stylized low-poly 3D game asset, faceted flat-shaded polygons, thick hand-drawn black outline, cel shading with 2-3 tones, slightly dirty with soil specks, warm muted palette, single object centered, three-quarter view, plain beige background, soft drop shadow
+```

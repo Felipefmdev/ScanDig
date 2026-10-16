@@ -6,11 +6,12 @@
 script = ExtResource("1_tool")
 id = &"marisco"
 display_name = "Marisco"
-description = "Concha fechada, ainda fresca. Recupera 18 de vida."
+description = "Concha fechada, ainda fresca. Recupera 18 de vida e mata a fome."
 price = 0
 category = 2
 charges = 1
 color = Color(0.35, 0.3, 0.4, 1)
 heal_amount = 18.0
+hunger_restore = 25.0
 dig_maps = PackedStringArray("praia")
 dig_weight = 1.5

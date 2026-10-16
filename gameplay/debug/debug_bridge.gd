@@ -494,6 +494,7 @@ func _start_monitoring() -> void:
 func _process(delta: float) -> void:
 	if _start_msec > 0:
 		_game_time += delta
+	_bot_auto_eat(delta)
 	if not _monitoring:
 		return
 	var now: float = _elapsed()
@@ -1606,6 +1607,21 @@ func _nearest_remote_player(me: Node3D) -> Node3D:
 ## Os altares de chefe (BossAltar e subclasses) também são BuriedSpot; goto_spot ignora-os.
 static func _is_altar(n: Node) -> bool:
 	return n is BossAltar
+
+
+## O bot come o que cavou quando a fome passa de 60% (como um jogador faria), para os
+## roteiros de pacing não morrerem de fome sem ter um passo próprio para isso.
+var _auto_eat_timer: float = 0.0
+func _bot_auto_eat(delta: float) -> void:
+	_auto_eat_timer -= delta
+	if _auto_eat_timer > 0.0:
+		return
+	_auto_eat_timer = 1.0
+	var p: Node = _player()
+	if p == null or not ("hunger" in p) or not p.has_method("eat_any_food"):
+		return
+	if float(p.get("hunger")) < float(p.get("max_hunger")) * 0.4:
+		p.call("eat_any_food")
 
 
 func _player() -> Node3D:
