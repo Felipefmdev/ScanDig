@@ -3,6 +3,7 @@ extends Node3D
 ## Auditoria de arte (#61): instancia UMA cena (IA desligada), enquadra-a pela AABB das malhas
 ## e grava capturas de frente, 3/4 e lado. Uso:
 ##   godot --path . res://gameplay/debug/art_audit.tscn -- --subject=res://...tscn --out=C:/dir/nome
+##   (ou --subject=item:<id> para um item de museu de ItemModels)
 ## Grava <out>_0.png, <out>_1.png, <out>_2.png e sai. A frente do modelo é -Z (look_at do Godot).
 
 const BG: Color = Color(0.88, 0.86, 0.8)
@@ -12,6 +13,8 @@ const VIEWS: Array[float] = [0.0, 35.0, 90.0]
 var _subject: Node3D = null
 var _out: String = ""
 var _cam: Camera3D = null
+## Altura relativa da câmara (y da direção de vista antes de normalizar).
+var _elevation: float = 0.35
 
 
 func _ready() -> void:
@@ -45,8 +48,13 @@ func _ready() -> void:
 	sun.shadow_enabled = true
 	add_child(sun)
 
-	var scene: PackedScene = load(path) as PackedScene
-	_subject = scene.instantiate() as Node3D
+	if path.begins_with("item:"):
+		# Itens de museu (#61): --subject=item:<id>, vistos mais de cima (estão deitados)
+		_subject = ItemModels.build(path.trim_prefix("item:"))
+		_elevation = 0.9
+	else:
+		var scene: PackedScene = load(path) as PackedScene
+		_subject = scene.instantiate() as Node3D
 	add_child(_subject)
 	_subject.process_mode = Node.PROCESS_MODE_DISABLED
 	var hud: CanvasLayer = _subject.get_node_or_null(^"BossHud") as CanvasLayer
@@ -77,7 +85,7 @@ func _capture() -> void:
 	var dist: float = radius / sin(deg_to_rad(_cam.fov * 0.5)) * 1.05
 	for i: int in VIEWS.size():
 		var ang: float = deg_to_rad(VIEWS[i])
-		var dir: Vector3 = Vector3(sin(ang), 0.35, -cos(ang)).normalized()
+		var dir: Vector3 = Vector3(sin(ang), _elevation, -cos(ang)).normalized()
 		_cam.look_at_from_position(center + dir * dist, center)
 		for f: int in 4:
 			await get_tree().process_frame

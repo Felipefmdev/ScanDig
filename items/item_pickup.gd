@@ -18,6 +18,7 @@ var net_position: Vector3 = Vector3.ZERO
 var net_rotation: Vector3 = Vector3.ZERO
 var _pending_impulse: Vector3 = Vector3.ZERO
 var _mesh: MeshInstance3D = null
+var _model: Node3D = null
 var _label: Label3D = null
 
 
@@ -106,6 +107,8 @@ func _ready() -> void:
 		var visual: Node = carried.world_scene.instantiate()
 		add_child(visual)
 		box.size = Vector3(0.35, 0.25, 0.9)
+	elif _item_model() != null:
+		add_child(_item_model())
 	else:
 		_mesh = MeshInstance3D.new()
 		var cube: BoxMesh = BoxMesh.new()
@@ -139,6 +142,13 @@ func take() -> CarriedItem:
 	carried = null
 	queue_free()
 	return c
+
+
+## Modelo low-poly do item (#61), construído uma vez; null se o item não tiver modelo.
+func _item_model() -> Node3D:
+	if _model == null and carried != null and carried.item != null:
+		_model = ItemModels.build(carried.item.id, carried.is_rare_variant)
+	return _model
 
 
 static func make_material(item: ItemData, is_rare: bool) -> StandardMaterial3D:
