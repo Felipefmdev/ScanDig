@@ -11,5 +11,6 @@ description = "Empurra criaturas e puxa metal. Banca da Cratera."
 price = 15000
 category = 0
 charges = -1
+durability = 60
 color = Color(0.5, 0.35, 0.85, 1)
 world_scene = ExtResource("2_world")

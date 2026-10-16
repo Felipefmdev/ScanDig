@@ -1485,6 +1485,7 @@ func _handle_attack_action() -> void:
 	if _attack_buffer_left > 0.0:
 		_attack_buffer_left = 0.0
 		var c: CarriedItem = inventory.get_selected()
+		var cooldown_before: float = _use_cooldown
 		if c != null and c.tool_id == TOOL_FORCADO:
 			if _use_cooldown <= 0.0:
 				_attack_pitchfork()
@@ -1496,6 +1497,8 @@ func _handle_attack_action() -> void:
 				_fire_magnetic_pulse()
 		else:
 			_perform_attack()
+		if c != null and _use_cooldown > cooldown_before:
+			wear_tool(c)
 
 
 func get_attack_damage() -> float:
@@ -2115,6 +2118,30 @@ func _handle_use_tool_action() -> void:
 	if c.tool_data.category == ToolData.Category.FOOD:
 		eat(c)
 		return
+	var cooldown_before: float = _use_cooldown
+	_dispatch_tool_use(c)
+	if _use_cooldown > cooldown_before:
+		wear_tool(c)
+
+
+## Arma usada de facto (a recarga começou): gasta um uso e parte quando acaba.
+func wear_tool(c: CarriedItem) -> void:
+	if c == null or c.wear < 0:
+		return
+	var broke: bool = c.use_wear()
+	if broke:
+		var idx: int = inventory.slots.find(c)
+		if idx >= 0:
+			inventory.remove_at(idx)
+		SFX.play_ui(SFX.PLAYER_DEATH, -8.0, 0.2)
+		_show_temporary_message("🔧 %s partiu de tanto uso! Compre outro na banca." % c.tool_name, UiPalette.ORANGE, 2.2)
+	else:
+		if c.wear == int(ceilf(float(c.tool_data.durability) * 0.2)):
+			_show_temporary_message("🔧 %s está gasto (20%%)." % c.tool_name, Color(1.0, 0.85, 0.5), 1.6)
+		inventory.notify_changed()
+
+
+func _dispatch_tool_use(c: CarriedItem) -> void:
 	match c.tool_id:
 		TOOL_SLINGSHOT:
 			_fire_slingshot()

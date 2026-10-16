@@ -11,5 +11,6 @@ description = "Arma à distância. Atira pedras (20 de dano). Recarga 0.8 s."
 price = 250
 category = 0
 charges = -1
+durability = 150
 color = Color(0.55, 0.35, 0.2, 1)
 world_scene = ExtResource("2_world")

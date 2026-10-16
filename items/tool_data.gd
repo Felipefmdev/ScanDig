@@ -17,6 +17,8 @@ enum Category {
 @export var category: Category = Category.WEAPON
 ## Cargas iniciais para consumíveis (-1 = infinito).
 @export var charges: int = -1
+## Armas: usos até partir (estudo How to Fish: as iscas perdem-se). 0 = não gasta.
+@export var durability: int = 0
 @export var color: Color = Color(0.9, 0.6, 0.2)
 ## Visual opcional quando está no chão; sem cena, usa uma caixa com `color`.
 @export var world_scene: PackedScene = null

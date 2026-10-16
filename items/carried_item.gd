@@ -17,6 +17,8 @@ var world_scene: PackedScene = null
 var tool_data: ToolData = null
 ## Cargas restantes de consumíveis (-1 = infinito).
 var charges: int = -1
+## Usos que faltam até a arma partir (-1 = não gasta). Ver ToolData.durability.
+var wear: int = -1
 
 
 static func create(p_item: ItemData, p_value: int, p_integrity: float, p_rare: bool, p_clean: bool = false) -> CarriedItem:
@@ -41,6 +43,7 @@ static func create_from_tool_data(td: ToolData) -> CarriedItem:
 	var c: CarriedItem = create_tool(td.id, td.display_name, td.world_scene)
 	c.tool_data = td
 	c.charges = td.charges
+	c.wear = td.durability if td.durability > 0 else -1
 	return c
 
 
@@ -55,6 +58,7 @@ func to_dict() -> Dictionary:
 		"clean": is_clean,
 		"tool_id": String(tool_id),
 		"charges": charges,
+		"wear": wear,
 	}
 
 
@@ -115,6 +119,11 @@ static func _tool_from_dict(d: Dictionary) -> CarriedItem:
 		if left < 1 or left > td.charges:
 			return null
 		c.charges = left
+	if td.durability > 0:
+		var w: Variant = d.get("wear", td.durability)
+		if not (w is int or w is float) or int(w) < 1 or int(w) > td.durability:
+			return null
+		c.wear = int(w)
 	return c
 
 
@@ -124,6 +133,21 @@ static func _is_safe_id(id: String) -> bool:
 
 
 ## Gasta uma carga. Devolve true se o item acabou (o chamador remove-o da mochila).
+## Gasta um uso da arma; verdadeiro quando partiu.
+func use_wear() -> bool:
+	if wear < 0:
+		return false
+	wear -= 1
+	return wear <= 0
+
+
+## 0..1 do que resta (1 se não gasta).
+func wear_ratio() -> float:
+	if wear < 0 or tool_data == null or tool_data.durability <= 0:
+		return 1.0
+	return float(wear) / float(tool_data.durability)
+
+
 func consume_charge() -> bool:
 	if charges < 0:
 		return false
@@ -137,6 +161,8 @@ func is_tool() -> bool:
 
 func get_display_name() -> String:
 	if is_tool():
+		if wear >= 0:
+			return "%s [%d%%]" % [tool_name, int(ceilf(wear_ratio() * 100.0))]
 		return tool_name if charges < 0 else "%s (x%d)" % [tool_name, charges]
 	if item == null:
 		return "Artefato Misterioso"

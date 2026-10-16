@@ -11,5 +11,6 @@ description = "Puxa inimigos e itens. Banca da Geleira Eterna."
 price = 6000
 category = 0
 charges = -1
+durability = 80
 color = Color(0.45, 0.6, 0.75, 1)
 world_scene = ExtResource("2_world")

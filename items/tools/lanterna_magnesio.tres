@@ -11,5 +11,6 @@ description = "Flash em cone que atordoa; os morcegos fogem. Banca das Ruínas."
 price = 2500
 category = 0
 charges = -1
+durability = 40
 color = Color(0.95, 0.95, 0.8, 1)
 world_scene = ExtResource("2_world")

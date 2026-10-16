@@ -11,7 +11,7 @@ func test_item_round_trip() -> void:
 	var c: CarriedItem = CarriedItem.create(MOEDA, 120, 0.8, true)
 	var d: Dictionary = c.to_dict()
 	assert_eq(d, {"kind": "item", "item_id": "moeda_antiga", "final_value": 120, "integrity": 0.8,
-		"rare": true, "clean": false, "tool_id": "", "charges": -1})
+		"rare": true, "clean": false, "tool_id": "", "charges": -1, "wear": -1})
 	var back: CarriedItem = CarriedItem.from_dict(d)
 	assert_not_null(back)
 	assert_eq(back.item, MOEDA)

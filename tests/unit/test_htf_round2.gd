@@ -161,3 +161,42 @@ func test_trigger_rearms_and_fails_quest_event_when_boss_leaves() -> void:
 	boss.leave_fight()
 	assert_false(trig.triggered, "pode ser acordado de novo")
 	assert_signal_emitted_with_parameters(trig, "finished", [false])
+
+
+# --- 6. Desgaste de ferramentas ----------------------------------------------
+
+func test_weapons_have_durability_and_consumables_do_not() -> void:
+	for id: String in ["estilingue", "forcado", "lanterna_magnesio", "arpao_corda", "pulso_magnetico"]:
+		var td: ToolData = load("res://items/tools/%s.tres" % id) as ToolData
+		assert_gt(td.durability, 0, "%s gasta" % id)
+	for id: String in ["kit_medico", "repelente", "dinamite", "minhoca"]:
+		var td2: ToolData = load("res://items/tools/%s.tres" % id) as ToolData
+		assert_eq(td2.durability, 0, "%s não usa desgaste" % id)
+
+
+func test_weapon_breaks_after_last_use() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	var td: ToolData = load("res://items/tools/forcado.tres") as ToolData
+	var c: CarriedItem = CarriedItem.create_from_tool_data(td)
+	assert_eq(c.wear, td.durability)
+	player.inventory.add_item(c)
+	c.wear = 2
+	player.wear_tool(c)
+	assert_eq(c.wear, 1)
+	assert_ne(player.inventory.slots.find(c), -1, "ainda inteiro")
+	player.wear_tool(c)
+	assert_eq(player.inventory.slots.find(c), -1, "partiu e saiu da mochila")
+
+
+func test_wear_survives_network_roundtrip_and_is_validated() -> void:
+	var td: ToolData = load("res://items/tools/estilingue.tres") as ToolData
+	var c: CarriedItem = CarriedItem.create_from_tool_data(td)
+	c.wear = 37
+	var back: CarriedItem = CarriedItem.from_dict(c.to_dict())
+	assert_not_null(back)
+	assert_eq(back.wear, 37)
+	var bad: Dictionary = c.to_dict()
+	bad["wear"] = td.durability + 50
+	assert_null(CarriedItem.from_dict(bad), "desgaste acima do novo é recusado")
+	assert_string_contains(back.get_display_name(), "%", "mostra o estado")

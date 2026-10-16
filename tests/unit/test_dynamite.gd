@@ -26,6 +26,8 @@ func test_sold_from_ruins_onwards() -> void:
 
 
 func test_blast_hits_enemies_items_and_thrower() -> void:
+	for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+		n.free()  # sobras de outros testes
 	var player: Player = PLAYER_SCENE.instantiate() as Player
 	add_child_autofree(player)
 	player.global_position = Vector3(2, 0, 0)
