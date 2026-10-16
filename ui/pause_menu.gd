@@ -4,7 +4,8 @@ extends CanvasLayer
 ## Menu de pausa (#77): Continuar, Configurações, Voltar à base, Sair da sessão, Sair do jogo.
 ## Em solo pausa a árvore; em coop não pausa (o player consulta is_open() e para o input local).
 ## Não abre com o carregamento, o resumo do dia ou o aviso de queda do host na tela.
-## Autoload CorePauseMenu. Ainda NÃO está ligado no Esc: a troca no player.gd é do Dev A.
+## Autoload CorePauseMenu. Abre e fecha pela ação "pause" (Esc); dentro das Configurações ou da
+## confirmação de saída, o Esc volta ao cartão.
 
 signal open_changed(open: bool)
 
@@ -52,6 +53,18 @@ func _ready() -> void:
 		return
 	_build()
 	root_control.visible = false
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_action_pressed(&"pause", false, true):
+		return
+	if _open and settings_menu.visible:
+		settings_menu.call(&"_on_back_pressed")
+	elif _open and quit_panel.visible:
+		_show_card()
+	else:
+		toggle()
+	get_viewport().set_input_as_handled()
 
 
 # --- Abrir / fechar ------------------------------------------------------------

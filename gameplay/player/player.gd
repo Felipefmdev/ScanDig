@@ -454,16 +454,13 @@ func _add_mouse_if_empty(action: StringName, button: MouseButton) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not is_settings_open():
 		_sway_look += (event as InputEventMouseMotion).relative
 		rotate_y(-event.relative.x * mouse_sensitivity)
 		head.rotate_x(-event.relative.y * mouse_sensitivity)
 		head.rotation.x = clampf(head.rotation.x, deg_to_rad(-80.0), deg_to_rad(80.0))
 
-	if event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_ESCAPE:
-		toggle_settings(not is_settings_open())
-		return
-
+	# [Esc] (ação "pause") é do menu de pausa (CorePauseMenu, #77).
 	if is_settings_open() or is_downed:
 		return
 	if event is InputEventMouseButton and event.is_pressed():
@@ -501,7 +498,7 @@ func _physics_process(delta: float) -> void:
 			gravity *= fall_gravity_multiplier
 		velocity += gravity * delta
 	_coyote_left = coyote_time if on_floor else maxf(_coyote_left - delta, 0.0)
-	if Input.is_action_just_pressed("jump"):
+	if Input.is_action_just_pressed("jump") and not is_settings_open():
 		_jump_buffer_left = jump_buffer_time
 	else:
 		_jump_buffer_left = maxf(_jump_buffer_left - delta, 0.0)
@@ -510,7 +507,8 @@ func _physics_process(delta: float) -> void:
 		_jump_buffer_left = 0.0
 		_coyote_left = 0.0
 
-	var input_dir: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	# Menu de pausa aberto (coop não pausa a árvore): parado, mas a física segue.
+	var input_dir: Vector2 = Vector2.ZERO if is_settings_open() else Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	direction = _apply_chaos_effects(direction, delta)
@@ -1531,37 +1529,26 @@ func _on_swing_hit() -> void:
 		_shake_camera(0.02, 0.15)
 
 
-var settings_panel: Control = null
 const SETTINGS_SCRIPT: Script = preload("res://gameplay/player/player_settings.gd")
-const SETTINGS_PANEL_SCRIPT: Script = preload("res://gameplay/player/settings_panel.gd")
 
 
+## O [Esc] abre o menu de pausa (CorePauseMenu, #77); as opções vão para a aba Jogabilidade.
 func _setup_settings() -> void:
 	apply_settings(SETTINGS_SCRIPT.load_settings())
-	var hud: Node = get_node_or_null(^"HUD")
-	if hud == null:
-		return
-	settings_panel = SETTINGS_PANEL_SCRIPT.new()
-	settings_panel.name = "SettingsPanel"
-	settings_panel.visible = false
-	hud.add_child(settings_panel)
-	settings_panel.connect(&"settings_changed", _on_settings_changed)
-	settings_panel.connect(&"closed", func() -> void: toggle_settings(false))
 
 
+## Menu de pausa aberto: sem olhar, mover, atacar nem cavar (em coop o jogo segue).
 func is_settings_open() -> bool:
-	return settings_panel != null and settings_panel.visible
+	return PauseMenu.is_open()
 
 
-## [Esc]: abre/fecha as opções. O jogo segue (coop); só o mouse fica livre.
 func toggle_settings(open: bool) -> void:
-	if settings_panel == null:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CAPTURED
+	if PauseMenu.instance == null:
 		return
 	if open:
-		settings_panel.call("show_values", current_settings())
-	settings_panel.visible = open
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CAPTURED
+		PauseMenu.instance.open()
+	else:
+		PauseMenu.instance.close()
 
 
 func current_settings() -> Dictionary:
@@ -1578,11 +1565,6 @@ func apply_settings(values: Dictionary) -> void:
 	view_bobbing = v["view_bobbing"]
 	if camera != null:
 		camera.fov = v["fov"]
-
-
-func _on_settings_changed(values: Dictionary) -> void:
-	apply_settings(values)
-	SETTINGS_SCRIPT.save_settings(values)
 
 
 var nearby_items_ui: Control = null

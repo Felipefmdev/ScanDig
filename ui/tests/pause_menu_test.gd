@@ -2,6 +2,7 @@
 ## #77: PauseMenu (autoload CorePauseMenu) e SettingsMenu. Solo pausa a árvore, coop (porta 7803)
 ## não; não abre com carregamento ou resumo; botões por papel; Configurações aplica no
 ## SettingsManager (arquivo do teste em user://test_saves/); resolução pede confirmação.
+## Esc (ação "pause") abre e fecha; em coop o player fica parado com o menu aberto e anda ao fechar.
 extends SceneTree
 
 const SETTINGS_PATH: String = "user://test_saves/pause_menu_test.cfg"
@@ -63,6 +64,18 @@ func _run() -> void:
 	_check(not PauseMenu.is_open() and not paused, "continuar fecha e despausa")
 	_check(_open_signals == [true, false], "open_changed: %s" % str(_open_signals))
 
+	# 1b. Esc (ação "pause"): abre; nas Configurações volta ao cartão; de novo fecha.
+	await _press(KEY_ESCAPE)
+	_check(PauseMenu.is_open() and paused, "Esc abre o menu (solo pausa)")
+	menu.settings_button.pressed.emit()
+	await _press(KEY_ESCAPE)
+	_check(PauseMenu.is_open() and menu.card.visible and not menu.settings_menu.visible, "Esc nas Configurações volta ao cartão")
+	menu.quit_button.pressed.emit()
+	await _press(KEY_ESCAPE)
+	_check(PauseMenu.is_open() and menu.card.visible and not menu.quit_panel.visible, "Esc na confirmação de saída volta ao cartão")
+	await _press(KEY_ESCAPE)
+	_check(not PauseMenu.is_open() and not paused, "Esc no cartão fecha e despausa")
+
 	# 2. Não abre com carregamento ou resumo do dia.
 	ui.loading_screen.visible = true
 	_check(not menu.open() and not PauseMenu.is_open(), "não abre no carregamento")
@@ -121,6 +134,7 @@ func _run() -> void:
 	_check(menu.leave_button.visible, "coop: sair da sessão visível")
 	menu.close()
 	_check(not PauseMenu.is_open() and not paused, "coop: fecha")
+	await _check_player(menu)
 	net.disconnect_game()
 	await _wait(3)
 
@@ -158,3 +172,44 @@ func _check_controls(settings: SettingsMenu, sm: SettingsManager) -> void:
 	settings.defaults_button.pressed.emit()
 	_check(sm.get_binding("jump") == {"type": "key", "code": KEY_SPACE} and jump.text == "Espaço", "restaurar padrão nos controles")
 	settings.tabs.current_tab = SettingsMenu.TAB_VIDEO
+
+
+## Coop: com o menu aberto o player local não anda nem pula (a física segue); ao fechar, anda.
+func _check_player(menu: PauseMenu) -> void:
+	# O lobby não tem player (nasce nos mapas): um player do host num chão longe da base.
+	var arena: Node3D = Node3D.new()
+	arena.position = Vector3(0.0, -500.0, 0.0)
+	current_scene.add_child(arena)
+	var floor_body: StaticBody3D = StaticBody3D.new()
+	var shape: CollisionShape3D = CollisionShape3D.new()
+	var box: BoxShape3D = BoxShape3D.new()
+	box.size = Vector3(200.0, 1.0, 200.0)
+	shape.shape = box
+	floor_body.add_child(shape)
+	arena.add_child(floor_body)
+	var player: Player = (load("res://gameplay/player/player.tscn") as PackedScene).instantiate() as Player
+	player.name = str(root.multiplayer.get_unique_id())
+	player.position = Vector3(0.0, 1.0, 0.0)
+	arena.add_child(player)
+	await _wait(5)
+	_check(player.is_local() and player.is_in_group(Player.LOCAL_GROUP), "player local do host")
+	for i in range(20):
+		await physics_frame
+	_check(menu.open() and not paused, "coop: menu aberto, árvore rodando")
+	player.velocity = Vector3.ZERO
+	Input.action_press("move_forward")
+	Input.action_press("jump")
+	for i in range(15):
+		await physics_frame
+	var flat: Vector3 = Vector3(player.velocity.x, 0.0, player.velocity.z)
+	_check(flat.length() < 0.05, "menu aberto: player parado (vel %.2f)" % flat.length())
+	_check(player.velocity.y <= 0.01, "menu aberto: não pula (vel.y %.2f)" % player.velocity.y)
+	Input.action_release("jump")
+	menu.close()
+	for i in range(15):
+		await physics_frame
+	flat = Vector3(player.velocity.x, 0.0, player.velocity.z)
+	_check(flat.length() > 0.5, "menu fechado: player anda (vel %.2f)" % flat.length())
+	Input.action_release("move_forward")
+
+	arena.queue_free()

@@ -1,6 +1,7 @@
 extends GutTest
 
-## Opções do jogador ([Esc]): sensibilidade, campo de visão e balanço da câmera.
+## Opções do jogador: sensibilidade, campo de visão e balanço da câmera. O [Esc] abre o menu de
+## pausa (CorePauseMenu, #77).
 
 const PLAYER_SCENE: PackedScene = preload("res://gameplay/player/player.tscn")
 const SETTINGS: Script = preload("res://gameplay/player/player_settings.gd")
@@ -18,6 +19,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if PauseMenu.instance != null:
+		PauseMenu.instance.close()
 	SETTINGS.set_settings_path(_orig_path)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -38,18 +41,15 @@ func test_save_load_roundtrip_and_sanitize() -> void:
 	assert_true(bad["view_bobbing"])
 
 
-func test_panel_toggles_and_applies() -> void:
+func test_pause_menu_toggles_and_settings_apply() -> void:
 	var player: Player = PLAYER_SCENE.instantiate() as Player
 	add_child_autofree(player)
-	assert_not_null(player.settings_panel)
 	assert_false(player.is_settings_open())
 	player.toggle_settings(true)
-	assert_true(player.is_settings_open())
-	assert_eq(Input.mouse_mode, Input.MOUSE_MODE_VISIBLE, "mouse livre com o painel aberto")
-	player.settings_panel.fov_slider.value = 95.0
-	assert_almost_eq(player.camera.fov, 95.0, 0.01, "campo de visão aplicado na hora")
-	player.settings_panel.bobbing_check.button_pressed = false
-	assert_false(player.view_bobbing)
-	assert_almost_eq(float(SETTINGS.load_settings()["fov"]), 95.0, 0.01, "gravado no arquivo")
+	assert_true(player.is_settings_open(), "toggle_settings abre o menu de pausa")
+	assert_eq(Input.mouse_mode, Input.MOUSE_MODE_VISIBLE, "mouse livre com o menu aberto")
 	player.toggle_settings(false)
 	assert_false(player.is_settings_open())
+	player.apply_settings({"fov": 95.0, "view_bobbing": false})
+	assert_almost_eq(player.camera.fov, 95.0, 0.01, "campo de visão aplicado")
+	assert_false(player.view_bobbing)
