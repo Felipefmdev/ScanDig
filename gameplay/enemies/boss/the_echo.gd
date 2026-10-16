@@ -25,9 +25,9 @@ const BOSS_NAME: String = "O ECO"
 const GROUP_BOSSES: StringName = &"bosses"
 const TROPHY_ITEM_ID: String = "cristal_eco"
 
-const CRYSTAL_DARK: Color = Color(0.28, 0.26, 0.35)
-const CRYSTAL_GREY: Color = Color(0.42, 0.40, 0.50)
-const RESONANCE_CYAN: Color = Color(0.25, 0.95, 0.90)
+const CRYSTAL_DARK: Color = Color("#3c3a52")
+const CRYSTAL_GREY: Color = Color("#5a5a72")
+const RESONANCE_CYAN: Color = Color("#40e8e0")
 const RESONANCE_GLOW: Color = Color(0.60, 1.0, 0.98)
 const EYE_CYAN: Color = Color(0.85, 1.0, 1.0)
 
@@ -455,10 +455,10 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
-	_glow_mat = LowPolyMesh.make_material()
+	_glow_mat = ToonKit.vertex_material(true, true)
 	_glow_mat.set_shader_parameter(&"emission_color", RESONANCE_CYAN)
 	_register_flash_material(_glow_mat)
 
@@ -484,6 +484,15 @@ func _build_model() -> void:
 	LowPolyMesh.box(st, Vector3(-0.24, 1.1, -0.42), Vector3(0.20, 0.14, 0.08), Basis.IDENTITY, RESONANCE_GLOW)
 	LowPolyMesh.box(st, Vector3(0.24, 1.1, -0.42), Vector3(0.20, 0.14, 0.08), Basis.IDENTITY, RESONANCE_GLOW)
 
+	# Anéis de ressonância dos dois lados da máscara (o_eco.jpg)
+	for side: float in [-1.0, 1.0]:
+		for r: float in [0.55, 0.32]:
+			for k: int in 14:
+				var a0: float = TAU * float(k) / 14.0
+				var a1: float = TAU * float(k + 1) / 14.0
+				var p0: Vector3 = Vector3(1.15 * side, 1.1 + cos(a0) * r, sin(a0) * r)
+				var p1: Vector3 = Vector3(1.15 * side, 1.1 + cos(a1) * r, sin(a1) * r)
+				LowPolyMesh.prism(st, p0, p1, 0.035, 0.035, 4, RESONANCE_GLOW)
 	_body.add_child(LowPolyMesh.commit(st, "MaskMesh", _mat))
 
 	# Fragmentos flutuantes orbitantes que se soltam no estado SHATTERED_DIZZY

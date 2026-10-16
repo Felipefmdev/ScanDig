@@ -23,14 +23,14 @@ const GROUP_BOSSES: StringName = &"bosses"
 const TROPHY_ITEM_ID: String = "bussola_antiga"
 const SECONDARY_TROPHY_ID: String = "medalha_polar"
 
-const SKIN_GREY: Color = Color(0.42, 0.48, 0.54)
-const SKIN_DARK: Color = Color(0.30, 0.35, 0.40)
-const FROST_WHITE: Color = Color(0.85, 0.92, 0.96)
-const CAPTAIN_NAVY: Color = Color(0.18, 0.22, 0.28)
-const GOLD_ANCHOR: Color = Color(0.88, 0.72, 0.22)
-const MOUSTACHE_GREY: Color = Color(0.75, 0.80, 0.84)
-const TUSK_IVORY: Color = Color(0.92, 0.88, 0.78)
-const ICE_BLOCK: Color = Color(0.62, 0.84, 0.94)
+const SKIN_GREY: Color = Color("#4c4a4e")
+const SKIN_DARK: Color = Color("#34363c")
+const FROST_WHITE: Color = Color("#c8dce8")
+const CAPTAIN_NAVY: Color = Color("#2a3442")
+const GOLD_ANCHOR: Color = Color("#d8a830")
+const MOUSTACHE_GREY: Color = Color("#8a8070")
+const TUSK_IVORY: Color = Color("#d8b860")
+const ICE_BLOCK: Color = Color("#9cd0e4")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
 
@@ -482,7 +482,7 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
 	_body = Node3D.new()

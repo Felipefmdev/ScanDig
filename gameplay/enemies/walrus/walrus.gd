@@ -10,14 +10,14 @@ extends EnemyBase
 
 enum State { WADDLE, SLAM_WINDUP, SLAM, RECOVER, FLEE }
 
-const BLUBBER_BROWN: Color = Color(0.56, 0.45, 0.36)
-const BLUBBER_DARK: Color = Color(0.40, 0.30, 0.23)
-const MOUSTACHE_TAN: Color = Color(0.80, 0.70, 0.52)
-const TUSK_IVORY: Color = Color(0.94, 0.92, 0.82)
-const FLIPPER_COLOR: Color = Color(0.48, 0.38, 0.30)
+const BLUBBER_BROWN: Color = Color("#6e4a34")
+const BLUBBER_DARK: Color = Color("#4a3020")
+const MOUSTACHE_TAN: Color = Color("#8a6a48")
+const TUSK_IVORY: Color = Color("#e0d0a0")
+const FLIPPER_COLOR: Color = Color("#5a3c2a")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
-const ICE_SHARDS: Color = Color(0.78, 0.92, 0.98)
+const ICE_SHARDS: Color = Color("#b8e0f0")
 
 const ARMOR_FACTOR: float = 0.55
 const SLAM_RADIUS: float = 3.4
@@ -225,7 +225,7 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
 	_body = Node3D.new()

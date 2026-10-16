@@ -5,10 +5,13 @@ extends Crow
 ## e às voltas, e foge da luz: o flash da Lanterna de Magnésio põe-no a fugir (grupo
 ## LanternFlash.GROUP_FLEES).
 
-const FUR: Color = Color(0.25, 0.2, 0.22)
-const WING: Color = Color(0.35, 0.25, 0.3)
-const EAR_PINK: Color = Color(0.85, 0.5, 0.55)
+const FUR: Color = Color("#4a2f33")
+const WING: Color = Color("#8a3a2a")
+const EAR_PINK: Color = Color("#c9884a")
 const FANG: Color = Color(0.98, 0.97, 0.92)
+const BAT_EYE: Color = Color("#f2ecd2")
+const PUPIL: Color = Color(0.08, 0.07, 0.06)
+const ROCK: Color = Color("#7a6a58")
 
 
 func _ready() -> void:
@@ -17,16 +20,22 @@ func _ready() -> void:
 
 
 func _build_model() -> void:
-	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.12), Vector3(0.0, 0.02, -0.1), 0.08, 0.09, 6, FUR)
 	LowPolyMesh.box(st, Vector3(0.0, 0.06, -0.15), Vector3(0.13, 0.12, 0.12), Basis.IDENTITY, FUR)
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(st, Vector3(0.05 * side, 0.1, -0.15), Vector3(0.08 * side, 0.22, -0.14), 0.035, 0.0, 4, EAR_PINK)
-		LowPolyMesh.box(st, Vector3(0.04 * side, 0.08, -0.215), Vector3(0.035, 0.035, 0.02), Basis.IDENTITY, Color(0.98, 0.9, 0.3, 0.0))
+		# Orelhas enormes (referência morcego.jpg): exterior de pelo, interior laranja
+		LowPolyMesh.prism(st, Vector3(0.05 * side, 0.1, -0.14), Vector3(0.13 * side, 0.32, -0.13), 0.06, 0.0, 4, FUR)
+		LowPolyMesh.prism(st, Vector3(0.05 * side, 0.11, -0.155), Vector3(0.125 * side, 0.29, -0.145), 0.042, 0.0, 4, EAR_PINK)
+		# Olhos esbugalhados, brancos com pupila
+		LowPolyMesh.prism(st, Vector3(0.042 * side, 0.09, -0.205), Vector3(0.042 * side, 0.09, -0.235), 0.034, 0.034, 8, BAT_EYE)
+		LowPolyMesh.box(st, Vector3(0.042 * side, 0.095, -0.237), Vector3(0.018, 0.018, 0.006), Basis.IDENTITY, PUPIL)
 		LowPolyMesh.prism(st, Vector3(0.02 * side, 0.02, -0.21), Vector3(0.02 * side, -0.02, -0.21), 0.01, 0.0, 3, Color(FANG.r, FANG.g, FANG.b, 0.0))
+	# Pedra segura por cima da cabeça, como na referência
+	LowPolyMesh.prism(st, Vector3(0.0, 0.13, 0.0), Vector3(0.0, 0.23, 0.0), 0.06, 0.05, 6, ROCK)
 	add_child(LowPolyMesh.commit(st, "Body", mat))
 	_wing_left = _build_bat_wing(-1.0, mat)
 	_wing_right = _build_bat_wing(1.0, mat)

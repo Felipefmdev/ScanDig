@@ -9,10 +9,10 @@ extends EnemyBase
 
 enum State { EMERGE, CHASE, LEAP_WINDUP, LEAP, RECOVER, FLEE }
 
-const ICE_BODY: Color = Color(0.76, 0.88, 0.96)
-const ICE_CRYSTAL: Color = Color(0.50, 0.75, 0.92)
-const ICE_BELLY: Color = Color(0.88, 0.94, 0.98)
-const NOSE_DARK: Color = Color(0.12, 0.16, 0.22)
+const ICE_BODY: Color = Color("#9cc4dc")
+const ICE_CRYSTAL: Color = Color("#6ab8d8")
+const ICE_BELLY: Color = Color("#d8eef6")
+const NOSE_DARK: Color = Color("#1e2630")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
 const FANG_WHITE: Color = Color(0.92, 0.95, 0.94)
@@ -236,7 +236,7 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
 	_body = Node3D.new()

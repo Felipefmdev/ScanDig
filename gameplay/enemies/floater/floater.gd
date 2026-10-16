@@ -10,9 +10,9 @@ extends EnemyBase
 
 enum State { FLOAT, PULSE_WINDUP, PULSE, RECOVER, FLEE }
 
-const ROCK_GREY: Color = Color(0.44, 0.40, 0.45)
-const ROCK_DARK: Color = Color(0.32, 0.29, 0.34)
-const CYAN_CRYSTAL: Color = Color(0.20, 0.90, 0.85)
+const ROCK_GREY: Color = Color("#6a6066")
+const ROCK_DARK: Color = Color("#4a4248")
+const CYAN_CRYSTAL: Color = Color("#40e8e0")
 const CYAN_GLOW: Color = Color(0.50, 0.98, 0.94)
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
@@ -211,10 +211,10 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
-	_crystal_mat = LowPolyMesh.make_material()
+	_crystal_mat = ToonKit.vertex_material(true, true)
 	_crystal_mat.set_shader_parameter(&"emission_color", CYAN_CRYSTAL)
 	_register_flash_material(_crystal_mat)
 
@@ -227,7 +227,12 @@ func _build_model() -> void:
 
 	# Cúpula / anel rochoso de cratera
 	LowPolyMesh.prism(st, Vector3(0.0, 0.3, 0.0), Vector3(0.0, 0.8, 0.0), 0.58, 0.48, 8, ROCK_GREY)
-	LowPolyMesh.box(st, Vector3(0.0, 0.45, 0.0), Vector3(1.15, 0.35, 1.15), Basis.IDENTITY, ROCK_DARK)
+	# Aba de rocha irregular (nuvem de pedra da criatura_flutuante.jpg), não uma laje quadrada
+	LowPolyMesh.prism(st, Vector3(0.0, 0.3, 0.0), Vector3(0.0, 0.6, 0.0), 0.62, 0.66, 9, ROCK_DARK)
+	for k: int in 5:
+		var a: float = TAU * float(k) / 5.0 + 0.4
+		var lump: Vector3 = Vector3(sin(a) * 0.45, 0.62, cos(a) * 0.45)
+		LowPolyMesh.prism(st, lump, lump + Vector3(0.0, 0.22, 0.0), 0.26, 0.16, 6, ROCK_GREY)
 
 	# Espigões de cristal salientes nas laterais
 	for i: int in 4:

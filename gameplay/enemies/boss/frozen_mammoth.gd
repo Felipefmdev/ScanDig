@@ -24,11 +24,11 @@ const BOSS_NAME: String = "MAMUTE CONGELADO"
 const GROUP_BOSSES: StringName = &"bosses"
 const TROPHY_ITEM_ID: String = "dente_mamute"
 
-const FUR_BROWN: Color = Color(0.48, 0.32, 0.20)
-const FUR_DARK: Color = Color(0.35, 0.22, 0.14)
-const GLACIER_ICE: Color = Color(0.46, 0.72, 0.85)
-const ICE_HIGHLIGHT: Color = Color(0.72, 0.90, 0.98)
-const TUSK_IVORY: Color = Color(0.92, 0.90, 0.80)
+const FUR_BROWN: Color = Color("#6a4228")
+const FUR_DARK: Color = Color("#4a2c1a")
+const GLACIER_ICE: Color = Color("#5aa8c0")
+const ICE_HIGHLIGHT: Color = Color("#a0d8e8")
+const TUSK_IVORY: Color = Color("#dcdcd0")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
 const SNOW_WHITE: Color = Color(0.95, 0.97, 1.0)
@@ -445,10 +445,10 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
-	_ice_mat = LowPolyMesh.make_material()
+	_ice_mat = ToonKit.vertex_material(true, true)
 	_ice_mat.set_shader_parameter(&"specular_amount", 0.6)
 	_register_flash_material(_ice_mat)
 

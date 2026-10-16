@@ -14,10 +14,10 @@ enum State { EMERGE, WALK, WINDUP, SMASH, RECOVER, ROLL_WINDUP, ROLL, DIZZY }
 const CrabModel := preload("res://gameplay/enemies/crab/crab_model.gd")
 const ARMOR_FACTOR: float = 0.4
 const SMASH_RANGE: float = 1.8
-const STONE: Color = Color(0.68, 0.63, 0.55)
-const STONE_DARK: Color = Color(0.5, 0.46, 0.4)
-const MOSS: Color = Color(0.38, 0.5, 0.24)
-const JADE: Color = Color(0.3, 0.9, 0.65)
+const STONE: Color = Color("#a39b74")
+const STONE_DARK: Color = Color("#6b6650")
+const MOSS: Color = Color("#6f8a2a")
+const JADE: Color = Color("#ffb030")
 
 @export var move_speed: float = 1.3
 @export var turn_speed: float = 4.0
@@ -291,9 +291,12 @@ func _build_model() -> void:
 		LowPolyMesh.box(st, Vector3(0.22 * side, 0.35, 0.0), Vector3(0.32, 0.7, 0.4), Basis.IDENTITY, STONE_DARK)
 	LowPolyMesh.prism(st, Vector3(0.0, 0.7, 0.0), Vector3(0.0, 1.55, 0.0), 0.5, 0.62, 6, STONE)
 	LowPolyMesh.box(st, Vector3(0.0, 1.15, -0.5), Vector3(0.5, 0.45, 0.08), Basis.IDENTITY, STONE_DARK)
+	# Runas a brilhar no peito (guardiao_pedra.jpg)
+	for k: int in 3:
+		LowPolyMesh.box(st, Vector3(-0.15 + 0.15 * float(k), 1.15, -0.545), Vector3(0.05, 0.22, 0.02), Basis(Vector3.FORWARD, 0.35 * float(k - 1)), Color(JADE.r, JADE.g, JADE.b, 0.0))
 	# Cabeça-máscara com olhos de jade
 	LowPolyMesh.box(st, Vector3(0.0, 1.85, 0.0), Vector3(0.6, 0.55, 0.55), Basis.IDENTITY, STONE)
-	LowPolyMesh.prism(st, Vector3(0.0, 2.1, 0.0), Vector3(0.0, 2.35, 0.0), 0.32, 0.0, 4, STONE_DARK)
+	LowPolyMesh.box(st, Vector3(0.0, 2.15, 0.0), Vector3(0.64, 0.08, 0.58), Basis.IDENTITY, MOSS)
 	var jade: Color = Color(JADE.r, JADE.g, JADE.b, 0.0)
 	for side: float in [-1.0, 1.0]:
 		LowPolyMesh.box(st, Vector3(0.14 * side, 1.9, -0.28), Vector3(0.14, 0.07, 0.04), Basis.IDENTITY, jade)

@@ -24,15 +24,15 @@ const BOSS_NAME: String = "YETI DA GRUTA"
 const GROUP_BOSSES: StringName = &"bosses"
 const TROPHY_ITEM_ID: String = "fossil_gelo"
 
-const FUR_WHITE: Color = Color(0.88, 0.94, 0.98)
-const FUR_SHADOW: Color = Color(0.72, 0.86, 0.94)
-const SKIN_BLUE: Color = Color(0.46, 0.58, 0.68)
-const SKIN_DARK: Color = Color(0.32, 0.42, 0.50)
+const FUR_WHITE: Color = Color("#c8e4f2")
+const FUR_SHADOW: Color = Color("#8cb8d8")
+const SKIN_BLUE: Color = Color("#4a6a94")
+const SKIN_DARK: Color = Color("#34507a")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
 const TOOTH_WHITE: Color = Color(0.95, 0.95, 0.90)
-const THERMOS_RED: Color = Color(0.72, 0.18, 0.18)
-const THERMOS_SILVER: Color = Color(0.82, 0.82, 0.86)
+const THERMOS_RED: Color = Color("#c02a2a")
+const THERMOS_SILVER: Color = Color("#a0a4ac")
 const SNOW_BALL: Color = Color(0.92, 0.96, 1.0)
 
 const WEAK_POINT_FACTOR: float = 2.5
@@ -461,7 +461,7 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
 	_body = Node3D.new()

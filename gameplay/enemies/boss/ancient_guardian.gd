@@ -34,10 +34,10 @@ const BOWL_SPEED: float = 11.0
 const SPIN_RADIUS: float = 2.6
 const PHASE_TWO_RATIO: float = 0.5
 
-const STONE: Color = Color(0.7, 0.65, 0.56)
-const STONE_DARK: Color = Color(0.52, 0.48, 0.42)
-const MOSS: Color = Color(0.38, 0.5, 0.24)
-const JADE: Color = Color(0.3, 0.92, 0.66)
+const STONE: Color = Color("#b38d5c")
+const STONE_DARK: Color = Color("#6e6a5c")
+const MOSS: Color = Color("#5e7a2a")
+const JADE: Color = Color("#40f0d8")
 
 @export var move_speed: float = 1.4
 @export var stomp_damage: float = 18.0

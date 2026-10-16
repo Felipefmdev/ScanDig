@@ -28,13 +28,13 @@ const PULL_WIDTH: float = 2.2
 const TORNADO_RADIUS: float = 2.8
 const SUMMON_RADIUS: float = 4.0
 
-const LINEN: Color = Color(0.86, 0.82, 0.70)
-const LINEN_DARK: Color = Color(0.66, 0.60, 0.48)
-const GOLD: Color = Color(0.96, 0.78, 0.18)
-const GOLD_DARK: Color = Color(0.72, 0.52, 0.10)
-const JADE: Color = Color(0.28, 0.88, 0.58)
+const LINEN: Color = Color("#b8945a")
+const LINEN_DARK: Color = Color("#8a6a3a")
+const GOLD: Color = Color("#e8b830")
+const GOLD_DARK: Color = Color("#a87818")
+const JADE: Color = Color("#3ad070")
 const SCARAB_BLUE: Color = Color(0.18, 0.38, 0.78)
-const RED_EYE: Color = Color(0.95, 0.15, 0.10)
+const RED_EYE: Color = Color("#f4f0dc")
 
 @export var move_speed: float = 1.9
 @export var turn_speed: float = 3.5
@@ -470,7 +470,7 @@ func _animate(delta: float) -> void:
 
 
 func _build_model() -> void:
-	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
 
 	var col: CollisionShape3D = CollisionShape3D.new()
@@ -509,15 +509,26 @@ func _build_model() -> void:
 	_head.name = "Head"
 	_head.position = Vector3(0.0, 1.7, 0.0)
 	_body_root.add_child(_head)
-	LowPolyMesh.box(st, Vector3(0.0, 0.22, -0.04), Vector3(0.36, 0.38, 0.36), Basis.IDENTITY, LINEN)
+	var hst: SurfaceTool = SurfaceTool.new()
+	hst.begin(Mesh.PRIMITIVE_TRIANGLES)
+	LowPolyMesh.box(hst, Vector3(0.0, 0.22, -0.04), Vector3(0.36, 0.38, 0.36), Basis.IDENTITY, LINEN)
 	# Fita de ouro na testa
-	LowPolyMesh.box(st, Vector3(0.0, 0.36, -0.04), Vector3(0.40, 0.09, 0.38), Basis.IDENTITY, GOLD)
+	LowPolyMesh.box(hst, Vector3(0.0, 0.36, -0.04), Vector3(0.40, 0.09, 0.38), Basis.IDENTITY, GOLD)
 	# Asas da touca faraónica
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(st, Vector3(0.22 * side, 0.38, -0.02), Vector3(0.34 * side, 0.05, 0.04), 0.12, 0.06, 5, GOLD_DARK)
-	# Olhos vermelhos brilhantes
+		LowPolyMesh.prism(hst, Vector3(0.22 * side, 0.38, -0.02), Vector3(0.34 * side, 0.05, 0.04), 0.12, 0.06, 5, GOLD_DARK)
+	# Coroa de pontas por cima da fita (referência mumia_idolo.jpg)
+	for k: int in 5:
+		var a: float = TAU * float(k) / 5.0
+		var base: Vector3 = Vector3(sin(a) * 0.15, 0.4, -0.04 + cos(a) * 0.15)
+		LowPolyMesh.prism(hst, base, base + Vector3(0.0, 0.16, 0.0), 0.06, 0.0, 4, GOLD)
+	# Olhos esbugalhados (brancos) com pupila e boca aberta
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.1 * side, 0.23, -0.23), Vector3(0.08, 0.05, 0.03), Basis.IDENTITY, RED_EYE)
+		LowPolyMesh.prism(hst, Vector3(0.09 * side, 0.24, -0.2), Vector3(0.09 * side, 0.24, -0.26), 0.075, 0.075, 8, RED_EYE)
+		LowPolyMesh.box(hst, Vector3(0.09 * side, 0.24, -0.265), Vector3(0.04, 0.04, 0.01), Basis.IDENTITY, Color(0.08, 0.07, 0.06))
+	LowPolyMesh.box(hst, Vector3(0.0, 0.1, -0.225), Vector3(0.14, 0.07, 0.01), Basis.IDENTITY, Color(0.18, 0.1, 0.08))
+
+	_head.add_child(LowPolyMesh.commit(hst, "HeadMesh", mat))
 
 	# Braços articulados
 	_arm_left = _build_arm(-1.0, mat)
@@ -533,7 +544,7 @@ func _build_model() -> void:
 	var ast: SurfaceTool = SurfaceTool.new()
 	ast.begin(Mesh.PRIMITIVE_TRIANGLES)
 	LowPolyMesh.box(ast, Vector3(0.0, 1.35, -0.36), Vector3(0.18, 0.22, 0.08), Basis.IDENTITY, JADE)
-	_amulet_mat = LowPolyMesh.make_material()
+	_amulet_mat = ToonKit.vertex_material(true, true)
 	_amulet_mat.set_shader_parameter(&"albedo_color", JADE)
 	var amulet_mi: MeshInstance3D = MeshInstance3D.new()
 	amulet_mi.name = "JadeAmulet"

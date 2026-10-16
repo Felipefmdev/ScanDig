@@ -24,12 +24,12 @@ const GROUP_BOSSES: StringName = &"bosses"
 const TROPHY_ITEM_ID: String = "nucleo_adormecido"
 const SECONDARY_TROPHY_ID: String = "orbe_vibrante"
 
-const TITAN_STONE: Color = Color(0.35, 0.32, 0.36)
-const TITAN_DARK: Color = Color(0.22, 0.20, 0.24)
-const AMETHYST_PURPLE: Color = Color(0.68, 0.20, 0.98)
+const TITAN_STONE: Color = Color("#4a4440")
+const TITAN_DARK: Color = Color("#2e2a28")
+const AMETHYST_PURPLE: Color = Color("#9a3ae8")
 const AMETHYST_GLOW: Color = Color(0.85, 0.45, 1.0)
 const EYE_PURPLE: Color = Color(0.92, 0.35, 1.0)
-const METEOR_CRUST: Color = Color(0.25, 0.22, 0.26)
+const METEOR_CRUST: Color = Color("#3a3432")
 
 const WEAK_POINT_FACTOR: float = 2.5
 const GRAVITY_PULSE_RADIUS: float = 8.5
@@ -432,10 +432,10 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
-	_amethyst_mat = LowPolyMesh.make_material()
+	_amethyst_mat = ToonKit.vertex_material(true, true)
 	_amethyst_mat.set_shader_parameter(&"emission_color", AMETHYST_PURPLE)
 	_register_flash_material(_amethyst_mat)
 
@@ -448,6 +448,11 @@ func _build_model() -> void:
 
 	# Borda circular rochosa da cratera de onde emerge
 	LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.6, 0.0), 2.8, 2.5, 10, TITAN_DARK)
+	for k: int in 12:
+		var a: float = TAU * float(k) / 12.0
+		var h: float = 0.85 + 0.25 * float(k % 3)
+		var lip: Vector3 = Vector3(sin(a) * 2.6, 0.0, cos(a) * 2.6)
+		LowPolyMesh.box(st, lip + Vector3(0.0, h * 0.5, 0.0), Vector3(1.2, h, 0.5), Basis(Vector3.UP, a), METEOR_CRUST)
 
 	# Tronco maciço colossal
 	LowPolyMesh.prism(st, Vector3(0.0, 0.5, 0.0), Vector3(0.0, 2.4, 0.0), 1.6, 1.4, 8, TITAN_STONE)
@@ -458,15 +463,15 @@ func _build_model() -> void:
 
 	# Múltiplos olhos púrpuras brilhantes (referência: o_que_dorme.jpg)
 	var eye_offsets: Array[Vector3] = [
-		Vector3(0.0, 3.1, -0.75),
-		Vector3(-0.35, 2.9, -0.72),
-		Vector3(0.35, 2.9, -0.72),
-		Vector3(-0.25, 2.65, -0.68),
-		Vector3(0.25, 2.65, -0.68),
-		Vector3(0.0, 2.5, -0.65)
+		Vector3(0.0, 3.1, -0.98),
+		Vector3(-0.35, 2.9, -0.98),
+		Vector3(0.35, 2.9, -0.98),
+		Vector3(-0.25, 2.65, -1.0),
+		Vector3(0.25, 2.65, -1.0),
+		Vector3(0.0, 2.45, -1.02)
 	]
 	for eo: Vector3 in eye_offsets:
-		LowPolyMesh.box(st, eo, Vector3(0.18, 0.12, 0.06), Basis.IDENTITY, EYE_PURPLE)
+		LowPolyMesh.box(st, eo, Vector3(0.2, 0.14, 0.08), Basis.IDENTITY, EYE_PURPLE)
 
 	# Mandíbulas / presas de pedra ao redor da boca
 	LowPolyMesh.prism(st, Vector3(-0.4, 2.3, -0.6), Vector3(-0.2, 1.8, -0.7), 0.15, 0.04, 4, TITAN_DARK)

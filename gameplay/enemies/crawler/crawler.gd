@@ -11,12 +11,12 @@ extends EnemyBase
 
 enum State { EMERGE, CRAWL, SPRING_WINDUP, SPRING_JUMP, RECOVER, FLEE }
 
-const STONE_BODY: Color = Color(0.42, 0.39, 0.46)
-const STONE_DARK: Color = Color(0.30, 0.27, 0.34)
-const PURPLE_CORE: Color = Color(0.70, 0.22, 1.0)
+const STONE_BODY: Color = Color("#77737a")
+const STONE_DARK: Color = Color("#4c4850")
+const PURPLE_CORE: Color = Color("#b040ff")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
-const EYE_RIM: Color = Color(0.50, 0.46, 0.54)
+const EYE_RIM: Color = Color("#5a5660")
 
 @export var move_speed: float = 3.5
 @export var turn_speed: float = 7.0
@@ -231,10 +231,10 @@ func _on_remote_state(new_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
-	_core_mat = LowPolyMesh.make_material()
+	_core_mat = ToonKit.vertex_material(true, true)
 	_core_mat.set_shader_parameter(&"emission_color", PURPLE_CORE)
 	_register_flash_material(_core_mat)
 
@@ -265,7 +265,8 @@ func _build_model() -> void:
 	# Núcleo interior brilhante de ametista
 	var st_core: SurfaceTool = SurfaceTool.new()
 	st_core.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(st_core, Vector3(0.0, 0.35, 0.0), Vector3(0.0, 0.65, 0.0), 0.24, 0.18, 6, PURPLE_CORE)
+	# Núcleo maior que a casca: aparece como faixa roxa a brilhar entre as placas (criatura_rastejante.jpg)
+	LowPolyMesh.prism(st_core, Vector3(0.0, 0.36, 0.0), Vector3(0.0, 0.64, 0.0), 0.4, 0.36, 8, PURPLE_CORE)
 	_core_mesh = LowPolyMesh.commit(st_core, "CoreMesh", _core_mat)
 	_body.add_child(_core_mesh)
 

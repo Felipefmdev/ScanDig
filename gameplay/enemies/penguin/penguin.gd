@@ -10,14 +10,14 @@ extends EnemyBase
 
 enum State { WADDLE, SLIDE_WINDUP, SLIDE, BUMP, RECOVER, FLEE }
 
-const SLATE_BLUE: Color = Color(0.22, 0.28, 0.35)
-const BELLY_WHITE: Color = Color(0.95, 0.94, 0.90)
-const BEAK_ORANGE: Color = Color(0.92, 0.54, 0.18)
-const MASK_BLACK: Color = Color(0.12, 0.14, 0.16)
+const SLATE_BLUE: Color = Color("#2c3a4c")
+const BELLY_WHITE: Color = Color("#efe6c4")
+const BEAK_ORANGE: Color = Color("#e07a30")
+const MASK_BLACK: Color = Color("#1c1e22")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
-const SCARF_RED: Color = Color(0.75, 0.18, 0.18)
-const SACK_BROWN: Color = Color(0.65, 0.54, 0.40)
+const SCARF_RED: Color = Color("#b83a2e")
+const SACK_BROWN: Color = Color("#9a7c56")
 const ICE_SPARK: Color = Color(0.78, 0.92, 0.98)
 
 @export var move_speed: float = 1.7
@@ -267,7 +267,7 @@ func _on_died() -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	_mat = LowPolyMesh.make_material()
+	_mat = ToonKit.vertex_material(true, true)
 	_register_flash_material(_mat)
 
 	_body = Node3D.new()
