@@ -27,6 +27,8 @@ enum Kind {
 }
 
 # Paleta de cores fiéis às referências
+const METAL_GRAY: Color = Color(0.45, 0.48, 0.52)
+const MODULE_ORANGE: Color = Color(0.85, 0.45, 0.15)
 const SKIN_TONE: Color = Color(0.78, 0.52, 0.38)
 const AFRO_HAIR: Color = Color(0.28, 0.18, 0.12)
 const HEADPHONE_ORANGE: Color = Color(0.88, 0.46, 0.14)
