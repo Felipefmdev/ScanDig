@@ -27,14 +27,14 @@ func _initialize() -> void:
 			campo.append(id)
 	var found: Array = [praia[0], campo[1], praia[2], "segredo_que_nao_existe"]
 	var counts: Dictionary = UiFormat.secret_counts_by_map(found)
-	_check(counts.keys() == ["praia", "campo"], "mapas na ordem de SECRETS: %s" % [counts.keys()])
+	_check(counts.keys() == ["praia", "campo", "ruinas", "geleira", "cratera"], "mapas na ordem de SECRETS: %s" % [counts.keys()])
 	_check(counts["praia"] == {"found": 2, "total": praia.size()}, "praia: %s" % [counts["praia"]])
 	_check(counts["campo"] == {"found": 1, "total": campo.size()}, "campo: %s" % [counts["campo"]])
 
 	# 3. Mapa sem nenhum encontrado.
 	var only_praia: Dictionary = UiFormat.secret_counts_by_map([praia[0]])
 	_check(int(only_praia["campo"]["found"]) == 0 and int(only_praia["campo"]["total"]) == 6, "campo 0/6: %s" % [only_praia["campo"]])
-	_check(UiFormat.secret_counts_by_map([]).size() == 2, "nada encontrado: os 2 mapas aparecem")
+	_check(UiFormat.secret_counts_by_map([]).size() == 5, "nada encontrado: os 5 mapas aparecem")
 
 	# 4. Id sem prefixo conhecido: entra em "Outros" sem quebrar; id encontrado fora da lista é ignorado.
 	var custom: Dictionary = UiFormat.secret_counts_by_map(["avulso"], ["praia_a", "avulso", "praia_b"])

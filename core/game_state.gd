@@ -46,12 +46,19 @@ const MAP_UNLOCK_BOSSES: Dictionary = {
 const QUESTS: Dictionary = {
 	"ze_anzol": {"name": "O anzol de ouro", "reward": 600},
 	"lurdes_chaves": {"name": "Os corvos levaram as chaves", "reward": 1800},
+	# Mapas 3-5: ~25% do desbloqueio seguinte, como Zé/Lurdes; afinar com o pacing (#64).
+	"ines_camara": {"name": "A câmara selada", "reward": 5000},
+	"bjorn_expedicao": {"name": "A expedição perdida", "reward": 13000},
+	"vega_sinal": {"name": "Sinal no fundo", "reward": 15000},
 }
 ## Relíquias escondidas e easter eggs (#45): só ficam registrados no save.
 const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", "praia_reliquia_mare",
 	"praia_polvo", "praia_ovo_pato", "praia_ovo_castelo",
 	"campo_reliquia_poco", "campo_reliquia_fardo", "campo_reliquia_muro",
-	"campo_espantalho", "campo_ovo_circulo", "campo_ovo_ovelha"]
+	"campo_espantalho", "campo_ovo_circulo", "campo_ovo_ovelha",
+	"ruinas_mumia", "ruinas_ovo_esqueleto", "ruinas_ovo_pintura", "ruinas_reliquia_altar", "ruinas_reliquia_nicho", "ruinas_reliquia_parede",
+	"geleira_morsa_ancia", "geleira_ovo_boneco", "geleira_ovo_pinguim", "geleira_reliquia_iglu", "geleira_reliquia_lago", "geleira_reliquia_mamute", "geleira_yeti",
+	"cratera_o_eco", "cratera_ovo_disco", "cratera_ovo_sonda", "cratera_reliquia_engrenagem", "cratera_reliquia_geodo", "cratera_reliquia_orbe"]
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
 ## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
 ## Mapas 3-5: idol_mummy, cave_yeti, ancient_walrus, the_sleeper, the_echo (#75).
