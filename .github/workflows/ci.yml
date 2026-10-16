@@ -32,5 +32,18 @@ jobs:
             if grep -q "SCRIPT ERROR" run.log; then echo "Script error in $scene"; exit 1; fi
           done
 
+      # Um teste GUT que não compila é ignorado em silêncio ("does not extend GutTest"):
+      # qualquer SCRIPT ERROR ou Parse Error no log derruba o passo.
       - name: Unit tests (GUT)
-        run: ./godot --headless --path . -s addons/gut/gut_cmdln.gd
+        run: |
+          set -o pipefail
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd 2>&1 | tee gut.log
+          if grep -qE "SCRIPT ERROR|Parse Error" gut.log; then
+            echo "::error::SCRIPT ERROR / Parse Error no log do GUT"
+            grep -nE -A2 "SCRIPT ERROR|Parse Error" gut.log | head -40
+            exit 1
+          fi
+
+      # Testes headless do Dev B (core/tests e ui/tests, "RESULT fails=N") e pares de rede local.
+      - name: Headless tests (core/tests, ui/tests)
+        run: bash tools/run_headless_tests.sh ./godot
