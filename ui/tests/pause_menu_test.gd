@@ -3,7 +3,8 @@
 ## não; não abre com carregamento ou resumo; botões por papel; Configurações aplica no
 ## SettingsManager (arquivo do teste em user://test_saves/); resolução pede confirmação.
 ## Etapa 3: Esc (ação "pause") abre e fecha; aba Jogabilidade; em coop o player fica parado com o
-## menu aberto e anda ao fechar; inverter Y.
+## menu aberto e anda ao fechar; inverter Y. Acabamento: aviso "Configurações salvas" na frente do
+## menu, "Descartar alterações?" ao voltar com mudanças, caixas Ligado/Desligado.
 extends SceneTree
 
 const SETTINGS_PATH: String = "user://test_saves/pause_menu_test.cfg"
@@ -120,6 +121,7 @@ func _run() -> void:
 	await _check_gameplay(settings, sm, menu)
 	settings.back_button.pressed.emit()
 	_check(menu.card.visible and not settings.visible, "voltar das configurações mostra o cartão")
+	await _check_apply_and_discard(menu, sm)
 
 	# 5. Sair do jogo pede confirmação (não clica em Sair).
 	menu.quit_button.pressed.emit()
@@ -264,3 +266,60 @@ func _check_player(menu: PauseMenu, sm: SettingsManager) -> void:
 	sm.restore_defaults(SettingsManager.GAMEPLAY)
 	_check(label.get_theme_font_size(&"font_size") == base and not player.invert_y, "padrão volta o HUD e o eixo Y")
 	arena.queue_free()
+
+
+## Acabamento: aviso ao aplicar, pergunta ao voltar com mudanças, texto das caixas de marcar.
+func _check_apply_and_discard(menu: PauseMenu, sm: SettingsManager) -> void:
+	menu.settings_button.pressed.emit()
+	var settings: SettingsMenu = menu.settings_menu
+	await _wait(2)
+	_check(not settings.has_pending_changes(), "sem mudanças ao abrir")
+
+	# Caixas de marcar: o texto segue o estado.
+	_check(settings.invert_y_check.text == "Desligado" and settings.bobbing_check.text == "Ligado" and settings.show_fps_check.text == "Desligado", "caixas: Desligado/Ligado conforme o estado")
+	var vsync_on: bool = settings.vsync_check.button_pressed
+	_check(settings.vsync_check.text == ("Ligado" if vsync_on else "Desligado"), "VSync mostra o estado: %s" % settings.vsync_check.text)
+	settings.vsync_check.button_pressed = not vsync_on
+	_check(settings.vsync_check.text == ("Desligado" if vsync_on else "Ligado"), "VSync troca o texto ao marcar")
+	settings.vsync_check.button_pressed = vsync_on
+
+	# Aplicar mostra "Configurações salvas" na frente do menu e some sozinho.
+	settings.tabs.current_tab = SettingsMenu.TAB_AUDIO
+	(settings.audio_sliders["sfx"] as HSlider).value = 70.0
+	_check(settings.has_pending_changes(), "mudança pendente detectada")
+	settings.apply_button.pressed.emit()
+	await _wait(2)
+	var notice: PanelContainer = settings.saved_notice
+	var notice_rect: Rect2 = notice.get_global_rect()
+	_check(notice.visible and notice.top_level and notice.modulate.a > 0.9, "aviso de salvo visível")
+	_check((notice.get_child(0) as Label).text == "Configurações salvas", "texto do aviso")
+	_check(settings.get_global_rect().encloses(notice_rect) and notice_rect.end.y <= settings.buttons_row.global_position.y, "aviso dentro do painel, acima dos botões: %s painel %s botões %s" % [str(notice_rect), str(settings.get_global_rect()), str(settings.buttons_row.get_global_rect())])
+	_check(notice.get_index() == settings.get_child_count() - 1, "aviso desenhado por último (na frente)")
+	_check(not settings.has_pending_changes() and is_equal_approx(float(sm.get_value(SettingsManager.AUDIO, "sfx")), 0.7), "aplicado e sem pendência")
+	await create_timer(SettingsMenu.SAVED_SECONDS + 0.4, true, false, true).timeout
+	_check(not notice.visible, "aviso some em ~2 s")
+
+	# Voltar com mudança pendente pergunta; Cancelar mantém; Descartar volta ao valor salvo.
+	settings.tabs.current_tab = SettingsMenu.TAB_GAMEPLAY
+	settings.fov_slider.value = 95.0
+	settings.back_button.pressed.emit()
+	_check(settings.visible and settings.discard_panel.visible and not settings.tabs.visible and not settings.buttons_row.visible, "voltar com mudança pergunta 'Descartar alterações?'")
+	settings.discard_cancel_button.pressed.emit()
+	_check(not settings.discard_panel.visible and settings.tabs.visible and settings.buttons_row.visible and is_equal_approx(settings.fov_slider.value, 95.0), "cancelar mantém a mudança na tela")
+	settings.show_saved_notice()
+	settings.back_button.pressed.emit()
+	_check(not settings.saved_notice.visible, "a pergunta esconde o aviso de salvo")
+	settings.discard_button.pressed.emit()
+	_check(menu.card.visible and not settings.visible and is_equal_approx(float(sm.get_value(SettingsManager.GAMEPLAY, "fov")), 75.0), "descartar volta ao cartão sem aplicar")
+	_check(is_equal_approx(settings.fov_slider.value, 75.0) and not settings.has_pending_changes(), "tela volta ao valor salvo")
+
+	# Esc com mudança: pergunta; Esc de novo cancela a pergunta; fechar o menu descarta sem perguntar.
+	menu.settings_button.pressed.emit()
+	settings.fov_slider.value = 90.0
+	await _press(KEY_ESCAPE)
+	_check(settings.discard_panel.visible and PauseMenu.is_open(), "Esc com mudança pergunta")
+	await _press(KEY_ESCAPE)
+	_check(not settings.discard_panel.visible and settings.visible, "Esc de novo cancela a pergunta")
+	menu.close()
+	_check(not PauseMenu.is_open() and not settings.discard_panel.visible and is_equal_approx(float(sm.get_value(SettingsManager.GAMEPLAY, "fov")), 75.0), "fechar o menu descarta sem perguntar")
+	sm.restore_defaults(SettingsManager.AUDIO)

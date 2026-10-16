@@ -178,6 +178,16 @@ func _run() -> void:
 		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"show_fps": false}, false)
 		pause.settings_menu.refresh()
 		page.scroll_vertical = 0
+		# Aviso de salvo (chamado direto: nada é gravado) e pergunta ao voltar com mudança.
+		pause.settings_menu.tabs.current_tab = 0
+		pause.settings_menu.show_saved_notice()
+		await _shot("config_salvo")
+		pause.settings_menu.tabs.current_tab = 3
+		pause.settings_menu.fov_slider.value = 95.0
+		pause.settings_menu.back_button.pressed.emit()
+		await _shot("config_descartar")
+		pause.settings_menu.discard_button.pressed.emit()
+		pause.settings_button.pressed.emit()
 		pause.settings_menu.tabs.current_tab = 0
 		pause.close()
 

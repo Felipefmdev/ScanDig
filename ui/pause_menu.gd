@@ -147,7 +147,7 @@ func close() -> void:
 		return
 	_open = false
 	if settings_menu.visible:
-		settings_menu.call(&"_on_back_pressed")
+		settings_menu.discard()
 	root_control.visible = false
 	if _paused_by_me:
 		get_tree().paused = false

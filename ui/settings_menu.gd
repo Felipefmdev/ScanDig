@@ -2,7 +2,8 @@ class_name SettingsMenu
 extends PanelContainer
 
 ## Tela de Configurações (#77): abas Vídeo / Áudio / Controles / Jogabilidade. Só fala com o
-## SettingsManager. As mudanças ficam pendentes até Aplicar; modo de janela e resolução pedem
+## SettingsManager. As mudanças ficam pendentes até Aplicar (aviso "Configurações salvas");
+## Voltar com mudanças pendentes pergunta antes de descartar. Modo de janela e resolução pedem
 ## confirmação e voltam sozinhos em 10 s.
 
 signal closed
@@ -17,6 +18,9 @@ const TAB_GAMEPLAY: int = 3
 ## Sensibilidade mostrada em % do padrão (0.0025 = 100 %), como no painel antigo do Esc.
 const SENSITIVITY_UNIT: float = 0.0025
 const CAPTURE_TEXT: String = "Pressione uma tecla…"
+const SAVED_TEXT: String = "Configurações salvas"
+const SAVED_SECONDS: float = 2.0
+const DISCARD_TEXT: String = "Descartar alterações?\nAs mudanças que não foram aplicadas serão perdidas."
 
 var tabs: TabContainer = null
 var window_mode_option: OptionButton = null
@@ -53,6 +57,14 @@ var show_fps_check: CheckBox = null
 var hud_text_slider: HSlider = null
 var hud_text_value: Label = null
 var language_option: OptionButton = null
+var buttons_row: HBoxContainer = null
+var saved_notice: PanelContainer = null
+var discard_panel: PanelContainer = null
+var discard_button: Button = null
+var discard_cancel_button: Button = null
+## Valores pendentes logo depois do último refresh/Aplicar: diferente disso = mudança não aplicada.
+var _clean_state: Dictionary = {}
+var _saved_token: int = 0
 
 var _resolutions: Array[Vector2i] = []
 var _trial_left: float = 0.0
@@ -70,6 +82,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if saved_notice != null and saved_notice.visible:
+		_place_saved_notice()
 	if confirm_panel == null or not confirm_panel.visible:
 		return
 	_trial_left = maxf(_trial_left - delta, 0.0)
@@ -121,10 +135,12 @@ func _slider_row(grid: GridContainer, text: String, min_value: float, max_value:
 	return [slider, value]
 
 
-func _checkbox(text: String) -> CheckBox:
+## Caixa de marcar com o texto do estado: "Ligado" / "Desligado".
+func _checkbox() -> CheckBox:
 	var check: CheckBox = CheckBox.new()
-	check.text = text
+	check.text = "Desligado"
 	check.focus_mode = Control.FOCUS_NONE
+	check.toggled.connect(func(on: bool) -> void: check.text = "Ligado" if on else "Desligado")
 	return check
 
 
@@ -163,9 +179,7 @@ func _build() -> void:
 		res_labels.append("%d × %d" % [res.x, res.y])
 	resolution_option = _option(res_labels)
 	_row(video, "Resolução", resolution_option)
-	vsync_check = CheckBox.new()
-	vsync_check.text = "Ligado"
-	vsync_check.focus_mode = Control.FOCUS_NONE
+	vsync_check = _checkbox()
 	_row(video, "VSync", vsync_check)
 	var fps_labels: Array = []
 	for fps: int in SettingsManager.FPS_LIMITS:
@@ -222,15 +236,15 @@ func _build() -> void:
 	sensitivity_slider = sens_row[0]
 	sensitivity_value = sens_row[1]
 	sensitivity_slider.value_changed.connect(func(v: float) -> void: sensitivity_value.text = "%d %%" % int(v))
-	invert_y_check = _checkbox("Ligado")
+	invert_y_check = _checkbox()
 	_row(gameplay, "Inverter eixo Y", invert_y_check)
 	var fov_row: Array = _slider_row(gameplay, "Campo de visão", SettingsManager.FOV_RANGE.x, SettingsManager.FOV_RANGE.y, 1.0)
 	fov_slider = fov_row[0]
 	fov_value = fov_row[1]
 	fov_slider.value_changed.connect(func(v: float) -> void: fov_value.text = "%d°" % int(v))
-	bobbing_check = _checkbox("Ligado")
+	bobbing_check = _checkbox()
 	_row(gameplay, "Balanço da câmera ao andar", bobbing_check)
-	show_fps_check = _checkbox("Ligado")
+	show_fps_check = _checkbox()
 	_row(gameplay, "Mostrar FPS", show_fps_check)
 	var hud_row: Array = _slider_row(gameplay, "Tamanho do texto do HUD",
 		SettingsManager.HUD_TEXT_SCALE_RANGE.x * 100.0, SettingsManager.HUD_TEXT_SCALE_RANGE.y * 100.0, 10.0)
@@ -253,6 +267,7 @@ func _build() -> void:
 	tabs.add_child(gameplay_scroll)
 
 	var buttons: HBoxContainer = HBoxContainer.new()
+	buttons_row = buttons
 	buttons.add_theme_constant_override("separation", 12)
 	defaults_button = Button.new()
 	defaults_button.text = "Restaurar padrão"
@@ -320,6 +335,46 @@ func _build() -> void:
 	conflict_box.add_child(conflict_buttons)
 	conflict_panel.add_child(_margin(conflict_box, 18))
 	box.add_child(conflict_panel)
+	# Descartar alterações (Voltar com mudanças pendentes).
+	discard_panel = PanelContainer.new()
+	discard_panel.theme_type_variation = &"WornPanel"
+	discard_panel.visible = false
+	var discard_box: VBoxContainer = VBoxContainer.new()
+	discard_box.add_theme_constant_override("separation", 12)
+	var discard_label: Label = Label.new()
+	discard_label.text = DISCARD_TEXT
+	discard_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	discard_box.add_child(discard_label)
+	var discard_buttons: HBoxContainer = HBoxContainer.new()
+	discard_buttons.add_theme_constant_override("separation", 12)
+	discard_cancel_button = Button.new()
+	discard_cancel_button.text = "Cancelar"
+	discard_button = Button.new()
+	discard_button.text = "Descartar"
+	discard_button.theme_type_variation = &"DangerButton"
+	for button: Button in [discard_cancel_button, discard_button]:
+		button.custom_minimum_size = Vector2(0, 44)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.focus_mode = Control.FOCUS_NONE
+		discard_buttons.add_child(button)
+	discard_box.add_child(discard_buttons)
+	discard_panel.add_child(_margin(discard_box, 18))
+	box.add_child(discard_panel)
+	discard_button.pressed.connect(discard)
+	discard_cancel_button.pressed.connect(_hide_discard)
+
+	# "Configurações salvas": por cima do painel (top_level), acima dos botões; some em ~2 s.
+	saved_notice = PanelContainer.new()
+	saved_notice.theme_type_variation = &"ToastPanel"
+	saved_notice.top_level = true
+	saved_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	saved_notice.visible = false
+	var saved_label: Label = Label.new()
+	saved_label.text = SAVED_TEXT
+	saved_label.theme_type_variation = &"ToastLabel"
+	saved_notice.add_child(saved_label)
+	add_child(saved_notice)
+
 	swap_button.pressed.connect(_on_swap_pressed)
 	conflict_cancel_button.pressed.connect(_end_capture)
 	keep_button.pressed.connect(func() -> void: SettingsManager.instance.confirm_video_trial())
@@ -362,6 +417,7 @@ func refresh() -> void:
 	show_fps_check.button_pressed = bool(gameplay["show_fps"])
 	hud_text_slider.value = roundf(float(gameplay["hud_text_scale"]) * 100.0)
 	hud_text_value.text = "%d %%" % int(hud_text_slider.value)
+	_mark_clean()
 
 
 func pending_gameplay() -> Dictionary:
@@ -373,6 +429,19 @@ func pending_gameplay() -> Dictionary:
 		"show_fps": show_fps_check.button_pressed,
 		"hud_text_scale": hud_text_slider.value / 100.0,
 	}
+
+
+func _pending_all() -> Dictionary:
+	return {"video": pending_video(), "audio": pending_audio(), "gameplay": pending_gameplay()}
+
+
+## Há mudança na tela que ainda não foi aplicada (os controles se aplicam na hora).
+func has_pending_changes() -> bool:
+	return _pending_all() != _clean_state
+
+
+func _mark_clean() -> void:
+	_clean_state = _pending_all()
 
 
 func pending_video() -> Dictionary:
@@ -416,6 +485,8 @@ func _on_apply_pressed() -> void:
 		sm.begin_video_trial(video)
 	else:
 		sm.set_section(SettingsManager.VIDEO, video)
+		_mark_clean()
+		show_saved_notice()
 
 
 func _on_defaults_pressed() -> void:
@@ -441,19 +512,75 @@ func _on_defaults_pressed() -> void:
 	refresh()
 
 
+## Voltar (botão ou Esc): com mudanças não aplicadas pergunta antes; com a pergunta na tela,
+## cancela a pergunta.
 func _on_back_pressed() -> void:
+	if discard_panel.visible:
+		_hide_discard()
+		return
+	var sm: SettingsManager = SettingsManager.instance
+	var trial: bool = sm != null and sm.is_video_trial_active()
+	if not trial and capturing.is_empty() and has_pending_changes():
+		hide_saved_notice()
+		discard_panel.visible = true
+		tabs.visible = false
+		buttons_row.visible = false
+		return
+	discard()
+
+
+## Fecha sem aplicar: desfaz o teste de vídeo e volta os valores da tela aos atuais.
+func discard() -> void:
 	_end_capture()
+	hide_saved_notice()
 	var sm: SettingsManager = SettingsManager.instance
 	if sm != null and sm.is_video_trial_active():
 		sm.revert_video_trial()
+	_hide_discard()
 	refresh()
 	closed.emit()
 
 
-func _on_video_trial_finished(_kept: bool) -> void:
+func _hide_discard() -> void:
+	discard_panel.visible = false
+	buttons_row.visible = true
+	tabs.visible = not confirm_panel.visible and not conflict_panel.visible
+
+
+func show_saved_notice() -> void:
+	_saved_token += 1
+	var token: int = _saved_token
+	saved_notice.modulate.a = 1.0
+	saved_notice.visible = true
+	_place_saved_notice()
+	await get_tree().create_timer(SAVED_SECONDS * 0.75, true, false, true).timeout
+	if token != _saved_token:
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(saved_notice, "modulate:a", 0.0, SAVED_SECONDS * 0.25)
+	await tween.finished
+	if token == _saved_token:
+		saved_notice.visible = false
+
+
+func hide_saved_notice() -> void:
+	_saved_token += 1
+	saved_notice.visible = false
+
+
+## Centrado no painel, logo acima dos botões (refeito a cada frame: o layout muda ao aplicar).
+func _place_saved_notice() -> void:
+	saved_notice.reset_size()
+	var anchor_y: float = buttons_row.global_position.y if buttons_row.is_visible_in_tree() else global_position.y + size.y
+	saved_notice.global_position = Vector2(global_position.x + (size.x - saved_notice.size.x) * 0.5, anchor_y - saved_notice.size.y - 10.0)
+
+
+func _on_video_trial_finished(kept: bool) -> void:
 	confirm_panel.visible = false
 	tabs.visible = true
 	refresh()
+	if kept and is_visible_in_tree():
+		show_saved_notice()
 
 
 # --- Controles (etapa 2) -------------------------------------------------------
