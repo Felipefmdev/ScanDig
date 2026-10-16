@@ -15,11 +15,14 @@ enum State {
 	LEAVE,
 }
 
-const FUR: Color = Color(0.3, 0.24, 0.2)
-const FUR_DARK: Color = Color(0.2, 0.15, 0.12)
-const SNOUT: Color = Color(0.93, 0.6, 0.62)
-const CLAW: Color = Color(0.85, 0.8, 0.7)
-const DIRT: Color = Color(0.42, 0.3, 0.18)
+const FUR: Color = Color(0.26, 0.20, 0.17)
+const FUR_DARK: Color = Color(0.18, 0.14, 0.12)
+const SNOUT: Color = Color(0.96, 0.62, 0.65)
+const NOSE_TIP: Color = Color(0.85, 0.45, 0.50)
+const CLAW: Color = Color(0.88, 0.84, 0.72)
+const GLASSES_FRAME: Color = Color(0.14, 0.12, 0.10)
+const GLASSES_LENS: Color = Color(0.85, 0.90, 0.94)
+const DIRT: Color = Color(0.48, 0.36, 0.22)
 
 ## Profundidade (abaixo do chão) a que viaja.
 const UNDERGROUND_DEPTH: float = 1.0
@@ -258,28 +261,59 @@ func _build_model() -> void:
 		_body_root = Node3D.new()
 		_body_root.name = "BodyRoot"
 		add_child(_body_root)
-	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Corpo gordo, focinho rosa, garras grandes à frente
-	LowPolyMesh.prism(st, Vector3(0, 0.0, 0.25), Vector3(0, 0.55, 0.05), 0.32, 0.22, 8, FUR)
-	LowPolyMesh.prism(st, Vector3(0, 0.55, 0.05), Vector3(0, 0.62, -0.25), 0.2, 0.06, 7, FUR_DARK)
-	LowPolyMesh.box(st, Vector3(0, 0.62, -0.3), Vector3(0.1, 0.08, 0.08), Basis.IDENTITY, SNOUT)
+
+	# Corpo rechonchudo em forma de pêra (toupeira.jpg)
+	LowPolyMesh.prism(st, Vector3(0, 0.0, 0.05), Vector3(0, 0.52, 0.0), 0.35, 0.28, 8, FUR)
+	LowPolyMesh.prism(st, Vector3(0, 0.50, 0.0), Vector3(0, 0.74, -0.05), 0.28, 0.18, 8, FUR)
+
+	# Focinho carnudo rosa bulboso e ponta do nariz com narinas (toupeira.jpg)
+	LowPolyMesh.prism(st, Vector3(0, 0.58, -0.14), Vector3(0, 0.56, -0.32), 0.15, 0.11, 7, SNOUT)
+	LowPolyMesh.box(st, Vector3(0, 0.56, -0.34), Vector3(0.15, 0.10, 0.06), Basis.IDENTITY, NOSE_TIP)
+	LowPolyMesh.box(st, Vector3(-0.038, 0.56, -0.372), Vector3(0.022, 0.028, 0.015), Basis.IDENTITY, FUR_DARK)
+	LowPolyMesh.box(st, Vector3(0.038, 0.56, -0.372), Vector3(0.022, 0.028, 0.015), Basis.IDENTITY, FUR_DARK)
+
+	# Óculos redondos cómicos com aros escuros, lentes e olhos por trás (toupeira.jpg)
+	# Ponte dos óculos
+	LowPolyMesh.box(st, Vector3(0.0, 0.68, -0.21), Vector3(0.06, 0.02, 0.02), Basis.IDENTITY, GLASSES_FRAME)
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.09 * side, 0.68, -0.18), Vector3(0.03, 0.03, 0.03), Basis.IDENTITY, Color.BLACK)
-		var paw: Vector3 = Vector3(0.28 * side, 0.32, -0.2)
-		LowPolyMesh.box(st, paw, Vector3(0.18, 0.06, 0.16), Basis(Vector3.FORWARD, 0.5 * side), FUR_DARK)
-		for k: int in 3:
-			var c: Vector3 = paw + Vector3((0.05 * float(k - 1)) + 0.05 * side, 0.0, -0.1)
-			LowPolyMesh.prism(st, c, c + Vector3(0, -0.02, -0.1), 0.02, 0.0, 4, CLAW)
+		# Aro redondo
+		LowPolyMesh.prism(st, Vector3(0.12 * side, 0.67, -0.19), Vector3(0.12 * side, 0.67, -0.225), 0.085, 0.085, 8, GLASSES_FRAME)
+		# Vidro da lente
+		LowPolyMesh.box(st, Vector3(0.12 * side, 0.67, -0.22), Vector3(0.11, 0.11, 0.012), Basis.IDENTITY, GLASSES_LENS)
+		# Pupila atrás da lente
+		LowPolyMesh.box(st, Vector3(0.12 * side, 0.67, -0.228), Vector3(0.035, 0.035, 0.01), Basis.IDENTITY, Color.BLACK)
+		# Hastes laterais dos óculos
+		LowPolyMesh.box(st, Vector3(0.20 * side, 0.68, -0.11), Vector3(0.016, 0.016, 0.20), Basis(Vector3.UP, 0.22 * side), GLASSES_FRAME)
+
+		# Grandes patas e garras de escavação (toupeira.jpg)
+		# Braço
+		LowPolyMesh.box(st, Vector3(0.26 * side, 0.38, -0.08), Vector3(0.16, 0.14, 0.18), Basis(Vector3.FORWARD, 0.35 * side), FUR_DARK)
+		# Palma em pá larga marfim/osso
+		var paw_pos: Vector3 = Vector3(0.33 * side, 0.36, -0.22)
+		LowPolyMesh.box(st, paw_pos, Vector3(0.22, 0.08, 0.20), Basis(Vector3.UP, -0.25 * side), CLAW)
+		# 4 garras longas curvas de escavador
+		for k: int in 4:
+			var offset: float = (float(k) - 1.5) * 0.045
+			var c: Vector3 = paw_pos + Vector3(offset, 0.0, -0.10)
+			LowPolyMesh.prism(st, c, c + Vector3(offset * 0.2 * side, -0.06, -0.16), 0.024, 0.005, 4, CLAW)
+
 	_body_root.add_child(LowPolyMesh.commit(st, "Body", mat))
 	_body_root.visible = false
 
 	var mst: SurfaceTool = SurfaceTool.new()
 	mst.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(mst, Vector3(0, -0.05, 0), Vector3(0, 0.22, 0), 0.45, 0.12, 7, DIRT)
-	_mound = LowPolyMesh.commit(mst, "Mound", LowPolyMesh.make_material())
+	LowPolyMesh.prism(mst, Vector3(0, -0.05, 0), Vector3(0, 0.24, 0), 0.48, 0.16, 8, DIRT)
+	# Pedras e terra revolvida à volta do monte
+	for k: int in 6:
+		var ang: float = float(k) * (TAU / 6.0) + 0.2
+		var rx: float = cos(ang) * 0.38
+		var rz: float = sin(ang) * 0.38
+		LowPolyMesh.box(mst, Vector3(rx, 0.08, rz), Vector3(0.09, 0.07, 0.08), Basis(Vector3.UP, ang), Color(0.38, 0.28, 0.18))
+	_mound = LowPolyMesh.commit(mst, "Mound", ToonKit.vertex_material(true, true))
 	_mound.top_level = true
 	add_child(_mound)
 	_place_mound(0.0)

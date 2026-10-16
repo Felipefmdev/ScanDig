@@ -47,15 +47,26 @@ const PLANK_HIT_RADIUS: float = 1.0
 const SHIELD_TIME: float = 3.0
 ## Fração do dano que passa pelo escudo (golpes de frente).
 const SHIELD_FACTOR: float = 0.2
-const WOOD: Color = Color(0.5, 0.33, 0.18)
+const WOOD: Color = Color(0.50, 0.33, 0.18)
 const WOOD_DARK: Color = Color(0.36, 0.22, 0.12)
-const IRON: Color = Color(0.45, 0.45, 0.47)
+const WOOD_LIGHT: Color = Color(0.62, 0.44, 0.26)
+const IRON: Color = Color(0.40, 0.42, 0.45)
+const IRON_DARK: Color = Color(0.24, 0.25, 0.28)
 
-const SKIN: Color = Color(0.62, 0.22, 0.42)
-const SKIN_DARK: Color = Color(0.44, 0.13, 0.32)
-const SUCKER: Color = Color(0.96, 0.78, 0.74)
-const EYE_WHITE: Color = Color(0.98, 0.97, 0.93)
-const PUPIL: Color = Color(0.04, 0.04, 0.05)
+const SKIN: Color = Color(0.70, 0.22, 0.42)
+const SKIN_DARK: Color = Color(0.48, 0.12, 0.30)
+const SUCKER: Color = Color(0.96, 0.84, 0.80)
+const SUCKER_RIM: Color = Color(0.86, 0.70, 0.68)
+const EYE_WHITE: Color = Color(0.98, 0.98, 0.94)
+const EYE_LID: Color = Color(0.60, 0.18, 0.36)
+const PUPIL: Color = Color(0.06, 0.06, 0.08)
+
+const ANCHOR_RUST: Color = Color(0.74, 0.38, 0.16)
+const ANCHOR_DARK: Color = Color(0.44, 0.22, 0.12)
+const CHAIN_IRON: Color = Color(0.32, 0.30, 0.28)
+const BARNACLE: Color = Color(0.88, 0.85, 0.74)
+const BARNACLE_DARK: Color = Color(0.28, 0.25, 0.20)
+const SPOT_CREAM: Color = Color(0.95, 0.88, 0.80)
 
 @export var slam_damage: float = 18.0
 @export var telegraph_time: float = 1.1
@@ -538,7 +549,7 @@ func _animate(delta: float) -> void:
 
 func _build_model() -> void:
 	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
-	mat.set_shader_parameter(&"spots_amount", 0.7)
+	mat.set_shader_parameter(&"spots_amount", 0.5)
 	mat.set_shader_parameter(&"spots_color", Color(0.86, 0.48, 0.62))
 	mat.set_shader_parameter(&"spots_scale", 4.0)
 	mat.set_shader_parameter(&"spots_size", 0.2)
@@ -549,31 +560,25 @@ func _build_model() -> void:
 
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Cabeça em forma de bolbo (anéis facetados), um pouco inclinada para trás
-	var head_basis: Basis = Basis(Vector3.RIGHT, 0.25)
-	CrabModel.gem(st, Transform3D.IDENTITY, Vector3(0.0, 2.2, 0.35), head_basis, [
-		Vector3(-0.9, 1.0, 0.95), Vector3(-0.2, 1.25, 1.2), Vector3(0.6, 1.15, 1.1), Vector3(1.3, 0.75, 0.8),
-	], 8, -1.2, 1.75, SKIN, 0.05, 71)
-	# Olhos enormes (sem pintas: alfa 0) com pupila em fenda horizontal
-	for side: float in [-1.0, 1.0]:
-		var c: Vector3 = Vector3(0.55 * side, 2.15, -0.75)
-		CrabModel.gem(st, Transform3D.IDENTITY, c, Basis.IDENTITY, [
-			Vector3(-0.22, 0.24, 0.24), Vector3(0.0, 0.33, 0.33), Vector3(0.22, 0.24, 0.24),
-		], 8, -0.33, 0.33, Color(EYE_WHITE.r, EYE_WHITE.g, EYE_WHITE.b, 0.0), 0.0, 72)
-		LowPolyMesh.box(st, c + Vector3(0.0, 0.0, -0.3), Vector3(0.3, 0.1, 0.06), Basis.IDENTITY,
-			Color(PUPIL.r, PUPIL.g, PUPIL.b, 0.0))
-	# Boca/sifão
-	LowPolyMesh.prism(st, Vector3(0.0, 1.55, -0.85), Vector3(0.0, 1.5, -1.25), 0.22, 0.16, 6, SKIN_DARK)
-	_body_root.add_child(_commit(st, "Head", mat))
+	_build_shipwreck(st)
+	_build_head_and_eyes(st)
+	_build_anchor(st)
+	_body_root.add_child(_commit(st, "HeadAndWreckage", mat))
 
-	# 8 tentáculos à volta (cada um um nó para abanar)
+	# 8 tentáculos à volta (cada um num nó pivot para abanar)
 	for i: int in 8:
 		var ang: float = TAU * float(i) / 8.0 + 0.2
 		var pivot: Node3D = Node3D.new()
-		pivot.position = Vector3(cos(ang) * 0.9, 1.0, sin(ang) * 0.9)
+		pivot.position = Vector3(cos(ang) * 0.95, 1.05, sin(ang) * 0.95)
 		pivot.rotation.y = -ang + PI * 0.5
 		_body_root.add_child(pivot)
-		pivot.add_child(_commit(_tentacle_mesh(2.4, 0.32), "Mesh", mat))
+		var mode: int = 0
+		# Tentáculo no bordo de bombordo (+X) erguido sobre a amurada como na referência
+		if i == 1:
+			mode = 1
+		elif i == 5:
+			mode = 2
+		pivot.add_child(_commit(_tentacle_mesh(2.6, 0.38, false, mode), "Mesh", mat))
 		_tentacles.append(pivot)
 
 	# Tentáculos de golpe (saem do chão no ponto atacado)
@@ -583,7 +588,7 @@ func _build_model() -> void:
 		slam.top_level = true
 		slam.visible = false
 		add_child(slam)
-		var m: MeshInstance3D = _commit(_tentacle_mesh(2.6, 0.38, true), "Mesh", mat)
+		var m: MeshInstance3D = _commit(_tentacle_mesh(2.8, 0.40, true), "Mesh", mat)
 		slam.add_child(m)
 		_slam_tentacles.append(slam)
 
@@ -595,28 +600,222 @@ func _build_model() -> void:
 	add_child(shape)
 
 
-## Tentáculo: cadeia de troncos de cone que curva para fora e para baixo, com ventosas claras.
-## upright = sai do chão e enrola-se no topo (golpe).
-func _tentacle_mesh(length: float, radius: float, upright: bool = false) -> SurfaceTool:
+func _build_shipwreck(st: SurfaceTool) -> void:
+	# O casco do barco rodeia o polvo, com a proa partida erguida à esquerda (vista frontal = +X)
+	# e o mastro partido à direita (-X) como na referência polvo_naufragio.jpg
+	var plank_count: int = 16
+	for i: int in range(plank_count):
+		var a0: float = -2.7 + float(i) * 0.34
+		var a1: float = a0 + 0.30
+		# Raio assimétrico em forma de casco de navio (mais alongado no comprimento)
+		var rx: float = 2.45 + (0.5 if cos(a0) > 0.0 else -0.1)
+		var rz: float = 2.05 + sin(a0) * 0.35
+		# Proa erguida no lado esquerdo (+X, -Z)
+		var bow_lift: float = maxf(0.0, cos(a0) * 1.2 - sin(a0) * 0.5)
+		var p0: Vector3 = Vector3(cos(a0) * rx, 0.2 + bow_lift * 0.9, sin(a0) * rz)
+		var p1: Vector3 = Vector3(cos(a1) * rx, 0.2 + bow_lift * 0.9, sin(a1) * rz)
+		var p_mid: Vector3 = (p0 + p1) * 0.5
+		var plank_len: float = (p1 - p0).length() + 0.08
+		var plank_basis: Basis = Basis(Vector3.UP, atan2(p1.x - p0.x, p1.z - p0.z))
+		var timber_col: Color = WOOD if i % 2 == 0 else (WOOD_DARK if i % 3 == 0 else WOOD_LIGHT)
+
+		# Costado / tábua principal
+		LowPolyMesh.box(st, p_mid, Vector3(0.14, 0.55, plank_len), plank_basis, timber_col)
+		# Tábua inferior do casco
+		LowPolyMesh.box(st, p_mid - Vector3(0.0, 0.38, 0.0), Vector3(0.12, 0.42, plank_len), plank_basis, WOOD_DARK)
+		# Tábua superior irregular / lascada
+		LowPolyMesh.box(st, p_mid + Vector3(0.0, 0.42, 0.0), Vector3(0.11, 0.32, plank_len * 0.88), plank_basis, WOOD_LIGHT)
+		# Braçadeiras metálicas / pregos
+		if i % 3 == 0:
+			LowPolyMesh.box(st, p_mid + Vector3(0.0, 0.06, 0.0), Vector3(0.18, 1.15, 0.12), plank_basis, IRON)
+
+	# Proa saliente e vigas partidas no lado esquerdo (+X, como em polvo_naufragio.jpg)
+	var bow_tip: Vector3 = Vector3(2.55, 1.85, -0.45)
+	LowPolyMesh.prism(st, Vector3(2.1, 0.5, -0.2), bow_tip, 0.20, 0.06, 5, WOOD)
+	LowPolyMesh.prism(st, Vector3(2.35, 0.4, 0.2), bow_tip + Vector3(0.1, 0.2, -0.1), 0.16, 0.04, 4, WOOD_LIGHT)
+	# Vigas de trave quebrada
+	LowPolyMesh.prism(st, bow_tip, bow_tip + Vector3(0.4, 0.25, -0.3), 0.08, 0.02, 4, WOOD_DARK)
+
+	# Mastro grosso partido erguido a estibordo (-X, atrás/lado como na referência)
+	var mast_base: Vector3 = Vector3(-1.85, 0.3, 0.55)
+	var mast_mid: Vector3 = Vector3(-2.05, 1.85, 0.35)
+	var mast_top: Vector3 = Vector3(-2.25, 3.15, 0.15)
+	LowPolyMesh.prism(st, mast_base, mast_mid, 0.18, 0.15, 6, WOOD)
+	LowPolyMesh.prism(st, mast_mid - Vector3(0.0, 0.12, 0.0), mast_mid + Vector3(0.0, 0.12, 0.0), 0.20, 0.20, 6, IRON)
+	LowPolyMesh.prism(st, mast_mid, mast_top, 0.15, 0.03, 5, WOOD_LIGHT)
+	# Corda pendurada do topo do mastro descendo até aos destroços
+	var rope_pts: Array[Vector3] = [
+		mast_top - Vector3(0.05, 0.1, 0.0),
+		mast_mid + Vector3(0.15, -0.3, -0.1),
+		Vector3(-1.6, 0.9, -0.4),
+		Vector3(-1.3, 0.4, -0.9)
+	]
+	for ri: int in rope_pts.size() - 1:
+		LowPolyMesh.prism(st, rope_pts[ri], rope_pts[ri + 1], 0.035, 0.03, 4, BARNACLE)
+
+	# Trave transversal frontal sobre a qual os tentáculos descansam
+	var spar_left: Vector3 = Vector3(1.65, 0.85, -1.15)
+	var spar_mid: Vector3 = Vector3(0.15, 0.52, -1.55)
+	var spar_right: Vector3 = Vector3(-1.25, 0.40, -1.35)
+	LowPolyMesh.prism(st, spar_left, spar_mid, 0.14, 0.11, 5, WOOD)
+	LowPolyMesh.prism(st, spar_mid, spar_right, 0.11, 0.04, 5, WOOD_DARK)
+	# Anel de ferro na trave
+	LowPolyMesh.prism(st, spar_mid - Vector3(0.1, 0.0, 0.0), spar_mid + Vector3(0.1, 0.0, 0.0), 0.14, 0.14, 6, IRON)
+
+	# Piso do barco com tábuas partidas
+	for k: int in range(7):
+		var b_pos: Vector3 = Vector3(-1.2 + float(k) * 0.4, 0.18, 0.2 + float(k % 2) * 0.3)
+		LowPolyMesh.box(st, b_pos, Vector3(0.34, 0.08, 1.8), Basis(Vector3.UP, 0.10 * float(k - 3)), WOOD_DARK)
+
+
+func _build_anchor(st: SurfaceTool) -> void:
+	# Grande âncora de ferro enferrujada cravada no topo-direito do polvo (na vista frontal fica à direita = -X)
+	var a_base: Vector3 = Vector3(-0.65, 3.45, 0.15)
+	var a_top: Vector3 = Vector3(-1.15, 4.95, -0.05)
+	var shank_vec: Vector3 = (a_top - a_base).normalized()
+
+	# Haste principal imponente
+	LowPolyMesh.prism(st, a_base, a_top, 0.11, 0.09, 6, ANCHOR_RUST)
+
+	# Travessão perpendicular longo (stock)
+	var stock_pos: Vector3 = a_top - shank_vec * 0.42
+	var stock_basis: Basis = Basis(Vector3.FORWARD, deg_to_rad(35.0)).rotated(Vector3.UP, deg_to_rad(-25.0))
+	LowPolyMesh.box(st, stock_pos, Vector3(1.10, 0.085, 0.085), stock_basis, ANCHOR_RUST)
+	var stock_end: Vector3 = stock_basis.x * 0.55
+	LowPolyMesh.prism(st, stock_pos + stock_end, stock_pos + stock_end * 1.15, 0.08, 0.02, 6, ANCHOR_DARK)
+	LowPolyMesh.prism(st, stock_pos - stock_end, stock_pos - stock_end * 1.15, 0.08, 0.02, 6, ANCHOR_DARK)
+
+	# Grande argola / olhal superior
+	var ring_center: Vector3 = a_top + shank_vec * 0.18
+	LowPolyMesh.prism(st, a_top, ring_center + shank_vec * 0.16, 0.15, 0.15, 8, ANCHOR_DARK)
+	LowPolyMesh.prism(st, ring_center - Vector3(0.0, 0.02, 0.0), ring_center + Vector3(0.0, 0.02, 0.0), 0.075, 0.075, 6, Color(0, 0, 0, 0))
+
+	# Braços curvos e unhas pontiagudas (flukes) na base cravada
+	# Braço 1: crava-se no crânio do polvo
+	var fluke1_mid: Vector3 = a_base + Vector3(0.35, -0.15, 0.15)
+	var fluke1_tip: Vector3 = a_base + Vector3(0.60, 0.25, 0.10)
+	LowPolyMesh.prism(st, a_base, fluke1_mid, 0.10, 0.08, 5, ANCHOR_RUST)
+	LowPolyMesh.prism(st, fluke1_mid, fluke1_tip, 0.08, 0.02, 4, ANCHOR_DARK)
+
+	# Braço 2: curva-se para fora de forma bem saliente
+	var fluke2_mid: Vector3 = a_base + Vector3(-0.45, -0.10, -0.15)
+	var fluke2_tip: Vector3 = a_base + Vector3(-0.75, 0.55, -0.20)
+	var palm_tip: Vector3 = fluke2_tip + Vector3(-0.15, 0.18, 0.05)
+	LowPolyMesh.prism(st, a_base, fluke2_mid, 0.11, 0.09, 5, ANCHOR_RUST)
+	LowPolyMesh.prism(st, fluke2_mid, fluke2_tip, 0.09, 0.06, 5, ANCHOR_RUST)
+	LowPolyMesh.prism(st, fluke2_tip, palm_tip, 0.12, 0.015, 4, ANCHOR_DARK)
+
+	# Corrente de elos grossos pendurada do olhal caindo pelo lado do polvo
+	var chain_points: Array[Vector3] = [
+		ring_center,
+		stock_pos + Vector3(0.05, -0.20, 0.10),
+		a_base + Vector3(-0.25, 0.15, 0.20),
+		a_base + Vector3(-0.55, -0.50, 0.25),
+		Vector3(-1.3, 2.2, 0.35)
+	]
+	for idx: int in chain_points.size() - 1:
+		var cp_a: Vector3 = chain_points[idx]
+		var cp_b: Vector3 = chain_points[idx + 1]
+		var c_mid: Vector3 = (cp_a + cp_b) * 0.5
+		LowPolyMesh.prism(st, cp_a, cp_b, 0.05, 0.05, 6, CHAIN_IRON)
+		LowPolyMesh.box(st, c_mid, Vector3(0.12, 0.12, 0.045), Basis.IDENTITY, CHAIN_IRON)
+
+
+func _build_head_and_eyes(st: SurfaceTool) -> void:
+	var head_basis: Basis = Basis(Vector3.RIGHT, 0.18)
+	# Manto bulboso do polvo com anéis poligonais
+	CrabModel.gem(st, Transform3D.IDENTITY, Vector3(0.0, 2.35, 0.15), head_basis, [
+		Vector3(-1.05, 1.20, 1.15), Vector3(-0.25, 1.55, 1.50), Vector3(0.70, 1.45, 1.40), Vector3(1.50, 0.90, 0.90),
+	], 8, -1.3, 1.85, SKIN, 0.05, 71)
+
+	# Manchas poligonais claras (creme/bege) grandes como em polvo_naufragio.jpg
+	var spot_positions: Array[Vector3] = [
+		Vector3(-0.45, 3.25, -0.85), Vector3(0.20, 3.45, -0.75), Vector3(-0.70, 2.95, -0.65),
+		Vector3(0.55, 2.95, -0.65), Vector3(0.0, 3.75, -0.35), Vector3(-0.55, 3.65, -0.15),
+		Vector3(0.65, 3.55, -0.15), Vector3(-0.85, 2.55, -0.45), Vector3(0.85, 2.55, -0.45),
+		Vector3(0.0, 3.85, 0.25), Vector3(-0.55, 3.45, 0.65), Vector3(0.55, 3.45, 0.65)
+	]
+	for sp: Vector3 in spot_positions:
+		var norm: Vector3 = (sp - Vector3(0.0, 2.35, 0.15)).normalized()
+		LowPolyMesh.prism(st, sp, sp + norm * 0.06, 0.18, 0.14, 6, SPOT_CREAM)
+
+	# Cracas (barnacles) espalhadas pelo manto
+	var barnacle_positions: Array[Vector3] = [
+		Vector3(-0.15, 3.05, -0.95), Vector3(0.45, 2.65, -0.85), Vector3(-0.75, 2.35, -0.75),
+		Vector3(0.75, 2.35, -0.75), Vector3(-0.25, 3.80, -0.15), Vector3(0.35, 3.75, 0.05)
+	]
+	for bp: Vector3 in barnacle_positions:
+		var b_norm: Vector3 = (bp - Vector3(0.0, 2.35, 0.15)).normalized()
+		var b_tip: Vector3 = bp + b_norm * 0.14
+		LowPolyMesh.prism(st, bp, b_tip, 0.13, 0.045, 5, BARNACLE)
+		LowPolyMesh.prism(st, bp + b_norm * 0.10, b_tip + b_norm * 0.03, 0.05, 0.0, 5, BARNACLE_DARK)
+
+	# Olhos esféricos enormes saltados para a frente/lados com pupilas vivas
+	for side: float in [-1.0, 1.0]:
+		var eye_center: Vector3 = Vector3(0.72 * side, 2.25, -0.75)
+		# Anel da pálpebra em redor do olho
+		LowPolyMesh.prism(st, eye_center + Vector3(0.0, 0.0, 0.16), eye_center - Vector3(0.0, 0.0, 0.06), 0.50, 0.46, 8, EYE_LID)
+		# Globo ocular branco esférico
+		CrabModel.gem(st, Transform3D.IDENTITY, eye_center, Basis.IDENTITY, [
+			Vector3(-0.32, 0.42, 0.42), Vector3(0.0, 0.46, 0.46), Vector3(0.32, 0.42, 0.42),
+		], 8, -0.42, 0.42, Color(EYE_WHITE.r, EYE_WHITE.g, EYE_WHITE.b, 0.0), 0.0, 72)
+		# Pupila preta viva circular
+		var pupil_pos: Vector3 = eye_center + Vector3(0.04 * side, 0.02, -0.44)
+		LowPolyMesh.prism(st, pupil_pos + Vector3(0.0, 0.0, 0.05), pupil_pos, 0.22, 0.21, 8, Color(PUPIL.r, PUPIL.g, PUPIL.b, 0.0))
+		# Brilho branco na pupila
+		var glint_pos: Vector3 = pupil_pos + Vector3(-0.07 * side, 0.09, -0.02)
+		LowPolyMesh.box(st, glint_pos, Vector3(0.07, 0.07, 0.02), Basis.IDENTITY, Color(1.0, 1.0, 1.0, 0.0))
+
+	# Sifão / boca
+	LowPolyMesh.prism(st, Vector3(0.0, 1.60, -0.95), Vector3(0.0, 1.45, -1.45), 0.32, 0.22, 6, SKIN_DARK)
+
+
+func _tentacle_mesh(length: float, radius: float, upright: bool = false, mode: int = 0) -> SurfaceTool:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var segs: int = 6
+	var segs: int = 8
 	var prev: Vector3 = Vector3.ZERO
 	for s: int in segs:
 		var t: float = float(s + 1) / float(segs)
 		var p: Vector3
 		if upright:
 			p = Vector3(0.0, length * t, -sin(t * PI * 0.9) * 0.6 * t)
+		elif mode == 1:
+			# Erguido alto e curvado sobre a amurada do barco (+X) como na referência
+			p = Vector3(sin(t * PI) * 0.55, sin(t * PI * 0.75) * 1.7 + t * 0.4, length * t * 0.72)
+		elif mode == 2:
+			# Curvado para a frente enroscando na trave frontal
+			p = Vector3(-sin(t * PI) * 0.35, -0.15 + sin(t * PI) * 0.55, length * t * 0.92)
 		else:
 			p = Vector3(0.0, -length * 0.35 * t * t, length * t)
 		var r0: float = radius * (1.0 - float(s) / float(segs) * 0.85)
 		var r1: float = radius * (1.0 - t * 0.85)
-		LowPolyMesh.prism(st, prev, p, r0, r1 if s < segs - 1 else 0.0, 6, SKIN if s % 2 == 0 else SKIN_DARK)
-		# Ventosa por baixo (sem pintas)
+		LowPolyMesh.prism(st, prev, p, r0, r1 if s < segs - 1 else 0.0, 7, SKIN if s % 2 == 0 else SKIN_DARK)
 		var mid: Vector3 = (prev + p) * 0.5
-		var under: Vector3 = Vector3(0.0, 0.0, r0 * 0.9) if upright else Vector3(0.0, -r0 * 0.9, 0.0)
-		LowPolyMesh.prism(st, mid + under * 0.6, mid + under * 1.1, r0 * 0.45, r0 * 0.35, 6,
-			Color(SUCKER.r, SUCKER.g, SUCKER.b, 0.0))
+		var under_dir: Vector3
+		if upright:
+			under_dir = Vector3(0.0, 0.0, 1.0)
+		elif mode == 1:
+			under_dir = Vector3(-0.6, -0.8, 0.0).normalized()
+		else:
+			under_dir = Vector3(0.0, -1.0, 0.0)
+		var under_pos: Vector3 = mid + under_dir * (r0 * 0.85)
+		LowPolyMesh.prism(st, mid, under_pos, r0 * 0.75, r0 * 0.65, 5, SUCKER)
+
+		if s < segs - 1:
+			for vx: float in [-0.4, 0.4]:
+				var v_offset: Vector3 = Vector3(r0 * vx, 0.0, 0.0)
+				var v_base: Vector3 = under_pos + v_offset
+				var v_tip: Vector3 = v_base + under_dir * (r0 * 0.35)
+				LowPolyMesh.prism(st, v_base, v_tip, r0 * 0.38, r0 * 0.32, 6, SUCKER_RIM)
+				LowPolyMesh.prism(st, v_tip, v_tip + under_dir * 0.01, r0 * 0.22, 0.0, 6, SUCKER)
+
+		if s == 2 or s == 4:
+			var dorsal_dir: Vector3 = -under_dir
+			var b_pos: Vector3 = mid + dorsal_dir * (r0 * 0.95)
+			LowPolyMesh.prism(st, b_pos, b_pos + dorsal_dir * 0.10, 0.09, 0.03, 5, BARNACLE)
+			LowPolyMesh.prism(st, b_pos + dorsal_dir * 0.08, b_pos + dorsal_dir * 0.11, 0.04, 0.0, 5, BARNACLE_DARK)
+
 		prev = p
 	return st
 

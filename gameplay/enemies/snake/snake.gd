@@ -33,11 +33,11 @@ const WRAP_BREAK: float = 1.3
 
 const SEGMENTS: int = 7
 const SEGMENT_SPACING: float = 0.16
-const SCALE_GREEN: Color = Color(0.36, 0.52, 0.18)
-const SCALE_DARK: Color = Color(0.2, 0.32, 0.1)
-const BELLY: Color = Color(0.82, 0.78, 0.45)
-const EYE: Color = Color(0.95, 0.75, 0.1)
-const TONGUE: Color = Color(0.85, 0.12, 0.2)
+const SCALE_GREEN: Color = Color(0.44, 0.48, 0.20)
+const SCALE_DARK: Color = Color(0.18, 0.16, 0.12)
+const BELLY: Color = Color(0.88, 0.85, 0.65)
+const EYE: Color = Color(0.98, 0.98, 0.98)
+const TONGUE: Color = Color(0.88, 0.12, 0.18)
 
 @export var move_speed: float = 3.0
 @export var turn_speed: float = 7.0
@@ -425,24 +425,50 @@ func _build_model() -> void:
 		_body_root = Node3D.new()
 		_body_root.name = "BodyRoot"
 		add_child(_body_root)
-	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
 	for i: int in SEGMENTS:
 		var st: SurfaceTool = SurfaceTool.new()
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		var r: float = 0.075 * (1.0 - float(i) / float(SEGMENTS) * 0.6)
+		var r: float = 0.095 * (1.0 - float(i) / float(SEGMENTS) * 0.55)
 		if i == 0:
-			# Cabeça achatada com olhos amarelos e língua
-			LowPolyMesh.box(st, Vector3(0, 0, -0.04), Vector3(0.17, 0.09, 0.2), Basis.IDENTITY, SCALE_DARK)
-			LowPolyMesh.box(st, Vector3(0, -0.035, -0.04), Vector3(0.15, 0.03, 0.18), Basis.IDENTITY, BELLY)
+			# Cabeça triangular/diamante de víbora (cobra.jpg)
+			LowPolyMesh.prism(st, Vector3(0.0, 0.02, 0.06), Vector3(0.0, 0.02, -0.16), 0.13, 0.08, 6, SCALE_GREEN)
+			LowPolyMesh.prism(st, Vector3(0.0, 0.01, -0.12), Vector3(0.0, -0.01, -0.25), 0.08, 0.04, 5, SCALE_GREEN)
+			# Padrão escuro no topo da cabeça
+			LowPolyMesh.box(st, Vector3(0.0, 0.045, -0.05), Vector3(0.08, 0.015, 0.08), Basis(Vector3.UP, PI * 0.25), SCALE_DARK)
+			# Mandíbula inferior e ventre creme
+			LowPolyMesh.box(st, Vector3(0.0, -0.035, -0.08), Vector3(0.14, 0.03, 0.18), Basis(Vector3.RIGHT, 0.12), BELLY)
+			LowPolyMesh.box(st, Vector3(0.0, -0.01, -0.10), Vector3(0.10, 0.02, 0.14), Basis.IDENTITY, Color(0.52, 0.12, 0.16)) # interior da boca
+			# Presas brancas afiadas (cobra.jpg)
 			for side: float in [-1.0, 1.0]:
-				LowPolyMesh.box(st, Vector3(0.07 * side, 0.03, -0.09), Vector3(0.04, 0.04, 0.04), Basis.IDENTITY, EYE)
-			LowPolyMesh.prism(st, Vector3(0, -0.01, -0.14), Vector3(0, -0.01, -0.24), 0.012, 0.0, 3, TONGUE)
+				LowPolyMesh.prism(st, Vector3(0.05 * side, -0.005, -0.16), Vector3(0.05 * side, -0.055, -0.16), 0.015, 0.0, 3, Color(0.98, 0.98, 0.98))
+			# Língua bifurcada vermelha longa curvada (cobra.jpg)
+			LowPolyMesh.box(st, Vector3(0.0, -0.02, -0.22), Vector3(0.025, 0.008, 0.10), Basis(Vector3.RIGHT, -0.2), TONGUE)
+			LowPolyMesh.box(st, Vector3(-0.02, -0.045, -0.28), Vector3(0.012, 0.006, 0.06), Basis(Vector3.UP, 0.4), TONGUE)
+			LowPolyMesh.box(st, Vector3(0.02, -0.045, -0.28), Vector3(0.012, 0.006, 0.06), Basis(Vector3.UP, -0.4), TONGUE)
+			# Olhos arregalados cómicos (cobra.jpg)
+			for side: float in [-1.0, 1.0]:
+				LowPolyMesh.box(st, Vector3(0.09 * side, 0.065, -0.10), Vector3(0.065, 0.065, 0.065), Basis.IDENTITY, Color(0.98, 0.98, 0.98))
+				LowPolyMesh.box(st, Vector3(0.115 * side, 0.065, -0.11), Vector3(0.025, 0.035, 0.035), Basis.IDENTITY, Color(0.08, 0.08, 0.10))
+				LowPolyMesh.box(st, Vector3(0.085 * side, 0.10, -0.10), Vector3(0.055, 0.015, 0.06), Basis(Vector3.FORWARD, 0.25 * side), SCALE_DARK)
 		else:
-			var color: Color = SCALE_GREEN if i % 2 == 1 else SCALE_DARK
-			LowPolyMesh.prism(st, Vector3(0, 0, -SEGMENT_SPACING * 0.55), Vector3(0, 0, SEGMENT_SPACING * 0.55), r, r * 0.9, 6, color)
+			# Segmentos com dorso verde, ventre creme e losangos escuros (cobra.jpg)
+			LowPolyMesh.prism(st, Vector3(0, 0, -SEGMENT_SPACING * 0.55), Vector3(0, 0, SEGMENT_SPACING * 0.55), r, r * 0.92, 6, SCALE_GREEN)
+			# Ventre creme
+			LowPolyMesh.box(st, Vector3(0.0, -r * 0.72, 0.0), Vector3(r * 1.35, r * 0.4, SEGMENT_SPACING * 0.95), Basis.IDENTITY, BELLY)
+			# Padrão losangular escuro nas costas e flancos
+			LowPolyMesh.box(st, Vector3(0.0, r * 0.85, 0.0), Vector3(r * 0.95, r * 0.22, r * 0.95), Basis(Vector3.UP, PI * 0.25), SCALE_DARK)
+			for side: float in [-1.0, 1.0]:
+				LowPolyMesh.box(st, Vector3(r * 0.85 * side, 0.0, 0.0), Vector3(r * 0.18, r * 0.75, r * 0.75), Basis(Vector3.UP, PI * 0.25), SCALE_DARK)
+			if i == SEGMENTS - 1:
+				# Guizo na cauda
+				LowPolyMesh.box(st, Vector3(0.0, 0.0, SEGMENT_SPACING * 0.55), Vector3(0.045, 0.045, 0.07), Basis.IDENTITY, Color(0.82, 0.72, 0.45))
+				LowPolyMesh.box(st, Vector3(0.0, 0.0, SEGMENT_SPACING * 0.65), Vector3(0.035, 0.035, 0.05), Basis.IDENTITY, Color(0.68, 0.58, 0.35))
 		var seg: MeshInstance3D = LowPolyMesh.commit(st, "Segment%d" % i, mat)
-		seg.position = Vector3(0, 0.12 if i == 0 else 0.07, float(i) * SEGMENT_SPACING - 0.45)
+		var py: float = 0.20 if i == 0 else (0.15 if i == 1 else (0.10 if i == 2 else 0.07))
+		var pz: float = -0.45 + float(i) * SEGMENT_SPACING
+		seg.position = Vector3(0, py, pz)
 		_body_root.add_child(seg)
 		_segments.append(seg)
 

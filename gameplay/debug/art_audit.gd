@@ -64,10 +64,13 @@ func _capture() -> void:
 	# Os modelos procedimentais constroem-se no _ready; espera uns frames.
 	for i: int in 8:
 		await get_tree().process_frame
-	# Chefes que nascem numa pose (ex.: múmia deitada no sarcófago) ficam de pé para a captura.
+	# Chefes e inimigos que nascem numa pose ou debaixo da terra (ex.: múmia, toupeira)
 	var body: Node3D = _subject.get(&"_body_root") as Node3D
 	if body != null:
 		body.rotation = Vector3.ZERO
+		body.visible = true
+	if _subject is EnemyBase:
+		_subject.position.y = 0.0
 	var box: AABB = _mesh_aabb(_subject)
 	var center: Vector3 = box.get_center()
 	var radius: float = maxf(box.size.length() * 0.5, 0.2)

@@ -9,12 +9,13 @@ extends Seagull
 ## (todo o bando, se houver vários) voa em espiral cada vez mais apertada e baixa à volta dele
 ## e no fim bica e atira-o ao ar.
 
-const BLACK: Color = Color(0.1, 0.1, 0.13)
-const BLUE_BLACK: Color = Color(0.16, 0.18, 0.26)
+const BLACK: Color = Color(0.08, 0.08, 0.11)
+const BLUE_BLACK: Color = Color(0.14, 0.17, 0.25)
 const FEATHER_TIP: Color = Color(0.05, 0.05, 0.07)
-const BEAK_GREY: Color = Color(0.32, 0.3, 0.3)
-const EYE_WHITE: Color = Color(0.98, 0.97, 0.93)
+const BEAK_GREY: Color = Color(0.28, 0.29, 0.32)
+const EYE_WHITE: Color = Color(0.98, 0.98, 0.98)
 const KEY_GOLD: Color = Color(1.0, 0.8, 0.2)
+const LEGS_TAN: Color = Color(0.72, 0.58, 0.36)
 
 ## Replicado: leva uma chave no bico.
 var carries_key: bool = false:
@@ -119,7 +120,7 @@ func _refresh_key() -> void:
 	LowPolyMesh.prism(st, Vector3(0.0, -0.05, -0.47), Vector3(0.0, -0.2, -0.47), 0.012, 0.012, 4, g)
 	LowPolyMesh.box(st, Vector3(0.025, -0.18, -0.47), Vector3(0.04, 0.015, 0.012), Basis.IDENTITY, g)
 	LowPolyMesh.prism(st, Vector3(0.0, -0.02, -0.47), Vector3(0.0, -0.06, -0.47), 0.035, 0.035, 6, g)
-	_key_visual = LowPolyMesh.commit(st, "Key", LowPolyMesh.make_material())
+	_key_visual = LowPolyMesh.commit(st, "Key", ToonKit.vertex_material(true, true))
 	add_child(_key_visual)
 
 
@@ -128,24 +129,53 @@ func _refresh_key() -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.24), Vector3(0.0, 0.02, -0.2), 0.11, 0.13, 6, BLACK)
-	# Cauda em leque
-	for k: int in 3:
-		var a: float = (float(k) - 1.0) * 0.25
-		LowPolyMesh.box(st, Vector3(sin(a) * 0.08, 0.02, 0.38), Vector3(0.07, 0.02, 0.22), Basis(Vector3.UP, a), FEATHER_TIP)
-	# Cabeça, penacho, olhos esbugalhados, bico grosso
-	LowPolyMesh.box(st, Vector3(0.0, 0.1, -0.27), Vector3(0.15, 0.15, 0.16), Basis.IDENTITY, BLUE_BLACK)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.17, -0.25), Vector3(0.0, 0.26, -0.18), 0.04, 0.0, 4, BLACK)
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.078 * side, 0.13, -0.3), Vector3(0.02, 0.06, 0.06), Basis.IDENTITY, EYE_WHITE)
-		LowPolyMesh.box(st, Vector3(0.088 * side, 0.13, -0.31), Vector3(0.01, 0.03, 0.03), Basis.IDENTITY, EYE_BLACK)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.08, -0.34), Vector3(0.0, 0.06, -0.5), 0.045, 0.0, 4, BEAK_GREY)
-	LowPolyMesh.box(st, Vector3(-0.04, -0.11, 0.12), Vector3(0.03, 0.03, 0.08), Basis.IDENTITY, BEAK_GREY)
-	LowPolyMesh.box(st, Vector3(0.04, -0.11, 0.12), Vector3(0.03, 0.03, 0.08), Basis.IDENTITY, BEAK_GREY)
+	
+	# Corpo rechonchudo azul-escuro / preto (corvo.jpg)
+	LowPolyMesh.prism(st, Vector3(0.0, -0.06, 0.18), Vector3(0.0, 0.04, -0.14), 0.16, 0.18, 7, BLACK)
+	LowPolyMesh.box(st, Vector3(0.0, 0.02, 0.02), Vector3(0.26, 0.22, 0.30), Basis(Vector3.RIGHT, 0.15), BLUE_BLACK)
+	LowPolyMesh.prism(st, Vector3(0.0, -0.10, 0.14), Vector3(0.0, -0.04, -0.10), 0.13, 0.15, 6, FEATHER_TIP)
+
+	# Cauda em leque escalonada com penas recortadas (corvo.jpg)
+	for k: int in 4:
+		var a: float = (float(k) - 1.5) * 0.18
+		LowPolyMesh.box(st, Vector3(sin(a) * 0.10, 0.04, 0.36), Vector3(0.065, 0.02, 0.24), Basis(Vector3.UP, a), FEATHER_TIP)
+
+	# Pescoço e Cabeça com penacho rebelde (corvo.jpg)
+	LowPolyMesh.box(st, Vector3(0.0, 0.10, -0.15), Vector3(0.18, 0.14, 0.16), Basis(Vector3.RIGHT, -0.2), BLUE_BLACK)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.14, -0.20), Vector3(0.0, 0.30, -0.20), 0.14, 0.11, 7, BLUE_BLACK)
+	LowPolyMesh.box(st, Vector3(0.0, 0.20, -0.22), Vector3(0.20, 0.18, 0.18), Basis.IDENTITY, BLACK)
+
+	# Penacho punk espetado no topo e nuca (corvo.jpg)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.26, -0.18), Vector3(0.0, 0.40, -0.12), 0.045, 0.005, 4, BLACK)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.27, -0.24), Vector3(0.0, 0.38, -0.22), 0.035, 0.005, 4, BLUE_BLACK)
+	LowPolyMesh.prism(st, Vector3(-0.06, 0.25, -0.16), Vector3(-0.08, 0.37, -0.10), 0.035, 0.005, 4, BLACK)
+	LowPolyMesh.prism(st, Vector3(0.06, 0.25, -0.16), Vector3(0.08, 0.37, -0.10), 0.035, 0.005, 4, BLACK)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.18, -0.10), Vector3(0.0, 0.29, -0.04), 0.045, 0.01, 4, FEATHER_TIP)
+
+	# Olhos arregalados cómicos (corvo.jpg)
+	for s: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(0.09 * s, 0.27, -0.22), Vector3(0.065, 0.075, 0.075), Basis.IDENTITY, EYE_WHITE)
+		LowPolyMesh.box(st, Vector3(0.12 * s, 0.27, -0.24), Vector3(0.025, 0.035, 0.035), Basis.IDENTITY, EYE_BLACK)
+		LowPolyMesh.box(st, Vector3(0.09 * s, 0.32, -0.22), Vector3(0.05, 0.015, 0.06), Basis(Vector3.FORWARD, 0.3 * s), BLACK)
+
+	# Bico de corvo robusto e curvo/adunco cinza escuro (corvo.jpg)
+	LowPolyMesh.box(st, Vector3(0.0, 0.18, -0.32), Vector3(0.12, 0.09, 0.12), Basis(Vector3.RIGHT, -0.1), BEAK_GREY)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.17, -0.32), Vector3(0.0, 0.12, -0.48), 0.06, 0.02, 5, BEAK_GREY)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.12, -0.46), Vector3(0.0, 0.04, -0.52), 0.035, 0.0, 4, Color(0.20, 0.19, 0.20)) # gancho para baixo
+	# Mandíbula inferior (ligeiramente aberta)
+	LowPolyMesh.box(st, Vector3(0.0, 0.11, -0.33), Vector3(0.09, 0.04, 0.10), Basis(Vector3.RIGHT, 0.08), BEAK_GREY)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.11, -0.34), Vector3(0.0, 0.08, -0.44), 0.04, 0.01, 4, Color(0.20, 0.19, 0.20))
+
+	# Patas acastanhadas com garras finas (corvo.jpg)
+	for s: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(0.06 * s, -0.12, 0.08), Vector3(0.022, 0.10, 0.022), Basis(Vector3.RIGHT, 0.2), LEGS_TAN)
+		LowPolyMesh.box(st, Vector3(0.06 * s, -0.17, 0.06), Vector3(0.07, 0.016, 0.09), Basis(Vector3.UP, -0.2 * s), LEGS_TAN)
+		LowPolyMesh.prism(st, Vector3(0.06 * s, -0.17, 0.06), Vector3(0.06 * s, -0.18, -0.02), 0.035, 0.0, 3, Color(0.25, 0.22, 0.18))
+
 	add_child(LowPolyMesh.commit(st, "Body", mat))
 	_wing_left = _build_crow_wing(-1.0, mat)
 	_wing_right = _build_crow_wing(1.0, mat)
@@ -154,14 +184,20 @@ func _build_model() -> void:
 func _build_crow_wing(side: float, mat: Material) -> Node3D:
 	var pivot: Node3D = Node3D.new()
 	pivot.name = "WingLeft" if side < 0.0 else "WingRight"
-	pivot.position = Vector3(0.09 * side, 0.05, -0.02)
+	pivot.position = Vector3(0.11 * side, 0.06, -0.02)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.box(st, Vector3(0.2 * side, 0.0, 0.0), Vector3(0.4, 0.025, 0.22), Basis.IDENTITY, BLUE_BLACK)
-	# Penas da ponta separadas (silhueta de corvo)
-	for k: int in 3:
-		LowPolyMesh.box(st, Vector3((0.47 + 0.03 * k) * side, 0.0, -0.06 + 0.07 * k), Vector3(0.2, 0.018, 0.05),
-			Basis(Vector3.UP, (0.1 + 0.12 * k) * side), FEATHER_TIP)
+	
+	# Base da asa
+	LowPolyMesh.box(st, Vector3(0.12 * side, 0.01, 0.0), Vector3(0.24, 0.035, 0.22), Basis.IDENTITY, BLACK)
+	LowPolyMesh.box(st, Vector3(0.32 * side, 0.02, 0.02), Vector3(0.30, 0.028, 0.20), Basis(Vector3.UP, 0.12 * side), BLUE_BLACK)
+	LowPolyMesh.box(st, Vector3(0.54 * side, 0.03, 0.06), Vector3(0.26, 0.022, 0.16), Basis(Vector3.UP, 0.25 * side), BLUE_BLACK)
+
+	# Penas de vôo pontiagudas e recortadas (corvo.jpg)
+	for k: int in 4:
+		LowPolyMesh.box(st, Vector3((0.64 + 0.035 * k) * side, 0.02, 0.02 + 0.045 * k), Vector3(0.16 - 0.015 * k, 0.018, 0.045),
+			Basis(Vector3.UP, (0.32 + 0.12 * k) * side), FEATHER_TIP)
+
 	pivot.add_child(LowPolyMesh.commit(st, "Mesh", mat))
 	add_child(pivot)
 	return pivot

@@ -53,13 +53,31 @@ const ROCK_SPEED: float = 10.0
 const ROCK_RADIUS: float = 0.9
 const MOLE_SCENE: PackedScene = preload("res://gameplay/enemies/mole/mole.tscn")
 
-const FUR: Color = Color(0.27, 0.21, 0.18)
-const FUR_DARK: Color = Color(0.17, 0.13, 0.11)
-const SNOUT: Color = Color(0.93, 0.58, 0.6)
-const CLAW: Color = Color(0.9, 0.86, 0.76)
+const FUR: Color = Color(0.24, 0.18, 0.15)
+const FUR_DARK: Color = Color(0.16, 0.12, 0.10)
+const FUR_BELLY: Color = Color(0.32, 0.24, 0.20)
+const SNOUT_PINK: Color = Color(0.92, 0.58, 0.62)
+const SNOUT_NOSTRIL: Color = Color(0.55, 0.25, 0.30)
+const TOOTH_WHITE: Color = Color(0.96, 0.95, 0.90)
+
+const HELMET_YELLOW: Color = Color(0.92, 0.72, 0.15)
+const HELMET_DARK: Color = Color(0.72, 0.52, 0.10)
+const HELMET_RIM: Color = Color(0.85, 0.64, 0.12)
+const LANTERN_BEZEL: Color = Color(0.38, 0.38, 0.40)
+const LANTERN_GLOW: Color = Color(0.98, 0.96, 0.78)
+
+const GOGGLE_FRAME: Color = Color(0.32, 0.30, 0.28)
+const GOGGLE_LENS: Color = Color(0.78, 0.85, 0.86)
+const GOGGLE_STRAP: Color = Color(0.22, 0.18, 0.15)
+const EYE_PUPIL: Color = Color(0.08, 0.08, 0.10)
+const EYE_GLINT: Color = Color(0.98, 0.98, 0.98)
+
+const CLAW_BASE: Color = Color(0.86, 0.72, 0.54)
+const CLAW_TIP: Color = Color(0.70, 0.54, 0.38)
+const DIRT: Color = Color(0.44, 0.32, 0.20)
+const DIRT_DARK: Color = Color(0.32, 0.22, 0.14)
 const STONE: Color = Color(0.55, 0.55, 0.52)
 const MOSS: Color = Color(0.35, 0.5, 0.2)
-const DIRT: Color = Color(0.42, 0.3, 0.18)
 
 @export var move_speed: float = 1.6
 @export var turn_speed: float = 3.0
@@ -684,32 +702,116 @@ func _animate_walk(delta: float) -> void:
 
 
 func _build_model() -> void:
-	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(st, Vector3(0, 0.0, 0.7), Vector3(0, 1.6, 0.2), 1.1, 0.8, 9, FUR)
-	LowPolyMesh.prism(st, Vector3(0, 1.6, 0.2), Vector3(0, 1.85, -0.6), 0.75, 0.25, 8, FUR_DARK)
-	LowPolyMesh.box(st, Vector3(0, 1.85, -0.75), Vector3(0.36, 0.28, 0.28), Basis.IDENTITY, SNOUT)
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.3 * side, 2.0, -0.45), Vector3(0.09, 0.09, 0.09), Basis.IDENTITY, Color.BLACK)
+
+	# 1. Base / montículo de terra e pedras de onde a toupeira irrompe (como na referência toupeira_gigante.jpg)
+	LowPolyMesh.prism(st, Vector3(0, -0.15, 0.0), Vector3(0, 0.35, 0.0), 1.60, 1.35, 10, DIRT)
+	for k: int in range(9):
+		var ang: float = TAU * float(k) / 9.0 + 0.15
+		var r_rubble: float = 1.45 + sin(float(k) * 2.3) * 0.15
+		var r_pos: Vector3 = Vector3(cos(ang) * r_rubble, 0.15 + absf(sin(float(k) * 1.7)) * 0.15, sin(ang) * (r_rubble * 0.9))
+		var r_col: Color = DIRT_DARK if k % 2 == 0 else DIRT
+		LowPolyMesh.box(st, r_pos, Vector3(0.32, 0.22, 0.28), Basis(Vector3.UP, ang).rotated(Vector3.RIGHT, 0.2), r_col)
+
+	# 2. Corpo volumoso em dois troncos (barriga e tronco/pescoço)
+	LowPolyMesh.prism(st, Vector3(0, 0.30, 0.10), Vector3(0, 1.15, 0.02), 1.28, 1.12, 10, FUR)
+	# Mancha da barriga
+	LowPolyMesh.prism(st, Vector3(0, 0.38, -0.45), Vector3(0, 1.10, -0.42), 0.65, 0.55, 6, FUR_BELLY)
+	# Tronco superior e pescoço
+	LowPolyMesh.prism(st, Vector3(0, 1.15, 0.02), Vector3(0, 1.85, -0.15), 1.12, 0.88, 10, FUR)
+
+	# Manchas de terra e sujidade espalhadas pelo peito e ombros
+	var dirt_spots: Array[Vector3] = [
+		Vector3(-0.45, 1.35, -0.65), Vector3(0.50, 1.25, -0.62), Vector3(-0.25, 0.95, -0.85),
+		Vector3(0.35, 0.85, -0.82), Vector3(-0.65, 1.55, -0.35), Vector3(0.65, 1.55, -0.35)
+	]
+	for sp: Vector3 in dirt_spots:
+		LowPolyMesh.box(st, sp, Vector3(0.24, 0.16, 0.08), Basis.IDENTITY, DIRT_DARK)
+
 	# Pedras com musgo agarradas às costas (veio de debaixo do círculo de pedras)
 	for k: int in range(5):
 		var ang: float = PI * 0.15 + PI * 0.7 * float(k) / 4.0
-		var c: Vector3 = Vector3(cos(ang) * 0.75, 1.0 + sin(ang) * 0.45, 0.8)
-		LowPolyMesh.box(st, c, Vector3(0.35, 0.3, 0.3), Basis(Vector3.UP, ang), STONE)
-		LowPolyMesh.box(st, c + Vector3(0, 0.17, 0), Vector3(0.3, 0.06, 0.25), Basis(Vector3.UP, ang), MOSS)
+		var c: Vector3 = Vector3(cos(ang) * 0.82, 1.15 + sin(ang) * 0.45, 0.75)
+		LowPolyMesh.box(st, c, Vector3(0.38, 0.32, 0.32), Basis(Vector3.UP, ang), STONE)
+		LowPolyMesh.box(st, c + Vector3(0, 0.18, 0), Vector3(0.32, 0.07, 0.26), Basis(Vector3.UP, ang), MOSS)
+
+	# 3. Focinho rosado proeminente, arredondado e facetado com narinas escuras
+	LowPolyMesh.prism(st, Vector3(0, 1.42, -0.72), Vector3(0, 1.36, -1.25), 0.42, 0.30, 8, SNOUT_PINK)
+	LowPolyMesh.prism(st, Vector3(0, 1.36, -1.23), Vector3(0, 1.36, -1.28), 0.30, 0.26, 8, SNOUT_PINK)
+	# Narinas
+	LowPolyMesh.box(st, Vector3(-0.09, 1.35, -1.29), Vector3(0.07, 0.06, 0.02), Basis(Vector3.FORWARD, 0.35), SNOUT_NOSTRIL)
+	LowPolyMesh.box(st, Vector3(0.09, 1.35, -1.29), Vector3(0.07, 0.06, 0.02), Basis(Vector3.FORWARD, -0.35), SNOUT_NOSTRIL)
+
+	# Dentes de roedor / cinzel salientes sob o focinho
+	LowPolyMesh.box(st, Vector3(-0.065, 1.18, -1.02), Vector3(0.06, 0.12, 0.04), Basis(Vector3.RIGHT, 0.15), TOOTH_WHITE)
+	LowPolyMesh.box(st, Vector3(0.065, 1.18, -1.02), Vector3(0.06, 0.12, 0.04), Basis(Vector3.RIGHT, 0.15), TOOTH_WHITE)
+
+	# 4. Óculos de proteção retro de mineiro (goggles com lentes claras e armação metálica)
+	# Fita elástica de couro a toda a volta da cabeça
+	LowPolyMesh.prism(st, Vector3(0, 1.72, 0.42), Vector3(0, 1.72, -0.68), 0.88, 0.88, 10, GOGGLE_STRAP)
+	for side: float in [-1.0, 1.0]:
+		var g_center: Vector3 = Vector3(0.32 * side, 1.72, -0.92)
+		# Armação metálica grossa
+		LowPolyMesh.prism(st, g_center + Vector3(0, 0, 0.08), g_center - Vector3(0, 0, 0.06), 0.28, 0.25, 8, GOGGLE_FRAME)
+		# Lente de vidro claro
+		LowPolyMesh.prism(st, g_center + Vector3(0, 0, 0.03), g_center - Vector3(0, 0, 0.04), 0.22, 0.22, 8, GOGGLE_LENS)
+		# Olho/pupila expressiva por trás da lente
+		LowPolyMesh.prism(st, g_center - Vector3(0, 0, 0.04), g_center - Vector3(0, 0, 0.05), 0.08, 0.08, 6, EYE_PUPIL)
+		# Brilho branco na pupila
+		LowPolyMesh.box(st, g_center + Vector3(-0.03 * side, 0.04, -0.055), Vector3(0.03, 0.03, 0.01), Basis.IDENTITY, EYE_GLINT)
+	# Ponte de ligação entre as lentes
+	LowPolyMesh.box(st, Vector3(0, 1.72, -0.95), Vector3(0.14, 0.08, 0.06), Basis.IDENTITY, GOGGLE_FRAME)
+
+	# 5. Capacete de mineiro amarelo com lanterna frontal
+	# Aba do capacete
+	LowPolyMesh.prism(st, Vector3(0, 1.98, -0.22), Vector3(0, 2.08, -0.22), 0.98, 0.92, 10, HELMET_RIM)
+	LowPolyMesh.box(st, Vector3(0, 2.02, -1.05), Vector3(0.75, 0.06, 0.28), Basis(Vector3.RIGHT, -0.18), HELMET_YELLOW)
+	# Cúpula amarela do capacete
+	LowPolyMesh.prism(st, Vector3(0, 2.08, -0.22), Vector3(0, 2.65, -0.25), 0.90, 0.45, 9, HELMET_YELLOW)
+	# Nervura central de reforço
+	LowPolyMesh.box(st, Vector3(0, 2.42, -0.24), Vector3(0.12, 0.50, 1.05), Basis.IDENTITY, HELMET_DARK)
+	# Mancha de lama no capacete
+	LowPolyMesh.box(st, Vector3(-0.35, 2.32, -0.68), Vector3(0.20, 0.16, 0.05), Basis(Vector3.FORWARD, 0.3), DIRT_DARK)
+
+	# Lanterna de mineiro na frente do capacete
+	var lamp_center: Vector3 = Vector3(0, 2.28, -0.98)
+	LowPolyMesh.prism(st, lamp_center + Vector3(0, 0, 0.12), lamp_center - Vector3(0, 0, 0.16), 0.22, 0.20, 8, LANTERN_BEZEL)
+	LowPolyMesh.prism(st, lamp_center - Vector3(0, 0, 0.14), lamp_center - Vector3(0, 0, 0.18), 0.16, 0.15, 8, LANTERN_GLOW)
+	LowPolyMesh.box(st, lamp_center + Vector3(0, 0.18, 0.05), Vector3(0.08, 0.16, 0.10), Basis.IDENTITY, LANTERN_BEZEL)
+
 	body_root.add_child(LowPolyMesh.commit(st, "Body", mat))
 
-	# Garras enormes: nó próprio para levantar/varrer
+	# 6. Braços musculados erguidos e garras colossais de escavação (no nó Claws para animação)
 	var cst: SurfaceTool = SurfaceTool.new()
 	cst.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for side: float in [-1.0, 1.0]:
-		var paw: Vector3 = Vector3(0.95 * side, 0.0, -0.3)
-		LowPolyMesh.box(cst, paw, Vector3(0.6, 0.18, 0.5), Basis(Vector3.FORWARD, 0.4 * side), FUR_DARK)
+		# Posições relativas ao nó Claws (pivot em 0, 0.75, -0.6)
+		var shoulder: Vector3 = Vector3(0.95 * side, 0.40, 0.42)
+		var elbow: Vector3 = Vector3(1.48 * side, 0.85, 0.25)
+		var palm: Vector3 = Vector3(1.88 * side, 1.32, 0.10)
+
+		# Braço
+		LowPolyMesh.prism(cst, shoulder, elbow, 0.38, 0.32, 7, FUR)
+		LowPolyMesh.box(cst, shoulder + Vector3(0, 0.12, 0), Vector3(0.24, 0.08, 0.24), Basis.IDENTITY, DIRT_DARK)
+		# Antebraço
+		LowPolyMesh.prism(cst, elbow, palm, 0.32, 0.40, 7, FUR_DARK)
+
+		# Palma em pá larga de toupeira virada para a frente e para cima
+		var palm_basis: Basis = Basis(Vector3.FORWARD, -0.42 * side).rotated(Vector3.UP, -0.22 * side)
+		LowPolyMesh.box(cst, palm, Vector3(0.50, 0.54, 0.24), palm_basis, FUR_DARK)
+
+		# 4 garras colossais curvas e pontiagudas em cada pata
 		for k: int in 4:
-			var c: Vector3 = paw + Vector3(0.14 * float(k) - 0.21, -0.02, -0.25)
-			LowPolyMesh.prism(cst, c, c + Vector3(0, -0.08, -0.45), 0.06, 0.0, 4, CLAW)
+			var claw_x_offset: float = (float(k) * 0.15 - 0.225)
+			var c_base: Vector3 = palm + palm_basis.x * claw_x_offset + palm_basis.y * 0.26
+			var c_mid: Vector3 = c_base + palm_basis.y * 0.32 + palm_basis.z * -0.14 + palm_basis.x * (0.05 * float(k - 1) * side)
+			var c_tip: Vector3 = c_mid + palm_basis.y * 0.30 + palm_basis.z * -0.18 + palm_basis.x * (0.08 * float(k - 1) * side)
+			LowPolyMesh.prism(cst, c_base, c_mid, 0.11, 0.07, 5, CLAW_BASE)
+			LowPolyMesh.prism(cst, c_mid, c_tip, 0.07, 0.015, 4, CLAW_TIP)
+
 	claws.add_child(LowPolyMesh.commit(cst, "Mesh", mat))
 
 	var mst: SurfaceTool = SurfaceTool.new()

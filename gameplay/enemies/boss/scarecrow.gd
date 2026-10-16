@@ -39,17 +39,40 @@ const WHIRL_SPEED: float = 5.5
 const WHIRL_TIME: float = 3.0
 const THROW_FLIGHT: float = 0.9
 
-const SACK: Color = Color(0.72, 0.6, 0.4)
-const PATCH_RED: Color = Color(0.7, 0.2, 0.15)
+const SACK: Color = Color(0.72, 0.58, 0.44)
+const COAT_BROWN: Color = Color(0.38, 0.30, 0.22)
+const COAT_PLAID: Color = Color(0.28, 0.22, 0.18)
+const PANTS_OLIVE: Color = Color(0.32, 0.36, 0.26)
+const PATCH_ORANGE: Color = Color(0.85, 0.46, 0.16)
+const PATCH_GREEN: Color = Color(0.26, 0.46, 0.22)
+const PATCH_RED: Color = Color(0.72, 0.22, 0.18)
 const PATCH_BLUE: Color = Color(0.25, 0.35, 0.55)
-const STRAW: Color = Color(0.93, 0.8, 0.35)
-const PUMPKIN: Color = Color(0.95, 0.5, 0.1)
-const PUMPKIN_DARK: Color = Color(0.75, 0.35, 0.06)
+const BOOTS: Color = Color(0.30, 0.28, 0.26)
+const ROPE: Color = Color(0.82, 0.74, 0.54)
+const STRAW: Color = Color(0.94, 0.82, 0.36)
+const STRAW_DARK: Color = Color(0.78, 0.65, 0.26)
+
+const PUMPKIN: Color = Color(0.94, 0.52, 0.14)
+const PUMPKIN_DARK: Color = Color(0.76, 0.38, 0.10)
 const STEM: Color = Color(0.35, 0.45, 0.15)
-const HAT: Color = Color(0.38, 0.28, 0.18)
-const WOOD: Color = Color(0.45, 0.3, 0.17)
-const BLADE: Color = Color(0.6, 0.62, 0.66)
-const GLOW: Color = Color(1.0, 0.75, 0.2)
+const GLOW: Color = Color(1.0, 0.80, 0.25)
+const GLOW_EYE: Color = Color(1.0, 0.65, 0.15)
+const MOUTH_DARK: Color = Color(0.18, 0.12, 0.08)
+
+const HAT: Color = Color(0.42, 0.30, 0.20)
+const HAT_BAND: Color = Color(0.68, 0.58, 0.42)
+
+const WOOD: Color = Color(0.46, 0.32, 0.18)
+const WOOD_DARK: Color = Color(0.32, 0.20, 0.12)
+const SCYTHE_RUST: Color = Color(0.60, 0.38, 0.26)
+const SCYTHE_IRON: Color = Color(0.50, 0.52, 0.55)
+const BLADE: Color = SCYTHE_RUST
+
+const LANTERN_RUST: Color = Color(0.38, 0.26, 0.18)
+const LANTERN_GLASS: Color = Color(0.96, 0.85, 0.45)
+
+const CROW_BLACK: Color = Color(0.10, 0.10, 0.12)
+const CROW_BEAK: Color = Color(0.88, 0.70, 0.20)
 
 @export var move_speed: float = 1.5
 @export var turn_speed: float = 3.0
@@ -546,57 +569,219 @@ func _build_model() -> void:
 	_body_root = Node3D.new()
 	_body_root.name = "BodyRoot"
 	add_child(_body_root)
+
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Pau e pernas de calças com remendos
-	LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 1.0, 0.0), 0.07, 0.07, 6, WOOD)
+
+	# 1. Pernas articuladas com calças remendadas, palha a sair e botas de trabalho
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(st, Vector3(0.14 * side, 0.15, 0.0), Vector3(0.12 * side, 0.95, 0.0), 0.12, 0.13, 7, PATCH_BLUE)
-		LowPolyMesh.prism(st, Vector3(0.14 * side, 0.15, 0.0), Vector3(0.18 * side, 0.0, -0.05), 0.08, 0.0, 5, STRAW)
-	# Tronco (saco) com remendo vermelho e cinto de corda
-	LowPolyMesh.prism(st, Vector3(0.0, 0.9, 0.0), Vector3(0.0, 1.75, 0.0), 0.36, 0.3, 8, SACK)
-	LowPolyMesh.box(st, Vector3(0.12, 1.35, -0.3), Vector3(0.18, 0.18, 0.04), Basis(Vector3.FORWARD, 0.2), PATCH_RED)
-	LowPolyMesh.prism(st, Vector3(0.0, 1.0, 0.0), Vector3(0.0, 1.06, 0.0), 0.38, 0.38, 8, STRAW)
-	# Braços abertos (pau em cruz) com palha nas mangas
-	LowPolyMesh.prism(st, Vector3(-0.95, 1.55, 0.0), Vector3(0.95, 1.55, 0.0), 0.05, 0.05, 5, WOOD)
-	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(st, Vector3(0.25 * side, 1.55, 0.0), Vector3(0.75 * side, 1.55, 0.0), 0.12, 0.1, 6, SACK)
-		for k: int in 3:
-			var off: Vector3 = Vector3(0.0, (float(k) - 1.0) * 0.06, (float(k) - 1.0) * 0.06)
-			LowPolyMesh.prism(st, Vector3(0.75 * side, 1.55, 0.0) + off, Vector3(0.98 * side, 1.5 - 0.05 * k, 0.0) + off * 2.0, 0.04, 0.0, 4, STRAW)
-	# Cabeça de abóbora com cara recortada a brilhar (sem desgaste)
-	var head: Vector3 = Vector3(0.0, 2.05, 0.0)
+		var hip: Vector3 = Vector3(0.18 * side, 1.02, 0.0)
+		var knee: Vector3 = Vector3(0.24 * side, 0.58, 0.04)
+		var ankle: Vector3 = Vector3(0.26 * side, 0.24, 0.0)
+
+		# Coxa e canela das calças
+		LowPolyMesh.prism(st, hip, knee, 0.15, 0.13, 7, PANTS_OLIVE)
+		LowPolyMesh.prism(st, knee, ankle, 0.13, 0.12, 7, PANTS_OLIVE)
+
+		# Remendos nas calças com costuras
+		var patch_col: Color = PATCH_ORANGE if side > 0.0 else PATCH_GREEN
+		LowPolyMesh.box(st, knee + Vector3(0.0, 0.0, -0.12), Vector3(0.15, 0.18, 0.03), Basis.IDENTITY, patch_col)
+
+		# Tufo de palha seca a rebentar do fundo das pernas
+		for k: int in 4:
+			var s_ang: float = TAU * float(k) / 4.0
+			var s_p0: Vector3 = ankle + Vector3(cos(s_ang) * 0.08, 0.04, sin(s_ang) * 0.08)
+			var s_p1: Vector3 = s_p0 + Vector3(cos(s_ang) * 0.10, -0.12, sin(s_ang) * 0.10)
+			LowPolyMesh.prism(st, s_p0, s_p1, 0.025, 0.0, 4, STRAW)
+
+		# Botas de cabedal pesadas com atacadores
+		var boot_pos: Vector3 = ankle + Vector3(0.0, -0.12, -0.06)
+		LowPolyMesh.box(st, boot_pos, Vector3(0.17, 0.16, 0.30), Basis.IDENTITY, BOOTS)
+		LowPolyMesh.box(st, boot_pos - Vector3(0.0, 0.07, 0.0), Vector3(0.19, 0.04, 0.32), Basis.IDENTITY, WOOD_DARK)
+		# Atacadores
+		LowPolyMesh.box(st, boot_pos + Vector3(0.0, 0.04, -0.08), Vector3(0.12, 0.04, 0.08), Basis(Vector3.RIGHT, 0.3), ROPE)
+
+	# 2. Tronco: casaco de flanela, cinto de corda com nó e gola de palha
+	# Pélvis e cintura
+	LowPolyMesh.prism(st, Vector3(0.0, 0.95, 0.0), Vector3(0.0, 1.25, 0.0), 0.35, 0.33, 8, COAT_BROWN)
+	# Cinto de corda com nó
+	LowPolyMesh.prism(st, Vector3(0.0, 1.22, 0.0), Vector3(0.0, 1.28, 0.0), 0.36, 0.36, 8, ROPE)
+	LowPolyMesh.prism(st, Vector3(0.06, 1.25, -0.34), Vector3(0.08, 0.96, -0.36), 0.035, 0.02, 4, ROPE)
+
+	# Palha a sair da bainha da cintura
 	for k: int in 6:
-		var ang: float = TAU * float(k) / 6.0
-		LowPolyMesh.prism(st, head + Vector3(cos(ang) * 0.12, -0.24, sin(ang) * 0.12),
-			head + Vector3(cos(ang) * 0.12, 0.2, sin(ang) * 0.12), 0.2, 0.17, 6, PUMPKIN if k % 2 == 0 else PUMPKIN_DARK)
-	LowPolyMesh.prism(st, head + Vector3(0.0, 0.18, 0.0), head + Vector3(0.03, 0.34, 0.0), 0.04, 0.03, 5, STEM)
-	var glow: Color = Color(GLOW.r, GLOW.g, GLOW.b, 0.0)
+		var w_ang: float = TAU * float(k) / 6.0
+		var w_p0: Vector3 = Vector3(cos(w_ang) * 0.32, 1.20, sin(w_ang) * 0.32)
+		var w_p1: Vector3 = w_p0 + Vector3(cos(w_ang) * 0.14, -0.16, sin(w_ang) * 0.14)
+		LowPolyMesh.prism(st, w_p0, w_p1, 0.035, 0.0, 4, STRAW)
+
+	# Tronco superior e peito com padrão de flanela
+	LowPolyMesh.prism(st, Vector3(0.0, 1.25, 0.0), Vector3(0.0, 1.82, -0.04), 0.33, 0.38, 8, COAT_BROWN)
+	LowPolyMesh.box(st, Vector3(-0.12, 1.48, -0.34), Vector3(0.16, 0.16, 0.03), Basis.IDENTITY, PATCH_ORANGE)
+	LowPolyMesh.box(st, Vector3(0.14, 1.58, -0.34), Vector3(0.14, 0.14, 0.03), Basis.IDENTITY, COAT_PLAID)
+
+	# Manto / gola de serapilheira com nó sobre os ombros
+	LowPolyMesh.prism(st, Vector3(0.0, 1.68, -0.04), Vector3(0.0, 1.84, -0.04), 0.44, 0.32, 8, SACK)
+	LowPolyMesh.prism(st, Vector3(0.0, 1.76, -0.34), Vector3(0.0, 1.60, -0.36), 0.05, 0.025, 4, ROPE)
+
+	# Coroa de palha pontiaguda espetada ao redor do pescoço
+	for k: int in 8:
+		var c_ang: float = TAU * float(k) / 8.0
+		var cp0: Vector3 = Vector3(cos(c_ang) * 0.36, 1.74, sin(c_ang) * 0.36 - 0.04)
+		var cp1: Vector3 = cp0 + Vector3(cos(c_ang) * 0.22, 0.08, sin(c_ang) * 0.22)
+		LowPolyMesh.prism(st, cp0, cp1, 0.045, 0.0, 4, STRAW)
+
+	# 3. Braço esquerdo segurando a lanterna (como em espantalho.jpg)
+	var l_shoulder: Vector3 = Vector3(-0.38, 1.72, -0.02)
+	var l_elbow: Vector3 = Vector3(-0.64, 1.44, -0.06)
+	var l_wrist: Vector3 = Vector3(-0.72, 1.15, -0.12)
+	LowPolyMesh.prism(st, l_shoulder, l_elbow, 0.13, 0.11, 6, COAT_BROWN)
+	LowPolyMesh.prism(st, l_elbow, l_wrist, 0.11, 0.12, 6, COAT_BROWN)
+	LowPolyMesh.box(st, l_elbow + Vector3(0.0, 0.0, -0.11), Vector3(0.12, 0.14, 0.03), Basis.IDENTITY, PATCH_ORANGE)
+
+	# Palha a rebentar do punho esquerdo
+	for k: int in 5:
+		var p_ang: float = TAU * float(k) / 5.0
+		var cuff_p0: Vector3 = l_wrist + Vector3(cos(p_ang) * 0.10, 0.0, sin(p_ang) * 0.10)
+		var cuff_p1: Vector3 = cuff_p0 + Vector3(cos(p_ang) * 0.15, -0.12, sin(p_ang) * 0.15)
+		LowPolyMesh.prism(st, cuff_p0, cuff_p1, 0.03, 0.0, 4, STRAW)
+
+	# Mão de serapilheira segurando a pega da lanterna
+	var l_hand: Vector3 = l_wrist + Vector3(0.0, -0.08, 0.0)
+	LowPolyMesh.prism(st, l_wrist, l_hand, 0.10, 0.08, 5, SACK)
+
+	# Lanterna de querosene rústica pendurada
+	var lan_top: Vector3 = l_hand + Vector3(0.0, -0.12, 0.0)
+	# Alça de arame
+	LowPolyMesh.prism(st, l_hand, lan_top, 0.015, 0.015, 4, LANTERN_RUST)
+	# Tampa da lanterna
+	LowPolyMesh.prism(st, lan_top, lan_top - Vector3(0.0, 0.07, 0.0), 0.10, 0.12, 7, LANTERN_RUST)
+	# Vidro bojudo com chama brilhante
+	var lan_mid: Vector3 = lan_top - Vector3(0.0, 0.18, 0.0)
+	LowPolyMesh.prism(st, lan_top - Vector3(0.0, 0.07, 0.0), lan_mid - Vector3(0.0, 0.08, 0.0), 0.11, 0.10, 7, LANTERN_GLASS)
+	LowPolyMesh.prism(st, lan_mid + Vector3(0.0, 0.04, 0.0), lan_mid - Vector3(0.0, 0.04, 0.0), 0.06, 0.01, 5, GLOW)
+	# Depósito inferior da lanterna
+	var lan_bot: Vector3 = lan_mid - Vector3(0.0, 0.15, 0.0)
+	LowPolyMesh.prism(st, lan_mid - Vector3(0.0, 0.08, 0.0), lan_bot, 0.12, 0.13, 7, LANTERN_RUST)
+
+	# 4. Braço direito que empunha a foice
+	var r_shoulder: Vector3 = Vector3(0.38, 1.72, -0.02)
+	var r_elbow: Vector3 = Vector3(0.62, 1.45, -0.12)
+	var r_hand: Vector3 = Vector3(0.78, 1.28, -0.24)
+	LowPolyMesh.prism(st, r_shoulder, r_elbow, 0.13, 0.11, 6, COAT_BROWN)
+	LowPolyMesh.prism(st, r_elbow, r_hand, 0.11, 0.12, 6, COAT_BROWN)
+
+	# Palha a rebentar do punho direito
+	for k: int in 5:
+		var p_ang: float = TAU * float(k) / 5.0
+		var cuff_p0: Vector3 = r_hand + Vector3(cos(p_ang) * 0.10, 0.0, sin(p_ang) * 0.10)
+		var cuff_p1: Vector3 = cuff_p0 + Vector3(cos(p_ang) * 0.15, -0.12, sin(p_ang) * 0.15)
+		LowPolyMesh.prism(st, cuff_p0, cuff_p1, 0.03, 0.0, 4, STRAW)
+	LowPolyMesh.prism(st, r_hand, r_hand + Vector3(0.04, 0.0, -0.06), 0.09, 0.07, 5, SACK)
+
+	# 5. Dois corvos negros empoleirados nos ombros
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.prism(st, head + Vector3(0.11 * side, 0.06, -0.3), head + Vector3(0.11 * side, 0.14, -0.31), 0.06, 0.0, 3, glow)
-	LowPolyMesh.box(st, head + Vector3(0.0, -0.1, -0.31), Vector3(0.24, 0.06, 0.03), Basis.IDENTITY, glow)
-	# Chapéu de palha velho
-	LowPolyMesh.prism(st, head + Vector3(0.0, 0.2, 0.0), head + Vector3(0.0, 0.24, 0.0), 0.5, 0.46, 9, HAT)
-	LowPolyMesh.prism(st, head + Vector3(0.0, 0.24, 0.0), head + Vector3(0.0, 0.48, 0.0), 0.24, 0.14, 7, HAT)
+		var crow_base: Vector3 = Vector3(0.44 * side, 1.84, 0.02)
+		# Corpo do corvo
+		LowPolyMesh.prism(st, crow_base + Vector3(0.0, 0.0, 0.06), crow_base + Vector3(0.0, 0.08, -0.08), 0.07, 0.06, 6, CROW_BLACK)
+		# Cabeça
+		var cr_head: Vector3 = crow_base + Vector3(0.0, 0.12, -0.12)
+		LowPolyMesh.prism(st, crow_base + Vector3(0.0, 0.08, -0.08), cr_head, 0.045, 0.035, 5, CROW_BLACK)
+		# Bico
+		LowPolyMesh.prism(st, cr_head, cr_head + Vector3(0.0, -0.01, -0.07), 0.018, 0.002, 4, CROW_BEAK)
+		# Olho amarelo do corvo
+		LowPolyMesh.box(st, cr_head + Vector3(0.035 * side, 0.01, -0.02), Vector3(0.015, 0.015, 0.01), Basis.IDENTITY, GLOW)
+
+	# 6. Cabeça redonda de abóbora/serapilheira com olhos de botão brilhantes, boca recortada e chapéu de bruxo
+	var head: Vector3 = Vector3(0.0, 2.12, -0.05)
+	# Manto bulboso da cabeça (abóbora facetada)
+	for k: int in 8:
+		var ang: float = TAU * float(k) / 8.0
+		LowPolyMesh.prism(st, head + Vector3(cos(ang) * 0.12, -0.22, sin(ang) * 0.12),
+			head + Vector3(cos(ang) * 0.12, 0.20, sin(ang) * 0.12), 0.22, 0.19, 6, PUMPKIN if k % 2 == 0 else PUMPKIN_DARK)
+
+	# Olhos de botão brilhantes recortados com costura em cruz
+	var glow: Color = Color(GLOW.r, GLOW.g, GLOW.b, 0.0)
+	var glow_eye: Color = Color(GLOW_EYE.r, GLOW_EYE.g, GLOW_EYE.b, 0.0)
+	for side: float in [-1.0, 1.0]:
+		var eye_p: Vector3 = head + Vector3(0.12 * side, 0.08, -0.31)
+		# Aro externo do botão
+		LowPolyMesh.prism(st, eye_p, eye_p - Vector3(0.0, 0.0, 0.02), 0.075, 0.070, 8, PUMPKIN_DARK)
+		# Disco do botão brilhante
+		LowPolyMesh.prism(st, eye_p - Vector3(0.0, 0.0, 0.01), eye_p - Vector3(0.0, 0.0, 0.03), 0.065, 0.065, 8, glow_eye)
+		# Furo central com costura em cruz
+		LowPolyMesh.box(st, eye_p - Vector3(0.0, 0.0, 0.032), Vector3(0.035, 0.008, 0.005), Basis.IDENTITY, MOUTH_DARK)
+		LowPolyMesh.box(st, eye_p - Vector3(0.0, 0.0, 0.032), Vector3(0.008, 0.035, 0.005), Basis.IDENTITY, MOUTH_DARK)
+
+	# Boca recortada recortada a brilhar (sorriso malévolo e recortado)
+	LowPolyMesh.box(st, head + Vector3(0.0, -0.08, -0.32), Vector3(0.26, 0.07, 0.03), Basis.IDENTITY, glow)
+	for ti: int in 4:
+		var tooth_x: float = (float(ti) - 1.5) * 0.06
+		LowPolyMesh.prism(st, head + Vector3(tooth_x, -0.05, -0.33), head + Vector3(tooth_x, -0.11, -0.33), 0.025, 0.0, 3, MOUTH_DARK)
+
+	# Chapéu de bruxo/fazendeiro pontiagudo e amarrotado
+	# Aba larga do chapéu
+	LowPolyMesh.prism(st, head + Vector3(0.0, 0.18, 0.0), head + Vector3(0.0, 0.23, 0.0), 0.54, 0.48, 9, HAT)
+	# Fita do chapéu
+	LowPolyMesh.prism(st, head + Vector3(0.0, 0.23, 0.0), head + Vector3(0.0, 0.27, 0.0), 0.26, 0.24, 8, HAT_BAND)
+	# Copa pontiaguda do chapéu com curvatura para trás
+	LowPolyMesh.prism(st, head + Vector3(0.0, 0.27, 0.0), head + Vector3(0.02, 0.52, 0.04), 0.24, 0.14, 7, HAT)
+	LowPolyMesh.prism(st, head + Vector3(0.02, 0.52, 0.04), head + Vector3(0.06, 0.72, 0.12), 0.14, 0.02, 5, HAT)
+
 	_body_root.add_child(_commit(st, "Body", mat))
-	# Foice (nó para rodar na varridela)
+
+	# 7. Foice curva imponente com lâmina oxidada e serrada (no nó _scythe para rotação do golpe)
 	_scythe = Node3D.new()
 	_scythe.name = "Scythe"
-	_scythe.position = Vector3(0.9, 1.55, 0.0)
+	_scythe.position = r_hand
 	var sst: SurfaceTool = SurfaceTool.new()
 	sst.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.prism(sst, Vector3(0.0, -1.0, 0.0), Vector3(0.0, 0.7, 0.0), 0.035, 0.03, 5, WOOD)
-	LowPolyMesh.box(sst, Vector3(0.0, 0.7, -0.45), Vector3(0.05, 0.1, 0.9), Basis(Vector3.RIGHT, 0.25), BLADE)
-	LowPolyMesh.prism(sst, Vector3(0.0, 0.62, -0.9), Vector3(0.0, 0.45, -1.15), 0.05, 0.0, 4, BLADE)
+
+	# Cabo de madeira torto com pegas
+	var pole_bot: Vector3 = Vector3(0.0, -1.25, 0.10)
+	var pole_grip: Vector3 = Vector3(0.0, 0.0, 0.0)
+	var pole_top: Vector3 = Vector3(0.05, 1.15, -0.15)
+	LowPolyMesh.prism(sst, pole_bot, pole_grip, 0.042, 0.038, 5, WOOD)
+	LowPolyMesh.prism(sst, pole_grip, pole_top, 0.038, 0.035, 5, WOOD)
+	# Pega transversal de madeira onde a mão segura
+	LowPolyMesh.prism(sst, Vector3(-0.08, -0.15, 0.0), Vector3(0.08, -0.15, 0.0), 0.025, 0.025, 4, WOOD_DARK)
+	# Braçadeira de ferro no topo do cabo
+	LowPolyMesh.prism(sst, pole_top - Vector3(0.0, 0.08, 0.0), pole_top, 0.052, 0.052, 6, SCYTHE_IRON)
+
+	# Lâmina colossal curva e enferrujada com dentes/falhas
+	var blade_base: Vector3 = pole_top
+	var blade_elbow: Vector3 = blade_base + Vector3(0.0, 0.16, -0.42)
+	var blade_mid: Vector3 = blade_base + Vector3(0.0, -0.12, -0.88)
+	var blade_tip: Vector3 = blade_base + Vector3(0.0, -0.58, -1.18)
+
+	# Segmentos contínuos da lâmina curva
+	LowPolyMesh.prism(sst, blade_base, blade_elbow, 0.12, 0.10, 4, SCYTHE_RUST)
+	LowPolyMesh.prism(sst, blade_elbow, blade_mid, 0.10, 0.08, 4, SCYTHE_RUST)
+	LowPolyMesh.prism(sst, blade_mid, blade_tip, 0.08, 0.045, 4, SCYTHE_RUST)
+	# Ponta afiada da foice
+	LowPolyMesh.prism(sst, blade_tip, blade_tip + Vector3(0.0, -0.22, -0.08), 0.045, 0.005, 3, SCYTHE_IRON)
+	# Gume cortante de ferro ao longo da curvatura interna
+	LowPolyMesh.prism(sst, blade_elbow - Vector3(0.0, 0.06, 0.0), blade_mid - Vector3(0.0, 0.04, 0.0), 0.03, 0.015, 3, SCYTHE_IRON)
+
 	_scythe.add_child(_commit(sst, "Mesh", mat))
 	_body_root.add_child(_scythe)
-	# Luz da cara (a noite é escura)
-	var light: OmniLight3D = OmniLight3D.new()
-	light.light_color = GLOW
-	light.light_energy = 2.5
-	light.omni_range = 5.0
-	light.position = head + Vector3(0.0, 0.0, -0.5)
-	_body_root.add_child(light)
+
+	# Luz da cara
+	var light_head: OmniLight3D = OmniLight3D.new()
+	light_head.light_color = GLOW
+	light_head.light_energy = 2.5
+	light_head.omni_range = 5.0
+	light_head.position = head + Vector3(0.0, 0.0, -0.5)
+	_body_root.add_child(light_head)
+
+	# Luz da lanterna
+	var light_lan: OmniLight3D = OmniLight3D.new()
+	light_lan.light_color = GLOW
+	light_lan.light_energy = 2.0
+	light_lan.omni_range = 4.0
+	light_lan.position = lan_mid
+	_body_root.add_child(light_lan)
+
 	# Abóbora atirada (top_level: voa pelo mundo)
 	var pst: SurfaceTool = SurfaceTool.new()
 	pst.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -608,11 +793,12 @@ func _build_model() -> void:
 	_pumpkin.top_level = true
 	_pumpkin.visible = false
 	add_child(_pumpkin)
+
 	var shape: CollisionShape3D = CollisionShape3D.new()
 	var box: BoxShape3D = BoxShape3D.new()
-	box.size = Vector3(1.0, 2.4, 0.9)
+	box.size = Vector3(1.2, 2.6, 1.0)
 	shape.shape = box
-	shape.position = Vector3(0.0, 1.2, 0.0)
+	shape.position = Vector3(0.0, 1.3, 0.0)
 	add_child(shape)
 
 

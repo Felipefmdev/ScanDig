@@ -58,11 +58,11 @@ const LOOT_REPLY_TIMEOUT: float = 1.5
 const MAX_DIVE_TIME: float = 3.5
 const STEER: float = 3.0
 const WHITE: Color = Color(0.96, 0.96, 0.95)
-const WING_GREY: Color = Color(0.62, 0.65, 0.7)
-const WING_TIP: Color = Color(0.16, 0.17, 0.2)
-const BEAK_YELLOW: Color = Color(1.0, 0.8, 0.1)
+const WING_GREY: Color = Color(0.50, 0.55, 0.63)
+const WING_TIP: Color = Color(0.14, 0.15, 0.18)
+const BEAK_YELLOW: Color = Color(0.98, 0.64, 0.08)
 const EYE_BLACK: Color = Color(0.04, 0.04, 0.05)
-const FEET_ORANGE: Color = Color(0.95, 0.55, 0.2)
+const FEET_ORANGE: Color = Color(0.95, 0.48, 0.12)
 
 var state: State = State.CIRCLE
 ## Item roubado (largado se a gaivota for abatida).
@@ -528,22 +528,46 @@ func _animate_wings(delta: float) -> void:
 # ---------------------------------------------------------------------------
 
 func _build_model() -> void:
-	var mat: ShaderMaterial = LowPolyMesh.make_material()
+	var mat: ShaderMaterial = ToonKit.vertex_material(true, true)
 	_register_flash_material(mat)
 
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Corpo e cauda
-	LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.24), Vector3(0.0, 0.02, -0.2), 0.1, 0.12, 6, WHITE)
-	LowPolyMesh.box(st, Vector3(0.0, 0.03, 0.36), Vector3(0.17, 0.025, 0.2), Basis(Vector3.RIGHT, -0.1), WING_GREY)
-	# Cabeça, olhos e bico
-	LowPolyMesh.box(st, Vector3(0.0, 0.09, -0.27), Vector3(0.14, 0.14, 0.15), Basis.IDENTITY, WHITE)
-	LowPolyMesh.box(st, Vector3(-0.072, 0.12, -0.3), Vector3(0.012, 0.03, 0.03), Basis.IDENTITY, EYE_BLACK)
-	LowPolyMesh.box(st, Vector3(0.072, 0.12, -0.3), Vector3(0.012, 0.03, 0.03), Basis.IDENTITY, EYE_BLACK)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.07, -0.34), Vector3(0.0, 0.055, -0.48), 0.035, 0.0, 4, BEAK_YELLOW)
-	# Patas recolhidas
-	LowPolyMesh.box(st, Vector3(-0.04, -0.1, 0.12), Vector3(0.03, 0.03, 0.08), Basis.IDENTITY, FEET_ORANGE)
-	LowPolyMesh.box(st, Vector3(0.04, -0.1, 0.12), Vector3(0.03, 0.03, 0.08), Basis.IDENTITY, FEET_ORANGE)
+	
+	# Corpo rechonchudo e peito facetado (gaivota.jpg)
+	LowPolyMesh.prism(st, Vector3(0.0, -0.06, 0.18), Vector3(0.0, 0.04, -0.14), 0.16, 0.18, 7, WHITE)
+	LowPolyMesh.box(st, Vector3(0.0, 0.02, 0.02), Vector3(0.26, 0.22, 0.30), Basis(Vector3.RIGHT, 0.15), WHITE)
+	LowPolyMesh.prism(st, Vector3(0.0, -0.10, 0.14), Vector3(0.0, -0.04, -0.10), 0.13, 0.15, 6, Color(0.88, 0.88, 0.86))
+
+	# Pescoço e Cabeça arredondada facetada
+	LowPolyMesh.box(st, Vector3(0.0, 0.10, -0.15), Vector3(0.18, 0.14, 0.16), Basis(Vector3.RIGHT, -0.2), WHITE)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.14, -0.20), Vector3(0.0, 0.30, -0.20), 0.14, 0.11, 7, WHITE)
+	LowPolyMesh.box(st, Vector3(0.0, 0.20, -0.22), Vector3(0.20, 0.18, 0.18), Basis.IDENTITY, WHITE)
+
+	# Olhos arregalados cómicos bem salientes no cimo da cabeça (gaivota.jpg)
+	for s: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(0.09 * s, 0.27, -0.22), Vector3(0.065, 0.075, 0.075), Basis.IDENTITY, Color(0.98, 0.98, 0.98))
+		LowPolyMesh.box(st, Vector3(0.12 * s, 0.27, -0.24), Vector3(0.028, 0.04, 0.04), Basis.IDENTITY, EYE_BLACK)
+		LowPolyMesh.box(st, Vector3(0.09 * s, 0.32, -0.22), Vector3(0.05, 0.015, 0.06), Basis(Vector3.FORWARD, 0.3 * s), EYE_BLACK)
+
+	# Bico volumoso e curvo/adunco amarelo-ouro (gaivota.jpg)
+	LowPolyMesh.box(st, Vector3(0.0, 0.18, -0.32), Vector3(0.12, 0.09, 0.12), Basis(Vector3.RIGHT, -0.1), BEAK_YELLOW)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.17, -0.32), Vector3(0.0, 0.12, -0.47), 0.06, 0.02, 5, BEAK_YELLOW)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.12, -0.45), Vector3(0.0, 0.05, -0.50), 0.035, 0.0, 4, Color(0.85, 0.50, 0.06)) # ponta curva para baixo
+	# Mandíbula inferior (ligeiramente aberta)
+	LowPolyMesh.box(st, Vector3(0.0, 0.11, -0.33), Vector3(0.09, 0.04, 0.10), Basis(Vector3.RIGHT, 0.08), BEAK_YELLOW)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.11, -0.34), Vector3(0.0, 0.08, -0.43), 0.04, 0.01, 4, Color(0.85, 0.50, 0.06))
+
+	# Cauda
+	LowPolyMesh.box(st, Vector3(0.0, 0.05, 0.32), Vector3(0.18, 0.03, 0.18), Basis(Vector3.RIGHT, -0.15), WHITE)
+	LowPolyMesh.box(st, Vector3(0.0, 0.06, 0.42), Vector3(0.14, 0.02, 0.10), Basis(Vector3.RIGHT, -0.15), WING_TIP)
+
+	# Patas alaranjadas com dedos abertos (gaivota.jpg)
+	for s: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(0.06 * s, -0.12, 0.08), Vector3(0.025, 0.10, 0.025), Basis(Vector3.RIGHT, 0.2), FEET_ORANGE)
+		LowPolyMesh.box(st, Vector3(0.06 * s, -0.17, 0.06), Vector3(0.08, 0.018, 0.10), Basis(Vector3.UP, -0.2 * s), FEET_ORANGE)
+		LowPolyMesh.prism(st, Vector3(0.06 * s, -0.17, 0.06), Vector3(0.06 * s, -0.17, -0.01), 0.04, 0.0, 3, FEET_ORANGE)
+
 	add_child(LowPolyMesh.commit(st, "Body", mat))
 
 	_wing_left = _build_wing(-1.0, mat)
@@ -553,11 +577,20 @@ func _build_model() -> void:
 func _build_wing(side: float, mat: Material) -> Node3D:
 	var pivot: Node3D = Node3D.new()
 	pivot.name = "WingLeft" if side < 0.0 else "WingRight"
-	pivot.position = Vector3(0.09 * side, 0.05, -0.02)
+	pivot.position = Vector3(0.11 * side, 0.06, -0.02)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	LowPolyMesh.box(st, Vector3(0.2 * side, 0.0, 0.0), Vector3(0.4, 0.025, 0.21), Basis.IDENTITY, WING_GREY)
-	LowPolyMesh.box(st, Vector3(0.5 * side, 0.0, 0.03), Vector3(0.22, 0.02, 0.14), Basis(Vector3.UP, 0.15 * side), WING_TIP)
+	
+	# Base / ombro branco
+	LowPolyMesh.box(st, Vector3(0.12 * side, 0.01, 0.0), Vector3(0.24, 0.035, 0.22), Basis.IDENTITY, WHITE)
+	# Corpo da asa cinzento-azulado
+	LowPolyMesh.box(st, Vector3(0.32 * side, 0.02, 0.02), Vector3(0.30, 0.028, 0.20), Basis(Vector3.UP, 0.12 * side), WING_GREY)
+	LowPolyMesh.box(st, Vector3(0.54 * side, 0.03, 0.06), Vector3(0.26, 0.022, 0.16), Basis(Vector3.UP, 0.25 * side), WING_GREY)
+	
+	# Pontas escalonadas de penas escuras (gaivota.jpg)
+	for k: int in 3:
+		LowPolyMesh.box(st, Vector3((0.66 + 0.04 * k) * side, 0.02, 0.04 + 0.04 * k), Vector3(0.14 - 0.02 * k, 0.018, 0.04), Basis(Vector3.UP, (0.35 + 0.1 * k) * side), WING_TIP)
+
 	pivot.add_child(LowPolyMesh.commit(st, "Mesh", mat))
 	add_child(pivot)
 	return pivot
