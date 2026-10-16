@@ -7,9 +7,9 @@ extends SceneTree
 const HINT: String = " — mudou a economia? atualize docs/PACING.md e core/tests/economy_anchor_test.gd"
 
 const UPGRADE_COSTS: Dictionary = {
-	"detector": [300, 600, 700, 2000, 40000, 90000],
-	"pinpointer": [500, 60000],
-	"shovel": [800, 1200, 40000],
+	"detector": [300, 600, 700, 2000, 40000, 150000],
+	"pinpointer": [500, 100000],
+	"shovel": [800, 1200, 70000],
 	"backpack": [400, 800, 1600, 1800, 6000],
 }
 const UPGRADE_MAPS: Dictionary = {

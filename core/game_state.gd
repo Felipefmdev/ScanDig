@@ -50,10 +50,10 @@ const MAP_UNLOCK_BOSSES: Dictionary = {
 const QUESTS: Dictionary = {
 	"ze_anzol": {"name": "O anzol de ouro", "reward": 600},
 	"lurdes_chaves": {"name": "Os corvos levaram as chaves", "reward": 1800},
-	# Como Zé (~12 min) e Lurdes (~14 min): ~13 min da renda de bot do mapa (docs/PACING.md, #64).
-	"ines_camara": {"name": "A câmara selada", "reward": 17000},
-	"bjorn_expedicao": {"name": "A expedição perdida", "reward": 37000},
-	"vega_sinal": {"name": "Sinal no fundo", "reward": 30000},
+	# Como Zé (~12 min) e Lurdes (~14 min): ~13 min da renda de bot do mapa (docs/PACING.md, #82).
+	"ines_camara": {"name": "A câmara selada", "reward": 25000},
+	"bjorn_expedicao": {"name": "A expedição perdida", "reward": 41000},
+	"vega_sinal": {"name": "Sinal no fundo", "reward": 40000},
 }
 ## Relíquias escondidas e easter eggs (#45): só ficam registrados no save.
 const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", "praia_reliquia_mare",
@@ -80,7 +80,7 @@ const STYLE_BONUSES: Dictionary = {
 	"arremesso": {"name": "Arremesso certeiro", "ratio": 0.3},
 	"explosao": {"name": "Explosivo", "ratio": 0.3},
 }
-const MAP_INCOME_PER_MIN: Dictionary = {"praia": 50, "campo": 127, "ruinas": 1336, "geleira": 2849, "cratera": 2552}
+const MAP_INCOME_PER_MIN: Dictionary = {"praia": 43, "campo": 148, "ruinas": 1940, "geleira": 3189, "cratera": 4256}
 ## Um bónus por jogador a cada STYLE_COOLDOWN_MS (um cliente não faz spam de dinheiro).
 const STYLE_COOLDOWN_MS: int = 1500
 var _style_last_ms: Dictionary = {}
@@ -93,11 +93,11 @@ const EXTRA_BOSSES: Array[String] = [
 ]
 
 const UPGRADES: Dictionary = {
-	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 40000, 90000],
+	"detector": {"name": "Detector", "costs": [300, 600, 700, 2000, 40000, 150000],
 		"required_maps": ["", "", "", "ruinas", "geleira", "cratera"], "max_level": 6},
-	"pinpointer": {"name": "Pinpointer de Precisão", "costs": [500, 60000],
+	"pinpointer": {"name": "Pinpointer de Precisão", "costs": [500, 100000],
 		"required_maps": ["", "cratera"], "max_level": 2},
-	"shovel": {"name": "Pá de Fibra", "costs": [800, 1200, 40000],
+	"shovel": {"name": "Pá de Fibra", "costs": [800, 1200, 70000],
 		"required_maps": ["", "ruinas", "cratera"], "max_level": 3},
 	"backpack": {"name": "Mochila Reforçada", "costs": [400, 800, 1600, 1800, 6000],
 		"required_maps": ["", "", "campo", "ruinas", "geleira"], "max_level": 5},

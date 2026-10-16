@@ -352,6 +352,8 @@ Depois:
 | Geleira | 3.189 | 3 | ~326.000 | ~102 min |
 | Cratera | 4.256 | 2 | 190.000 | ~45 min |
 
-Pendente: a Cratera ficou curta (renda subiu com menos mortes). Os custos dela são upgrades
-(`GameState.UPGRADES`: detector 6, pinpointer 2, pá 3) e serão revistos junto com as
-recompensas das missões 3–5 e `MAP_INCOME_PER_MIN` dos bónus, depois do #81.
+Depois do #81: a Cratera ficou curta (renda subiu com menos mortes), por isso os upgrades
+comprados nela subiram ×1,7 (detector Nv.6 90.000 → 150.000, pinpointer Nv.2 60.000 →
+100.000, pá Nv.3 40.000 → 70.000; gasto ~320.000 ≈ 75 min de bot). Missões 3–5 a ~13 min
+da renda nova: Inês 25.000, Björn 41.000, Vega 40.000. `MAP_INCOME_PER_MIN` dos bónus de
+estilo passou para os valores medidos acima.
