@@ -504,7 +504,7 @@ func _on_items_delivered(count: int, total_value: int) -> void:
 	_m["items_sold"] = int(_m["items_sold"]) + count
 	_m["sold_value"] = int(_m["sold_value"]) + total_value
 	_m["sell_trips"] = int(_m["sell_trips"]) + 1
-	_log("t=%.1f entregue: %d itens, R$ %d" % [_elapsed(), count, total_value])
+	_log("t=%.1f entregue: %d itens, %s" % [_elapsed(), count, MoneyFormat.money(total_value)])
 
 
 func _alive_enemy_count() -> int:

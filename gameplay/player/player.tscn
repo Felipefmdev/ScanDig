@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://gameplay/detector/metal_detector.tscn" id="2_detector"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://gameplay/player/hand_model.gd" id="7_hand_model"]
 [ext_resource type="Script" path="res://gameplay/weapons/slingshot/slingshot_model.gd" id="8_slingshot"]
 [ext_resource type="Script" path="res://gameplay/player/player_avatar.gd" id="9_avatar"]
+[ext_resource type="Theme" uid="uid://dt4byoe88efie" path="res://ui/theme/scandig_theme.tres" id="10_theme"]
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
 properties/0/path = NodePath(".:position")
@@ -30,32 +31,6 @@ properties/4/replication_mode = 2
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.4
 height = 1.8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
-bg_color = Color(0.05, 0.05, 0.06, 0.65)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0, 0, 0, 0.85)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_threat_fill"]
-bg_color = Color(0.55, 0.75, 0.35, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
-bg_color = Color(0.85, 0.2, 0.22, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 1
@@ -139,6 +114,7 @@ offset_right = 400.0
 offset_bottom = 132.0
 grow_horizontal = 2
 mouse_filter = 2
+theme = ExtResource("10_theme")
 theme_override_constants/separation = 2
 
 [node name="SessionInfoLabel" type="Label" parent="HUD"]
@@ -146,7 +122,8 @@ offset_left = 24.0
 offset_top = 20.0
 offset_right = 380.0
 offset_bottom = 60.0
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme = ExtResource("10_theme")
+theme_override_colors/font_outline_color = Color(0.168627, 0.129412, 0.094118, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 18
 text = "🎒 Mochila: 0 itens | 💰 R$ 0"
@@ -162,10 +139,11 @@ offset_right = -24.0
 offset_bottom = 72.0
 grow_horizontal = 0
 mouse_filter = 2
+theme = ExtResource("10_theme")
 
 [node name="ThreatTitle" type="Label" parent="HUD/ThreatPanel"]
 layout_mode = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_outline_color = Color(0.168627, 0.129412, 0.094118, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 16
 text = "☠ Ameaça do Subsolo"
@@ -175,8 +153,7 @@ horizontal_alignment = 2
 custom_minimum_size = Vector2(280, 16)
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_threat_fill")
+theme_type_variation = &"ThreatBar"
 step = 0.01
 show_percentage = false
 
@@ -190,10 +167,11 @@ offset_right = 304.0
 offset_bottom = -20.0
 grow_vertical = 0
 mouse_filter = 2
+theme = ExtResource("10_theme")
 
 [node name="HealthLabel" type="Label" parent="HUD/HealthPanel"]
 layout_mode = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_outline_color = Color(0.168627, 0.129412, 0.094118, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 16
 text = "❤ Vida: 100 / 100"
@@ -202,8 +180,6 @@ text = "❤ Vida: 100 / 100"
 custom_minimum_size = Vector2(280, 16)
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
 step = 0.01
 value = 100.0
 show_percentage = false
@@ -221,6 +197,7 @@ offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
+theme = ExtResource("10_theme")
 theme_override_constants/separation = 8
 alignment = 1
 script = ExtResource("5_hotbar")
@@ -238,8 +215,9 @@ offset_bottom = 60.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme = ExtResource("10_theme")
 theme_override_colors/font_color = Color(1, 0.95, 0.75, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.95)
+theme_override_colors/font_outline_color = Color(0.168627, 0.129412, 0.094118, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1

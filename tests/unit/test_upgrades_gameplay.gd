@@ -112,7 +112,7 @@ func test_footer_lines_per_level() -> void:
 	_set_upgrades({"detector": 3})
 	lines = det.get_footer_lines()
 	assert_eq(lines.size(), 5, "Nv.4: + valor")
-	assert_eq(lines[4], "Val: R$22-50")
+	assert_eq(lines[4], "Val: %s–%s" % [MoneyFormat.money(22), MoneyFormat.thousands(50)])
 	_set_upgrades({"detector": 6}, [])
 	lines = det.get_footer_lines()
 	assert_eq(lines[2], "Novo: Teste", "Nv.7 identifica e avisa que falta no museu")

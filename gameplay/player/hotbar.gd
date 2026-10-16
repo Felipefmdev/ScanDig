@@ -9,9 +9,9 @@ const SLOT_SIZE: Vector2 = Vector2(92, 92)
 const MIN_SLOT_SIZE: float = 64.0
 ## Largura reservada em cada lado do ecrã (painel de vida: 24 + 280 px + margem).
 const SIDE_RESERVED: float = 320.0
-const COLOR_BG: Color = Color(0.05, 0.05, 0.06, 0.6)
-const COLOR_BORDER: Color = Color(0.0, 0.0, 0.0, 0.85)
-const COLOR_SELECTED: Color = Color(1.0, 0.85, 0.3, 1.0)
+const COLOR_BG: Color = Color(0.169, 0.129, 0.094, 0.65)
+const COLOR_BORDER: Color = UiPalette.INK
+const COLOR_SELECTED: Color = UiPalette.GOLD
 const COLOR_RARE: Color = Color(0.85, 0.55, 1.0)
 const COLOR_TOOL: Color = Color(0.32, 0.8, 1.0)
 
@@ -55,6 +55,7 @@ func get_slot_size(count: int) -> Vector2:
 
 func _make_slot_panel() -> PanelContainer:
 	var panel: PanelContainer = PanelContainer.new()
+	panel.theme = preload("res://ui/theme/scandig_theme.tres")
 	panel.custom_minimum_size = _slot_size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -79,7 +80,7 @@ func _make_slot_panel() -> PanelContainer:
 	swatch_holder.add_child(swatch)
 
 	box.add_child(_make_label("Name", 12, Color.WHITE))
-	box.add_child(_make_label("Value", 12, Color(0.6, 1.0, 0.6)))
+	box.add_child(_make_label("Value", 12, UiPalette.GREEN_BOTTLE.lightened(0.4)))
 	return panel
 
 
@@ -93,7 +94,7 @@ func _make_label(label_name: String, size: int, color: Color) -> Label:
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	l.add_theme_color_override("font_outline_color", UiPalette.INK)
 	l.add_theme_constant_override("outline_size", 4)
 	return l
 
@@ -119,14 +120,14 @@ func _fill_slot(i: int) -> void:
 		swatch.color = ItemPickup.make_material(c.item, c.is_rare_variant).albedo_color
 		name_label.text = c.get_display_name()
 		name_label.add_theme_color_override("font_color", COLOR_RARE if c.is_rare_variant else Color.WHITE)
-		value_label.text = "R$ %d" % c.final_value
+		value_label.text = MoneyFormat.money(c.final_value)
 
 
 func _on_selected_slot_changed(index: int) -> void:
 	for i: int in _slot_panels.size():
 		var selected: bool = (i == index)
 		var style: StyleBoxFlat = StyleBoxFlat.new()
-		style.bg_color = Color(0.2, 0.16, 0.05, 0.75) if selected else COLOR_BG
+		style.bg_color = Color(UiPalette.INK.r, UiPalette.INK.g, UiPalette.INK.b, 0.85) if selected else COLOR_BG
 		style.border_color = COLOR_SELECTED if selected else COLOR_BORDER
 		var w: int = 3 if selected else 1
 		style.border_width_left = w

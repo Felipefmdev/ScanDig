@@ -321,25 +321,21 @@ func _build_hud() -> void:
 	_hud.layer = 3
 	_hud.visible = false
 	var box: VBoxContainer = VBoxContainer.new()
+	box.theme = preload("res://ui/theme/scandig_theme.tres")
 	box.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	box.position = Vector2(-220.0, 118.0)
 	box.custom_minimum_size = Vector2(440.0, 0.0)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	_hud.add_child(box)
-	_hud_title = _hud_label(event_name, 30, Color(1.0, 0.45, 0.32))
+	_hud_title = _hud_label(event_name, 30, UiPalette.ORANGE)
 	box.add_child(_hud_title)
-	_hud_round = _hud_label("", 22, Color(1.0, 0.95, 0.85))
+	_hud_round = _hud_label("", 22, UiPalette.PAPER)
 	box.add_child(_hud_round)
 	_hud_defend = ProgressBar.new()
+	_hud_defend.theme_type_variation = &"ThreatBar"
 	_hud_defend.custom_minimum_size = Vector2(440.0, 14.0)
 	_hud_defend.show_percentage = false
 	_hud_defend.value = 100.0
-	var fill: StyleBoxFlat = StyleBoxFlat.new()
-	fill.bg_color = Color(0.36, 0.72, 0.35)
-	var bg: StyleBoxFlat = StyleBoxFlat.new()
-	bg.bg_color = Color(0.1, 0.08, 0.06, 0.8)
-	_hud_defend.add_theme_stylebox_override(&"fill", fill)
-	_hud_defend.add_theme_stylebox_override(&"background", bg)
 	box.add_child(_hud_defend)
 	add_child(_hud)
 
@@ -350,6 +346,6 @@ static func _hud_label(text: String, size: int, color: Color) -> Label:
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override(&"font_size", size)
 	l.add_theme_color_override(&"font_color", color)
-	l.add_theme_color_override(&"font_outline_color", Color(0.05, 0.03, 0.02))
+	l.add_theme_color_override(&"font_outline_color", UiPalette.INK)
 	l.add_theme_constant_override(&"outline_size", 8)
 	return l

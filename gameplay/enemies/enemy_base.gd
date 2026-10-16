@@ -30,11 +30,19 @@ const FLASH_COLOR: Color = Color(1.0, 0.25, 0.2)
 const BLOCK_FLASH_COLOR: Color = Color(0.55, 0.65, 1.0)
 ## Grupos de jogadores: "players" (todos, coop) e "player" (só o local; testes/solo antigo).
 const PLAYERS_GROUPS: Array[StringName] = [&"players", &"player"]
-## Validação no host dos pedidos dos clientes (#5 F; a Fase 4 do Dev B endurece).
-## Distância máxima (no plano) entre o jogador que pede e o inimigo (estilingue incluído).
-const REQUEST_MAX_RANGE: float = 40.0
-## Dano máximo aceite por pedido e intervalo mínimo entre pedidos do mesmo peer.
-const REQUEST_MAX_DAMAGE: float = 100.0
+## Validação no host dos pedidos dos clientes (#5 F; Fase 4 do Dev B endurecida na #48).
+## Margem de folga adicionada ao alcance das armas.
+const REQUEST_RANGE_MARGIN: float = 2.0
+## Alcance máximo por arma (alcance nativo + 2.0 m de folga):
+const RANGE_SHOVEL: float = 4.2        # 2.2 + 2.0 (pá)
+const RANGE_PITCHFORK: float = 5.2     # 3.2 + 2.0 (forcado)
+const RANGE_LANTERN: float = 11.0      # 9.0 + 2.0 (lanterna de magnésio)
+const RANGE_SLINGSHOT: float = 24.0    # 22.0 + 2.0 (estilingue / projéteis)
+const RANGE_REPELLENT: float = 7.5     # 5.5 + 2.0 (repelente de caranguejo)
+const RANGE_NET_TRAP: float = 4.5      # 1.6 + 0.75 + 2.0 (armadilha de rede)
+## Teto máximo absoluto de alcance (estilingue) e dano (pá melhorada / forcado).
+const REQUEST_MAX_RANGE: float = 24.0
+const REQUEST_MAX_DAMAGE: float = 35.0
 const REQUEST_MIN_INTERVAL_MS: int = 150
 const REQUEST_MAX_STUN: float = 6.0
 const REQUEST_MAX_FLEE: float = 10.0
@@ -106,6 +114,34 @@ func _ready() -> void:
 	add_to_group(GROUP)
 	health = max_health
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
+	_connect_expedition_ending()
+
+
+func _exit_tree() -> void:
+	if _net_sync != null and is_instance_valid(_net_sync):
+		_net_sync.public_visibility = false
+	var sm: SessionManager = SessionManager.instance
+	if sm == null and is_inside_tree():
+		var node: Node = get_node_or_null("/root/CoreSession")
+		if node is SessionManager:
+			sm = node
+	if sm != null and sm.expedition_ending.is_connected(_on_expedition_ending):
+		sm.expedition_ending.disconnect(_on_expedition_ending)
+
+
+func _connect_expedition_ending() -> void:
+	var sm: SessionManager = SessionManager.instance
+	if sm == null and is_inside_tree():
+		var node: Node = get_node_or_null("/root/CoreSession")
+		if node is SessionManager:
+			sm = node
+	if sm != null and not sm.expedition_ending.is_connected(_on_expedition_ending):
+		sm.expedition_ending.connect(_on_expedition_ending)
+
+
+func _on_expedition_ending(_map_id: String = "") -> void:
+	if _net_sync != null and is_instance_valid(_net_sync):
+		_net_sync.public_visibility = false
 
 
 func _physics_process(delta: float) -> void:
@@ -159,6 +195,7 @@ func setup_network() -> void:
 	_net_sync.replication_interval = 0.05
 	NetVisibility.watch(_net_sync)
 	add_child(_net_sync)
+	_connect_expedition_ending()
 
 
 func get_net_sync() -> MultiplayerSynchronizer:
@@ -281,38 +318,190 @@ func request_flee(origin: Vector3, seconds: float) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_request_hit(amount: float, from: Vector3) -> void:
-	if accept_request(multiplayer.get_remote_sender_id()):
-		take_damage(clampf(amount, 0.0, REQUEST_MAX_DAMAGE), from)
+	var peer_id: int = multiplayer.get_remote_sender_id()
+	if peer_id == 0:
+		peer_id = 1
+	if not accept_request(peer_id, &"hit"):
+		return
+	var max_damage: float = get_peer_max_damage(peer_id)
+	if max_damage <= 0.0 or amount <= 0.0:
+		return
+	take_damage(clampf(amount, 0.0, max_damage), from)
 
 
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_request_stun(seconds: float) -> void:
-	if accept_request(multiplayer.get_remote_sender_id()):
-		stun(clampf(seconds, 0.0, REQUEST_MAX_STUN))
+	var peer_id: int = multiplayer.get_remote_sender_id()
+	if peer_id == 0:
+		peer_id = 1
+	if not accept_request(peer_id, &"stun"):
+		return
+	stun(clampf(seconds, 0.0, REQUEST_MAX_STUN))
 
 
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_request_flee(origin: Vector3, seconds: float) -> void:
-	if accept_request(multiplayer.get_remote_sender_id()):
-		flee_from(origin, clampf(seconds, 0.0, REQUEST_MAX_FLEE))
+	var peer_id: int = multiplayer.get_remote_sender_id()
+	if peer_id == 0:
+		peer_id = 1
+	if not accept_request(peer_id, &"flee"):
+		return
+	flee_from(origin, clampf(seconds, 0.0, REQUEST_MAX_FLEE))
 
 
-## Host: aceita o pedido do peer? O jogador dele tem de estar a <= REQUEST_MAX_RANGE (no
-## plano) e o último pedido aceite tem de ter sido há >= REQUEST_MIN_INTERVAL_MS.
-func accept_request(peer_id: int) -> bool:
+## Host: aceita o pedido do peer? O jogador dele tem de estar dentro do alcance da arma
+## equipada (+ 2.0 m de folga), o peer tem de ter carregado o mapa e o último pedido
+## aceite tem de ter sido há >= REQUEST_MIN_INTERVAL_MS.
+func accept_request(peer_id: int, request_type: StringName = &"") -> bool:
 	if not has_simulation_authority() or not is_alive():
+		return false
+	if not is_peer_scene_ready(peer_id):
 		return false
 	var player: Node3D = _player_of_peer(peer_id)
 	if player == null:
 		return false
+	var max_range: float = get_peer_max_range(peer_id, request_type)
 	var d: Vector3 = player.global_position - global_position
-	if Vector2(d.x, d.z).length() > REQUEST_MAX_RANGE:
+	if Vector2(d.x, d.z).length() > max_range:
 		return false
 	var now: int = Time.get_ticks_msec()
 	if _last_request_ms.has(peer_id) and now - int(_last_request_ms[peer_id]) < REQUEST_MIN_INTERVAL_MS:
 		return false
 	_last_request_ms[peer_id] = now
 	return true
+
+
+## Host: o peer já carregou o mapa? Fora de uma expedição (cena aberta direto, bot,
+## testes) não há handshake de cena e conta como pronto.
+func is_peer_scene_ready(peer_id: int) -> bool:
+	var sm: SessionManager = SessionManager.instance
+	if sm == null and is_inside_tree():
+		var node: Node = get_node_or_null("/root/CoreSession")
+		if node is SessionManager:
+			sm = node
+	if sm == null or not sm.is_in_expedition():
+		return true
+	return sm.is_peer_scene_ready(peer_id)
+
+
+## Devolve o alcance máximo aceitável (no plano) para o tipo de pedido do peer,
+## considerando a arma equipada (+ 2.0 m de folga).
+func get_peer_max_range(peer_id: int, request_type: StringName = &"") -> float:
+	var player: Node3D = _player_of_peer(peer_id)
+	if player == null:
+		return RANGE_SHOVEL
+
+	var held: StringName = player.held_tool_id if "held_tool_id" in player else &""
+
+	match request_type:
+		&"hit":
+			if held == &"estilingue":
+				return RANGE_SLINGSHOT
+			if held == &"forcado":
+				return RANGE_PITCHFORK
+			if held == &"armadilha_rede":
+				return RANGE_NET_TRAP
+			if _peer_has_inventory_tool(player, &"estilingue"):
+				return RANGE_SLINGSHOT
+			if _peer_has_inventory_tool(player, &"forcado"):
+				return RANGE_PITCHFORK
+			if _peer_has_inventory_tool(player, &"armadilha_rede"):
+				return RANGE_NET_TRAP
+			return RANGE_SHOVEL
+		&"stun":
+			if held == &"lanterna_magnesio":
+				return RANGE_LANTERN
+			if held == &"forcado":
+				return RANGE_PITCHFORK
+			if held == &"armadilha_rede":
+				return RANGE_NET_TRAP
+			if _peer_has_inventory_tool(player, &"lanterna_magnesio"):
+				return RANGE_LANTERN
+			if _peer_has_inventory_tool(player, &"forcado"):
+				return RANGE_PITCHFORK
+			if _peer_has_inventory_tool(player, &"armadilha_rede"):
+				return RANGE_NET_TRAP
+			return RANGE_SHOVEL
+		&"flee":
+			if held == &"lanterna_magnesio":
+				return RANGE_LANTERN
+			if held == &"repelente":
+				return RANGE_REPELLENT
+			if _peer_has_inventory_tool(player, &"lanterna_magnesio"):
+				return RANGE_LANTERN
+			if _peer_has_inventory_tool(player, &"repelente"):
+				return RANGE_REPELLENT
+			return RANGE_REPELLENT
+		_:
+			if held == &"estilingue" or _peer_has_inventory_tool(player, &"estilingue"):
+				return RANGE_SLINGSHOT
+			if held == &"lanterna_magnesio" or _peer_has_inventory_tool(player, &"lanterna_magnesio"):
+				return RANGE_LANTERN
+			if held == &"repelente" or _peer_has_inventory_tool(player, &"repelente"):
+				return RANGE_REPELLENT
+			if held == &"forcado" or _peer_has_inventory_tool(player, &"forcado"):
+				return RANGE_PITCHFORK
+			return RANGE_SHOVEL
+
+
+## Devolve o dano máximo permitido para o pedido do peer, baseado na arma equipada
+## ou na pá (com melhorias de dano se disponíveis).
+func get_peer_max_damage(peer_id: int) -> float:
+	var player: Node3D = _player_of_peer(peer_id)
+	if player == null:
+		return REQUEST_MAX_DAMAGE
+
+	var held: StringName = player.held_tool_id if "held_tool_id" in player else &""
+
+	# Se tiver ferramenta equipada (não pá nem detector), valida catálogo de ferramentas
+	if held != &"" and held != &"pa" and held != &"detector":
+		var gs: GameState = GameState.instance
+		if gs == null and is_inside_tree():
+			var node: Node = get_node_or_null("/root/CoreGameState")
+			if node is GameState:
+				gs = node
+		if gs != null:
+			if gs.get_tool_data(String(held)) == null:
+				return 0.0
+		elif not _is_known_tool(held):
+			return 0.0
+
+	var shovel_dmg: float = REQUEST_MAX_DAMAGE
+	if player.has_method("get_attack_damage"):
+		shovel_dmg = float(player.call("get_attack_damage"))
+
+	if held == &"estilingue":
+		var d: Vector3 = player.global_position - global_position
+		if Vector2(d.x, d.z).length() <= RANGE_SHOVEL:
+			return maxf(20.0, shovel_dmg)
+		return 20.0
+	elif held == &"armadilha_rede":
+		return 15.0
+	elif held == &"forcado":
+		return 35.0
+	elif held == &"arpao_corda":
+		return 20.0
+
+	return shovel_dmg
+
+
+func _peer_has_inventory_tool(player: Node3D, tool_name: StringName) -> bool:
+	if player == null:
+		return false
+	if "inventory" in player and player.inventory != null and "slots" in player.inventory:
+		for item in player.inventory.slots:
+			if item != null and "tool_id" in item and item.tool_id == tool_name:
+				return true
+	return false
+
+
+func _is_known_tool(tool_id: StringName) -> bool:
+	match tool_id:
+		&"", &"pa", &"detector", &"estilingue", &"forcado", &"armadilha_rede", \
+		&"lanterna_magnesio", &"repelente", &"kit_medico", &"arpao_corda", &"pulso_magnetico":
+			return true
+		_:
+			return false
 
 
 func _player_of_peer(peer_id: int) -> Node3D:

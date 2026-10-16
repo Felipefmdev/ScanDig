@@ -194,6 +194,7 @@ func _setup_screen() -> void:
 		var layer: CanvasLayer = CanvasLayer.new()
 		layer.name = "DebugRadarLayer"
 		var radar: DetectorRadar = DetectorRadar.new()
+		radar.theme = preload("res://ui/theme/scandig_theme.tres")
 		radar.detector = self
 		radar.anchor_top = 1.0
 		radar.anchor_bottom = 1.0
@@ -761,7 +762,7 @@ func get_footer_lines() -> PackedStringArray:
 		if item != null:
 			var rare: bool = is_rare_revealed(target, get_signal_strength())
 			var r: Vector2i = get_value_range(item, rare)
-			val_text = "R$%d-%d%s" % [r.x, r.y, " ★x3" if rare else ""]
+			val_text = "%s–%s%s" % [MoneyFormat.money(r.x), MoneyFormat.thousands(r.y), " ★x3" if rare else ""]
 		lines.append("Val: " + val_text)
 	return lines
 

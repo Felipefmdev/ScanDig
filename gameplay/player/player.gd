@@ -80,10 +80,10 @@ const SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL: float = 0.25
 const SHOVEL_DAMAGE_REDUCTION_PER_LEVEL: float = 0.15
 const MIN_SHOVEL_DAMAGE_MULTIPLIER: float = 0.3
 const THREAT_COLORS: Array[Color] = [
-	Color(0.55, 0.75, 0.35),
-	Color(0.95, 0.85, 0.25),
-	Color(1.0, 0.55, 0.15),
-	Color(0.95, 0.15, 0.15),
+	UiPalette.GREEN_BOTTLE,
+	UiPalette.GOLD,
+	UiPalette.ORANGE,
+	UiPalette.RED_BURNT,
 ]
 ## #34: o que sai de uma pazada fora de um sinal, pelo chão de cada mapa (MapData.id).
 const EMPTY_DIG_GROUND: Dictionary = {"praia": "Só areia...", "campo": "Só terra..."}
@@ -93,7 +93,7 @@ const MAX_MESSAGES: int = 3
 const MAX_MESSAGE_LINES: int = 4
 const MESSAGE_FONT_SIZE: int = 22
 const THREAT_MESSAGE_FONT_SIZE: int = 30
-const THREAT_MESSAGE_COLOR: Color = Color(1, 0.32, 0.2, 1)
+const THREAT_MESSAGE_COLOR: Color = UiPalette.RED_BURNT
 const THREAT_MESSAGES: Array[String] = [
 	"O chão treme...",
 	"O chão treme... algo se mexe lá em baixo.",
@@ -525,14 +525,14 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 		var rarity_str: String = _get_category_name(item.category if item != null else 0)
 		var item_name: String = item.display_name if item != null else "Artefato Misterioso"
 		var msg: String = ""
-		var color: Color = Color(1.0, 0.88, 0.25)
+		var color: Color = UiPalette.GOLD
 		var duration: float = 3.5
 		if is_rare_variant:
 			msg += "✦ RARO ✦\n"
 			color = Color(0.85, 0.55, 1.0)
 			duration = 4.5
-		msg += "★ DESCOBERTA: %s [%s]!\nIntegridade: %d%% | Valor: R$ %d" % [
-			item_name, rarity_str, int(integrity * 100.0), final_val
+		msg += "★ DESCOBERTA: %s [%s]!\nIntegridade: %d%% | Valor: %s" % [
+			item_name, rarity_str, int(integrity * 100.0), MoneyFormat.money(final_val)
 		]
 		if is_perfect:
 			msg += "\n✔ ESCAVAÇÃO PERFEITA! (+25%)"
@@ -543,7 +543,7 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 		var msg: String = "💥 CRACK! Você bateu com a pá no objeto!\nIntegridade caiu para %d%% (Camada %d/%d)" % [
 			int(integrity * 100.0), layer_num, max_layers
 		]
-		_show_temporary_message(msg, Color(1.0, 0.35, 0.35), 2.2)
+		_show_temporary_message(msg, UiPalette.RED_BURNT.lightened(0.2), 2.2)
 	else:
 		var tool_name: String = "Escavação Cuidadosa" if is_careful else "Pá Rápida"
 		var layer_num: int = max_layers - dirt_left
@@ -574,7 +574,7 @@ func _push_message(text: String, color: Color, duration: float, font_size: int, 
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	label.add_theme_color_override("font_outline_color", UiPalette.INK)
 	label.add_theme_constant_override("outline_size", outline)
 	label.modulate.a = 0.0
 	message_stack.add_child(label)
@@ -642,11 +642,11 @@ func get_hud_messages() -> PackedStringArray:
 func _update_session_hud() -> void:
 	if session_info_label == null:
 		return
-	var bag: String = "🎒 Mochila: %d/%d (R$ %d)" % [inventory.get_count(), inventory.capacity, inventory.get_total_value()]
+	var bag: String = "🎒 Mochila: %d/%d (%s)" % [inventory.get_count(), inventory.capacity, MoneyFormat.money(inventory.get_total_value())]
 	if GameState.instance != null:
-		session_info_label.text = "%s | 💰 Equipa: R$ %d" % [bag, GameState.instance.team_money]
+		session_info_label.text = "%s | 💰 Equipa: %s" % [bag, MoneyFormat.money(GameState.instance.team_money)]
 	else:
-		session_info_label.text = "%s | 💰 Entregue: R$ %d" % [bag, session_money]
+		session_info_label.text = "%s | 💰 Entregue: %s" % [bag, MoneyFormat.money(session_money)]
 
 
 func _on_team_money_changed(_new_amount: int) -> void:
@@ -931,7 +931,7 @@ func _interact() -> void:
 		session_money += total
 		_update_session_hud()
 		SFX.play_ui(SFX.DELIVER_COINS)
-		_show_temporary_message("📦 Entregue: %d itens, R$ %d" % [items.size(), total], Color(0.5, 1.0, 0.55), 2.5)
+		_show_temporary_message("📦 Entregue: %d itens, %s" % [items.size(), MoneyFormat.money(total)], UiPalette.GREEN_BOTTLE.lightened(0.3), 2.5)
 		return
 
 	if _target_pickup == null or not is_instance_valid(_target_pickup):
@@ -979,7 +979,7 @@ func _add_picked_item(c: CarriedItem) -> void:
 		_show_temporary_message("🎒 Mochila cheia! O item caiu no chão.", Color(1.0, 0.6, 0.3), 1.8)
 		return
 	SFX.play_ui(SFX.PICKUP)
-	var value: String = "" if c.is_tool() else " (R$ %d)" % c.final_value
+	var value: String = "" if c.is_tool() else " (%s)" % MoneyFormat.money(c.final_value)
 	_show_temporary_message("✋ Apanhou: %s%s" % [c.get_display_name(), value],
 		Color(0.85, 0.55, 1.0) if c.is_rare_variant else Color(0.95, 0.95, 0.85), 1.4)
 
@@ -1080,13 +1080,13 @@ func _update_interaction_target() -> void:
 		var full: String = "  — mochila cheia!" if inventory.is_full() else ""
 		interact_prompt.text = _target_offer.get_prompt() + full
 	elif sell_point != null and deliverable > 0:
-		interact_prompt.text = "[E] Entregar mochila (%d itens, R$ %d)" % [deliverable, inventory.get_total_value()]
+		interact_prompt.text = "[E] Entregar mochila (%d itens, %s)" % [deliverable, MoneyFormat.money(inventory.get_total_value())]
 	elif _target_pickup != null and _target_pickup.carried != null:
 		var aimed: CarriedItem = _target_pickup.carried
 		var suffix: String = "  — mochila cheia!" if inventory.is_full() else ""
 		if _already_has_unique_tool(aimed):
 			suffix = "  — já tem um"
-		var value: String = "" if aimed.is_tool() else " (R$ %d)" % aimed.final_value
+		var value: String = "" if aimed.is_tool() else " (%s)" % MoneyFormat.money(aimed.final_value)
 		interact_prompt.text = "[E] Apanhar %s%s%s" % [aimed.get_display_name(), value, suffix]
 	else:
 		interact_prompt.text = ""

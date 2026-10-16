@@ -35,7 +35,7 @@ func _ready() -> void:
 		add_child(mesh)
 
 	_label = Label3D.new()
-	_label.text = "%s\nR$ %d" % [tool_data.display_name, tool_data.price]
+	_label.text = "%s\n%s" % [tool_data.display_name, MoneyFormat.money(tool_data.price)]
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.position.y = 0.55
 	_label.font_size = 24
@@ -45,6 +45,7 @@ func _ready() -> void:
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_label.pixel_size = 0.004
 	_label.outline_size = 6
+	_label.outline_modulate = UiPalette.INK
 	add_child(_label)
 
 
@@ -56,7 +57,7 @@ func set_highlighted(on: bool) -> void:
 func get_prompt() -> String:
 	if tool_data == null:
 		return ""
-	return "[E] Comprar %s (R$ %d)" % [tool_data.display_name, tool_data.price]
+	return "[E] Comprar %s (%s)" % [tool_data.display_name, MoneyFormat.money(tool_data.price)]
 
 
 ## Tenta comprar pelo host (GameState.request_purchase_item). É uma corrotina: use
