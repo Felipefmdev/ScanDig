@@ -43,3 +43,39 @@ func test_fast_item_hits_enemy_once() -> void:
 	p._check_impacts()
 	assert_eq(snake.health, hp2, "um impacto por arremesso")
 	p.queue_free()
+
+
+# --- 2. Peso dos achados -----------------------------------------------------
+
+func _find(size: int) -> CarriedItem:
+	var item: ItemData = ItemData.new()
+	item.id = "teste_%d" % size
+	item.size_category = size
+	item.base_value = 10
+	return CarriedItem.create(item, 10, 1.0, false)
+
+
+func test_backpack_weight_slows_by_size() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	assert_eq(player.backpack_weight_multiplier(), 1.0, "mochila vazia")
+	player.inventory.add_item(_find(ItemData.SizeCategory.PEQUENO))
+	assert_eq(player.backpack_weight_multiplier(), 1.0, "pequeno não pesa")
+	player.inventory.add_item(_find(ItemData.SizeCategory.MEDIO))
+	assert_almost_eq(player.backpack_weight_multiplier(), 0.96, 0.001)
+	assert_false(player.is_overloaded())
+	player.inventory.add_item(_find(ItemData.SizeCategory.GRANDE))
+	assert_true(player.is_overloaded(), "grande: sem correr")
+	Input.action_press("sprint")
+	assert_almost_eq(player.get_target_speed(Vector2(0, -1)), player.speed * player.backpack_weight_multiplier(), 0.001,
+		"Shift não corre com peso")
+	Input.action_release("sprint")
+
+
+func test_backpack_slow_is_capped() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	player.inventory.capacity = 8
+	for i: int in 3:
+		player.inventory.add_item(_find(ItemData.SizeCategory.COLOSSAL))
+	assert_almost_eq(player.backpack_weight_multiplier(), 1.0 - Player.BACKPACK_SLOW_MAX, 0.001)

@@ -1927,6 +1927,10 @@ func _update_interaction_target() -> void:
 
 
 func _on_inventory_changed() -> void:
+	var was_overloaded: bool = _was_overloaded
+	_was_overloaded = is_overloaded()
+	if _was_overloaded and not was_overloaded:
+		_show_temporary_message("🎒 Achado pesado: não dá para correr.", UiPalette.ORANGE, 1.6)
 	_update_session_hud()
 	_update_tool_in_hand()
 	carrying_loot = _count_deliverable() > 0
@@ -2643,11 +2647,34 @@ func _place_net_trap() -> bool:
 	return true
 
 
+## Peso na mochila (How to Fish: cada item tem peso). Fração de lentidão por tamanho.
+const BACKPACK_SLOW_BY_SIZE: Array[float] = [0.0, 0.04, 0.12, 0.25]
+const BACKPACK_SLOW_MAX: float = 0.35
+var _was_overloaded: bool = false
+
+
+## 1.0 = mochila leve; menos com achados médios/grandes. Ferramentas e comida não pesam.
+func backpack_weight_multiplier() -> float:
+	var slow: float = 0.0
+	for c: CarriedItem in inventory.slots:
+		if c != null and c.item != null:
+			slow += BACKPACK_SLOW_BY_SIZE[clampi(int(c.item.size_category), 0, BACKPACK_SLOW_BY_SIZE.size() - 1)]
+	return 1.0 - minf(slow, BACKPACK_SLOW_MAX)
+
+
+## Com um achado GRANDE ou maior não dá para correr.
+func is_overloaded() -> bool:
+	for c: CarriedItem in inventory.slots:
+		if c != null and c.item != null and int(c.item.size_category) >= ItemData.SizeCategory.GRANDE:
+			return true
+	return false
+
+
 ## Velocidade alvo: andar, ou correr com Shift indo pra frente (sem correr agachado na escavação).
 func get_target_speed(input_dir: Vector2) -> float:
 	var sprinting: bool = InputMap.has_action("sprint") and Input.is_action_pressed("sprint") \
-		and input_dir.y < -0.1 and not dig_animator.is_playing() and carried_player == null
-	var spd: float = speed * (sprint_multiplier if sprinting else 1.0)
+		and input_dir.y < -0.1 and not dig_animator.is_playing() and carried_player == null and not is_overloaded()
+	var spd: float = speed * (sprint_multiplier if sprinting else 1.0) * backpack_weight_multiplier()
 	if carried_player != null:
 		spd *= carry_speed_multiplier
 	return spd
