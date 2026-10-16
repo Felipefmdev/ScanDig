@@ -177,3 +177,30 @@ func test_eating_restores_hunger_even_at_full_health() -> void:
 	player.inventory.add_item(c)
 	assert_true(player.eat(c), "vida cheia mas com fome: come")
 	assert_almost_eq(player.hunger, 20.0 + potato.hunger_restore, 0.001)
+
+
+# --- Ferramenta na mão -------------------------------------------------------
+
+func test_tool_sway_wraps_tool_view_and_hand() -> void:
+	var player: Player = _spawn_player()
+	assert_not_null(player.tool_sway, "pivô criado")
+	assert_eq(player.tool_view.get_parent(), player.tool_sway, "ToolView dentro do pivô")
+	assert_eq(player.detector.get_parent().get_parent(), player.tool_sway, "mão do detector dentro do pivô")
+
+
+func test_tool_sway_lags_look_and_recovers() -> void:
+	var player: Player = _spawn_player()
+	player._sway_look = Vector2(200, 0)
+	player.update_tool_sway(1.0 / 60.0)
+	assert_lt(player.tool_sway.position.x, 0.0, "olhar pra direita deixa a ferramenta pra trás")
+	assert_lte(absf(player.tool_sway.position.x), player.tool_sway_max + 0.001)
+	for i: int in 120:
+		player.update_tool_sway(1.0 / 60.0)
+	assert_almost_eq(player.tool_sway.position.x, 0.0, 0.002, "volta ao centro")
+
+
+func test_slot_change_dips_tool() -> void:
+	var player: Player = _spawn_player()
+	player._on_selected_slot_changed(0)
+	player.update_tool_sway(0.01)
+	assert_lt(player.tool_sway.position.y, -0.05, "mergulha ao trocar")

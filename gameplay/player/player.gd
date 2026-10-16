@@ -31,6 +31,14 @@ signal died
 ## Amplitudes do balanço (m) a velocidade de andar; correndo cresce junto.
 @export var head_bob_vertical: float = 0.035
 @export var head_bob_horizontal: float = 0.02
+## Ferramenta na mão: atraso ao olhar (sway), balanço ao andar, respiração e troca.
+@export var tool_sway_amount: float = 0.0012
+@export var tool_sway_max: float = 0.035
+@export var tool_sway_rot_deg: float = 6.0
+@export var tool_sway_return: float = 9.0
+@export var tool_bob_amount: float = 0.012
+@export var tool_breathe_amount: float = 0.004
+@export var tool_equip_time: float = 0.3
 
 @export_group("Vida")
 @export var max_health: float = 100.0
@@ -246,6 +254,12 @@ var _hunger_bar: ProgressBar = null
 var _hunger_label: Label = null
 signal hunger_changed(current: float, max_value: float)
 var _hit_feedback: Node = null
+## Pivô em runtime (filho da câmara) que leva o ToolView e a mão do detector.
+var tool_sway: Node3D = null
+var _sway_look: Vector2 = Vector2.ZERO
+var _sway_offset: Vector2 = Vector2.ZERO
+var _breathe_time: float = 0.0
+var _equip_left: float = 0.0
 const HIT_FEEDBACK_SCRIPT: Script = preload("res://gameplay/player/hit_feedback.gd")
 var _dig_target: BuriedSpot = null
 var _dig_is_careful: bool = false
@@ -308,6 +322,7 @@ func _ready() -> void:
 	_setup_threat_hud()
 	_hit_feedback = HIT_FEEDBACK_SCRIPT.new()
 	add_child(_hit_feedback)
+	_setup_tool_sway()
 
 	_apply_backpack_capacity()
 	_apply_shovel_level()
@@ -397,6 +412,7 @@ func _add_mouse_if_empty(action: StringName, button: MouseButton) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		_sway_look += (event as InputEventMouseMotion).relative
 		rotate_y(-event.relative.x * mouse_sensitivity)
 		head.rotate_x(-event.relative.y * mouse_sensitivity)
 		head.rotation.x = clampf(head.rotation.x, deg_to_rad(-80.0), deg_to_rad(80.0))
@@ -470,6 +486,7 @@ func _process(_delta: float) -> void:
 	if not is_local():
 		avatar.set_pitch(head.rotation.x)
 		return
+	update_tool_sway(_delta)
 	_update_interaction_target()
 
 
@@ -1101,6 +1118,39 @@ func _on_swing_hit() -> void:
 		_shake_camera(0.02, 0.15)
 
 
+func _setup_tool_sway() -> void:
+	if camera == null:
+		return
+	tool_sway = Node3D.new()
+	tool_sway.name = "ToolSway"
+	camera.add_child(tool_sway)
+	for n: Node3D in [tool_view, detector.get_parent() as Node3D if detector != null else null]:
+		if n != null and n.get_parent() == camera:
+			n.reparent(tool_sway, false)
+
+
+## Sway (a ferramenta atrasa-se ao olhar), bob em fase com os passos, respiração parada
+## e um mergulho curto ao trocar de slot. Tudo num pivô: os tweens de recuo seguem intactos.
+func update_tool_sway(delta: float) -> void:
+	if tool_sway == null:
+		return
+	var target: Vector2 = (-_sway_look * tool_sway_amount).limit_length(tool_sway_max)
+	_sway_look = Vector2.ZERO
+	_sway_offset = _sway_offset.lerp(target, 1.0 - exp(-tool_sway_return * delta))
+	_breathe_time += delta
+	var walk: float = _bob_weight
+	var bob: Vector3 = Vector3(sin(_bob_phase * 0.5) * tool_bob_amount, -absf(sin(_bob_phase)) * tool_bob_amount, 0.0) * walk
+	var breathe: float = sin(_breathe_time * 1.6) * tool_breathe_amount * (1.0 - walk)
+	var equip: float = 0.0
+	if _equip_left > 0.0:
+		_equip_left = maxf(_equip_left - delta, 0.0)
+		var t: float = _equip_left / maxf(tool_equip_time, 0.001)
+		equip = t * t  # sai de baixo e assenta com ease-out
+	tool_sway.position = Vector3(_sway_offset.x, _sway_offset.y + breathe - equip * 0.12, 0.0) + bob
+	var k: float = deg_to_rad(tool_sway_rot_deg) / maxf(tool_sway_max, 0.0001)
+	tool_sway.rotation = Vector3(-_sway_offset.y * k + equip * 0.5, _sway_offset.x * k, -_sway_offset.x * k * 0.6)
+
+
 ## Hitmarker na mira + número de dano no alvo (só no jogador local).
 func _register_hit(target: Node3D, damage: float) -> void:
 	if _hit_feedback == null or not is_instance_valid(target):
@@ -1305,6 +1355,7 @@ func _on_inventory_changed() -> void:
 
 func _on_selected_slot_changed(_index: int) -> void:
 	_update_tool_in_hand()
+	_equip_left = tool_equip_time
 
 
 func _count_deliverable() -> int:
