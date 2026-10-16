@@ -7,7 +7,7 @@ extends EnemyBase
 ##  - Focinho afiado com presas e olhos esbugalhados estilo "How to Fish";
 ##  - Investida rápida em perseguição e salto voraz (LEAP) telegrafado que abalroa o jogador.
 
-enum State { EMERGE, CHASE, LEAP_WINDUP, LEAP, RECOVER, FLEE }
+enum State { EMERGE, CHASE, BITE_WINDUP, LEAP_WINDUP, LEAP, RECOVER, FLEE }
 
 const ICE_BODY: Color = Color("#9cc4dc")
 const ICE_CRYSTAL: Color = Color("#6ab8d8")
@@ -22,6 +22,8 @@ const FANG_WHITE: Color = Color(0.92, 0.95, 0.94)
 @export var leap_speed: float = 9.5
 @export var leap_damage: float = 16.0
 @export var bite_damage: float = 10.0
+@export var bite_windup_time: float = 0.35
+@export var bite_cooldown_time: float = 1.6
 @export var leap_windup_time: float = 0.65
 @export var leap_range: float = 7.5
 @export var bite_range: float = 1.7
@@ -36,6 +38,7 @@ var net_leap_dir: Vector3 = Vector3.FORWARD:
 			_refresh_remote_leap_warning()
 
 var _state_time: float = 0.0
+var _bite_cooldown: float = 0.0
 var _surface_y: float = 0.0
 var _hit_done: bool = false
 var _hit_targets: Array[Node] = []
@@ -73,6 +76,8 @@ func setup_network() -> void:
 func _enemy_physics(delta: float) -> void:
 	_state_time += delta
 	_walk_anim_time += delta
+	if _bite_cooldown > 0.0:
+		_bite_cooldown -= delta
 
 	match state:
 		State.EMERGE:
@@ -82,6 +87,8 @@ func _enemy_physics(delta: float) -> void:
 				_enter_state(State.CHASE)
 		State.CHASE:
 			_process_chase(delta)
+		State.BITE_WINDUP:
+			_process_bite_windup(delta)
 		State.LEAP_WINDUP:
 			_process_leap_windup(delta)
 		State.LEAP:
@@ -105,6 +112,14 @@ func _enter_state(new_state: State) -> void:
 			global_position.y = _surface_y - 1.2
 		State.CHASE:
 			_warning.hide_warning()
+		State.BITE_WINDUP:
+			velocity.x = 0.0
+			velocity.z = 0.0
+			var target: Node3D = _update_target(0.0)
+			var to: Vector3 = (target.global_position - global_position) if target != null else -transform.basis.z
+			to.y = 0.0
+			var dir: Vector3 = to.normalized() if to.length() > 0.1 else -transform.basis.z
+			_warning.show_circle(global_position + dir * 0.9, bite_range)
 		State.LEAP_WINDUP:
 			velocity.x = 0.0
 			velocity.z = 0.0
@@ -144,13 +159,9 @@ func _process_chase(delta: float) -> void:
 
 	_turn_towards(dir, 0.0, turn_speed, delta)
 
-	if dist <= bite_range:
-		# Mordida rápida
-		velocity.x = 0.0
-		velocity.z = 0.0
-		_deal_damage(target, bite_damage)
-		_knockback(target, dir * 4.0 + Vector3.UP * 1.5, 0.05)
-		_enter_state(State.RECOVER)
+	if dist <= bite_range and _bite_cooldown <= 0.0:
+		# Aviso telegrafado antes da mordida (#63)
+		_enter_state(State.BITE_WINDUP)
 	elif dist <= leap_range and dist > bite_range + 0.8:
 		# Prepara o salto de investida
 		_enter_state(State.LEAP_WINDUP)
@@ -159,6 +170,31 @@ func _process_chase(delta: float) -> void:
 		velocity.z = dir.z * move_speed
 
 	move_and_slide()
+
+
+func _process_bite_windup(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = move_toward(velocity.x, 0.0, delta * 8.0)
+	velocity.z = move_toward(velocity.z, 0.0, delta * 8.0)
+	var target: Node3D = _update_target(delta)
+	if target != null:
+		var to: Vector3 = target.global_position - global_position
+		to.y = 0.0
+		var dir: Vector3 = to.normalized() if to.length() > 0.1 else -transform.basis.z
+		_turn_towards(dir, 0.0, turn_speed * 1.5, delta)
+	move_and_slide()
+	_warning.pulse(delta)
+
+	if _state_time >= bite_windup_time:
+		_bite_cooldown = bite_cooldown_time
+		if target != null and global_position.distance_to(target.global_position) <= bite_range + 0.6:
+			var to: Vector3 = target.global_position - global_position
+			to.y = 0.0
+			var push_dir: Vector3 = to.normalized() if to.length() > 0.1 else -transform.basis.z
+			_deal_damage(target, bite_damage)
+			_knockback(target, push_dir * 7.0 + Vector3.UP * 3.0, 0.12)
+			spawn_particles(target.global_position + Vector3.UP * 0.5, ICE_CRYSTAL, 8, 2.5)
+		_enter_state(State.RECOVER)
 
 
 func _process_leap_windup(delta: float) -> void:
@@ -227,6 +263,8 @@ func _on_remote_state(new_state: int) -> void:
 	if _warning != null:
 		if state == State.LEAP_WINDUP:
 			_refresh_remote_leap_warning()
+		elif state == State.BITE_WINDUP:
+			_warning.show_circle(global_position - transform.basis.z * 0.9, bite_range)
 		else:
 			_warning.hide_warning()
 
@@ -353,6 +391,13 @@ func _animate(delta: float) -> void:
 		if _tail != null:
 			_tail.rotation.y = sin(_walk_anim_time * 10.0) * 0.35
 		_body.position.y = absf(sin(_walk_anim_time * 14.0)) * 0.06
+	elif state == State.BITE_WINDUP:
+		# Puxa o tronco para trás e rosna antes de morder
+		_body.position.y = lerpf(_body.position.y, -0.06, clampf(12.0 * delta, 0.0, 1.0))
+		if _head != null:
+			_head.rotation.x = -0.3 + sin(_state_time * 30.0) * 0.08
+		if _tail != null:
+			_tail.rotation.y = sin(_state_time * 20.0) * 0.25
 	elif state == State.LEAP_WINDUP:
 		# Agacha para saltar
 		_body.position.y = lerpf(_body.position.y, -0.18, clampf(8.0 * delta, 0.0, 1.0))

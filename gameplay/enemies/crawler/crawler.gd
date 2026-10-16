@@ -9,7 +9,7 @@ extends EnemyBase
 ##  - Avança muito rápido e enrola-se para saltar como mola (SPRING_JUMP) telegrafada,
 ##    mordendo e repelindo o jogador com solavanco.
 
-enum State { EMERGE, CRAWL, SPRING_WINDUP, SPRING_JUMP, RECOVER, FLEE }
+enum State { EMERGE, CRAWL, BITE_WINDUP, SPRING_WINDUP, SPRING_JUMP, RECOVER, FLEE }
 
 const STONE_BODY: Color = Color("#77737a")
 const STONE_DARK: Color = Color("#4c4850")
@@ -23,6 +23,8 @@ const EYE_RIM: Color = Color("#5a5660")
 @export var spring_speed: float = 11.0
 @export var spring_damage: float = 15.0
 @export var bite_damage: float = 9.0
+@export var bite_windup_time: float = 0.35
+@export var bite_cooldown_time: float = 1.6
 @export var spring_windup_time: float = 0.6
 @export var spring_range: float = 8.0
 @export var bite_range: float = 1.6
@@ -37,6 +39,7 @@ var net_spring_dir: Vector3 = Vector3.FORWARD:
 			_refresh_remote_warning()
 
 var _state_time: float = 0.0
+var _bite_cooldown: float = 0.0
 var _surface_y: float = 0.0
 var _anim_time: float = 0.0
 var _hit_targets: Array[Node] = []
@@ -70,6 +73,8 @@ func setup_network() -> void:
 func _enemy_physics(delta: float) -> void:
 	_state_time += delta
 	_anim_time += delta
+	if _bite_cooldown > 0.0:
+		_bite_cooldown -= delta
 
 	match state:
 		State.EMERGE:
@@ -79,6 +84,8 @@ func _enemy_physics(delta: float) -> void:
 				_enter_state(State.CRAWL)
 		State.CRAWL:
 			_process_crawl(delta)
+		State.BITE_WINDUP:
+			_process_bite_windup(delta)
 		State.SPRING_WINDUP:
 			_process_spring_windup(delta)
 		State.SPRING_JUMP:
@@ -101,6 +108,14 @@ func _enter_state(new_state: State) -> void:
 			global_position.y = _surface_y - 1.2
 		State.CRAWL:
 			_warning.hide_warning()
+		State.BITE_WINDUP:
+			velocity.x = 0.0
+			velocity.z = 0.0
+			var target: Node3D = _update_target(0.0)
+			var to: Vector3 = (target.global_position - global_position) if target != null else -transform.basis.z
+			to.y = 0.0
+			var dir: Vector3 = to.normalized() if to.length() > 0.1 else -transform.basis.z
+			_warning.show_circle(global_position + dir * 0.8, bite_range)
 		State.SPRING_WINDUP:
 			velocity.x = 0.0
 			velocity.z = 0.0
@@ -140,13 +155,9 @@ func _process_crawl(delta: float) -> void:
 
 	_turn_towards(dir, 0.0, turn_speed, delta)
 
-	if dist <= bite_range:
-		# Mordida rápida
-		velocity.x = 0.0
-		velocity.z = 0.0
-		_deal_damage(target, bite_damage)
-		_knockback(target, dir * 5.0 + Vector3.UP * 1.5, 0.08)
-		_enter_state(State.RECOVER)
+	if dist <= bite_range and _bite_cooldown <= 0.0:
+		# Aviso telegrafado antes da mordida (#63)
+		_enter_state(State.BITE_WINDUP)
 	elif dist <= spring_range and dist > bite_range + 0.6:
 		# Enrola-se para saltar como mola
 		_enter_state(State.SPRING_WINDUP)
@@ -155,6 +166,31 @@ func _process_crawl(delta: float) -> void:
 		velocity.z = dir.z * move_speed
 
 	move_and_slide()
+
+
+func _process_bite_windup(delta: float) -> void:
+	_apply_gravity(delta)
+	velocity.x = move_toward(velocity.x, 0.0, delta * 8.0)
+	velocity.z = move_toward(velocity.z, 0.0, delta * 8.0)
+	var target: Node3D = _update_target(delta)
+	if target != null:
+		var to: Vector3 = target.global_position - global_position
+		to.y = 0.0
+		var dir: Vector3 = to.normalized() if to.length() > 0.1 else -transform.basis.z
+		_turn_towards(dir, 0.0, turn_speed * 1.5, delta)
+	move_and_slide()
+	_warning.pulse(delta)
+
+	if _state_time >= bite_windup_time:
+		_bite_cooldown = bite_cooldown_time
+		if target != null and global_position.distance_to(target.global_position) <= bite_range + 0.6:
+			var to: Vector3 = target.global_position - global_position
+			to.y = 0.0
+			var push_dir: Vector3 = to.normalized() if to.length() > 0.1 else -transform.basis.z
+			_deal_damage(target, bite_damage)
+			_knockback(target, push_dir * 7.5 + Vector3.UP * 3.5, 0.12)
+			spawn_particles(target.global_position + Vector3.UP * 0.5, PURPLE_CORE, 8, 2.5)
+		_enter_state(State.RECOVER)
 
 
 func _process_spring_windup(delta: float) -> void:
@@ -222,6 +258,8 @@ func _on_remote_state(new_state: int) -> void:
 	if _warning != null:
 		if state == State.SPRING_WINDUP:
 			_refresh_remote_warning()
+		elif state == State.BITE_WINDUP:
+			_warning.show_circle(global_position - transform.basis.z * 0.8, bite_range)
 		else:
 			_warning.hide_warning()
 
@@ -313,6 +351,11 @@ func _animate(delta: float) -> void:
 			leg.rotation.z = cos(_anim_time * speed + phase_offset) * 0.15
 		_body.position.y = absf(sin(_anim_time * speed)) * 0.04
 		_body.rotation.y = sin(_anim_time * (speed * 0.5)) * 0.05
+	elif state == State.BITE_WINDUP:
+		# Encolhe ligeiramente e treme antes do bote
+		var jitter: float = sin(_state_time * 40.0) * 0.02
+		_body.position.y = -0.06 + jitter
+		_body.rotation.y = jitter * 2.0
 	elif state == State.SPRING_WINDUP:
 		# Comprime-se como uma mola de relógio no chão
 		_body.position.y = lerpf(_body.position.y, -0.22, clampf(10.0 * delta, 0.0, 1.0))

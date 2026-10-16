@@ -82,6 +82,7 @@ func _enemy_physics(delta: float) -> void:
 		State.WALK:
 			_process_walk(delta)
 		State.WINDUP:
+			_warning.pulse(delta)
 			if _state_time >= windup_time:
 				_enter_state(State.SMASH)
 		State.SMASH:
@@ -141,8 +142,14 @@ func _enter_state(s: State) -> void:
 		State.EMERGE:
 			_surface_y = global_position.y
 			global_position.y = _surface_y - 1.6
+		State.WINDUP:
+			var target: Node3D = _update_target(0.0)
+			var fwd: Vector3 = (target.global_position - global_position).normalized() if target != null else -global_transform.basis.z
+			fwd.y = 0.0
+			_warning.show_circle(global_position + fwd * 1.0, SMASH_RANGE)
 		State.SMASH:
 			_hit_done = false
+			_warning.hide_warning()
 			SFX.play_at(SFX.EMERGE_SAND, global_position, 3.0)
 		State.ROLL_WINDUP:
 			_warning.show_line(global_position, net_roll_dir, roll_length)
@@ -182,6 +189,8 @@ func _process_roll(delta: float) -> void:
 func _refresh_roll_warning() -> void:
 	if state == State.ROLL_WINDUP:
 		_warning.show_line(global_position, net_roll_dir, roll_length)
+	elif state == State.WINDUP:
+		_warning.show_circle(global_position - transform.basis.z * 1.0, SMASH_RANGE)
 	else:
 		_warning.hide_warning()
 
@@ -204,7 +213,7 @@ func _smash() -> void:
 		if d.length() <= SMASH_RANGE:
 			_deal_damage(p, smash_damage)
 			# Bofetada de pedra: atira o jogador para trás e para cima (#57)
-			_knockback(p, fwd * 8.0 + Vector3.UP * 5.0, 0.05)
+			_knockback(p, fwd * 8.0 + Vector3.UP * 5.0, 0.12)
 
 
 # ---------------------------------------------------------------------------

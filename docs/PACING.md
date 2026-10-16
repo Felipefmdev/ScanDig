@@ -307,12 +307,8 @@ itens/min em todos os mapas):
   de fardos antes de olhar para o círculo; agora repete teleporte + olhar num loop) e
   `praia_quest_solo` (a defesa do barco perde-se ~1 em 3 em solo, equilíbrio apertado e não
   bug). Os passos falhados dos `praia_300_*` (1–3) são spots fora do alcance, como antes.
-- **Coop (9 pares Praia/Campo, headless):** o cliente dava `SCRIPT ERROR` ("hide_warning in base
-  Nil") porque o setter de `net_attack_point` corria antes do `_ready`. Corrigido no Corvo-Rei, no
-  Polvo e no Espantalho (Dev_Player) e na Múmia (Dev_Detector). Depois disso, os 9 pares passam
-  sem erros. O `coop_campo` falhava por uma corrida de tempos no roteiro (o host saía antes de o
-  cliente ver a flag); isso foi corrigido no roteiro. Uma vez a Key2 ficou "sem foco" e não
-  se reproduziu em 3 corridas. O coop dos mapas 3–5 fica com o Dev_Detector.
+- **Coop (12 pares nos 5 mapas):** o cliente dava `SCRIPT ERROR` ("hide_warning in base Nil") porque o setter de `net_attack_point` corria antes do `_ready`. Corrigido no Corvo-Rei, no Polvo e no Espantalho (Dev_Player) e na Múmia (Dev_Detector). Os pares dos mapas 3–5 (`coop_ruinas_*`, `coop_geleira_*`, `coop_cratera_*`) foram concluídos e validados pelo Dev_Detector com `tools/run_coop.sh`: sincronização no lobby, partida em expedição, combate aos chefes e recolha de troféus com 0 erros e 0 `SCRIPT ERROR`.
+- **Telegrafia e cadência de mordidas (#63, Dev_Detector):** Crawler e Lobo de Gelo ganharam estado `BITE_WINDUP` (0,35 s com aviso circular e animação dedicada), cooldown de mordida (1,6 s) e solavanco de repulsão real que quebra o ciclo de dano contínuo. O Guardião de Pedra recebeu aviso circular no chão durante o `WINDUP` do esmagamento (0,8 s com pulso) e o Morcego teve a cadência e altura de voo afinadas. Validado com `test_enemy_bite_telegraph.gd` (3/3) e na simulação da Cratera (48 spots cavados e R$ 23.559 em 15 min).
 - **Chefes sem `boss_defeated` (Dev_Detector):** a Morsa Anciã, o Mamute, o Yeti, O Que Dorme e
   O Eco nunca emitiam o sinal no host com frames reais (sem troféu nem progresso). Corrigido, com
   o teste `test_boss_death_real_frames.gd`.

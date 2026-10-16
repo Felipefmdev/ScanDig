@@ -1,0 +1,140 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 20,
+	"steps": [
+		{
+			"t": 1.5,
+			"join": "127.0.0.1",
+			"port": 7801,
+			"timeout": 30
+		},
+		{
+			"wait_until": "players>=2",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.0
+		},
+		{
+			"t": 0,
+			"fight": 15,
+			"radius": 25
+		},
+		{
+			"t": 0,
+			"teleport": [
+				19.0,
+				0.6,
+				-14.4
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"look_at": [
+				20.0,
+				0.0,
+				-15.0
+			]
+		},
+		{
+			"t": 0,
+			"screenshot": "c0_altar"
+		},
+		{
+			"t": 0,
+			"tap": "careful_dig"
+		},
+		{
+			"sleep": 1.4
+		},
+		{
+			"t": 0,
+			"tap": "careful_dig"
+		},
+		{
+			"sleep": 1.4
+		},
+		{
+			"t": 0,
+			"tap": "careful_dig"
+		},
+		{
+			"sleep": 1.4
+		},
+		{
+			"t": 0,
+			"tap": "careful_dig"
+		},
+		{
+			"sleep": 1.4
+		},
+		{
+			"t": 0,
+			"tap": "careful_dig"
+		},
+		{
+			"sleep": 1.4
+		},
+		{
+			"t": 0,
+			"tap": "careful_dig"
+		},
+		{
+			"sleep": 1.4
+		},
+		{
+			"wait_until": "bosses>=1",
+			"timeout": 60
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"screenshot": "c1_chefe"
+		},
+		{
+			"t": 0,
+			"dump": "c1_chefe"
+		},
+		{
+			"loop": [
+				{
+					"if": "enemy_dist>30",
+					"teleport": [
+						19.0,
+						0.6,
+						-14.4
+					]
+				},
+				{
+					"fight": 20,
+					"radius": 60
+				},
+				{
+					"sleep": 0.3
+				}
+			],
+			"until": "bosses==0",
+			"timeout": 420
+		},
+		{
+			"t": 0,
+			"dump": "c2_vencido"
+		},
+		{
+			"sleep": 5.0
+		},
+		{
+			"t": 0,
+			"dump": "c3_final"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}

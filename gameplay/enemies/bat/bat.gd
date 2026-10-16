@@ -17,6 +17,11 @@ const ROCK: Color = Color("#7a6a58")
 func _ready() -> void:
 	super._ready()
 	add_to_group(LanternFlash.GROUP_FLEES)
+	circle_height = 4.2
+	circle_radius = 4.8
+	circle_time_min = 5.0
+	circle_time_max = 8.0
+	peck_damage = 5.0
 
 
 func _build_model() -> void:

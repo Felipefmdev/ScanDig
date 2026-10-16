@@ -1,0 +1,132 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 20,
+	"steps": [
+		{
+			"t": 1.0,
+			"host": 7803
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"set_state": {
+				"unlocked_maps": [
+					"praia",
+					"campo",
+					"ruinas",
+					"geleira",
+					"cratera"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole",
+					"crow_king",
+					"scarecrow",
+					"ancient_guardian",
+					"idol_mummy",
+					"frozen_mammoth",
+					"cave_yeti",
+					"ancient_walrus"
+				],
+				"upgrade_levels": {
+					"detector": 6,
+					"shovel": 5
+				},
+				"team_money": 3000
+			}
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"start_expedition": "cratera",
+			"timeout": 30
+		},
+		{
+			"wait_until": "players>=2",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.0
+		},
+		{
+			"t": 0,
+			"screenshot": "h0_entrada"
+		},
+		{
+			"t": 0,
+			"fight": 15,
+			"radius": 25
+		},
+		{
+			"t": 0,
+			"teleport": [
+				14.399999999999999,
+				0.6,
+				14.399999999999999
+			]
+		},
+		{
+			"wait_until": "bosses>=1",
+			"timeout": 120
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"look_at": [
+				18.0,
+				0.0,
+				18.0
+			]
+		},
+		{
+			"t": 0,
+			"screenshot": "h1_chefe"
+		},
+		{
+			"t": 0,
+			"dump": "h1_chefe"
+		},
+		{
+			"loop": [
+				{
+					"if": "enemy_dist>30",
+					"teleport": [
+						17.2,
+						0.6,
+						17.2
+					]
+				},
+				{
+					"fight": 20,
+					"radius": 60
+				},
+				{
+					"sleep": 0.3
+				}
+			],
+			"until": "bosses==0",
+			"timeout": 420
+		},
+		{
+			"t": 0,
+			"dump": "h2_vencido"
+		},
+		{
+			"sleep": 8.0
+		},
+		{
+			"t": 0,
+			"dump": "h3_final"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}

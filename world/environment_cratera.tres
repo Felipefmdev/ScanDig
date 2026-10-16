@@ -1,4 +1,4 @@
-[gd_resource type="Environment" load_steps=4 format=3]
+[gd_resource type="Environment" load_steps=4 format=3 uid="uid://cgaoja6dt0jxw"]
 
 [ext_resource type="Shader" path="res://world/shaders/sky_stylized.gdshader" id="1_sky"]
 
@@ -6,7 +6,7 @@
 shader = ExtResource("1_sky")
 shader_parameter/top_color = Color(0.12, 0.06, 0.22, 1)
 shader_parameter/horizon_color = Color(0.48, 0.18, 0.65, 1)
-shader_parameter/ground_color = Color(0.20, 0.14, 0.26, 1)
+shader_parameter/ground_color = Color(0.2, 0.14, 0.26, 1)
 shader_parameter/gradient_curve = 0.45
 shader_parameter/cloud_color = Color(0.68, 0.35, 0.85, 1)
 shader_parameter/cloud_shade_color = Color(0.32, 0.14, 0.45, 1)
