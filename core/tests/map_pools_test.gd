@@ -120,8 +120,8 @@ func _run() -> void:
 	_check(catalog_files >= 44, "catálogo com pelo menos 44 itens: %d" % catalog_files)
 
 	# Ordem dos motivos em get_map_status: bloqueado → "Em breve." (sem cena) → detector.
-	# Radar Nv.3 com Ruínas e Geleira desbloqueadas. As Ruínas têm cena (#42), então o motivo é o
-	# detector; a Geleira ainda não tem cena, e o "Em breve." vem antes do detector.
+	# Radar Nv.3 com Ruínas e Geleira desbloqueadas. As duas têm cena (#42/#45), então o motivo é
+	# o detector de cada uma. Todos os mapas já têm cena: nenhum mapa real fica em "Em breve.".
 	gs.load_snapshot({"team_money": 0, "current_day": 1, "discovered_items": [], "upgrade_levels": {"detector": 2}, "unlocked_maps": ["campo", "ruinas", "geleira"], "defeated_bosses": ["king_crab", "giant_mole", "ancient_guardian"]})
 	await _wait(3)
 	_check(gs.equipped_detector_level == 3, "radar Nv.3: %d" % gs.equipped_detector_level)
@@ -130,9 +130,9 @@ func _run() -> void:
 	_check(status["reason"] == "Requer detector nível 4.", "ruinas pede detector Nv.4: %s" % str(status["reason"]))
 	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false com radar Nv.3")
 	var geleira_status: Dictionary = sm.get_map_status("geleira")
-	_check(geleira_status["unlocked"] and not geleira_status["has_scene"], "geleira desbloqueada e sem cena: %s" % str(geleira_status))
-	_check(geleira_status["reason"] == "Em breve.", "geleira reason Em breve antes do detector: %s" % str(geleira_status["reason"]))
-	_check(not sm.can_start_map("geleira"), "can_start_map geleira false")
+	_check(geleira_status["unlocked"] and geleira_status["has_scene"], "geleira desbloqueada e com cena: %s" % str(geleira_status))
+	_check(geleira_status["reason"] == "Requer detector nível 5.", "geleira pede detector Nv.5: %s" % str(geleira_status["reason"]))
+	_check(not sm.can_start_map("geleira"), "can_start_map geleira false com radar Nv.3")
 
 	gs.reset_state()
 	print("RESULT fails=%d" % _fails)

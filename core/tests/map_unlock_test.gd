@@ -125,7 +125,7 @@ func _run() -> void:
 	_check(saved.get("unlocked_maps", []) == ["campo"], "save unlocked_maps: %s" % str(saved.get("unlocked_maps")))
 	_check(saved.get("defeated_bosses", []) == ["king_crab"], "save defeated_bosses: %s" % str(saved.get("defeated_bosses")))
 
-	# Ruínas têm cena (#42): desbloqueada, mas pede o detector Nv.4 (o "Em breve." fica com a Geleira, abaixo).
+	# Ruínas têm cena (#42): desbloqueada, mas pede o detector Nv.4.
 	await _report_boss(gs, "giant_mole")
 	gs.load_snapshot({"team_money": 8000})
 	result = await _unlock(gs, "ruinas")
@@ -135,15 +135,15 @@ func _run() -> void:
 	_check(ruinas["reason"] == "Requer detector nível 4.", "status ruinas pede detector Nv.4: %s" % str(ruinas["reason"]))
 	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem detector Nv.4")
 
-	# #49: Geleira paga com o detector equipado Nv.5; sem world/map_geleira.tscn fica "Em breve".
+	# #49: Geleira paga com o detector equipado Nv.5; com world/map_geleira.tscn (#45) fica jogável.
 	await _report_boss(gs, "ancient_guardian")
 	gs.load_snapshot({"team_money": 20000, "upgrade_levels": {"detector": 4}})
 	result = await _unlock(gs, "geleira")
 	_check(result.get("success", false) == true and result.get("message", "") == "Geleira Eterna desbloqueado!", "desbloqueio geleira ok: %s" % str(result.get("message", "")))
 	geleira = sm.get_map_status("geleira")
-	_check(geleira["unlocked"] and not geleira["has_scene"] and not geleira["playable"], "status geleira desbloqueada e sem cena: %s" % str(geleira))
-	_check(geleira["reason"] == "Em breve.", "status geleira Em breve: %s" % str(geleira["reason"]))
-	_check(not sm.can_start_map("geleira"), "can_start_map geleira false sem cena")
+	_check(geleira["unlocked"] and geleira["has_scene"] and geleira["playable"], "status geleira desbloqueada e jogável: %s" % str(geleira))
+	_check(geleira["reason"] == "", "status geleira sem motivo: %s" % str(geleira["reason"]))
+	_check(sm.can_start_map("geleira"), "can_start_map geleira true com detector Nv.5")
 
 	gs.reset_state()
 	gs.load_snapshot({"team_money": 300, "current_day": 4, "discovered_items": [], "upgrade_levels": {"detector": 1}})
