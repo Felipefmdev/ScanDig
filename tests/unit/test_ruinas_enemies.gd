@@ -36,12 +36,18 @@ func test_guardian_roll_hits_and_gets_dizzy() -> void:
 	g.net_roll_dir = Vector3.FORWARD
 	g.call(&"_enter_state", StoneGuardian.State.ROLL)
 	assert_eq(g.state, StoneGuardian.State.ROLL)
+	var start: Vector3 = g.global_position
 	# Contra nada (sem chão nem paredes) acaba o percurso e fica tonto.
-	for i: int in 120:
-		g._enemy_physics(0.05)
+	# Frames de física reais: o move_and_slide usa o delta de física do motor, não o passado
+	# a _enemy_physics, e fora de um frame de física (GUT logo no início, como na CI) ele é 0.
+	# 240 frames = 4 s; o percurso de 11 m a 9 m/s leva ~1,2 s.
+	for i: int in 240:
+		await get_tree().physics_frame
 		if g.state != StoneGuardian.State.ROLL:
 			break
 	assert_eq(g.state, StoneGuardian.State.DIZZY)
+	var travelled: float = Vector2(g.global_position.x - start.x, g.global_position.z - start.z).length()
+	assert_gte(travelled, g.roll_length, "percorreu o roll_length inteiro")
 
 
 func test_bat_flees_from_lantern() -> void:
