@@ -47,6 +47,14 @@ signal died
 @export var pitchfork_knockback: float = 12.0
 @export var pitchfork_stun: float = 0.5
 
+@export_group("Arpão de Corda")
+@export var harpoon_damage: float = 40.0
+@export var harpoon_range: float = 14.0
+@export var harpoon_cooldown: float = 1.0
+@export_range(-1.0, 1.0, 0.05) var harpoon_cone_dot: float = 0.75
+@export var harpoon_pull_force: float = 14.0
+@export var harpoon_stun: float = 0.8
+
 @export_group("Som")
 @export var footsteps_enabled: bool = true
 ## Volume dos passos na areia (dB). Baixo de propósito: é um som repetitivo.
@@ -64,6 +72,7 @@ const TOOL_NET_TRAP: StringName = &"armadilha_rede"
 const TOOL_MEDKIT: StringName = &"kit_medico"
 const TOOL_LANTERN: StringName = &"lanterna_magnesio"
 const TOOL_FORCADO: StringName = &"forcado"
+const TOOL_HARPOON: StringName = &"arpao_corda"
 ## Recarga do clarão da Lanterna de Magnésio (#42).
 const LANTERN_COOLDOWN: float = 4.0
 ## Empurrão (#57): segundos sem controlo por m/s de impulso, e o máximo.
@@ -73,6 +82,7 @@ const KNOCKBACK_TIME_MAX: float = 0.9
 const MEDKIT_MODEL: Script = preload("res://gameplay/weapons/medkit/medkit_model.gd")
 const REPELLENT_MODEL: Script = preload("res://gameplay/weapons/repellent/repellent_model.gd")
 const PITCHFORK_MODEL: Script = preload("res://gameplay/weapons/pitchfork/pitchfork_model.gd")
+const HARPOON_MODEL: Script = preload("res://gameplay/weapons/harpoon/harpoon_model.gd")
 ## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
 const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
 const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
@@ -860,6 +870,9 @@ func _handle_attack_action() -> void:
 		if c != null and c.tool_id == TOOL_FORCADO:
 			if _use_cooldown <= 0.0:
 				_attack_pitchfork()
+		elif c != null and c.tool_id == TOOL_HARPOON:
+			if _use_cooldown <= 0.0:
+				_fire_harpoon()
 		else:
 			_perform_attack()
 
@@ -1145,6 +1158,12 @@ func _setup_held_models() -> void:
 	if "show_left_hand" in fork_model:
 		fork_model.set("show_left_hand", true)
 	_held_models[TOOL_FORCADO] = fork_model
+	# Arpão de Corda com a mão direita na coronha e a mão esquerda a apoiar o cano
+	var harpoon_pose: Transform3D = Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-8.0)).rotated(Vector3.UP, deg_to_rad(8.0)).scaled(Vector3.ONE * 0.75), Vector3(0.04, -0.07, -0.16))
+	var harpoon_model: Node3D = _add_held_model(HARPOON_MODEL, harpoon_pose)
+	if "show_left_hand" in harpoon_model:
+		harpoon_model.set("show_left_hand", true)
+	_held_models[TOOL_HARPOON] = harpoon_model
 	_update_tool_in_hand()
 
 
@@ -1270,6 +1289,8 @@ func _handle_use_tool_action() -> void:
 			_consume(c)
 		TOOL_FORCADO:
 			_attack_pitchfork()
+		TOOL_HARPOON:
+			_fire_harpoon()
 
 
 ## Clarão em cone (LanternFlash, Dev_Detector): atordoa e espanta; em coop o stun vai ao host.
@@ -1383,6 +1404,160 @@ func attack_pitchfork() -> int:
 
 func _attack_pitchfork() -> void:
 	attack_pitchfork()
+
+
+## Disparo do Arpão de Corda (#43): alcance até ~14m.
+## Se acertar num inimigo: aplica dano (40), atordoamento (0.8s) e puxa-o na direção do jogador.
+## Se acertar num item no chão (ItemPickup): puxa o item até ao jogador.
+## Suporta coop via request_hit/request_stun nos inimigos replicados.
+func fire_harpoon() -> int:
+	_use_cooldown = harpoon_cooldown
+	_attack_cooldown = harpoon_cooldown
+
+	# Animação de recuo do arpão no ToolView
+	if tool_view != null:
+		var t: Tween = create_tween()
+		var recoil: Vector3 = _tool_view_rest + Vector3(0.0, 0.03, 0.15)
+		t.tween_property(tool_view, "position", recoil, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.parallel().tween_property(tool_view, "rotation:x", 0.12, 0.06)
+		t.tween_property(tool_view, "position", _tool_view_rest, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		t.parallel().tween_property(tool_view, "rotation:x", 0.0, 0.3)
+
+	var fwd: Vector3 = -camera.global_basis.z if camera != null else -global_basis.z
+	var fwd_flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	if fwd_flat.is_zero_approx():
+		fwd_flat = Vector3.FORWARD
+	var origin: Vector3 = camera.global_position if camera != null else global_position
+	var hit_count: int = 0
+	var hit_point: Vector3 = origin + fwd * harpoon_range
+
+	var best_target: Node3D = null
+	var best_dist: float = harpoon_range + 0.1
+	var is_pickup: bool = false
+
+	# 1. Inimigos alinhados com a mira dentro do alcance de 14m
+	for n: Node in get_tree().get_nodes_in_group("enemies"):
+		if not (n is Node3D):
+			continue
+		var enemy: Node3D = n as Node3D
+		if enemy.has_method("is_alive") and not enemy.call("is_alive"):
+			continue
+		var to_e: Vector3 = enemy.global_position - origin
+		var to_e_flat: Vector3 = Vector3(to_e.x, 0.0, to_e.z)
+		var dist_flat: float = to_e_flat.length()
+		var dist_3d: float = to_e.length()
+		if dist_flat > harpoon_range or dist_3d < 0.2:
+			continue
+		var dot: float = fwd_flat.dot(to_e_flat / maxf(dist_flat, 0.001))
+		if dot >= harpoon_cone_dot and dist_flat < best_dist:
+			best_dist = dist_flat
+			best_target = enemy
+			is_pickup = false
+
+	# 2. Se não encontrou inimigo, verifica pickups de itens no chão
+	if best_target == null:
+		for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+			var pickup: ItemPickup = n as ItemPickup
+			if pickup == null or not is_instance_valid(pickup):
+				continue
+			var to_p: Vector3 = pickup.global_position - origin
+			var dist: float = to_p.length()
+			if dist > harpoon_range or dist < 0.2:
+				continue
+			var dot: float = fwd.dot(to_p / dist)
+			if dot >= harpoon_cone_dot and dist < best_dist:
+				best_dist = dist
+				best_target = pickup
+				is_pickup = true
+
+	# 3. Raycast se o cone não encontrou
+	if best_target == null:
+		var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+			origin, origin + fwd * harpoon_range, PICKUP_MASK | 1, [get_rid()]
+		)
+		var hit: Dictionary = space.intersect_ray(query)
+		if not hit.is_empty():
+			hit_point = hit["position"]
+			var col: Object = hit.get("collider", null)
+			if col is ItemPickup:
+				best_target = col as ItemPickup
+				is_pickup = true
+			elif col is Node3D and (col as Node3D).is_in_group("enemies"):
+				best_target = col as Node3D
+				is_pickup = false
+
+	if best_target != null:
+		hit_point = best_target.global_position
+
+	_spawn_harpoon_rope(origin + fwd * 0.4 - Vector3.UP * 0.1, hit_point)
+
+	if best_target != null:
+		hit_count = 1
+		var pull_dir: Vector3 = (origin - best_target.global_position).normalized()
+		pull_dir.y = 0.2
+		pull_dir = pull_dir.normalized()
+
+		if is_pickup:
+			var pickup: ItemPickup = best_target as ItemPickup
+			var pull_dest: Vector3 = global_position + (-fwd * 0.2) + Vector3.UP * 0.3
+			pickup.linear_velocity = (pull_dest - pickup.global_position).normalized() * 10.0 + Vector3.UP * 2.5
+			var t_p: Tween = pickup.create_tween()
+			t_p.tween_property(pickup, "global_position", pull_dest, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			SFX.play_ui(SFX.PICKUP, -2.0)
+			_show_temporary_message("⚓ Item fisgado pelo arpão!", Color(0.45, 0.85, 1.0), 1.0)
+		else:
+			var enemy: Node3D = best_target
+			# Suporte a coop: no cliente sem autoridade usa request_hit/request_stun para o host
+			if enemy.has_method("request_hit") and not (enemy.has_method("has_simulation_authority") and enemy.call("has_simulation_authority")):
+				enemy.call("request_hit", harpoon_damage, origin)
+			elif enemy.has_method("take_damage"):
+				enemy.call("take_damage", harpoon_damage, origin)
+
+			if enemy.has_method("request_stun") and not (enemy.has_method("has_simulation_authority") and enemy.call("has_simulation_authority")):
+				enemy.call("request_stun", harpoon_stun)
+			elif enemy.has_method("stun"):
+				enemy.call("stun", harpoon_stun)
+
+			if enemy.has_method("apply_knockback"):
+				enemy.call("apply_knockback", pull_dir * harpoon_pull_force + Vector3.UP * 1.5, 0.08)
+			if enemy is CharacterBody3D:
+				var cb: CharacterBody3D = enemy as CharacterBody3D
+				cb.velocity += pull_dir * harpoon_pull_force + Vector3.UP * 1.5
+				cb.move_and_collide(pull_dir * (harpoon_pull_force * 0.12))
+
+			_shake_camera(0.025, 0.16)
+			SFX.play_ui(SFX.STONE_IMPACT, -1.0, 0.1)
+			_show_temporary_message("⚓ Arpão cravado! Inimigo puxado e atordoado! (%d de dano)" % int(harpoon_damage), Color(0.5, 0.85, 1.0), 1.0)
+	else:
+		SFX.play_ui(SFX.SLINGSHOT_FIRE, -4.0, 0.2)
+
+	return hit_count
+
+
+func _fire_harpoon() -> void:
+	fire_harpoon()
+
+
+func _spawn_harpoon_rope(from: Vector3, to: Vector3) -> void:
+	var parent: Node = get_parent() if get_parent() != null else self
+	var rope: ImmediateMesh = ImmediateMesh.new()
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.mesh = rope
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.76, 0.66, 0.48)
+	mi.material_override = mat
+
+	rope.surface_begin(Mesh.PRIMITIVE_LINES)
+	rope.surface_add_vertex(from)
+	rope.surface_add_vertex(to)
+	rope.surface_end()
+
+	parent.add_child(mi)
+	var t: Tween = mi.create_tween()
+	t.tween_property(mat, "albedo_color:a", 0.0, 0.35)
+	t.tween_callback(mi.queue_free)
 
 
 func _use_repellent() -> void:

@@ -41,6 +41,12 @@ const KIND_SCENES: Dictionary = {
 	&"bat": "res://gameplay/enemies/bat/bat.tscn",
 	&"ancient_guardian": "res://gameplay/enemies/boss/ancient_guardian.tscn",
 	&"idol_mummy": "res://gameplay/enemies/boss/idol_mummy.tscn",
+	&"ice_wolf": "res://gameplay/enemies/ice_wolf/ice_wolf.tscn",
+	&"penguin": "res://gameplay/enemies/penguin/penguin.tscn",
+	&"walrus": "res://gameplay/enemies/walrus/walrus.tscn",
+	&"frozen_mammoth": "res://gameplay/enemies/boss/frozen_mammoth.tscn",
+	&"ancient_walrus": "res://gameplay/enemies/boss/ancient_walrus.tscn",
+	&"cave_yeti": "res://gameplay/enemies/boss/cave_yeti.tscn",
 }
 
 ## Inimigo base do mapa (níveis de ameaça e ambiente) e o "resistente" a partir do nível 2.

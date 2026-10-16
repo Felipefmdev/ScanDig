@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/enemies/boss/frozen_mammoth.gd" id="1_mammoth"]
+
+[node name="FrozenMammoth" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 1
+script = ExtResource("1_mammoth")
+max_health = 1350.0
+death_color = Color(0.46, 0.72, 0.85, 1)
