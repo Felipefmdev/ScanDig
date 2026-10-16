@@ -165,6 +165,8 @@ func _run() -> void:
 		await _shot("config_video")
 		pause.settings_menu.tabs.current_tab = 1
 		await _shot("config_audio")
+		pause.settings_menu.tabs.current_tab = 2
+		await _shot("config_controles")
 		pause.settings_menu.tabs.current_tab = 0
 		pause.close()
 

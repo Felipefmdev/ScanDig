@@ -40,6 +40,7 @@ func _initialize() -> void:
 	_popups()
 	_scroll_and_separators()
 	_progress_bars()
+	_sliders()
 	_windows()
 	_fonts()
 	if not _needs_import.is_empty():
@@ -422,6 +423,30 @@ func _scroll_and_separators() -> void:
 
 
 ## Barras de progresso (HP padrão em RED_BURNT, ThreatBar em ORANGE e BossBar com painel/sombra).
+## Grabber dos sliders: disco de papel com contorno INK de 2 px (fill = cor do miolo).
+func _paint_grabber(img: Image, fill: Color) -> void:
+	var c: Vector2 = Vector2(img.get_width(), img.get_height()) * 0.5
+	var r: float = img.get_width() * 0.5 - 0.5
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var d: float = Vector2(x + 0.5, y + 0.5).distance_to(c)
+			if d <= r - 2.0:
+				img.set_pixel(x, y, fill)
+			elif d <= r:
+				img.set_pixel(x, y, P.INK)
+
+
+## Sliders (Áudio, Escala da interface, #77): trilho PAPER_DARK com contorno INK, parte cheia
+## ORANGE e grabber redondo de 22 px.
+func _sliders() -> void:
+	_theme.set_stylebox("slider", "HSlider", _flat(P.PAPER_DARK, 2, 5, 0, 5))
+	_theme.set_stylebox("grabber_area", "HSlider", _flat(P.ORANGE, 2, 5, 0, 5))
+	_theme.set_stylebox("grabber_area_highlight", "HSlider", _flat(P.ORANGE.lerp(P.GOLD, 0.25), 2, 5, 0, 5))
+	_theme.set_icon("grabber", "HSlider", _icon("slider_grabber", Vector2i(22, 22), _paint_grabber.bind(P.PAPER_LIGHT)))
+	_theme.set_icon("grabber_highlight", "HSlider", _icon("slider_grabber_hover", Vector2i(22, 22), _paint_grabber.bind(P.PAPER)))
+	_theme.set_icon("grabber_disabled", "HSlider", _icon("slider_grabber_disabled", Vector2i(22, 22), _paint_grabber.bind(P.PAPER_DARK)))
+
+
 func _progress_bars() -> void:
 	_theme.set_stylebox("background", "ProgressBar", _flat(P.PAPER_DARK, 2, 3, 2, 2))
 	_theme.set_stylebox("fill", "ProgressBar", _flat(P.RED_BURNT, 2, 3, 0, 0))
