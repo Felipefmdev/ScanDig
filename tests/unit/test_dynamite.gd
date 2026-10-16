@@ -38,7 +38,7 @@ func test_blast_hits_enemies_items_and_thrower() -> void:
 	var td: ToolData = load("res://items/tools/batata_esquecida.tres") as ToolData
 	var item: ItemPickup = ItemPickup.spawn(self, CarriedItem.create_from_tool_data(td), Vector3(0, 0.5, 1))
 	await get_tree().physics_frame
-	snake.state = 0  # sai do EMERGE (imune) para o teste
+	snake.state = 1  # CHASE: fora do EMERGE (imune)
 	var hp0: float = player.health
 	var out: Dictionary = DYNAMITE.apply_blast(get_tree(), Vector3.ZERO, player)
 	assert_eq(out["enemies"], 1, "só a cobra perto")

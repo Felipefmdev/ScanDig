@@ -1818,7 +1818,9 @@ func _drop_selected(charge: float = 0.0) -> void:
 		return
 	var fwd: Vector3 = -camera.global_basis.z
 	var pos: Vector3 = camera.global_position + fwd * 0.7 + Vector3.DOWN * 0.3
-	ItemPickup.spawn(get_parent(), c, pos, get_throw_impulse(charge))
+	var thrown: ItemPickup = ItemPickup.spawn(get_parent(), c, pos, get_throw_impulse(charge))
+	if thrown != null and charge > 0.0:
+		thrown.impacted.connect(func(e: Node3D, dmg: float) -> void: _register_hit(e, dmg))
 	SFX.play_at(SFX.DROP if charge < 0.3 else SFX.SLINGSHOT_FIRE, pos, -3.0)
 
 

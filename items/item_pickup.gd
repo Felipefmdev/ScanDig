@@ -119,9 +119,59 @@ func _wriggle(delta: float) -> void:
 
 var _spoil_left: float = -1.0
 
+## Estudo How to Fish (peixe arremessado fere entre 8 e 20 m/s): item rápido acerta
+## inimigos. Vale para o [Q] carregado, para itens atirados pela dinamite, pela pá...
+const IMPACT_MIN_SPEED: float = 7.0
+const IMPACT_MAX_SPEED: float = 14.0
+const IMPACT_DAMAGE: Vector2 = Vector2(8.0, 30.0)
+const IMPACT_RADIUS: float = 0.9
+## Mesmo inimigo só leva um impacto por arremesso.
+var _impact_hit: Dictionary = {}
+
+
+## Dano de impacto à velocidade `speed` (0 abaixo do mínimo). Achados maiores batem mais.
+func impact_damage(speed: float) -> float:
+	if speed < IMPACT_MIN_SPEED:
+		return 0.0
+	var t: float = clampf((speed - IMPACT_MIN_SPEED) / (IMPACT_MAX_SPEED - IMPACT_MIN_SPEED), 0.0, 1.0)
+	var size_mult: float = 1.0
+	if carried != null and carried.item != null:
+		size_mult = 1.0 + 0.35 * float(carried.item.size_category)
+	return lerpf(IMPACT_DAMAGE.x, IMPACT_DAMAGE.y, t) * size_mult
+
+
+func _check_impacts() -> void:
+	var speed: float = linear_velocity.length()
+	if speed < IMPACT_MIN_SPEED:
+		if not _impact_hit.is_empty() and speed < 1.0:
+			_impact_hit.clear()  # assentou: o próximo arremesso volta a acertar
+		return
+	for n: Node in get_tree().get_nodes_in_group(&"enemies"):
+		var e: Node3D = n as Node3D
+		if e == null or not is_instance_valid(e) or _impact_hit.has(e.get_instance_id()):
+			continue
+		var center: Vector3 = e.global_position + Vector3.UP * 0.4
+		if center.distance_to(global_position) > IMPACT_RADIUS:
+			continue
+		if e.has_method("is_alive") and not bool(e.call("is_alive")):
+			continue
+		_impact_hit[e.get_instance_id()] = true
+		var dmg: float = impact_damage(speed)
+		e.call("take_damage", dmg, global_position - linear_velocity.normalized())
+		SFX.play_at(SFX.STONE_IMPACT, global_position, 2.0, 0.15)
+		# Ricochete: o item perde força e quica para cima.
+		linear_velocity = -linear_velocity * 0.25 + Vector3.UP * 2.0
+		impacted.emit(e, dmg)
+		break
+
+
+signal impacted(enemy: Node3D, damage: float)
+
 
 func _physics_process(delta: float) -> void:
 	var authority: bool = not networked or multiplayer.is_server()
+	if authority:
+		_check_impacts()
 	if is_wriggling_food() and authority:
 		_wriggle(delta)
 	if authority and carried != null and carried.tool_data != null and carried.tool_data.spoil_seconds > 0.0:
