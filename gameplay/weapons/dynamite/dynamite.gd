@@ -100,6 +100,9 @@ static func apply_blast(tree: SceneTree, center: Vector3, thrower: Node3D) -> Di
 		var dmg: float = DAMAGE * lerpf(1.0, 0.4, d / ENEMY_RADIUS)
 		if e.has_method("take_damage"):
 			e.call("take_damage", dmg, center)  # EnemyBase manda request_hit sozinho no cliente
+		if thrower != null and is_instance_valid(thrower) and thrower.has_method("on_style_kill") \
+				and e.has_method("is_alive") and not bool(e.call("is_alive")):
+			thrower.call("on_style_kill", "explosao", e.global_position)
 		if e.has_method("stun"):
 			e.call("stun", STUN)
 		out["enemies"] += 1

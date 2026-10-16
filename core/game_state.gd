@@ -70,6 +70,18 @@ const CREATURES: Dictionary = {
 	"ice_wolf": "Lobo do Gelo", "penguin": "Pinguim-ladrão", "walrus": "Morsa",
 	"crawler": "Rastejante", "floater": "Flutuante",
 }
+## Bónus de estilo (estudo How to Fish: KillScoreCalculator). Fração da renda por minuto do
+## mapa (docs/PACING.md, bot) paga por abate de estilo; o host decide o valor.
+const STYLE_BONUSES: Dictionary = {
+	"multi": {"name": "Multi-abate", "ratio": 0.35},
+	"longe": {"name": "De longe", "ratio": 0.25},
+	"arremesso": {"name": "Arremesso certeiro", "ratio": 0.3},
+	"explosao": {"name": "Explosivo", "ratio": 0.3},
+}
+const MAP_INCOME_PER_MIN: Dictionary = {"praia": 50, "campo": 127, "ruinas": 1336, "geleira": 2849, "cratera": 2552}
+## Um bónus por jogador a cada STYLE_COOLDOWN_MS (um cliente não faz spam de dinheiro).
+const STYLE_COOLDOWN_MS: int = 1500
+var _style_last_ms: Dictionary = {}
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
 ## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
 ## Mapas 3-5: idol_mummy, cave_yeti, ancient_walrus, the_sleeper, the_echo (#75).
@@ -513,6 +525,41 @@ func _host_report_creature(kind: String) -> void:
 	var seen: Array = Array(seen_creatures).duplicate()
 	seen.append(kind)
 	data["seen_creatures"] = seen
+	apply_snapshot(data)
+	_broadcast_snapshot()
+
+
+static func style_bonus_amount(kind: String, map_id: String) -> int:
+	if not STYLE_BONUSES.has(kind):
+		return 0
+	var income: float = float(MAP_INCOME_PER_MIN.get(map_id, MAP_INCOME_PER_MIN["praia"]))
+	return maxi(5, int(round(income * float(STYLE_BONUSES[kind]["ratio"]))))
+
+
+## Qualquer peer: pede o bónus de um abate de estilo. Devolve-se pelo snapshot (dinheiro).
+func request_style_bonus(kind: String) -> void:
+	if is_authority():
+		_host_style_bonus(kind)
+	else:
+		_host_style_bonus.rpc_id(HOST_PEER_ID, kind)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_style_bonus(kind: String) -> void:
+	if not is_authority() or not STYLE_BONUSES.has(kind):
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender == 0:
+		sender = multiplayer.get_unique_id()
+	var now: int = Time.get_ticks_msec()
+	if now - int(_style_last_ms.get(sender, -STYLE_COOLDOWN_MS)) < STYLE_COOLDOWN_MS:
+		return
+	_style_last_ms[sender] = now
+	var map_id: String = ""
+	if SessionManager.instance != null and SessionManager.instance.get_current_map() != null:
+		map_id = SessionManager.instance.get_current_map().id
+	var data: Dictionary = get_snapshot()
+	data["team_money"] = team_money + style_bonus_amount(kind, map_id)
 	apply_snapshot(data)
 	_broadcast_snapshot()
 
