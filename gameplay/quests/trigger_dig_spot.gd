@@ -33,8 +33,8 @@ func _on_revealed_elsewhere() -> void:
 		get_tree().create_timer(4.0).timeout.connect(queue_free)
 
 
-func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = true) -> Dictionary:
-	var res: Dictionary = super.dig(is_careful, damage_multiplier, report_noise)
+func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = true, digger: Node = null) -> Dictionary:
+	var res: Dictionary = super.dig(is_careful, damage_multiplier, report_noise, digger)
 	if bool(res.get("revealed", false)) and not _fired:
 		_fired = true
 		if HostSync.is_host(self):

@@ -26,6 +26,11 @@ const MAX_REMOTE_DIG_DISTANCE: float = 2.8
 const MIN_DAMAGE_MULTIPLIER: float = 0.3
 
 var is_rare_variant: bool = false
+## Achado limpo (#78): escavado sem quebrar (integridade 100%) e sem o jogador levar dano.
+var is_clean: bool = false
+var player_took_damage: bool = false
+var _tracked_diggers: Array[Node] = []
+var _diggers_health: Dictionary = {}
 ## Criado pelo SpotSpawner através do MultiplayerSpawner (contrato #5 D): só o host cava;
 ## os clientes pedem com request_dig. Spots fixos na cena (altares) ficam false.
 var networked: bool = false
@@ -35,6 +40,10 @@ var _is_revealed: bool = false
 var _dirt_mound: Node3D = null
 var _dirt_particles: CPUParticles3D = null
 const MAX_DIRT_LAYERS: int = 3
+
+
+func _exit_tree() -> void:
+	_untrack_all_diggers()
 
 
 func _ready() -> void:
@@ -140,7 +149,7 @@ func request_dig(is_careful: bool, damage_multiplier: float) -> void:
 		_dig_result.rpc_id(sender, {})
 		return
 	# Fase 3 (#5 G): o barulho de um cliente é reportado por ele (report_noise=false aqui).
-	var res: Dictionary = dig(is_careful, clampf(damage_multiplier, MIN_DAMAGE_MULTIPLIER, 1.0), false)
+	var res: Dictionary = dig(is_careful, clampf(damage_multiplier, MIN_DAMAGE_MULTIPLIER, 1.0), false, digger)
 	res["is_careful"] = is_careful
 	_dig_result.rpc_id(sender, result_to_net(res))
 
@@ -179,9 +188,95 @@ func _player_of(peer_id: int) -> Node3D:
 	return null
 
 
+func _track_digger(digger: Node) -> void:
+	if digger == null or not is_instance_valid(digger):
+		return
+	if _tracked_diggers.has(digger):
+		return
+	_tracked_diggers.append(digger)
+	if "health" in digger:
+		_diggers_health[digger] = float(digger.get("health"))
+	if digger.has_signal(&"health_changed"):
+		var cb: Callable = Callable(self, &"_on_digger_health_changed").bind(digger)
+		if not digger.is_connected(&"health_changed", cb):
+			digger.connect(&"health_changed", cb)
+	if digger.has_signal(&"died"):
+		var cb_died: Callable = Callable(self, &"_on_digger_died")
+		if not digger.is_connected(&"died", cb_died):
+			digger.connect(&"died", cb_died)
+	if digger.has_signal(&"tree_exiting"):
+		var cb_te: Callable = Callable(self, &"_on_digger_tree_exiting").bind(digger)
+		if not digger.is_connected(&"tree_exiting", cb_te):
+			digger.connect(&"tree_exiting", cb_te)
+
+
+func _on_digger_health_changed(current: float, _max_val: float, digger: Node) -> void:
+	var prev: float = float(_diggers_health.get(digger, -1.0))
+	if prev >= 0.0 and current < prev:
+		player_took_damage = true
+	_diggers_health[digger] = current
+
+
+func _on_digger_died() -> void:
+	player_took_damage = true
+
+
+func _on_digger_tree_exiting(digger: Node) -> void:
+	_untrack_digger(digger)
+
+
+func _untrack_digger(digger: Node) -> void:
+	if digger != null and is_instance_valid(digger):
+		var cb: Callable = Callable(self, &"_on_digger_health_changed").bind(digger)
+		if digger.has_signal(&"health_changed") and digger.is_connected(&"health_changed", cb):
+			digger.disconnect(&"health_changed", cb)
+		var cb_died: Callable = Callable(self, &"_on_digger_died")
+		if digger.has_signal(&"died") and digger.is_connected(&"died", cb_died):
+			digger.disconnect(&"died", cb_died)
+		var cb_te: Callable = Callable(self, &"_on_digger_tree_exiting").bind(digger)
+		if digger.has_signal(&"tree_exiting") and digger.is_connected(&"tree_exiting", cb_te):
+			digger.disconnect(&"tree_exiting", cb_te)
+	_tracked_diggers.erase(digger)
+	_diggers_health.erase(digger)
+
+
+func _untrack_all_diggers() -> void:
+	for d: Node in _tracked_diggers.duplicate():
+		_untrack_digger(d)
+	_tracked_diggers.clear()
+	_diggers_health.clear()
+
+
+func _check_diggers_health() -> void:
+	for d: Node in _tracked_diggers:
+		if d != null and is_instance_valid(d) and "health" in d:
+			var cur: float = float(d.get("health"))
+			var prev: float = float(_diggers_health.get(d, -1.0))
+			if prev >= 0.0 and cur < prev:
+				player_took_damage = true
+			_diggers_health[d] = cur
+
+
+func _find_digger() -> Node:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var closest: Node = null
+	var min_dist: float = MAX_REMOTE_DIG_DISTANCE + 1.5
+	for p: Node in tree.get_nodes_in_group(&"players"):
+		var p3d: Node3D = p as Node3D
+		if p3d != null and p3d.is_inside_tree():
+			var dist: float = global_position.distance_to(p3d.global_position)
+			if dist < min_dist:
+				min_dist = dist
+				closest = p
+	return closest
+
+
 ## damage_multiplier: escala o dano à integridade (ex.: pás melhores < 1.0). Opcional.
 ## report_noise: false quando quem cava é um cliente (ele reporta o barulho do lado dele).
-func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = true) -> Dictionary:
+## digger: jogador opcional a realizar a escavação (rastreia dano para achado limpo).
+func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = true, digger: Node = null) -> Dictionary:
 	if _is_revealed or dirt_layers <= 0:
 		return {
 			"revealed": true,
@@ -194,8 +289,15 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 			"final_value": 0,
 			"is_rare_variant": is_rare_variant,
 			"is_perfect": false,
+			"is_clean": false,
 			"dug": false,
 		}
+
+	if digger == null:
+		digger = _find_digger()
+	if digger != null:
+		_track_digger(digger)
+	_check_diggers_health()
 
 	# Partículas de areia e terra a voar (todos os peers veem-nas se o spot é em rede).
 	if networked and NetVisibility.is_online(multiplayer):
@@ -233,6 +335,9 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 	if revealed:
 		_is_revealed = true
 		remove_from_group("buried_spots")
+		_check_diggers_health()
+
+		is_clean = (integrity >= 1.0 and not player_took_damage)
 
 		if item != null:
 			final_val = item.calculate_value(integrity)
@@ -247,12 +352,15 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 			print("★ ITEM ENCONTRADO: %s" % item.display_name)
 			print("  Integridade: %d%%" % int(integrity * 100.0))
 			print("  Valor de Venda: R$ %d" % final_val)
+			if is_clean:
+				print("  ✦ ACHADO LIMPO! (Sem quebrar e sem levar dano)")
 			print("  Profundidade Real: %d cm" % item.depth_cm)
 			print("========================================")
 			_spawn_pickup(final_val)
 		else:
 			print("[BuriedSpot] Ponto escavado sem ItemData configurado.")
 
+		_untrack_all_diggers()
 		item_revealed.emit(item, final_val, integrity)
 		# A venda já não é automática: o item salta como ItemPickup, vai para a
 		# mochila (E) e só é entregue ao GameState num SellPoint.
@@ -275,6 +383,7 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 		"final_value": final_val,
 		"is_rare_variant": is_rare_variant,
 		"is_perfect": is_perfect,
+		"is_clean": is_clean,
 		"dug": true,
 	}
 
@@ -283,7 +392,7 @@ func _spawn_pickup(final_val: int) -> void:
 	var parent: Node = get_parent()
 	if parent == null:
 		return
-	var c: CarriedItem = CarriedItem.create(item, final_val, integrity, is_rare_variant)
+	var c: CarriedItem = CarriedItem.create(item, final_val, integrity, is_rare_variant, is_clean)
 	# Salta para fora do buraco numa direção aleatória.
 	var dir: Vector3 = Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)).normalized()
 	ItemPickup.spawn(parent, c, global_position + Vector3.UP * 0.35, Vector3.UP * 2.2 + dir * 0.6)

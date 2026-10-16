@@ -7,12 +7,29 @@ extends Node3D
 signal items_delivered(count: int, total_value: int)
 
 const GROUP: StringName = &"sell_points"
+## Bónus de valor para achados limpos (+20%).
+const CLEAN_BONUS_MULTIPLIER: float = 1.2
 
 @export var radius: float = 2.5
 
 
 func _ready() -> void:
 	add_to_group(GROUP)
+
+
+## Calcula o valor de entrega de um item, aplicando o bónus se for achado limpo.
+static func get_item_delivery_value(c: CarriedItem) -> int:
+	if c == null:
+		return 0
+	var val: int = c.final_value
+	if c.is_clean:
+		val = int(round(float(val) * CLEAN_BONUS_MULTIPLIER))
+	return val
+
+
+## Atalho para get_item_delivery_value.
+static func get_delivery_value(c: CarriedItem) -> int:
+	return get_item_delivery_value(c)
 
 
 ## Entrega os itens escavados e devolve o valor total. Ferramentas (is_tool) são
@@ -23,8 +40,9 @@ func deliver(items: Array[CarriedItem]) -> int:
 	for c: CarriedItem in items:
 		if not can_deliver(c):
 			continue
-		DiscoveryBridge.report_item_found(c.item, c.final_value)
-		total += c.final_value
+		var val: int = get_item_delivery_value(c)
+		DiscoveryBridge.report_item_found(c.item, val)
+		total += val
 		count += 1
 	items_delivered.emit(count, total)
 	return total

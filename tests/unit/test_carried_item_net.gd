@@ -11,22 +11,34 @@ func test_item_round_trip() -> void:
 	var c: CarriedItem = CarriedItem.create(MOEDA, 120, 0.8, true)
 	var d: Dictionary = c.to_dict()
 	assert_eq(d, {"kind": "item", "item_id": "moeda_antiga", "final_value": 120, "integrity": 0.8,
-		"rare": true, "tool_id": "", "charges": -1})
+		"rare": true, "clean": false, "tool_id": "", "charges": -1})
 	var back: CarriedItem = CarriedItem.from_dict(d)
 	assert_not_null(back)
 	assert_eq(back.item, MOEDA)
 	assert_eq(back.final_value, 120)
 	assert_almost_eq(back.integrity, 0.8, 0.0001)
 	assert_true(back.is_rare_variant)
+	assert_false(back.is_clean)
 	assert_false(back.is_tool())
+
+
+func test_clean_item_round_trip() -> void:
+	var c: CarriedItem = CarriedItem.create(MOEDA, 120, 1.0, false, true)
+	var d: Dictionary = c.to_dict()
+	assert_true(d["clean"])
+	var back: CarriedItem = CarriedItem.from_dict(d)
+	assert_not_null(back)
+	assert_true(back.is_clean)
+	assert_eq(back.final_value, 120)
 
 
 func test_round_trip_survives_json() -> void:
 	# Pela rede/JSON os inteiros podem chegar como float.
-	var d: Variant = JSON.parse_string(JSON.stringify(CarriedItem.create(MOEDA, 90, 1.0, false).to_dict()))
+	var d: Variant = JSON.parse_string(JSON.stringify(CarriedItem.create(MOEDA, 90, 1.0, false, true).to_dict()))
 	var back: CarriedItem = CarriedItem.from_dict(d)
 	assert_not_null(back)
 	assert_eq(back.final_value, 90)
+	assert_true(back.is_clean)
 
 
 func test_tool_round_trips() -> void:
@@ -62,6 +74,7 @@ func test_rejects_invalid() -> void:
 		_with(good, "final_value", 999999),  # acima do teto get_max_item_value
 		_with(good, "integrity", 1.5),
 		_with(good, "rare", "sim"),
+		_with(good, "clean", "sim"),
 		{"kind": "tool", "tool_id": "nao_existe", "charges": -1},
 		{"kind": "tool", "tool_id": "../catalog/moeda_antiga", "charges": -1},
 		{"kind": "tool", "tool_id": "repelente", "charges": 0},

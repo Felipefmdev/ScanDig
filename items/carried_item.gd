@@ -7,6 +7,7 @@ var item: ItemData = null
 var final_value: int = 0
 var integrity: float = 1.0
 var is_rare_variant: bool = false
+var is_clean: bool = false
 ## Ferramentas (ex.: &"detector") ocupam um slot mas não se vendem. Vazio = item escavado.
 var tool_id: StringName = &""
 var tool_name: String = ""
@@ -18,12 +19,13 @@ var tool_data: ToolData = null
 var charges: int = -1
 
 
-static func create(p_item: ItemData, p_value: int, p_integrity: float, p_rare: bool) -> CarriedItem:
+static func create(p_item: ItemData, p_value: int, p_integrity: float, p_rare: bool, p_clean: bool = false) -> CarriedItem:
 	var c: CarriedItem = CarriedItem.new()
 	c.item = p_item
 	c.final_value = p_value
 	c.integrity = p_integrity
 	c.is_rare_variant = p_rare
+	c.is_clean = p_clean
 	return c
 
 
@@ -50,6 +52,7 @@ func to_dict() -> Dictionary:
 		"final_value": final_value,
 		"integrity": integrity,
 		"rare": is_rare_variant,
+		"clean": is_clean,
 		"tool_id": String(tool_id),
 		"charges": charges,
 	}
@@ -73,9 +76,10 @@ static func _item_from_dict(d: Dictionary) -> CarriedItem:
 	var value: Variant = d.get("final_value")
 	var integ: Variant = d.get("integrity", 1.0)
 	var rare: Variant = d.get("rare", false)
+	var clean: Variant = d.get("clean", d.get("is_clean", false))
 	if not item_id is String or not _is_safe_id(item_id):
 		return null
-	if not (value is int or value is float) or not (integ is int or integ is float) or not rare is bool:
+	if not (value is int or value is float) or not (integ is int or integ is float) or not rare is bool or not clean is bool:
 		return null
 	var path: String = "res://items/catalog/%s.tres" % item_id
 	if not ResourceLoader.exists(path):
@@ -88,7 +92,7 @@ static func _item_from_dict(d: Dictionary) -> CarriedItem:
 		return null
 	if GameState.instance != null and final > GameState.instance.get_max_item_value(data):
 		return null
-	return create(data, final, float(integ), rare)
+	return create(data, final, float(integ), rare, bool(clean))
 
 
 static func _tool_from_dict(d: Dictionary) -> CarriedItem:
@@ -136,4 +140,7 @@ func get_display_name() -> String:
 		return tool_name if charges < 0 else "%s (x%d)" % [tool_name, charges]
 	if item == null:
 		return "Artefato Misterioso"
-	return ("✦ " + item.display_name) if is_rare_variant else item.display_name
+	var dname: String = ("✦ " + item.display_name) if is_rare_variant else item.display_name
+	if is_clean:
+		return "✨ " + dname
+	return dname
