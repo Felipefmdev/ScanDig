@@ -126,3 +126,7 @@ Total da história ≈ 7–8 h; com missões e segredos ≈ 8–9 h.
 - API de missões: `request_complete_quest(quest_id)` validada no host (recompensa uma só vez) e flags
   de segredos/missões no save (`completed_quests`, `found_secrets`).
 - Itens de museu novos (recompensas de missão, relíquias, troféus de chefe) no catálogo.
+
+## 7. Tom da gameplay: caótica (estilo How to Fish)
+
+Todos os chefes e vários inimigos têm movimentos únicos e exagerados (o Polvo sai a rodar com os tentáculos, o Caranguejo-Rei vira pião, a Toupeira faz surf debaixo da terra). Física exagerada, knockback cómico do jogador, câmara a tremer, mas cada ataque telegrafado e com janela de exposição. Detalhe e lista: issue "Gameplay caótica".
