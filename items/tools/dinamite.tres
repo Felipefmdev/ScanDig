@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"dinamite"
+display_name = "Dinamite"
+description = "3 bananas. Clique para lançar: explode em 2 s, derruba bichos, arremessa tudo (até você) e desenterra o que estiver perto, trincando os achados. Faz MUITO barulho."
+price = 1500
+category = 1
+charges = 3
+color = Color(0.85, 0.2, 0.15, 1)

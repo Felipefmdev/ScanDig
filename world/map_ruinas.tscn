@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3]
+[gd_scene load_steps=39 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -27,6 +27,7 @@
 [ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
 [ext_resource type="Resource" path="res://items/tools/lanterna_magnesio.tres" id="t_lanterna_magnesio"]
 [ext_resource type="PackedScene" path="res://gameplay/quests/ruinas/ruinas_secrets.tscn" id="q_ruinas_secrets"]
+[ext_resource type="Resource" path="res://items/tools/dinamite.tres" id="t_dinamite"]
 
 [sub_resource type="BoxShape3D" id="Shape_wall_x"]
 size = Vector3(1, 6, 62)
@@ -209,34 +210,39 @@ kind = 9
 size = Vector3(1.2, 0.9, 5.0)
 
 [node name="Offer1" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -2.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -2.4)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_estilingue")
 
 [node name="Offer2" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -1.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -1.6)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_armadilha_rede")
 
 [node name="Offer3" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.8)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_forcado")
 
 [node name="Offer4" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0.0)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_kit_medico")
 
 [node name="Offer5" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 1.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0.8)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_repelente")
 
 [node name="Offer6" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 2.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 1.6)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_lanterna_magnesio")
+
+[node name="Offer7" type="Node3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 2.4)
+script = ExtResource("9_shop_offer")
+tool_data = ExtResource("t_dinamite")
 
 [node name="Players" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)

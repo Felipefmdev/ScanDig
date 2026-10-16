@@ -143,6 +143,9 @@ const TOOL_LANTERN: StringName = &"lanterna_magnesio"
 const TOOL_FORCADO: StringName = &"forcado"
 const TOOL_HARPOON: StringName = &"arpao_corda"
 const TOOL_PULSE: StringName = &"pulso_magnetico"
+const TOOL_DYNAMITE: StringName = &"dinamite"
+const DYNAMITE_SCRIPT: Script = preload("res://gameplay/weapons/dynamite/dynamite.gd")
+const DYNAMITE_THROW_SPEED: float = 9.0
 ## Recarga do clarão da Lanterna de Magnésio (#42).
 const LANTERN_COOLDOWN: float = 4.0
 ## Empurrão (#57): segundos sem controlo por m/s de impulso, e o máximo.
@@ -2123,6 +2126,10 @@ func _handle_use_tool_action() -> void:
 			_attack_pitchfork()
 		TOOL_HARPOON:
 			_fire_harpoon()
+		TOOL_DYNAMITE:
+			throw_dynamite()
+			_consume(c)
+			_use_cooldown = 0.8
 		TOOL_PULSE:
 			_fire_magnetic_pulse()
 
@@ -2138,6 +2145,67 @@ func _flash_lantern(c: CarriedItem) -> void:
 		_use_cooldown = LANTERN_COOLDOWN
 	if hit > 0:
 		_show_temporary_message("Flash! %d atordoado%s" % [hit, "" if hit == 1 else "s"], Color(1.0, 0.95, 0.6), 1.2)
+
+
+## Lança uma dinamite acesa na direção da mira (soma a velocidade do jogador).
+func throw_dynamite() -> RigidBody3D:
+	var stick: RigidBody3D = DYNAMITE_SCRIPT.new()
+	stick.set("thrower", self)
+	var parent: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+	parent.add_child(stick)
+	var fwd: Vector3 = -camera.global_basis.z if camera != null else -global_basis.z
+	var origin: Vector3 = (camera.global_position if camera != null else global_position) + fwd * 0.6
+	stick.global_position = origin
+	stick.linear_velocity = (fwd + Vector3.UP * 0.35).normalized() * DYNAMITE_THROW_SPEED + Vector3(velocity.x, 0.0, velocity.z) * 0.5
+	stick.angular_velocity = Vector3(randf_range(-6, 6), randf_range(-6, 6), randf_range(-6, 6))
+	SFX.play_at(SFX.SLINGSHOT_FIRE, origin, -4.0)
+	return stick
+
+
+## Clarão, poeira e estrondo de uma explosão (em todos os peers; a física é de quem lançou).
+@rpc("any_peer", "call_remote", "unreliable")
+func show_explosion(center: Vector3) -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var parent: Node = tree.current_scene if tree.current_scene != null else self
+	var flash: OmniLight3D = OmniLight3D.new()
+	flash.light_color = Color(1.0, 0.7, 0.3)
+	flash.light_energy = 8.0
+	flash.omni_range = 9.0
+	parent.add_child(flash)
+	flash.global_position = center + Vector3.UP * 0.8
+	var ft: Tween = flash.create_tween()
+	ft.tween_property(flash, "light_energy", 0.0, 0.35)
+	ft.tween_callback(flash.queue_free)
+	for spec: Array in [[Color(1.0, 0.45, 0.1), 70, 10.0, 0.22], [Color(0.25, 0.22, 0.2), 50, 4.5, 0.32]]:
+		var p: CPUParticles3D = CPUParticles3D.new()
+		p.one_shot = true
+		p.explosiveness = 0.95
+		p.amount = spec[1]
+		p.lifetime = 0.7
+		p.spread = 180.0
+		p.initial_velocity_min = float(spec[2]) * 0.5
+		p.initial_velocity_max = spec[2]
+		p.gravity = Vector3(0, -6, 0)
+		var m: BoxMesh = BoxMesh.new()
+		m.size = Vector3.ONE * float(spec[3])
+		var mat: StandardMaterial3D = StandardMaterial3D.new()
+		mat.albedo_color = spec[0]
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.material = mat
+		p.mesh = m
+		parent.add_child(p)
+		p.global_position = center + Vector3.UP * 0.6
+		p.emitting = true
+		tree.create_timer(1.2).timeout.connect(p.queue_free)
+	SFX.play_at(SFX.PLAYER_DEATH, center, 4.0, 0.25)
+	for n: Node in tree.get_nodes_in_group(LOCAL_GROUP):
+		var local: Node3D = n as Node3D
+		if local != null and local.has_method("_shake_camera"):
+			var d: float = local.global_position.distance_to(center)
+			if d < 14.0:
+				local.call("_shake_camera", lerpf(0.12, 0.02, d / 14.0), 0.45)
 
 
 ## Come a comida do slot: cura heal_amount e gasta a unidade. Falso se não comeu.
