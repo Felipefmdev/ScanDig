@@ -150,6 +150,8 @@ func _process(delta: float) -> void:
 		if _warning.visible:
 			_warning.pulse(delta)
 	elif state == State.DYING and _dead:
+		# A física fica desligada na morte: o relógio da animação de morte avança aqui
+		_state_time += delta
 		_process_dying(delta)
 
 
