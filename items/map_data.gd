@@ -15,3 +15,6 @@ extends Resource
 ## Barulho perdido por segundo quando ninguém está a cavar.
 @export var noise_decay_per_second: float = 2.0
 @export var spot_count: int = 8
+## Multiplica o dano dos inimigos neste mapa (#82: mortes demais nos mapas 3-5 no bot).
+## Soma-se ao ajuste por nº de jogadores do DifficultyProfile.
+@export_range(0.1, 2.0, 0.05) var enemy_damage_multiplier: float = 1.0

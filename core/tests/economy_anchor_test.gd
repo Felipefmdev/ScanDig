@@ -23,8 +23,8 @@ const MAPS: Dictionary = {
 	"praia": [0, 1, 1.0, 100.0],
 	"campo": [800, 2, 30.0, 200.0],
 	"ruinas": [8000, 4, 400.0, 520.0],
-	"geleira": [70000, 5, 650.0, 950.0],
-	"cratera": [190000, 6, 1100.0, 1400.0],
+	"geleira": [100000, 5, 650.0, 950.0],
+	"cratera": [280000, 6, 1100.0, 1400.0],
 }
 const QUEST_REWARDS: Dictionary = {"ze_anzol": 600, "lurdes_chaves": 1800}
 

@@ -321,3 +321,37 @@ clique, e há a condição `in_expedition`. O roteiro faz lobby → aba Expediç
 (**Fechar**), nos 5 mapas, e acaba no Museu e na Loja. Tudo passa: os resumos mostram o dia, o
 ganho e a lata doada ao museu (+R$ 3), e o progresso comprado pela UI (desbloquear o Campo)
 mantém-se depois de ir e voltar. Capturas em `.bot_runs/ui_flow_*`.
+
+## Rebalanceamento após os sistemas How to Fish (#82, 2026-10-16)
+
+Fome com regeneração, comida escavada, Carne Crua, dinamite, bónus de estilo, desgaste de
+armas e recompensas das missões 3–5 mudaram a economia e as mortes. Medição com os mesmos
+`tools/bot/pacing_*.json` (headless `--fixed-fps 60`, 15 min de jogo cada).
+
+Antes deste ajuste (sistemas novos, custos do #64):
+
+| Mapa | R$/min (bot) | mortes/15 min |
+|---|---|---|
+| Praia | 43 | 0 |
+| Campo | 148 | 1 |
+| Ruínas | 1.873 | 6 |
+| Geleira | 4.327 | 4 |
+| Cratera | 2.582 | 5 |
+
+Ajustes:
+- `MapData.enemy_damage_multiplier` (novo, soma-se ao perfil por nº de jogadores):
+  Ruínas 0,55 · Geleira 0,75 · Cratera 0,6 (alvo do #82: ≤ 3 mortes/15 min).
+- Desbloqueio da Geleira 70.000 → **100.000**; da Cratera 190.000 → **280.000**
+  (Ruínas e Geleira passaram a render 40–50 % mais).
+
+Depois:
+
+| Mapa | R$/min (bot) | mortes/15 min | gasto no mapa | tempo (bot) |
+|---|---|---|---|---|
+| Ruínas | 1.940 | 2 | ~105.000 | ~54 min |
+| Geleira | 3.189 | 3 | ~326.000 | ~102 min |
+| Cratera | 4.256 | 2 | 190.000 | ~45 min |
+
+Pendente: a Cratera ficou curta (renda subiu com menos mortes). Os custos dela são upgrades
+(`GameState.UPGRADES`: detector 6, pinpointer 2, pá 3) e serão revistos junto com as
+recompensas das missões 3–5 e `MAP_INCOME_PER_MIN` dos bónus, depois do #81.

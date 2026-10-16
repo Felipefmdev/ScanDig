@@ -58,4 +58,18 @@ static func get_player_count(tree: SceneTree = null) -> int:
 static func current(tree: SceneTree = null) -> DifficultyProfile:
 	if override != null:
 		return override
-	return for_player_count(get_player_count(tree))
+	var p: DifficultyProfile = for_player_count(get_player_count(tree))
+	p.enemy_damage_multiplier *= map_damage_multiplier(tree)
+	return p
+
+
+## Fator do mapa atual (MapData.enemy_damage_multiplier); 1.0 fora de um mapa.
+static func map_damage_multiplier(tree: SceneTree = null) -> float:
+	var map: MapData = null
+	if SessionManager.instance != null:
+		map = SessionManager.instance.get_current_map()
+	if map == null and tree != null and tree.current_scene != null:
+		var spawner: SpotSpawner = tree.current_scene.get_node_or_null(^"SpotSpawner") as SpotSpawner
+		if spawner != null:
+			map = spawner.map_data
+	return map.enemy_damage_multiplier if map != null else 1.0
