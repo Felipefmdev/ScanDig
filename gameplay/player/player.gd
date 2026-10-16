@@ -468,11 +468,15 @@ func _find_ground_point(around: Vector3) -> Vector3:
 
 
 func _on_remote_dig_result(res: Dictionary, is_careful: bool, spot_pos: Vector3) -> void:
-	# TODO Fase 3 (#5 G): barulho de quem cavou, reportado deste lado (o host cavou com
-	# report_noise = false); com o DisturbanceMeter em rede isto passa a chegar ao host.
+	if not is_inside_tree() or res.is_empty():
+		return
+	if not bool(res.get("dug", true)):
+		return
+	# Fase 3 (#5 G): barulho de quem cavou, reportado deste lado (o host cavou com
+	# report_noise = false); com o DisturbanceMeter em rede isto chega ao host.
 	DisturbanceMeter.report(
 		DisturbanceMeter.NOISE_CAREFUL_DIG if is_careful else DisturbanceMeter.NOISE_FAST_DIG, spot_pos)
-	if bool(res.get("revealed", false)) and res.get("item") != null:
+	if bool(res.get("revealed_now", res.get("revealed", false))) and res.get("item") != null:
 		DisturbanceMeter.report(DisturbanceMeter.NOISE_REVEAL, spot_pos)
 	_show_dig_feedback(res, is_careful)
 

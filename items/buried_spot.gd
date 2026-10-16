@@ -137,9 +137,11 @@ func request_dig(is_careful: bool, damage_multiplier: float) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	var digger: Node3D = _player_of(sender)
 	if digger == null or digger.global_position.distance_to(global_position) > MAX_REMOTE_DIG_DISTANCE:
+		_dig_result.rpc_id(sender, {})
 		return
-	# TODO Fase 3 (#5 G): o barulho de um cliente é reportado por ele (report_noise=false aqui).
+	# Fase 3 (#5 G): o barulho de um cliente é reportado por ele (report_noise=false aqui).
 	var res: Dictionary = dig(is_careful, clampf(damage_multiplier, MIN_DAMAGE_MULTIPLIER, 1.0), false)
+	res["is_careful"] = is_careful
 	_dig_result.rpc_id(sender, result_to_net(res))
 
 
@@ -168,7 +170,10 @@ static func result_from_net(res: Dictionary) -> Dictionary:
 
 
 func _player_of(peer_id: int) -> Node3D:
-	for n: Node in get_tree().get_nodes_in_group(&"players"):
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	for n: Node in tree.get_nodes_in_group(&"players"):
 		if String(n.name) == str(peer_id):
 			return n as Node3D
 	return null
@@ -180,6 +185,7 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 	if _is_revealed or dirt_layers <= 0:
 		return {
 			"revealed": true,
+			"revealed_now": false,
 			"dirt_layers": 0,
 			"max_layers": MAX_DIRT_LAYERS,
 			"integrity": integrity,
@@ -187,7 +193,8 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 			"item": item,
 			"final_value": 0,
 			"is_rare_variant": is_rare_variant,
-			"is_perfect": false
+			"is_perfect": false,
+			"dug": false,
 		}
 
 	# Partículas de areia e terra a voar (todos os peers veem-nas se o spot é em rede).
@@ -258,6 +265,7 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 
 	return {
 		"revealed": revealed,
+		"revealed_now": revealed,
 		"dirt_layers": dirt_layers,
 		"max_layers": MAX_DIRT_LAYERS,
 		"integrity": integrity,
@@ -266,7 +274,8 @@ func dig(is_careful: bool, damage_multiplier: float = 1.0, report_noise: bool = 
 		"item": item,
 		"final_value": final_val,
 		"is_rare_variant": is_rare_variant,
-		"is_perfect": is_perfect
+		"is_perfect": is_perfect,
+		"dug": true,
 	}
 
 
