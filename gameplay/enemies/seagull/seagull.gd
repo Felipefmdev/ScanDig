@@ -37,6 +37,7 @@ const GROUND_STEAL_CHANCE: float = 0.5
 const GROUND_STEAL_RADIUS: float = 8.0
 const GROUND_GRAB_DISTANCE: float = 0.7
 var _ground_target: ItemPickup = null
+var _hinted: bool = false
 
 @export var circle_radius: float = 6.0
 ## Altura do voo em círculo acima do jogador.
@@ -161,6 +162,9 @@ func _enter_state(new_state: State) -> void:
 
 func _process_circle(delta: float) -> void:
 	var target: Node3D = _update_target(delta)
+	if target != null and target.has_method("show_hint") and not _hinted:
+		_hinted = true
+		target.call("show_hint", "seagull")
 	if target == null:
 		_start_escape(global_position - Vector3(0.0, 0.0, 1.0))
 		return

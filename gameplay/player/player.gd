@@ -1392,6 +1392,8 @@ func _respawn() -> void:
 ## Fome (estilo sobrevivência leve): cai com o tempo; saciado regenera vida, faminto perde.
 func tick_hunger(delta: float) -> void:
 	set_hunger(hunger - hunger_decay_per_sec * delta)
+	if hunger < max_hunger * 0.4:
+		show_hint("hunger")
 	if hunger <= 0.0:
 		_regen_timer = 0.0
 		_starve_timer += delta
@@ -1460,6 +1462,20 @@ func _refresh_hunger_hud() -> void:
 		_hunger_label.text += "   🎒 pesado"
 	elif backpack_weight_multiplier() < 1.0:
 		_hunger_label.text += "   🎒 -%d%%" % int(round((1.0 - backpack_weight_multiplier()) * 100.0))
+
+
+const HINTS: Script = preload("res://gameplay/player/player_hints.gd")
+
+
+## Mostra a dica `id` uma única vez por jogador (só o jogador local). Verdadeiro se mostrou.
+func show_hint(id: String) -> bool:
+	if not is_local():
+		return false
+	var text: String = HINTS.take(id)
+	if text.is_empty():
+		return false
+	_show_temporary_message(text, Color(0.75, 0.9, 1.0), 4.5)
+	return true
 
 
 ## HUD extra (estudo How to Fish): carga do arremesso e cronómetro do chefe.
@@ -2042,6 +2058,11 @@ func _on_inventory_changed() -> void:
 
 func _on_selected_slot_changed(_index: int) -> void:
 	_update_tool_in_hand()
+	var sel: CarriedItem = inventory.get_selected()
+	if sel != null and sel.tool_id == TOOL_DYNAMITE:
+		show_hint("dynamite")
+	elif sel != null and sel.item != null:
+		show_hint("throw")
 	_equip_left = tool_equip_time
 
 
@@ -2237,6 +2258,8 @@ func wear_tool(c: CarriedItem) -> void:
 		SFX.play_ui(SFX.PLAYER_DEATH, -8.0, 0.2)
 		_show_temporary_message("🔧 %s partiu de tanto uso! Compre outro na banca." % c.tool_name, UiPalette.ORANGE, 2.2)
 	else:
+		if c.wear_ratio() <= 0.5:
+			show_hint("wear")
 		if c.wear == int(ceilf(float(c.tool_data.durability) * 0.2)):
 			_show_temporary_message("🔧 %s está gasto (20%%)." % c.tool_name, Color(1.0, 0.85, 0.5), 1.6)
 		inventory.notify_changed()

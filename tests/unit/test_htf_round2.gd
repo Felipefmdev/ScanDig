@@ -268,3 +268,35 @@ func test_boss_timer_label_counts_down() -> void:
 	player._update_extra_hud()
 	assert_true(player.boss_timer_label.visible)
 	assert_string_contains(player.boss_timer_label.text, "1:15")
+
+
+# --- Dicas de primeira vez ---------------------------------------------------
+
+const HINTS: Script = preload("res://gameplay/player/player_hints.gd")
+
+
+func test_hints_show_once_and_never_touch_real_file() -> void:
+	assert_ne(HINTS.hints_path(), HINTS.PATH, "nos testes usa outro arquivo")
+	HINTS.set_hints_path("user://test_saves/hints_unit.cfg")
+	DirAccess.make_dir_recursive_absolute("user://test_saves")
+	if FileAccess.file_exists("user://test_saves/hints_unit.cfg"):
+		DirAccess.remove_absolute("user://test_saves/hints_unit.cfg")
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	assert_true(player.show_hint("hunger"), "primeira vez: mostra")
+	assert_false(player.show_hint("hunger"), "segunda vez: não")
+	assert_false(player.show_hint("nao_existe"))
+	assert_true(HINTS.has_seen("hunger"))
+	Engine.remove_meta(HINTS.PATH_META)
+
+
+func test_low_hunger_triggers_hint() -> void:
+	HINTS.set_hints_path("user://test_saves/hints_unit2.cfg")
+	if FileAccess.file_exists("user://test_saves/hints_unit2.cfg"):
+		DirAccess.remove_absolute("user://test_saves/hints_unit2.cfg")
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	player.set_hunger(30.0)
+	player.tick_hunger(0.1)
+	assert_true(HINTS.has_seen("hunger"), "fome baixa mostrou a dica")
+	Engine.remove_meta(HINTS.PATH_META)
