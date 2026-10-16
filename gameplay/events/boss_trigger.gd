@@ -22,6 +22,8 @@ const NIGHT_SKY: float = 0.3
 
 ## Kind do EnemySpawner (ex. &"octopus").
 @export var boss_kind: StringName = &""
+## Cena direta caso boss_kind não seja usado ou para sobreposição de testes.
+@export var fallback_scene: PackedScene = null
 ## Bandeira que acorda o chefe (vazio = só por trigger()).
 @export var trigger_flag: StringName = &""
 ## Bandeira posta quando o chefe morre (ex.: abre a relíquia do navio).
@@ -47,7 +49,23 @@ var _sky_contribution: float = 1.0
 var _ambient_color: Color = Color.WHITE
 
 
+## Verifica cedo se existe cena válida para o chefe deste gatilho.
+func can_spawn_boss() -> bool:
+	if fallback_scene != null:
+		return true
+	if boss_kind == &"":
+		return false
+	var spawner: EnemySpawner = EnemySpawner.find(get_tree()) if is_inside_tree() else null
+	if spawner != null and spawner.has_scene_for_kind(boss_kind):
+		return true
+	return EnemySpawner.has_kind_scene(boss_kind)
+
+
 func _ready() -> void:
+	if boss_kind == &"" and fallback_scene == null:
+		push_warning("[BossTrigger] '%s' configurado sem boss_kind nem fallback_scene" % name)
+	elif not can_spawn_boss():
+		push_warning("[BossTrigger] '%s' tem boss_kind sem cena valida: '%s'" % [name, boss_kind])
 	if trigger_flag != &"" and HostSync.is_host(self):
 		_watch_flag.call_deferred()
 	if HostSync.is_host(self):
@@ -62,25 +80,33 @@ func _watch_flag() -> void:
 		flags.when_set(trigger_flag, trigger)
 
 
-## Evento de missão: acorda o chefe; falso se já foi acordado.
+## Evento de missão: acorda o chefe; falso se já foi acordado ou se não tem cena.
 func start() -> bool:
 	if triggered or not HostSync.is_host(self):
 		return false
+	if not can_spawn_boss():
+		push_warning("[BossTrigger] start() recusado: chefe sem cena valida: '%s'" % boss_kind)
+		return false
 	trigger()
-	return triggered
+	return boss != null
 
 
-## Host: acorda o chefe (uma vez).
+## Host: acorda o chefe (uma vez). Valida cedo se o chefe tem cena antes de alterar o ambiente.
 func trigger() -> void:
 	if triggered or not HostSync.is_host(self):
 		return
+	if not can_spawn_boss():
+		push_warning("[BossTrigger] trigger() recusado: chefe sem cena ou boss_kind invalido: '%s'" % boss_kind)
+		return
+	var spawned: Node3D = spawn_boss(self, boss_kind, global_transform * spawn_offset, global_rotation.y, fallback_scene)
+	if spawned == null:
+		push_warning("[BossTrigger] trigger() falhou ao spawnar chefe: '%s'" % boss_kind)
+		return
+	boss = spawned
 	triggered = true
 	if night:
 		_set_night(true)
 		HostSync.broadcast(self, &"_rpc_night", [true])
-	boss = spawn_boss(self, boss_kind, global_transform * spawn_offset, global_rotation.y)
-	if boss == null:
-		return
 	if boss.has_signal(&"died"):
 		boss.connect(&"died", _on_boss_died)
 	boss_spawned.emit(boss)
@@ -159,17 +185,27 @@ static func _find_world_env(root: Node) -> WorldEnvironment:
 ## Partilhado com o BossAltar.
 static func spawn_boss(owner_node: Node3D, kind: StringName, world_pos: Vector3, rot_y: float,
 		fallback_scene: PackedScene = null) -> Node3D:
+	if owner_node == null:
+		push_warning("[BossTrigger] owner_node nulo ao tentar spawnar chefe")
+		return null
+	if kind == &"" and fallback_scene == null:
+		push_warning("[BossTrigger] chefe sem cena e sem kind definido")
+		return null
 	var tree: SceneTree = owner_node.get_tree() if owner_node.is_inside_tree() else null
 	var spawner: EnemySpawner = EnemySpawner.find(tree) if tree != null else null
 	if spawner != null and kind != &"":
-		var b: Node3D = spawner.spawn_from_data({"kind": String(kind), "pos": world_pos, "level": 0, "rot_y": rot_y})
-		if b != null:
-			return b
+		if spawner.has_scene_for_kind(kind):
+			var b: Node3D = spawner.spawn_from_data({"kind": String(kind), "pos": world_pos, "level": 0, "rot_y": rot_y})
+			if b != null:
+				return b
 	var scene: PackedScene = fallback_scene if fallback_scene != null else EnemySpawner.scene_for_kind(kind)
 	if scene == null:
 		push_warning("[BossTrigger] chefe sem cena: %s" % kind)
 		return null
 	var b2: Node3D = scene.instantiate() as Node3D
+	if b2 == null:
+		push_warning("[BossTrigger] falha ao instanciar cena do chefe: %s" % kind)
+		return null
 	var parent: Node = owner_node.get_parent() if owner_node.get_parent() != null else owner_node
 	# Posiciona antes de entrar na árvore: o _ready do chefe guarda a posição de partida.
 	b2.position = (parent as Node3D).global_transform.affine_inverse() * world_pos if parent is Node3D and parent.is_inside_tree() else world_pos

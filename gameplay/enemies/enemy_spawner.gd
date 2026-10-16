@@ -121,10 +121,17 @@ func _ready() -> void:
 	_net_spawner.spawn_path = _net_spawner.get_path_to(self)
 	if crab_scene == null:
 		crab_scene = scene_for_kind(primary_kind)
+		if crab_scene == null and primary_kind != &"":
+			push_warning("[EnemySpawner] primary_kind sem cena valida: '%s'" % primary_kind)
 	if hermit_scene == null:
 		hermit_scene = scene_for_kind(secondary_kind)
+		if hermit_scene == null and secondary_kind != &"":
+			push_warning("[EnemySpawner] secondary_kind sem cena valida: '%s'" % secondary_kind)
 	if seagull_scene == null:
 		seagull_scene = DEFAULT_SEAGULL_SCENE
+	for ak: StringName in ambient_kinds:
+		if not has_scene_for_kind(ak):
+			push_warning("[EnemySpawner] ambient_kind sem cena valida: '%s'" % ak)
 	# O primeiro caranguejo ambiente chega mais cedo (pressão logo no 1.º minuto)
 	_ambient_timer = randf_range(ambient_interval_min, ambient_interval_max) * _interval_multiplier() * 0.5
 	_seagull_timer = randf_range(seagull_interval_min, seagull_interval_max) * _interval_multiplier()
@@ -276,26 +283,62 @@ static func make_spawn_data(kind: StringName, pos: Vector3, level: int) -> Dicti
 	return {"kind": String(kind), "pos": pos, "level": level}
 
 
+## Verifica se o kind existe na tabela e se o ficheiro de cena existe no disco.
+static func has_kind_scene(kind: StringName) -> bool:
+	if kind == &"" or not KIND_SCENES.has(kind):
+		return false
+	return ResourceLoader.exists(KIND_SCENES[kind])
+
+
 static func scene_for_kind(kind: StringName) -> PackedScene:
-	if not KIND_SCENES.has(kind):
+	if not has_kind_scene(kind):
 		return null
 	return load(KIND_SCENES[kind]) as PackedScene
+
+
+## Verifica se esta instância tem cena (por override ou tabela) para o kind dado.
+func has_scene_for_kind(kind: StringName) -> bool:
+	if kind == &"":
+		return false
+	return _scene_override(kind) != null or has_kind_scene(kind)
+
+
+## Valida a estrutura mínima necessária de spawn data antes de tocar em campos ou replicar.
+static func is_valid_spawn_data(data: Variant) -> bool:
+	if not (data is Dictionary):
+		return false
+	var d: Dictionary = data as Dictionary
+	if not d.has("pos") or not (d["pos"] is Vector3):
+		return false
+	if not d.has("kind"):
+		return false
+	var k: Variant = d["kind"]
+	if not (k is String or k is StringName):
+		return false
+	if String(k).is_empty():
+		return false
+	return true
 
 
 ## Host: cria o inimigo descrito por {"kind", "pos", "level"[, "rot_y"]} como filho deste
 ## spawner e replica-o (MultiplayerSpawner). Não verifica max_alive (quem chama decide).
 ## Devolve null num cliente ou se os dados forem inválidos.
-func spawn_from_data(data: Dictionary) -> Node3D:
+func spawn_from_data(data: Variant) -> Node3D:
 	if not can_spawn():
 		return null
-	if _scene_for_data(data) == null:  # valida antes de replicar
+	if not is_valid_spawn_data(data):
 		push_warning("[EnemySpawner] dados de spawn invalidos: %s" % str(data))
+		return null
+	var d: Dictionary = data as Dictionary
+	var scene: PackedScene = _scene_for_data(d)
+	if scene == null:
+		push_warning("[EnemySpawner] kind sem cena valida para spawn: %s" % str(d.get("kind", "")))
 		return null
 	var enemy: Node3D = null
 	if _net_spawner != null and _net_spawner.is_inside_tree():
-		enemy = _net_spawner.spawn(data) as Node3D
+		enemy = _net_spawner.spawn(d) as Node3D
 	else:
-		enemy = _create_from_data(data) as Node3D
+		enemy = _create_from_data(d) as Node3D
 		if enemy != null:
 			add_child(enemy)
 	if enemy == null:
@@ -307,12 +350,17 @@ func spawn_from_data(data: Dictionary) -> Node3D:
 
 ## spawn_function: corre no host e em cada cliente com os mesmos dados.
 func _create_from_data(data: Variant) -> Node:
+	if not is_valid_spawn_data(data):
+		return null
 	var d: Dictionary = data as Dictionary
 	var scene: PackedScene = _scene_for_data(d)
 	if scene == null:
 		return null
 	var enemy: Node3D = scene.instantiate() as Node3D
-	enemy.position = global_transform.affine_inverse() * (d["pos"] as Vector3) if is_inside_tree() else d["pos"]
+	if enemy == null:
+		return null
+	var pos: Vector3 = d["pos"] as Vector3
+	enemy.position = global_transform.affine_inverse() * pos if is_inside_tree() else pos
 	enemy.rotation.y = float(d.get("rot_y", 0.0))
 	if "spawn_level" in enemy:
 		enemy.set("spawn_level", int(d.get("level", 0)))
@@ -322,10 +370,11 @@ func _create_from_data(data: Variant) -> Node:
 
 
 ## Cena para os dados, ou null se o kind ou a posição forem inválidos.
-func _scene_for_data(data: Dictionary) -> PackedScene:
-	if not data.get("pos") is Vector3:
+func _scene_for_data(data: Variant) -> PackedScene:
+	if not is_valid_spawn_data(data):
 		return null
-	var kind: StringName = StringName(str(data.get("kind", "")))
+	var d: Dictionary = data as Dictionary
+	var kind: StringName = StringName(str(d["kind"]))
 	var scene: PackedScene = _scene_override(kind)
 	return scene if scene != null else scene_for_kind(kind)
 
