@@ -149,6 +149,7 @@ func _connect_session() -> void:
 		_connect_if_has(GameState.instance, &"state_synced", _on_state_synced)
 		_connect_if_has(GameState.instance, &"quest_completed", _on_quest_completed)
 		_connect_if_has(GameState.instance, &"secret_found", _on_secret_found)
+		_connect_if_has(GameState.instance, &"creature_discovered", _on_creature_discovered)
 	if NetworkManager.instance != null:
 		_connect_if_has(NetworkManager.instance, &"session_left", _on_session_left)
 	if _session == null:
@@ -334,6 +335,13 @@ func _on_secret_found(secret_id: String) -> void:
 	var maps: Variant = _session_call(&"get_available_maps", [])
 	var map_list: Array = maps as Array if maps is Array else []
 	_enqueue_toast("Segredo encontrado! (%s)" % UiFormat.secret_count_text(map_id, counts.get(map_id, {}), map_list))
+
+
+## Primeira vez que se derrota um tipo de criatura (Diário de campo).
+func _on_creature_discovered(kind: String) -> void:
+	var total: int = GameState.CREATURES.size()
+	var seen: int = GameState.instance.seen_creatures.size() if GameState.instance != null else 0
+	_enqueue_toast("📖 Nova criatura no diário: %s (%d/%d)" % [GameState.CREATURES.get(kind, kind), seen, total])
 
 
 func _enqueue_toast(text: String) -> void:

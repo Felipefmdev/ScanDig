@@ -26,7 +26,7 @@ const TEST_SAVES_DIR: String = "user://test_saves"
 const MSG_CORRUPT: String = "O save estava corrompido e foi guardado como backup. Começando um jogo novo."
 const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar."
 ## Campos que o apply_snapshot só aceita como Array.
-const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets"]
+const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures"]
 ## Campos numéricos opcionais (team_money é obrigatório e conferido à parte).
 const NUMBER_FIELDS: Array[String] = ["current_day", "equipped_detector_level", "saved_at"]
 
@@ -243,6 +243,7 @@ func save_game(target_state: GameState = null) -> Error:
 		"defeated_bosses": Array(state.defeated_bosses),
 		"completed_quests": Array(state.completed_quests),
 		"found_secrets": Array(state.found_secrets),
+		"seen_creatures": Array(state.seen_creatures),
 	}
 
 	var error: Error = save_to_file(save_data)
@@ -430,6 +431,9 @@ func _upgrade_save_data(source: Dictionary) -> Dictionary:
 		save_data["completed_quests"] = []
 	if not save_data.has("found_secrets"):
 		save_data["found_secrets"] = []
+	# Diário de campo: saves anteriores começam com o diário vazio.
+	if not save_data.has("seen_creatures"):
+		save_data["seen_creatures"] = []
 	return save_data
 
 

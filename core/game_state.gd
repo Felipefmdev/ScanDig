@@ -21,6 +21,8 @@ signal map_unlock_result(map_id: String, success: bool, message: String)
 signal quest_completed(quest_id: String, reward: int)
 ## Em todos os peers, uma vez por entrada nova em found_secrets.
 signal secret_found(secret_id: String)
+## Em todos os peers, uma vez por criatura nova no Diário de campo (seen_creatures).
+signal creature_discovered(kind: String)
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
@@ -59,6 +61,15 @@ const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", 
 	"ruinas_mumia", "ruinas_ovo_esqueleto", "ruinas_ovo_pintura", "ruinas_reliquia_altar", "ruinas_reliquia_nicho", "ruinas_reliquia_parede",
 	"geleira_morsa_ancia", "geleira_ovo_boneco", "geleira_ovo_pinguim", "geleira_reliquia_iglu", "geleira_reliquia_lago", "geleira_reliquia_mamute", "geleira_yeti",
 	"cratera_o_eco", "cratera_ovo_disco", "cratera_ovo_sonda", "cratera_reliquia_engrenagem", "cratera_reliquia_geodo", "cratera_reliquia_orbe"]
+## Diário de campo (estudo How to Fish: o diário de peixes). Kind do EnemySpawner -> nome.
+## Chefes ficam em defeated_bosses; aqui só as criaturas comuns.
+const CREATURES: Dictionary = {
+	"crab": "Caranguejo", "hermit_crab": "Ermitão", "seagull": "Gaivota",
+	"snake": "Cobra", "mole": "Toupeira", "crow": "Corvo",
+	"stone_guardian": "Guardião de Pedra", "bat": "Morcego",
+	"ice_wolf": "Lobo do Gelo", "penguin": "Pinguim-ladrão", "walrus": "Morsa",
+	"crawler": "Rastejante", "floater": "Flutuante",
+}
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
 ## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
 ## Mapas 3-5: idol_mummy, cave_yeti, ancient_walrus, the_sleeper, the_echo (#75).
@@ -94,6 +105,7 @@ var unlocked_maps: Array[String] = []
 var defeated_bosses: Array[String] = []
 var completed_quests: Array[String] = []
 var found_secrets: Array[String] = []
+var seen_creatures: Array[String] = []
 
 
 func _enter_tree() -> void:
@@ -485,6 +497,26 @@ func _host_report_secret(secret_id: String) -> void:
 	_broadcast_snapshot()
 
 
+## Uma criatura morreu (no host). Primeira vez de cada tipo entra no diário.
+func report_creature(kind: String) -> void:
+	if is_authority():
+		_host_report_creature(kind)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_report_creature(kind: String) -> void:
+	if not is_authority() or not _is_host_sender("criatura", kind):
+		return
+	if not CREATURES.has(kind) or seen_creatures.has(kind):
+		return
+	var data: Dictionary = get_snapshot()
+	var seen: Array = Array(seen_creatures).duplicate()
+	seen.append(kind)
+	data["seen_creatures"] = seen
+	apply_snapshot(data)
+	_broadcast_snapshot()
+
+
 ## Chefes, missões e segredos acontecem só no mundo do host: aceita a chamada local
 ## (sender 0) ou do próprio host. Compras, entregas e desbloqueios aceitam qualquer peer.
 func _is_host_sender(kind: String, id: String) -> bool:
@@ -508,6 +540,7 @@ func get_snapshot() -> Dictionary:
 		"defeated_bosses": Array(defeated_bosses),
 		"completed_quests": Array(completed_quests),
 		"found_secrets": Array(found_secrets),
+		"seen_creatures": Array(seen_creatures),
 	}
 
 
@@ -533,6 +566,11 @@ func apply_snapshot(data: Dictionary) -> void:
 		var secrets: Array[String] = _to_id_list(data["found_secrets"])
 		new_secrets = _new_ids(found_secrets, secrets)
 		found_secrets = secrets
+	var new_creatures: Array[String] = []
+	if data.get("seen_creatures") is Array:
+		var seen: Array[String] = _to_id_list(data["seen_creatures"])
+		new_creatures = _new_ids(seen_creatures, seen)
+		seen_creatures = seen
 	if data.get("upgrade_levels") is Dictionary:
 		# JSON devolve números como float e pode conter chaves obsoletas.
 		var source: Dictionary = data["upgrade_levels"]
@@ -551,6 +589,8 @@ func apply_snapshot(data: Dictionary) -> void:
 		quest_completed.emit(quest_id, int(quest.get("reward", 0)))
 	for secret_id: String in new_secrets:
 		secret_found.emit(secret_id)
+	for kind: String in new_creatures:
+		creature_discovered.emit(kind)
 	state_synced.emit()
 
 
@@ -653,6 +693,7 @@ func reset_state() -> void:
 	defeated_bosses.clear()
 	completed_quests.clear()
 	found_secrets.clear()
+	seen_creatures.clear()
 	_broadcast_snapshot()
 
 

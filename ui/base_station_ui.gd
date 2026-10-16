@@ -624,6 +624,8 @@ func _refresh_secrets_label() -> void:
 	for map_id: String in counts:
 		parts.append(UiFormat.secret_count_text(map_id, counts[map_id], map_list))
 	secrets_label.text = "Segredos —" + UiFormat.NBSP + (UiFormat.NBSP + "• ").join(parts)
+	var seen: int = _game_state.seen_creatures.size() if _game_state != null and "seen_creatures" in _game_state else 0
+	secrets_label.text += "\nDiário de campo —" + UiFormat.NBSP + "%d/%d criaturas" % [seen, GameState.CREATURES.size()]
 
 
 func _on_secret_found(_secret_id: String) -> void:

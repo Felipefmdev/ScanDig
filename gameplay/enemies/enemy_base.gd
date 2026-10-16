@@ -659,6 +659,8 @@ func _die() -> void:
 	_dead = true
 	if has_simulation_authority():
 		try_drop_meat()
+		if GameState.instance != null and not scene_file_path.is_empty():
+			GameState.instance.report_creature(scene_file_path.get_file().get_basename())
 	_set_stun_fx(false)
 	died.emit()
 	_on_died()

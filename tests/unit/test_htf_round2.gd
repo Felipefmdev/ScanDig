@@ -79,3 +79,39 @@ func test_backpack_slow_is_capped() -> void:
 	for i: int in 3:
 		player.inventory.add_item(_find(ItemData.SizeCategory.COLOSSAL))
 	assert_almost_eq(player.backpack_weight_multiplier(), 1.0 - Player.BACKPACK_SLOW_MAX, 0.001)
+
+
+# --- 4. Diário de campo ------------------------------------------------------
+
+func test_journal_records_each_creature_once() -> void:
+	var gs: GameState = GameState.instance
+	assert_not_null(gs)
+	var before: Array = Array(gs.seen_creatures)
+	gs.seen_creatures.clear()
+	watch_signals(gs)
+	gs.report_creature("snake")
+	gs.report_creature("snake")
+	gs.report_creature("dragao_inexistente")
+	assert_eq(Array(gs.seen_creatures), ["snake"], "uma entrada, só criaturas conhecidas")
+	assert_signal_emit_count(gs, "creature_discovered", 1)
+	assert_true(gs.get_snapshot().has("seen_creatures"), "vai no snapshot (rede e save)")
+	gs.seen_creatures.assign(before)
+
+
+func test_enemy_death_reports_to_journal() -> void:
+	var gs: GameState = GameState.instance
+	var before: Array = Array(gs.seen_creatures)
+	gs.seen_creatures.clear()
+	var snake: EnemyBase = SNAKE_SCENE.instantiate() as EnemyBase
+	add_child_autofree(snake)
+	snake._die()
+	assert_true(gs.seen_creatures.has("snake"), "a cobra entrou no diário")
+	gs.seen_creatures.assign(before)
+
+
+func test_every_spawner_kind_is_known_or_boss() -> void:
+	for kind: StringName in EnemySpawner.KIND_SCENES:
+		var k: String = String(kind)
+		var is_boss: bool = GameState.EXTRA_BOSSES.has(k) or GameState.MAP_UNLOCK_BOSSES.values().any(
+			func(e: Dictionary) -> bool: return e["boss_id"] == k)
+		assert_true(GameState.CREATURES.has(k) or is_boss, "%s no diário ou é chefe" % k)
