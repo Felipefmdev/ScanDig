@@ -83,6 +83,7 @@ func get_save_summary() -> Dictionary:
 		"money": int(data.get("team_money", 0)) if read["status"] == ReadStatus.OK else 0,
 		"museum_found": (found as Array).size() if read["status"] == ReadStatus.OK and found is Array else 0,
 		"museum_total": state.get_total_catalog_items() if state != null else 0,
+		"game_completed": bool(data.get("game_completed", false)) or (data.get("defeated_bosses", []) is Array and (data.get("defeated_bosses", []) as Array).has("the_sleeper")),
 		"saved_at": int(data.get("saved_at", 0)) if read["status"] == ReadStatus.OK else 0,
 		"error": str(read["error"]),
 	}
@@ -244,6 +245,7 @@ func save_game(target_state: GameState = null) -> Error:
 		"completed_quests": Array(state.completed_quests),
 		"found_secrets": Array(state.found_secrets),
 		"seen_creatures": Array(state.seen_creatures),
+		"game_completed": state.game_completed,
 	}
 
 	var error: Error = save_to_file(save_data)
@@ -411,6 +413,8 @@ func _validate_fields(data: Dictionary) -> String:
 			return "Campo '%s' não é uma lista." % key
 	if data.has("upgrade_levels") and not (data["upgrade_levels"] is Dictionary):
 		return "Campo 'upgrade_levels' inválido."
+	if data.has("game_completed") and not (data["game_completed"] is bool):
+		return "Campo 'game_completed' inválido."
 	return ""
 
 
@@ -434,6 +438,12 @@ func _upgrade_save_data(source: Dictionary) -> Dictionary:
 	# Diário de campo: saves anteriores começam com o diário vazio.
 	if not save_data.has("seen_creatures"):
 		save_data["seen_creatures"] = []
+	# Conclusão do jogo (#81): se já venceu the_sleeper, marca como concluído.
+	if not save_data.has("game_completed"):
+		var defeated: Variant = save_data.get("defeated_bosses", [])
+		save_data["game_completed"] = (defeated is Array) and (defeated as Array).has("the_sleeper")
+	else:
+		save_data["game_completed"] = bool(save_data["game_completed"])
 	return save_data
 
 

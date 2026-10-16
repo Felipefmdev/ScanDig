@@ -23,6 +23,8 @@ signal quest_completed(quest_id: String, reward: int)
 signal secret_found(secret_id: String)
 ## Em todos os peers, uma vez por criatura nova no Diário de campo (seen_creatures).
 signal creature_discovered(kind: String)
+## Em todos os peers, quando o jogo é concluído (derrota de the_sleeper).
+signal game_completed_changed(completed: bool)
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
@@ -118,6 +120,7 @@ var defeated_bosses: Array[String] = []
 var completed_quests: Array[String] = []
 var found_secrets: Array[String] = []
 var seen_creatures: Array[String] = []
+var game_completed: bool = false
 
 
 func _enter_tree() -> void:
@@ -257,6 +260,10 @@ func is_quest_completed(quest_id: String) -> bool:
 
 func is_secret_found(secret_id: String) -> bool:
 	return found_secrets.has(secret_id)
+
+
+func is_game_completed() -> bool:
+	return game_completed
 
 
 ## "" se pode desbloquear agora; senão o motivo, em português, pronto para a UI.
@@ -475,7 +482,14 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 		known = known or str(entry["boss_id"]) == boss_id
 	if known:
 		defeated_bosses.append(boss_id)
-		_broadcast_snapshot()
+		var data: Dictionary = get_snapshot()
+		if boss_id == "the_sleeper":
+			data["game_completed"] = true
+		apply_snapshot(data)
+		if _is_online():
+			_receive_snapshot.rpc(data)
+		if boss_id == "the_sleeper" and SaveManager.instance != null and SaveManager.instance.is_progress_applied():
+			SaveManager.instance.save_game()
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -588,6 +602,7 @@ func get_snapshot() -> Dictionary:
 		"completed_quests": Array(completed_quests),
 		"found_secrets": Array(found_secrets),
 		"seen_creatures": Array(seen_creatures),
+		"game_completed": game_completed,
 	}
 
 
@@ -618,6 +633,11 @@ func apply_snapshot(data: Dictionary) -> void:
 		var seen: Array[String] = _to_id_list(data["seen_creatures"])
 		new_creatures = _new_ids(seen_creatures, seen)
 		seen_creatures = seen
+	var old_completed: bool = game_completed
+	if data.has("game_completed"):
+		game_completed = bool(data["game_completed"])
+	if defeated_bosses.has("the_sleeper"):
+		game_completed = true
 	if data.get("upgrade_levels") is Dictionary:
 		# JSON devolve números como float e pode conter chaves obsoletas.
 		var source: Dictionary = data["upgrade_levels"]
@@ -638,6 +658,8 @@ func apply_snapshot(data: Dictionary) -> void:
 		secret_found.emit(secret_id)
 	for kind: String in new_creatures:
 		creature_discovered.emit(kind)
+	if game_completed != old_completed:
+		game_completed_changed.emit(game_completed)
 	state_synced.emit()
 
 
@@ -741,6 +763,7 @@ func reset_state() -> void:
 	completed_quests.clear()
 	found_secrets.clear()
 	seen_creatures.clear()
+	game_completed = false
 	_broadcast_snapshot()
 
 

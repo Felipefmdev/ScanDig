@@ -358,6 +358,7 @@ func _resolve_game_state() -> void:
 		_connect_game_state_signal(&"progression_changed", _on_progression_changed)
 		_connect_game_state_signal(&"secret_found", _on_secret_found)
 		_connect_game_state_signal(&"state_synced", _refresh_secrets_label)
+		_connect_game_state_signal(&"game_completed_changed", _on_game_completed_changed)
 	
 	_refresh_museum_display()
 	_refresh_secrets_label()
@@ -602,6 +603,14 @@ func _refresh_museum_display() -> void:
 	for item in _catalog_items:
 		museum_item_list.add_item(museum_line(item, discovered.has(item.id)))
 
+	if tab_container != null and tab_container.get_tab_count() > 1:
+		if _game_state != null and _game_state.game_completed:
+			tab_container.set_tab_title(1, "Museu de Achados ★")
+		else:
+			tab_container.set_tab_title(1, "Museu de Achados")
+	if museum_feedback_label != null and museum_feedback_label.text.is_empty() and _game_state != null and _game_state.game_completed:
+		museum_feedback_label.text = "🏆 Jogo concluído — Modo Museu completo ativo!"
+
 
 ## Linha do Museu. Itens que não são escavados (missão, relíquia escondida, troféu de chefe,
 ## easter egg) têm depth_cm 0: mostram "Achado especial" no lugar da profundidade.
@@ -626,6 +635,21 @@ func _refresh_secrets_label() -> void:
 	secrets_label.text = "Segredos —" + UiFormat.NBSP + (UiFormat.NBSP + "• ").join(parts)
 	var seen: int = _game_state.seen_creatures.size() if _game_state != null and "seen_creatures" in _game_state else 0
 	secrets_label.text += "\nDiário de campo —" + UiFormat.NBSP + "%d/%d criaturas" % [seen, GameState.CREATURES.size()]
+	if _game_state != null and _game_state.game_completed:
+		var museum_found: int = _game_state.discovered_items.size()
+		var museum_total: int = _game_state.get_total_catalog_items()
+		var secrets_found: int = _game_state.found_secrets.size()
+		var secrets_total: int = GameState.SECRETS.size()
+		secrets_label.text += "\n★ Jogo concluído (Modo Museu completo) — Peças: %d/%d • Segredos: %d/%d • Diário: %d/%d" % [
+			museum_found, museum_total,
+			secrets_found, secrets_total,
+			seen, GameState.CREATURES.size()
+		]
+
+
+func _on_game_completed_changed(_completed: bool) -> void:
+	_refresh_secrets_label()
+	_refresh_museum_display()
 
 
 func _on_secret_found(_secret_id: String) -> void:
