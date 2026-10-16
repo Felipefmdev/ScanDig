@@ -27,7 +27,7 @@ func _initialize() -> void:
 	special.base_value = 600
 	special.depth_cm = 0
 	var special_line: String = BaseStationUI.museum_line(special, false)
-	_check(special_line == "[NÃO DESCOBERTO] Anel do Poço (Valor: R$ 600 | Achado especial)" and not special_line.contains("Profundidade"), "museu especial: '%s'" % special_line)
+	_check(special_line == "[ ? ] Anel do Poço (Valor: R$ 600 | Achado especial)" and not special_line.contains("Profundidade"), "museu especial: '%s'" % special_line)
 	var dug: ItemData = ItemData.new()
 	dug.display_name = "Aliança de Ouro"
 	dug.base_value = 250
