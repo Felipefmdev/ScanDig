@@ -40,6 +40,9 @@ func _run() -> void:
 	var status_label: Label = ui.map_status_label
 	_check(unlock_btn != null, "UnlockMapButton presente")
 	_check(status_label != null, "MapStatusLabel presente")
+	# #59: cor de aviso no tamanho padrão do theme (não o 15 do WarningLabel).
+	_check(status_label.theme_type_variation == &"StatusLabel", "MapStatusLabel usa StatusLabel: %s" % status_label.theme_type_variation)
+	_check(status_label.get_theme_font_size("font_size") == ui.map_list.get_theme_font_size("font_size") and status_label.get_theme_color("font_color").is_equal_approx(UiPalette.RED_BURNT), "MapStatusLabel no tamanho padrão e em RED_BURNT: %d" % status_label.get_theme_font_size("font_size"))
 
 	gs.load_snapshot({"team_money": 2500, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(3)

@@ -218,6 +218,10 @@ func _labels() -> void:
 	_theme.set_font_size("font_size", "WarningLabel", 15)
 	_theme.set_color("font_color", "WarningLabel", P.RED_BURNT)
 
+	# Motivo de bloqueio em linha própria (aba Expedições): cor de aviso no tamanho padrão.
+	_variation("StatusLabel", "Label")
+	_theme.set_color("font_color", "StatusLabel", P.RED_BURNT)
+
 	# Código da sala: letras GOLD com contorno INK numa plaquinha INK.
 	_variation("CodeLabel", "Label")
 	_theme.set_font_size("font_size", "CodeLabel", 30)

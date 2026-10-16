@@ -202,6 +202,7 @@ func _check_contrast() -> void:
 		[UiPalette.PAPER, UiPalette.RED_BURNT, "DangerButton"],
 		[UiPalette.PAPER, UiPalette.RED_BURNT.darkened(0.15), "DangerButton pressionado"],
 		[UiPalette.RED_BURNT, UiPalette.PAPER, "WarningLabel"],
+		[UiPalette.RED_BURNT, UiPalette.PAPER, "StatusLabel"],
 		[UiPalette.WOOD, UiPalette.PAPER, "HintLabel"],
 		[UiPalette.WOOD, UiPalette.PAPER_LIGHT, "placeholder do LineEdit"],
 		[UiPalette.METAL, UiPalette.PAPER_LIGHT, "mapa bloqueado na lista"],

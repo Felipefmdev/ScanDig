@@ -182,7 +182,7 @@ size_flags_vertical = 3
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_type_variation = &"WarningLabel"
+theme_type_variation = &"StatusLabel"
 autowrap_mode = 3
 
 [node name="UnlockMapButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
