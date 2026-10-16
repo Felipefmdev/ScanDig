@@ -620,10 +620,45 @@ func death_fling() -> void:
 # Utilitários para subclasses
 # ---------------------------------------------------------------------------
 
+## Bichos de carne e osso que podem largar Carne Crua (chance por cena). Pedra, morcego,
+## gaivota e criaturas da Cratera não. Chance baixa: comida fácil quebraria a fome.
+const MEAT_DROP_CHANCE: Dictionary = {
+	"crab": 0.15, "hermit_crab": 0.15, "snake": 0.15, "mole": 0.15, "crow": 0.12,
+	"ice_wolf": 0.15, "penguin": 0.15, "walrus": 0.2,
+}
+const MEAT_ITEM: String = "res://items/tools/carne_crua.tres"
+
+
+func meat_drop_chance() -> float:
+	if scene_file_path.is_empty():
+		return 0.0
+	return float(MEAT_DROP_CHANCE.get(scene_file_path.get_file().get_basename(), 0.0))
+
+
+## Só quem simula (host/solo) sorteia; o PickupsRoot replica o item. `roll` para testes.
+func try_drop_meat(roll: float = -1.0) -> bool:
+	var chance: float = meat_drop_chance()
+	if chance <= 0.0 or not is_inside_tree():
+		return false
+	if roll < 0.0:
+		roll = randf()
+	if roll >= chance:
+		return false
+	var td: ToolData = load(MEAT_ITEM) as ToolData
+	if td == null:
+		return false
+	var parent: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+	ItemPickup.spawn(parent, CarriedItem.create_from_tool_data(td), global_position + Vector3.UP * 0.5,
+		Vector3(randf_range(-1.0, 1.0), 3.0, randf_range(-1.0, 1.0)))
+	return true
+
+
 func _die() -> void:
 	if _dead:
 		return
 	_dead = true
+	if has_simulation_authority():
+		try_drop_meat()
 	_set_stun_fx(false)
 	died.emit()
 	_on_died()

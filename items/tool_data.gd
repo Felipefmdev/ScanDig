@@ -31,3 +31,7 @@ enum Category {
 @export var dig_weight: float = 1.0
 ## Comida viva: no chão se debate e tenta fugir (minhoca, tatuíra, larva).
 @export var wriggles: bool = false
+## No chão estraga e some depois disto (s); 0 = não estraga.
+@export var spoil_seconds: float = 0.0
+## Chance de enjoar ao comer (crua): perde saciedade em vez de ganhar.
+@export_range(0.0, 1.0, 0.05) var nausea_chance: float = 0.0

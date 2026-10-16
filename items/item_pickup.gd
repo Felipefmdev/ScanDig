@@ -117,9 +117,20 @@ func _wriggle(delta: float) -> void:
 	apply_torque_impulse(Vector3(randf_range(-0.15, 0.15), randf_range(-0.3, 0.3), randf_range(-0.15, 0.15)) * mass)
 
 
+var _spoil_left: float = -1.0
+
+
 func _physics_process(delta: float) -> void:
-	if is_wriggling_food() and (not networked or multiplayer.is_server()):
+	var authority: bool = not networked or multiplayer.is_server()
+	if is_wriggling_food() and authority:
 		_wriggle(delta)
+	if authority and carried != null and carried.tool_data != null and carried.tool_data.spoil_seconds > 0.0:
+		if _spoil_left < 0.0:
+			_spoil_left = carried.tool_data.spoil_seconds
+		_spoil_left -= delta
+		if _spoil_left <= 0.0:
+			queue_free()  # estragou (em rede o PickupsRoot propaga o despawn)
+			return
 	if not networked:
 		return
 	if multiplayer.is_server():

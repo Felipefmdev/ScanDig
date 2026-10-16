@@ -2148,12 +2148,26 @@ func eat(c: CarriedItem) -> bool:
 		_show_temporary_message("Sem fome agora.", Color(0.9, 0.9, 0.9), 1.0)
 		return false
 	var amount: float = c.tool_data.heal_amount
+	if c.tool_data.nausea_chance > 0.0 and randf() < c.tool_data.nausea_chance:
+		# Crua: às vezes cai mal. Perde saciedade, não cura, e a câmara balança.
+		set_hunger(hunger - c.tool_data.hunger_restore)
+		_shake_camera(0.03, 0.4)
+		SFX.play_ui(SFX.PLAYER_HURT, -8.0)
+		_show_temporary_message("🤢 %s caiu mal... -%d saciedade" % [c.tool_name, int(c.tool_data.hunger_restore)],
+			UiPalette.ORANGE, 1.6)
+		_remove_eaten(c)
+		return true
 	heal(amount)
 	set_hunger(hunger + c.tool_data.hunger_restore)
 	SFX.play_ui(SFX.MEDKIT, -6.0, 0.15)
 	_show_temporary_message("😋 %s: +%d vida, +%d saciedade" % [c.tool_name, int(amount), int(c.tool_data.hunger_restore)],
 		Color(0.5, 1.0, 0.55), 1.2)
-	# Sem o aviso "acabou" do _consume: comer é sempre uma unidade só.
+	_remove_eaten(c)
+	return true
+
+
+## Sem o aviso "acabou" do _consume: comer é sempre uma unidade só.
+func _remove_eaten(c: CarriedItem) -> void:
 	if c.consume_charge():
 		var idx: int = inventory.slots.find(c)
 		if idx >= 0:
@@ -2161,7 +2175,6 @@ func eat(c: CarriedItem) -> bool:
 	else:
 		inventory.notify_changed()
 	_use_cooldown = 0.6
-	return true
 
 
 ## Come a primeira comida da mochila (bots e atalhos). Falso se não havia ou não comeu.

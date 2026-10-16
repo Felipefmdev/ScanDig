@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"carne_crua"
+display_name = "Carne Crua"
+description = "Do bicho que você acabou de derrotar. Mata pouco a fome e pode enjoar. Estraga rápido no chão."
+price = 0
+category = 2
+charges = 1
+color = Color(0.78, 0.3, 0.3, 1)
+heal_amount = 6.0
+hunger_restore = 10.0
+spoil_seconds = 40.0
+nausea_chance = 0.25

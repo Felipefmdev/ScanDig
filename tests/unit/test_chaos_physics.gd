@@ -103,3 +103,53 @@ func test_live_food_wriggles() -> void:
 	assert_gt(w.linear_velocity.y, 0.5, "a minhoca pula")
 	w.queue_free()
 	b.queue_free()
+
+
+# --- Carne Crua (balanceada) -------------------------------------------------
+
+func test_meat_is_weaker_than_dug_food() -> void:
+	var meat: ToolData = load("res://items/tools/carne_crua.tres") as ToolData
+	assert_eq(meat.category, ToolData.Category.FOOD)
+	assert_eq(meat.dig_maps.size(), 0, "não sai do chão")
+	assert_lte(meat.price, 0, "não se compra")
+	for id: String in ["minhoca", "tatuira", "liquen_gelado"]:
+		var food: ToolData = load("res://items/tools/%s.tres" % id) as ToolData
+		assert_lt(meat.heal_amount, food.heal_amount, "cura menos que %s" % id)
+		assert_lt(meat.hunger_restore, food.hunger_restore, "sacia menos que %s" % id)
+	assert_gt(meat.spoil_seconds, 0.0, "estraga no chão")
+	assert_gt(meat.nausea_chance, 0.0, "pode enjoar")
+
+
+func test_only_flesh_enemies_drop_meat_rarely() -> void:
+	var snake: EnemyBase = (load("res://gameplay/enemies/snake/snake.tscn") as PackedScene).instantiate() as EnemyBase
+	var stone: EnemyBase = (load("res://gameplay/enemies/stone_guardian/stone_guardian.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child_autofree(snake)
+	add_child_autofree(stone)
+	assert_between(snake.meat_drop_chance(), 0.05, 0.25, "cobra: chance baixa")
+	assert_eq(stone.meat_drop_chance(), 0.0, "guardião de pedra não tem carne")
+	assert_false(snake.try_drop_meat(0.99), "rolagem alta: nada")
+	assert_true(snake.try_drop_meat(0.0), "rolagem baixa: carne")
+	assert_false(stone.try_drop_meat(0.0))
+
+
+func test_meat_spoils_on_ground() -> void:
+	var meat: ToolData = load("res://items/tools/carne_crua.tres") as ToolData
+	var p: ItemPickup = ItemPickup.spawn(self, CarriedItem.create_from_tool_data(meat), Vector3(0, 1, 0))
+	p._spoil_left = 0.01
+	for i: int in 3:
+		await get_tree().physics_frame
+	assert_true(not is_instance_valid(p) or p.is_queued_for_deletion(), "estragou e sumiu")
+
+
+func test_raw_meat_can_cause_nausea() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	var meat: ToolData = load("res://items/tools/carne_crua.tres").duplicate() as ToolData
+	meat.nausea_chance = 1.0
+	var c: CarriedItem = CarriedItem.create_from_tool_data(meat)
+	player.inventory.add_item(c)
+	player.health = 50.0
+	player.set_hunger(50.0)
+	assert_true(player.eat(c))
+	assert_almost_eq(player.health, 50.0, 0.001, "enjoado não cura")
+	assert_lt(player.hunger, 50.0, "e perde saciedade")
