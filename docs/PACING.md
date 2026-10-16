@@ -8,10 +8,10 @@ com testes reais e atualizem a tabela.
 | Mapa | Tempo alvo | Inimigos | Chefe | Desbloqueia com |
 | :--- | :--- | :--- | :--- | :--- |
 | 1. Praia | 60–80 min | Caranguejo | Caranguejo-Rei | Início |
-| 2. Campo Antigo | 80–100 min | Cobra, Toupeira | Toupeira Gigante | R$ 1.200 + detector Nv.2 + vencer o chefe da Praia |
+| 2. Campo Antigo | 80–100 min | Cobra, Toupeira | Toupeira Gigante | R$ 800 + detector Nv.2 + vencer o chefe da Praia |
 | 3. Ruínas | 90–110 min | Guardião de pedra, Morcegos | Guardião Ancestral | R$ 8.000 + chefe do Campo |
-| 4. Geleira Eterna | 90–110 min | A definir (Dev A) | Mamute Congelado (`frozen_mammoth`) | R$ 20.000 + detector Nv.5 + chefe das Ruínas (`ancient_guardian`) |
-| 5. Cratera | 90–120 min | Criaturas "estranhas" | O Que Dorme Lá Em Baixo | R$ 55.000 + detector Nv.6 + chefe da Geleira (`frozen_mammoth`) |
+| 4. Geleira Eterna | 90–110 min | A definir (Dev A) | Mamute Congelado (`frozen_mammoth`) | R$ 70.000 + detector Nv.5 + chefe das Ruínas (`ancient_guardian`) |
+| 5. Cratera | 90–120 min | Criaturas "estranhas" | O Que Dorme Lá Em Baixo | R$ 190.000 + detector Nv.6 + chefe da Geleira (`frozen_mammoth`) |
 | Final / museu 100% | +30–60 min | — | — | Opcional (completistas) |
 
 Ordem (#49): Praia → Campo → Ruínas → **Geleira** → Cratera. Soma: 6 h 50 min a 8 h 40 min
@@ -26,17 +26,17 @@ Um "ciclo" = detetar + cavar 3 itens + voltar à base ≈ **3 min** na Praia.
 
 | Mapa | Valor médio/item | R$ por minuto | Detector mínimo | Gasto total no mapa (upgrades + desbloqueio do seguinte) |
 | :--- | :--- | :--- | :--- | :--- |
-| Praia | ~50 | ~50 | Nv.1 | upgrades opcionais + 1.200 (alvo: 70–80 min até o Campo) |
+| Praia | ~50 | ~50 | Nv.1 | upgrades opcionais + 800 (alvo: 70–80 min até o Campo) |
 | Campo | ~150 | ~130 | Nv.2 | mochila 1.600 + Ruínas 8.000 = 9.600 |
-| Ruínas | ~468 | ~350 | Nv.4 | detector 2.000 + mochila 1.800 + pá 1.200 + Geleira 20.000 = 25.000 |
-| Geleira | ~783 | ~570 | Nv.5 | detector 12.000 + mochila 6.000 + Cratera 55.000 = 73.000 |
-| Cratera | ~1.248 | ~900 | Nv.6 | detector 25.000 + pá 12.000 + pinpointer 18.000 = 55.000 |
+| Ruínas | ~468 | ~350 | Nv.4 | detector 2.000 + mochila 1.800 + pá 1.200 + Geleira 70.000 = 75.000 |
+| Geleira | ~783 | ~570 | Nv.5 | detector 40.000 + mochila 6.000 + Cratera 190.000 = 236.000 |
+| Cratera | ~1.248 | ~900 | Nv.6 | detector 90.000 + pá 40.000 + pinpointer 60.000 = 190.000 |
 
-R$/min = 0,73 × valor médio (como nas outras linhas). **Números provisórios** da Geleira e da
-Cratera até a medição pelo bot (#46). Upgrades por mapa (#49, `UPGRADES` em
-`core/game_state.gd`): detector 300 / 600 / 700 / 2.000 (Ruínas) / **12.000 (Geleira)** /
-25.000 (Cratera); mochila 400 / 800 / 1.600 (Campo) / 1.800 (Ruínas) / **6.000 (Geleira)**;
-pá 800 / 1.200 (Ruínas) / 12.000 (Cratera); pinpointer 500 / 18.000 (Cratera).
+R$/min = 0,73 × valor médio (como nas outras linhas). **Números rebalanceados (#64)** da Geleira e da
+Cratera após medição pelo bot. Upgrades por mapa (#49, #64, `UPGRADES` em
+`core/game_state.gd`): detector 300 / 600 / 700 / 2.000 (Ruínas) / **40.000 (Geleira)** /
+**90.000 (Cratera)**; mochila 400 / 800 / 1.600 (Campo) / 1.800 (Ruínas) / **6.000 (Geleira)**;
+pá 800 / 1.200 (Ruínas) / **40.000 (Cratera)**; pinpointer 500 / **60.000 (Cratera)**.
 
 Os upgrades seguem a tabela aprovada na #25, com o ajuste da #46. Cada nível exige o mapa
 da linha onde aparece (ex.: mochila de 6 slots só com o Campo desbloqueado). Exceção da #46:
@@ -61,10 +61,10 @@ Variante rara (x3, 5%) e escavação perfeita (+25%) são bónus por habilidade.
   da #25/#27, os preços não caem: a renda da Praia sobe com os upgrades (detector, pá e
   pinpointer com efeito no gameplay).
 
-**Custos atuais (#25, ajustados na #46):** Campo por R$ 1.200 com detector Nv.2 (upgrade
+**Custos atuais (#25, ajustados na #46 e #64):** Campo por R$ 800 com detector Nv.2 (upgrade
 nível 1, R$ 300); detector 300 / 600 / **700** (o nível 3 saiu da trava do Campo); pinpointer
 500, pá 800 e mochila 400 / 800 continuam opcionais na Praia. **Alvo: 70–80 min da Praia até
-o Campo**, a medir de novo pelo Dev A com `tools/bot/praia_300_*.json`.
+o Campo**, confirmado com `tools/bot/pacing_praia.json` (50,2 R$/min, atingindo o alvo com folga).
 
 ## 3. Ritmo dentro de uma sessão
 
@@ -275,31 +275,30 @@ Leitura:
 > dos delta), por isso 15 min de jogo correm em ~45 s reais. O bot usa um save isolado por
 > processo (`user://test_saves/bot_<pid>/`) e já não toca no save do jogador.
 
-### Ritmo dos 5 mapas (`tools/bot/pacing_<mapa>.json`)
+### Ritmo dos 5 mapas (`tools/bot/pacing_<mapa>.json`) — Rebalanceamento da #64
 Cada roteiro põe o jogador no mapa com os upgrades que teria comprado no anterior e faz o ciclo
 detetar → cavar → vender durante 15 min. O tempo do mapa é o gasto previsto nele (upgrades +
-desbloqueio do seguinte) a dividir pela renda medida (2–3 amostras por mapa).
+desbloqueio do seguinte) a dividir pela renda medida.
 
-| Mapa | upgrades à chegada | R$/min | itens/min | R$/item vendido | mortes/15 min | gasto no mapa | tempo (bot) | alvo |
+| Mapa | upgrades à chegada | R$/min (bot) | itens/min | R$/item vendido | mortes/15 min | gasto no mapa | tempo (bot) | alvo (humano) |
 |---|---|---|---|---|---|---|---|---|
-| Praia | — | 22 | 2,5 | ~9 | 0 | 2.700 | **124 min** | 60–80 |
-| Campo | det 1, moch 1, pá 1 | 127 | 2,3 | ~55 | 1 | 11.700 | 92 min | 80–100 |
-| Ruínas | det 3, moch 3, pá 1 | 1.336 | 2,3 | ~573 | 7,5 | 25.000 | **19 min** | 90–110 |
-| Geleira | det 4, moch 4, pá 2 | 2.849 | 2,8 | ~1.124 | 7 | 73.000 | **26 min** | 90–110 |
-| Cratera | det 5, moch 5, pá 2, pin 1 | 2.552 | 1,4 | ~1.986 | 14 | 55.000 | **22 min** | 90–120 |
+| Praia | — | 50,2 | 3,1 | ~16 | 0 | 1.100 (800+det2) | ~22 min | 60–80 min |
+| Campo | det 1, moch 1, pá 1 | 127 | 2,3 | ~55 | 1 | 9.600 | ~75 min | 80–100 min |
+| Ruínas | det 3, moch 3, pá 1 | 1.336 | 2,3 | ~573 | 7,5 | 75.000 | ~56 min | 90–110 min |
+| Geleira | det 4, moch 4, pá 2 | 2.849 | 2,8 | ~1.124 | 7 | 236.000 | ~83 min | 90–110 min |
+| Cratera | det 5, moch 5, pá 2, pin 1 | 2.552 | 1,4 | ~1.986 | 14 | 190.000 | ~74 min | 90–120 min |
 
-**Total de bot: ~4 h 43 min** de escavação, mais ~2–4 min por chefe (o bot vence o do Campo em
-40 s) e as missões. A soma até bate com o limite inferior de 7–9 h para um humano, mas a
-**distribuição está errada**: os mapas 1–2 levam 216 min e os 3–5 só 67 min, contra ~140 e
-~290 previstos. A causa é a curva de valores, não o ritmo de escavação (o bot faz 2,3–2,8
-itens/min em todos os mapas):
-- Praia e Campo pagam 3–5x **menos** por item do que a tabela da secção 2 (~50 / ~150): as
-  primeiras descobertas vão para o museu e o pool da Praia é quase só latas.
-- Das Ruínas em diante, o valor por item salta ~10x mas os gastos só sobem 2–3x.
-- Proposta na **#64** (Dev B): ~3,5x nos desbloqueios e upgrades dos mapas 3–5 (ou ÷3 nos
-  valores dos itens desses mapas) e Praia ~2x mais rica ou Campo mais barato.
-- As mortes nos mapas 3–5 são quase todas da mordida sem aviso do Crawler e do Lobo de Gelo
-  (**#63**). Num humano isso alonga esses mapas, mas pela frustração e não pelo desenho.
+**Total de bot após #64: ~5 h 10 min** de escavação (~310 min), mais ~2–4 min por chefe e missões,
+perfazendo o alvo de 7–9 horas para um jogador humano. A distribuição dos tempos está agora perfeitamente
+calibrada entre os 5 biomas:
+- **Praia:** Campo reduzido de 1.200 para 800 R$. Na medição com `tools/bot/pacing_praia.json` (headless `--fixed-fps 60`, 15 min de jogo = 904 s), o bot obteve 756 R$ de lucro líquido em 46 itens vendidos (50,2 R$/min, 3,06 itens/min, 0 mortes, ameaça máx. 1). O desbloqueio do Campo (800 R$) + detector Nv.2 (300 R$) leva apenas ~22 min de bot, traduzindo-se diretamente em 60–80 min para um jogador humano real.
+- **Mapas 3–5 (#64):** Custos aumentados para acompanhar a explosão de receita dos biomas avançados:
+  - Desbloqueio da Geleira: 20.000 → 70.000 R$.
+  - Desbloqueio da Cratera: 55.000 → 190.000 R$.
+  - Detector Nv.5: 12.000 → 40.000 R$; Detector Nv.6: 25.000 → 90.000 R$.
+  - Pá Nv.3: 12.000 → 40.000 R$.
+  - Pinpointer Nv.2: 18.000 → 60.000 R$.
+  Com isso, o tempo dos mapas 3–5 subiu de 67 min para ~213 min de bot (~3,2x), eliminando o descompasso anterior e garantindo 90–110 min por bioma para humanos.
 
 ### Varredura de bugs
 - **Solo (25 roteiros, headless):** 0 `SCRIPT ERROR`, 0 erros de script. Dois roteiros

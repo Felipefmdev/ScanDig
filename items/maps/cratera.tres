@@ -11,7 +11,7 @@
 script = ExtResource("1_map")
 id = "cratera"
 display_name = "Cratera"
-unlock_cost = 55000
+unlock_cost = 190000
 required_detector_level = 6
 item_pool = Array[ExtResource("2_item")]([ExtResource("i0_fragmento_meteorito"), ExtResource("i0_fragmento_meteorito"), ExtResource("i0_fragmento_meteorito"), ExtResource("i0_fragmento_meteorito"), ExtResource("i0_fragmento_meteorito"), ExtResource("i0_fragmento_meteorito"), ExtResource("i0_fragmento_meteorito"), ExtResource("i1_caixa_musica_bizarra"), ExtResource("i1_caixa_musica_bizarra"), ExtResource("i1_caixa_musica_bizarra"), ExtResource("i1_caixa_musica_bizarra"), ExtResource("i1_caixa_musica_bizarra"), ExtResource("i1_caixa_musica_bizarra"), ExtResource("i2_liga_desconhecida"), ExtResource("i2_liga_desconhecida"), ExtResource("i2_liga_desconhecida"), ExtResource("i2_liga_desconhecida"), ExtResource("i2_liga_desconhecida"), ExtResource("i3_engrenagem_alienigena"), ExtResource("i3_engrenagem_alienigena")])
 rare_variant_chance = 0.07

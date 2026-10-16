@@ -22,24 +22,22 @@ func test_shop_offer_freed_during_try_buy_await() -> void:
 	var buy_coroutine: Signal = offer.purchased
 	# Remove da árvore e liberta logo a seguir
 	offer.queue_free()
-	await get_tree().process_frame
-	await get_tree().process_frame
+	await wait_frames(4)
 
-	pass_test("ShopOffer libertado durante await termina sem SCRIPT ERROR")
+	assert_true(true, "ShopOffer libertado durante await termina sem SCRIPT ERROR")
 
 
 func test_session_ui_freed_during_loading_await() -> void:
 	var session_ui: SessionUI = preload("res://ui/session_ui.tscn").instantiate() as SessionUI
 	_root.add_child(session_ui)
 
-	# Simula carregamento de expedição que inicia os awaits de loading
-	session_ui._on_expedition_loading("res://world/map_praia.tscn")
+	# Simula carregamento de cena que inicia os awaits de loading
+	session_ui._on_scene_changing("res://world/map_praia.tscn")
 	# Imediatamente liberta o SessionUI (simulando troca abrupta de cena / saída)
 	session_ui.queue_free()
-	await get_tree().process_frame
-	await get_tree().create_timer(0.05).timeout
+	await wait_frames(4)
 
-	pass_test("SessionUI libertado durante loading timer/frame termina sem SCRIPT ERROR")
+	assert_true(true, "SessionUI libertado durante loading timer/frame termina sem SCRIPT ERROR")
 
 
 func test_session_ui_freed_during_toast_await() -> void:
@@ -47,13 +45,13 @@ func test_session_ui_freed_during_toast_await() -> void:
 	_root.add_child(session_ui)
 
 	# Enfileira e mostra um toast
-	session_ui.show_toast("Mensagem de teste")
+	session_ui._toast_queue.append("Mensagem de teste")
+	session_ui._show_next_toast()
 	# Liberta imediatamente o SessionUI
 	session_ui.queue_free()
-	await get_tree().process_frame
-	await get_tree().create_timer(0.05).timeout
+	await wait_frames(4)
 
-	pass_test("SessionUI libertado durante toast timer termina sem SCRIPT ERROR")
+	assert_true(true, "SessionUI libertado durante toast timer termina sem SCRIPT ERROR")
 
 
 func test_noray_client_freed_during_connect_await() -> void:
@@ -65,10 +63,9 @@ func test_noray_client_freed_during_connect_await() -> void:
 	noray.connect_to_server.call("192.0.2.1", 12345)
 	# Remove da árvore imediatamente
 	noray.queue_free()
-	await get_tree().process_frame
-	await get_tree().process_frame
+	await wait_frames(4)
 
-	pass_test("NorayClient libertado durante connect_to_server process_frame termina sem SCRIPT ERROR")
+	assert_true(true, "NorayClient libertado durante connect_to_server process_frame termina sem SCRIPT ERROR")
 
 
 func test_noray_client_freed_during_handshake_enet() -> void:
@@ -79,23 +76,22 @@ func test_noray_client_freed_during_handshake_enet() -> void:
 	noray.handshake_enet(peer, "127.0.0.1", 9999)
 	# Liberta imediatamente
 	noray.queue_free()
-	await get_tree().process_frame
-	await get_tree().create_timer(0.05).timeout
+	await wait_frames(4)
 
-	pass_test("NorayClient libertado durante handshake_enet timer termina sem SCRIPT ERROR")
+	assert_true(true, "NorayClient libertado durante handshake_enet timer termina sem SCRIPT ERROR")
 
 
 func test_debug_bridge_sleep_and_wait_freed_cleanly() -> void:
-	var bridge: DebugBridge = DebugBridge.new()
+	var bridge_script: GDScript = preload("res://gameplay/debug/debug_bridge.gd")
+	var bridge: Node = bridge_script.new()
 	_root.add_child(bridge)
 
-	bridge._sleep(1.0)
-	bridge._wait_until_time(10.0)
+	bridge.call("_sleep", 1.0)
+	bridge.call("_wait_until_time", 10.0)
 	bridge.queue_free()
-	await get_tree().process_frame
-	await get_tree().create_timer(0.05).timeout
+	await wait_frames(4)
 
-	pass_test("DebugBridge libertado durante timer/frame awaits termina sem SCRIPT ERROR")
+	assert_true(true, "DebugBridge libertado durante timer/frame awaits termina sem SCRIPT ERROR")
 
 
 func test_session_manager_scene_change_await_guard() -> void:
@@ -105,7 +101,6 @@ func test_session_manager_scene_change_await_guard() -> void:
 	# Define pending scene e liberta o nó antes/durante o frame
 	sm.set("_pending_scene_path", "res://world/lobby_base.tscn")
 	sm.queue_free()
-	await get_tree().process_frame
-	await get_tree().process_frame
+	await wait_frames(4)
 
-	pass_test("SessionManager libertado durante transição de cena não gera SCRIPT ERROR")
+	assert_true(true, "SessionManager libertado durante transição de cena não gera SCRIPT ERROR")

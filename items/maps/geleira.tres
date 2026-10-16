@@ -12,7 +12,7 @@
 script = ExtResource("1_map")
 id = "geleira"
 display_name = "Geleira Eterna"
-unlock_cost = 20000
+unlock_cost = 70000
 required_detector_level = 5
 item_pool = Array[ExtResource("2_item")]([ExtResource("i0_crampon_enferrujado"), ExtResource("i0_crampon_enferrujado"), ExtResource("i0_crampon_enferrujado"), ExtResource("i0_crampon_enferrujado"), ExtResource("i0_crampon_enferrujado"), ExtResource("i0_crampon_enferrujado"), ExtResource("i0_crampon_enferrujado"), ExtResource("i1_lanterna_expedicao"), ExtResource("i1_lanterna_expedicao"), ExtResource("i1_lanterna_expedicao"), ExtResource("i1_lanterna_expedicao"), ExtResource("i1_lanterna_expedicao"), ExtResource("i1_lanterna_expedicao"), ExtResource("i2_cronometro_explorador"), ExtResource("i2_cronometro_explorador"), ExtResource("i2_cronometro_explorador"), ExtResource("i2_cronometro_explorador"), ExtResource("i3_medalha_polar"), ExtResource("i3_medalha_polar"), ExtResource("i4_bussola_congelada")])
 rare_variant_chance = 0.06

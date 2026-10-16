@@ -36,6 +36,8 @@ const SNOW_WHITE: Color = Color(0.95, 0.97, 1.0)
 const WEAK_POINT_FACTOR: float = 2.5
 const CHARGE_RANGE: float = 18.0
 const CHARGE_SPEED: float = 11.5
+## Distância mínima (m) do centro do mamute às paredes da arena (meio corpo + folga).
+const ARENA_MARGIN: float = 3.0
 const STOMP_RADIUS: float = 4.8
 const PHASE_TWO_RATIO: float = 0.5
 
@@ -74,6 +76,8 @@ var _hud: BossHud = null
 var _warning: GroundWarning = null
 var _body: Node3D = null
 var _trunk: Node3D = null
+## Meia-largura (x, z) da arena; INF = ainda não lida.
+var _arena_half: Vector2 = Vector2(INF, INF)
 var _leg_fl: Node3D = null
 var _leg_fr: Node3D = null
 var _glacier_block: MeshInstance3D = null
@@ -105,6 +109,47 @@ func setup_network() -> void:
 	super.setup_network()
 	_add_synced_property(".:net_attack_dir")
 	_add_synced_property(".:net_attack_point")
+
+
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if has_simulation_authority() and not _dead:
+		_keep_inside_arena()
+
+
+## QA coop (#62): numa investida o mamute saiu para lá das paredes (x 33.6 com a parede a
+## 30.5) e ficou fora do alcance dos jogadores até ao fim. Mantém-no dentro dos Bounds do mapa.
+func _keep_inside_arena() -> void:
+	if _arena_half.x == INF:
+		_arena_half = _find_arena_half()
+	if _arena_half.x == INF or _arena_half.x <= 0.0:
+		return
+	var p: Vector3 = global_position
+	var cx: float = clampf(p.x, -_arena_half.x, _arena_half.x)
+	var cz: float = clampf(p.z, -_arena_half.y, _arena_half.y)
+	if cx != p.x or cz != p.z:
+		global_position = Vector3(cx, p.y, cz)
+
+
+## Meia-largura útil da arena a partir das paredes do nó "Bounds" do mapa (menos a margem do
+## corpo); (-1, -1) se o mapa não tiver Bounds (fica sem limite).
+func _find_arena_half() -> Vector2:
+	var scene: Node = get_tree().current_scene if is_inside_tree() else null
+	var bounds: Node = scene.get_node_or_null(^"Bounds") if scene != null else null
+	if bounds == null:
+		return Vector2(-1.0, -1.0)
+	var half: Vector2 = Vector2(INF, INF)
+	for c: Node in bounds.get_children():
+		var wall: Node3D = c as Node3D
+		if wall == null:
+			continue
+		if absf(wall.position.x) > absf(wall.position.z):
+			half.x = minf(half.x, absf(wall.position.x) - ARENA_MARGIN)
+		else:
+			half.y = minf(half.y, absf(wall.position.z) - ARENA_MARGIN)
+	if half.x == INF or half.y == INF:
+		return Vector2(-1.0, -1.0)
+	return half
 
 
 func _enemy_physics(delta: float) -> void:
