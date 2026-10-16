@@ -33,7 +33,14 @@ static var _converted_mats: Dictionary = {}
 
 ## Cópia de um material do kit (ver KINDS).
 static func material(kind: StringName) -> ShaderMaterial:
-	var base: ShaderMaterial = load(DIR + String(kind) + ".tres") as ShaderMaterial
+	var path: String = DIR + String(kind) + ".tres"
+	if not ResourceLoader.exists(path):
+		push_warning("[ToonKit] material '%s' inexistente em %s" % [kind, path])
+		return null
+	var base: ShaderMaterial = load(path) as ShaderMaterial
+	if base == null:
+		push_warning("[ToonKit] falha ao carregar material '%s'" % kind)
+		return null
 	return base.duplicate() as ShaderMaterial
 
 
@@ -41,6 +48,8 @@ static func material(kind: StringName) -> ShaderMaterial:
 ## os inimigos antigos usam cores lineares (srgb = false) para manter o tom.
 static func vertex_material(outline: bool = true, srgb: bool = true) -> ShaderMaterial:
 	var mat: ShaderMaterial = material(&"vertex")
+	if mat == null:
+		return null
 	mat.set_shader_parameter(&"vertex_color_srgb", srgb)
 	if not outline:
 		mat.next_pass = null

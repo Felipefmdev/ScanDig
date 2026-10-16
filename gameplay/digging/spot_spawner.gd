@@ -144,7 +144,12 @@ func _random_point_in_area() -> Vector3:
 
 
 func _find_ground(point: Vector3) -> Dictionary:
-	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var world_3d: World3D = get_world_3d() if is_inside_tree() else null
+	if world_3d == null:
+		return {}
+	var space: PhysicsDirectSpaceState3D = world_3d.direct_space_state
+	if space == null:
+		return {}
 	var from: Vector3 = Vector3(point.x, global_position.y + RAY_HEIGHT, point.z)
 	var to: Vector3 = Vector3(point.x, global_position.y - RAY_HEIGHT, point.z)
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from, to, ground_mask)

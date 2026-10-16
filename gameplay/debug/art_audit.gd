@@ -53,8 +53,20 @@ func _ready() -> void:
 		_subject = ItemModels.build(path.trim_prefix("item:"))
 		_elevation = 0.9
 	else:
+		if not ResourceLoader.exists(path):
+			push_error("[ArtAudit] Subject path inexistente: %s" % path)
+			get_tree().quit(1)
+			return
 		var scene: PackedScene = load(path) as PackedScene
+		if scene == null:
+			push_error("[ArtAudit] Falha ao carregar cena: %s" % path)
+			get_tree().quit(1)
+			return
 		_subject = scene.instantiate() as Node3D
+	if _subject == null:
+		push_error("[ArtAudit] Subject invalido ou nulo: %s" % path)
+		get_tree().quit(1)
+		return
 	add_child(_subject)
 	_subject.process_mode = Node.PROCESS_MODE_DISABLED
 	var hud: CanvasLayer = _subject.get_node_or_null(^"BossHud") as CanvasLayer
