@@ -75,7 +75,7 @@ func _run() -> void:
 	_select_map(map_list, 1)
 	_check(not depart_btn.disabled, "partir habilitado no Campo: %s" % depart_btn.tooltip_text)
 
-	# Ruínas ainda não tem cena: desbloqueada, mas "Em breve".
+	# Ruínas têm cena (#42): desbloqueada, mas pede o detector Nv.4.
 	gs.request_report_boss_defeated("giant_mole")
 	gs.load_snapshot({"team_money": 8000})
 	await _wait(3)
@@ -84,8 +84,20 @@ func _run() -> void:
 	unlock_btn.pressed.emit()
 	await _wait(5)
 	_check(feedback.text == "Ruínas desbloqueado!", "feedback ruínas: %s" % feedback.text)
-	_check(map_list.get_item_text(2).contains("Em breve"), "item 2 em breve: %s" % map_list.get_item_text(2))
-	_check(depart_btn.disabled and depart_btn.tooltip_text == "Em breve.", "partir bloqueado nas Ruínas: %s" % depart_btn.tooltip_text)
+	_check(map_list.get_item_text(2).contains("Detector nível 4") and not map_list.get_item_text(2).contains("Em breve"), "item 2 pede detector Nv.4: %s" % map_list.get_item_text(2))
+	_check(depart_btn.disabled and depart_btn.tooltip_text == "Requer detector nível 4.", "partir bloqueado nas Ruínas: %s" % depart_btn.tooltip_text)
+
+	# Geleira ainda não tem cena: desbloqueada, mas "Em breve".
+	gs.request_report_boss_defeated("ancient_guardian")
+	gs.load_snapshot({"team_money": 20000})
+	await _wait(3)
+	_select_map(map_list, 3)
+	_check(unlock_btn.visible and not unlock_btn.disabled, "desbloquear habilitado na Geleira: %s" % unlock_btn.tooltip_text)
+	unlock_btn.pressed.emit()
+	await _wait(5)
+	_check(feedback.text == "Geleira Eterna desbloqueado!", "feedback geleira: %s" % feedback.text)
+	_check(map_list.get_item_text(3).contains("Em breve"), "item 3 em breve: %s" % map_list.get_item_text(3))
+	_check(depart_btn.disabled and depart_btn.tooltip_text == "Em breve.", "partir bloqueado na Geleira: %s" % depart_btn.tooltip_text)
 
 	_select_map(map_list, 0)
 	_check(not depart_btn.disabled, "partir habilitado na Praia: %s" % depart_btn.tooltip_text)

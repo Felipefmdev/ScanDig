@@ -125,15 +125,15 @@ func _run() -> void:
 	_check(saved.get("unlocked_maps", []) == ["campo"], "save unlocked_maps: %s" % str(saved.get("unlocked_maps")))
 	_check(saved.get("defeated_bosses", []) == ["king_crab"], "save defeated_bosses: %s" % str(saved.get("defeated_bosses")))
 
-	# Ruínas ainda não tem cena: desbloqueada, mas "Em breve".
+	# Ruínas têm cena (#42): desbloqueada, mas pede o detector Nv.4 (o "Em breve." fica com a Geleira, abaixo).
 	await _report_boss(gs, "giant_mole")
 	gs.load_snapshot({"team_money": 8000})
 	result = await _unlock(gs, "ruinas")
 	_check(result.get("success", false) == true and result.get("message", "") == "Ruínas desbloqueado!", "desbloqueio ruinas ok: %s" % str(result.get("message", "")))
 	var ruinas: Dictionary = sm.get_map_status("ruinas")
-	_check(ruinas["unlocked"] and not ruinas["has_scene"] and not ruinas["playable"], "status ruinas desbloqueada e sem cena: %s" % str(ruinas))
-	_check(ruinas["reason"] == "Em breve.", "status ruinas Em breve: %s" % str(ruinas["reason"]))
-	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem cena")
+	_check(ruinas["unlocked"] and ruinas["has_scene"] and not ruinas["playable"], "status ruinas desbloqueada e com cena: %s" % str(ruinas))
+	_check(ruinas["reason"] == "Requer detector nível 4.", "status ruinas pede detector Nv.4: %s" % str(ruinas["reason"]))
+	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem detector Nv.4")
 
 	# #49: Geleira paga com o detector equipado Nv.5; sem world/map_geleira.tscn fica "Em breve".
 	await _report_boss(gs, "ancient_guardian")

@@ -8,7 +8,9 @@ const CAMPO_SECRETS: Array[String] = ["campo_reliquia_poco", "campo_reliquia_far
 ## id -> base_value do catálogo.
 const CAMPO_ITEMS: Dictionary = {"sino_bronze": 700, "anel_do_poco": 600, "moeda_celta": 480,
 	"fibula_romana": 520, "pena_corvo_rei": 650, "lanterna_espantalho": 900}
-const CATALOG_TOTAL: int = 38
+const CATALOG_DIR: String = "res://items/catalog/"
+## Piso do catálogo (#42: +6 das Ruínas). O total exato vem dos arquivos, para não quebrar a cada item novo.
+const CATALOG_MIN: int = 44
 
 var _fails: int = 0
 var _quest_signals: Array[String] = []
@@ -24,6 +26,14 @@ func _wait(frames: int) -> void:
 
 func _initialize() -> void:
 	_run.call_deferred()
+
+## Arquivos .tres em CATALOG_DIR (.remap das builds exportadas conta como o .tres).
+func _count_catalog_files() -> int:
+	var count: int = 0
+	for file_name: String in DirAccess.get_files_at(CATALOG_DIR):
+		if file_name.trim_suffix(".remap").ends_with(".tres"):
+			count += 1
+	return count
 
 func _on_quest_completed(quest_id: String, reward: int) -> void:
 	_quest_signals.append("%s:%d" % [quest_id, reward])
@@ -70,8 +80,10 @@ func _run() -> void:
 	_check(gs.unlocked_maps == ["campo"], "chefes extras não desbloqueiam mapa: %s" % str(gs.unlocked_maps))
 	_check(gs.get_map_unlock_block_reason("ruinas") == "Vença o chefe Toupeira Gigante primeiro.", "ruínas continua pedindo a Toupeira: %s" % gs.get_map_unlock_block_reason("ruinas"))
 
-	# Museu: os 6 itens viram descoberta com 50% do valor base; o total do catálogo é 38 (#49: +5 da Geleira).
-	_check(gs.get_total_catalog_items() == CATALOG_TOTAL, "max_items = %d: %d" % [CATALOG_TOTAL, gs.get_total_catalog_items()])
+	# Museu: os 6 itens viram descoberta com 50% do valor base; o total do catálogo é o número de arquivos.
+	var catalog_files: int = _count_catalog_files()
+	_check(gs.get_total_catalog_items() == catalog_files, "max_items = arquivos do catálogo: %d / %d" % [gs.get_total_catalog_items(), catalog_files])
+	_check(catalog_files >= CATALOG_MIN, "catálogo com pelo menos %d itens: %d" % [CATALOG_MIN, catalog_files])
 	var money_before: int = gs.team_money
 	var expected_rewards: int = 0
 	for item_id: String in CAMPO_ITEMS:
