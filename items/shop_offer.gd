@@ -91,10 +91,18 @@ func try_buy(inventory: Inventory) -> Dictionary:
 	state.request_purchase_item(item_id)
 	var deadline: int = Time.get_ticks_msec() + int(PURCHASE_TIMEOUT * 1000.0)
 	while reply.is_empty() and Time.get_ticks_msec() < deadline and is_inside_tree():
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			break
+		await tree.process_frame
+		if not is_inside_tree():
+			break
 	if is_instance_valid(state) and state.item_purchase_result.is_connected(on_result):
 		state.item_purchase_result.disconnect(on_result)
 	_pending = false
+	if not is_inside_tree():
+		result["message"] = "Cancelado."
+		return result
 
 	if reply.is_empty():
 		result["message"] = "Sem resposta do anfitrião. Tente de novo."

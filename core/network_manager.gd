@@ -246,11 +246,11 @@ func get_room_code() -> String:
 func _run_host_online(generation: int, port: int) -> void:
 	online_join_progress.emit("registrando")
 	var error: Error = await _noray.connect_to_server(noray_address, noray_port)
-	if generation != _online_generation:
+	if not is_inside_tree() or generation != _online_generation:
 		return
 	if error == OK:
 		error = await _noray.register(noray_registrar_port, port, true)
-		if generation != _online_generation:
+		if not is_inside_tree() or generation != _online_generation:
 			return
 	if error == ERR_ALREADY_IN_USE:
 		_fail_online("Não foi possível hospedar: a porta %d já está em uso." % port)
@@ -281,11 +281,11 @@ func _open_host_room(port: int, oid: String) -> void:
 func _run_join_code(generation: int, code: String) -> void:
 	online_join_progress.emit("registrando")
 	var error: Error = await _noray.connect_to_server(noray_address, noray_port)
-	if generation != _online_generation:
+	if not is_inside_tree() or generation != _online_generation:
 		return
 	if error == OK:
 		error = await _noray.register(noray_registrar_port, 0, false)
-		if generation != _online_generation:
+		if not is_inside_tree() or generation != _online_generation:
 			return
 	if error != OK:
 		_fail_online("Servidor de salas fora do ar.")
@@ -293,14 +293,14 @@ func _run_join_code(generation: int, code: String) -> void:
 	if not noray_force_relay:
 		online_join_progress.emit("punch")
 		error = await _try_online_path(generation, code, false, PUNCH_TIMEOUT_SEC)
-		if generation != _online_generation or error == OK:
+		if not is_inside_tree() or generation != _online_generation or error == OK:
 			return
 		if error != ERR_CANT_CONNECT:
 			_fail_online(_online_error_message(error))
 			return
 	online_join_progress.emit("relay")
 	error = await _try_online_path(generation, code, true, RELAY_TIMEOUT_SEC)
-	if generation != _online_generation or error == OK:
+	if not is_inside_tree() or generation != _online_generation or error == OK:
 		return
 	_fail_online(_online_error_message(error))
 
@@ -332,9 +332,14 @@ func _try_online_path(generation: int, code: String, relay: bool, timeout_sec: f
 		mp.multiplayer_peer = peer
 	var deadline: int = Time.get_ticks_msec() + int(ONLINE_ENET_TIMEOUT_SEC * 1000.0)
 	while peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTING and Time.get_ticks_msec() < deadline:
-		await get_tree().process_frame
-		if generation != _online_generation or enet_peer != peer:
+		var tree: SceneTree = get_tree()
+		if tree == null:
 			return ERR_SKIP
+		await tree.process_frame
+		if not is_inside_tree() or generation != _online_generation or enet_peer != peer:
+			return ERR_SKIP
+	if not is_inside_tree():
+		return ERR_SKIP
 	if peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
 		return OK
 	_cleanup_peer_keep_deadline()

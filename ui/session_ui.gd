@@ -202,9 +202,17 @@ func _on_scene_changing(target_scene: String) -> void:
 	_loading_token += 1
 	var token: int = _loading_token
 	# Esconde o carregamento depois que a nova cena entrar (com tempo mínimo na tela).
-	await get_tree().create_timer(LOADING_MIN_SEC, true, false, true).timeout
-	await get_tree().process_frame
-	if token != _loading_token:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(LOADING_MIN_SEC, true, false, true).timeout
+	if not is_inside_tree() or token != _loading_token:
+		return
+	tree = get_tree()
+	if tree == null:
+		return
+	await tree.process_frame
+	if not is_inside_tree() or token != _loading_token:
 		return
 	loading_screen.visible = false
 	_refresh_expedition_bar()
@@ -286,9 +294,11 @@ func _show_next_toast() -> void:
 	toast_label.text = _toast_queue.pop_front()
 	toast_panel.visible = true
 	_toast_token += 1
-	var token: int = _toast_token
-	await get_tree().create_timer(TOAST_SEC, true, false, true).timeout
-	if token != _toast_token:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(TOAST_SEC, true, false, true).timeout
+	if not is_inside_tree() or token != _toast_token:
 		return
 	_show_next_toast()
 

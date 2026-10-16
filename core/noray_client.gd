@@ -94,7 +94,14 @@ func connect_to_server(address: String, port: int) -> Error:
 		if status != StreamPeerTCP.STATUS_CONNECTING or Time.get_ticks_msec() >= deadline:
 			close()
 			return ERR_CANT_CONNECT
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			close()
+			return ERR_CANT_CONNECT
+		await tree.process_frame
+		if not is_inside_tree():
+			close()
+			return ERR_CANT_CONNECT
 	tcp.set_no_delay(true)
 	server_address = ip
 	_connected = true
@@ -138,7 +145,14 @@ func register(registrar_port: int, bind_port: int, as_host: bool) -> Error:
 				result = OK if reply == "OK" else FAILED
 		if result != ERR_TIMEOUT:
 			break
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			result = ERR_CONNECTION_ERROR
+			break
+		await tree.process_frame
+		if not is_inside_tree():
+			result = ERR_CONNECTION_ERROR
+			break
 	if result == OK:
 		local_port = udp.get_local_port()
 	udp.close()
@@ -196,7 +210,14 @@ func handshake_udp(address: String, port: int, timeout_sec: float) -> Error:
 			udp.put_packet(_handshake_status(did_read, did_handshake).to_ascii_buffer())
 			next_send = Time.get_ticks_msec() + int(HANDSHAKE_RESEND_SEC * 1000.0)
 		if result != OK:
-			await get_tree().process_frame
+			var tree: SceneTree = get_tree()
+			if tree == null:
+				result = ERR_CONNECTION_ERROR
+				break
+			await tree.process_frame
+			if not is_inside_tree():
+				result = ERR_CONNECTION_ERROR
+				break
 	udp.close()
 	if result != OK and did_read:
 		result = ERR_BUSY
@@ -212,7 +233,12 @@ func handshake_enet(peer: ENetMultiplayerPeer, address: String, port: int) -> vo
 		if peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED or peer.host == null:
 			return
 		peer.host.socket_send(address, port, packet)
-		await get_tree().create_timer(HANDSHAKE_RESEND_SEC).timeout
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.create_timer(HANDSHAKE_RESEND_SEC).timeout
+		if not is_inside_tree():
+			return
 
 
 ## Fecha o TCP e esquece o registro. Não emite server_lost.
@@ -272,7 +298,12 @@ func _wait_for_replies(keys: Array[String], timeout_sec: float, tcp: StreamPeerT
 			all_in = all_in and _replies.has(key)
 		if all_in:
 			return true
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return false
+		await tree.process_frame
+		if not is_inside_tree():
+			return false
 	return false
 
 

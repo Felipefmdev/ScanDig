@@ -69,15 +69,20 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if _pending_scene_path.is_empty() or _awaiting_scene_frame:
 		return
-	var current: Node = get_tree().current_scene
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var current: Node = tree.current_scene
 	if current == null or current.scene_file_path != _pending_scene_path:
 		return
 	var scene_path: String = _pending_scene_path
 	_pending_scene_path = ""
 	# Espera um frame para todos os _ready da cena nova rodarem.
 	_awaiting_scene_frame = true
-	await get_tree().process_frame
+	await tree.process_frame
 	_awaiting_scene_frame = false
+	if not is_inside_tree():
+		return
 	# Outra troca começou durante a espera: o aviso desta cena já não vale.
 	if not _pending_scene_path.is_empty():
 		return

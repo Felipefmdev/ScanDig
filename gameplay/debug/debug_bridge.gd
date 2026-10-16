@@ -449,12 +449,20 @@ func _run(script_path: String) -> void:
 	var current: Node = get_tree().current_scene
 	if not scene_path.is_empty() and (current == null or current.scene_file_path != scene_path):
 		_log("a carregar cena %s" % scene_path)
-		if get_tree().change_scene_to_file(scene_path) != OK:
+		var tree: SceneTree = get_tree()
+		if tree == null or tree.change_scene_to_file(scene_path) != OK:
 			_error("nao foi possivel carregar %s" % scene_path)
 			_finish(1)
 			return
-		await get_tree().process_frame
-		await get_tree().process_frame
+		await tree.process_frame
+		if not is_inside_tree():
+			return
+		tree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_inside_tree():
+			return
 	_start_msec = Time.get_ticks_msec()
 	var periodic: Dictionary = parsed["periodic"]
 	_dump_every = periodic.get("dump_every", 0.0)
@@ -559,7 +567,12 @@ func _elapsed() -> float:
 
 func _wait_until_time(t: float) -> void:
 	while _elapsed() < t:
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_inside_tree():
+			return
 
 
 func _execute(step: Dictionary) -> void:
@@ -617,8 +630,13 @@ func _execute(step: Dictionary) -> void:
 		"ui_tab":
 			_ui_tab(step["target"])
 			# O TabContainer só mostra a página nova no frame seguinte.
-			await get_tree().process_frame
-			await get_tree().process_frame
+			var tree: SceneTree = get_tree()
+			if tree != null:
+				await tree.process_frame
+				if is_inside_tree():
+					tree = get_tree()
+					if tree != null:
+						await tree.process_frame
 		"ui_select":
 			_ui_select(step["target"], step["item"])
 		"ui_press":
@@ -646,7 +664,9 @@ func _execute(step: Dictionary) -> void:
 ## Não bloqueia: os passos seguintes podem correr enquanto a ação está premida.
 func _hold_action(action: String, seconds: float) -> void:
 	Input.action_press(action)
-	await get_tree().create_timer(seconds, true, false, true).timeout
+	var tree: SceneTree = get_tree()
+	if tree != null:
+		await tree.create_timer(seconds, true, false, true).timeout
 	Input.action_release(action)
 
 
@@ -720,7 +740,12 @@ func _run_loop(step: Dictionary) -> void:
 			await _execute(sub)
 			_executed += 1
 		iterations += 1
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			break
+		await tree.process_frame
+		if not is_inside_tree():
+			break
 	var cond_text: String = "%s%s%s" % [until["var"], until["op"], until["value"]]
 	var took: float = _elapsed() - t0
 	_loops.append({"until": cond_text, "ok": ok, "seconds": took, "ended_at": _elapsed(), "iterations": iterations})
@@ -728,7 +753,12 @@ func _run_loop(step: Dictionary) -> void:
 
 
 func _sleep(seconds: float) -> void:
-	await get_tree().create_timer(seconds, true, false, true).timeout
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(seconds, true, false, true).timeout
+	if not is_inside_tree():
+		return
 
 
 func _tap(action: String) -> void:
@@ -806,7 +836,12 @@ func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float, s
 				_log("  teleport de recurso #%d (%s) para %s" % [
 					_m["teleport_fallbacks"], "timeout" if timed_out else "preso", _vec(pos)])
 				break
-		await get_tree().physics_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			break
+		await tree.physics_frame
+		if not is_inside_tree():
+			break
 	Input.action_release("move_forward")
 	return walked
 
@@ -828,7 +863,10 @@ func _fight(seconds: float, radius: float) -> void:
 	while _elapsed() - t0 < seconds and is_instance_valid(player):
 		var target: EnemyBase = null
 		var best: float = radius
-		for n: Node in get_tree().get_nodes_in_group(ENEMY_GROUP):
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			break
+		for n: Node in tree.get_nodes_in_group(ENEMY_GROUP):
 			var e: EnemyBase = n as EnemyBase
 			if e == null or not is_instance_valid(e) or not e.is_alive():
 				continue
@@ -841,7 +879,9 @@ func _fight(seconds: float, radius: float) -> void:
 			Input.action_release("move_forward")
 			if _elapsed() - idle_since > 2.0:
 				break
-			await get_tree().physics_frame
+			await tree.physics_frame
+			if not is_inside_tree():
+				break
 			continue
 		idle_since = _elapsed()
 		_look_at(target.global_position + Vector3.UP * 0.4)
@@ -858,7 +898,12 @@ func _fight(seconds: float, radius: float) -> void:
 			Input.action_release("move_forward")
 			await _tap("attack")
 			swings += 1
-		await get_tree().physics_frame
+		tree = get_tree()
+		if tree == null:
+			break
+		await tree.physics_frame
+		if not is_inside_tree():
+			break
 	Input.action_release("move_forward")
 	_m["fight_swings"] = int(_m["fight_swings"]) + swings
 	_log("  fight: %d golpes em %.1fs" % [swings, _elapsed() - t0])
@@ -998,14 +1043,24 @@ func _pickup(radius: float, timeout: float) -> void:
 			if _elapsed() - t0 > 1.5 and inv.get_count() <= start_count:
 				_fail("pickup: nenhum item a menos de %.1f m" % radius)
 				return
-			await get_tree().process_frame
+			var tree: SceneTree = get_tree()
+			if tree == null:
+				break
+			await tree.process_frame
+			if not is_inside_tree():
+				break
 			continue
 		if best > 1.6:
 			await _walk_to(target.global_position, 1.0, 5.0, 0.3)
 			if not is_instance_valid(target):
 				continue
 		_look_at(target.global_position)
-		await get_tree().process_frame
+		var tree2: SceneTree = get_tree()
+		if tree2 == null:
+			break
+		await tree2.process_frame
+		if not is_inside_tree():
+			break
 		var before: int = inv.get_count()
 		await _tap("interact")
 		await _sleep(0.2)
@@ -1073,6 +1128,8 @@ func _screenshot(label: String) -> void:
 		_error("screenshot '%s' ignorado: renderer headless" % label)
 		return
 	await RenderingServer.frame_post_draw
+	if not is_inside_tree():
+		return
 	var img: Image = get_viewport().get_texture().get_image()
 	var path: String = _run_dir.path_join(label + ".png")
 	if img == null or img.save_png(path) != OK:
@@ -1104,7 +1161,12 @@ func _wait_condition(cond: Dictionary, timeout: float) -> void:
 			_error("timeout (%.0fs) a espera de %s%s%s (atual %s)" % [timeout, cond["var"], cond["op"], cond["value"], lhs])
 			_waits.append({"condition": "%s%s%s" % [cond["var"], cond["op"], cond["value"]], "ok": false, "seconds": timeout})
 			return
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_inside_tree():
+			return
 
 
 func _condition_value(var_name: String) -> float:
@@ -1311,14 +1373,21 @@ func _interact_with(target_name: String, walk: bool, timeout: float) -> void:
 				(player as CharacterBody3D).velocity = Vector3.ZERO
 	_look_at(focus)
 	for i: int in 3:
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_inside_tree():
+			return
 	if Interactable.get_focused() != it:
 		var fo: Interactable = Interactable.get_focused()
 		_fail("interact: '%s' sem foco (alvo do proprio jogador ou fora do cone; alvo em %s, jogador em %s, a %.1f m, ativo=%s, focado=%s)" % [
 			target_name, _vec(focus), _vec(player.global_position), player.global_position.distance_to(focus),
 			it.active, String(fo.name) if fo != null else "nenhum"])
 	await _hold_action("interact", TAP_SECONDS)
-	await get_tree().process_frame
+	var tree_end: SceneTree = get_tree()
+	if tree_end != null:
+		await tree_end.process_frame
 
 
 func _debug_call(target_name: String, method: String) -> void:
@@ -1379,7 +1448,12 @@ func _join(ip: String, port: int, timeout: float) -> void:
 		if _elapsed() - t0 > timeout:
 			_error("join: sem ligacao a %s:%d em %.0fs" % [ip, port, timeout])
 			return
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_inside_tree():
+			return
 	_log("  ligado como peer %d" % multiplayer.get_unique_id())
 
 
@@ -1398,7 +1472,12 @@ func _start_expedition(map_id: String, timeout: float) -> void:
 		if _elapsed() - t0 > timeout:
 			_error("start_expedition: mapa '%s' nao carregou em %.0fs" % [map_id, timeout])
 			return
-		await get_tree().process_frame
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_inside_tree():
+			return
 	_log("  expedicao em %s" % get_tree().current_scene.scene_file_path)
 
 
