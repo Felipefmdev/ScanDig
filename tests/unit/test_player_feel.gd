@@ -217,3 +217,31 @@ func test_attack_pressed_during_cooldown_is_buffered() -> void:
 	player._handle_attack_action()
 	assert_eq(player._attack_buffer_left, 0.0, "sai assim que a recarga acaba")
 	assert_gt(player._attack_cooldown, 0.0, "golpe executado")
+
+
+# --- Arremesso e itens próximos ----------------------------------------------
+
+func test_tap_drop_vs_charged_throw() -> void:
+	var player: Player = _spawn_player()
+	var tap: Vector3 = player.get_throw_impulse(0.0)
+	var full: Vector3 = player.get_throw_impulse(1.0)
+	assert_gt(full.length(), tap.length() * 3.0, "carregado voa bem mais longe")
+	player._drop_holding = true
+	player._drop_hold = player.throw_charge_delay * 0.5
+	assert_eq(player.get_throw_charge(), 0.0, "toque rápido não carrega")
+	player._drop_hold = player.throw_charge_delay + player.throw_charge_time * 2.0
+	assert_eq(player.get_throw_charge(), 1.0, "satura no máximo")
+	player._drop_holding = false
+	player._drop_hold = 0.0
+
+
+func test_nearby_items_ui_tracks_close_pickups() -> void:
+	var player: Player = _spawn_player()
+	assert_not_null(player.nearby_items_ui, "camada dos pontinhos no HUD")
+	var worm: ToolData = load("res://items/tools/minhoca.tres") as ToolData
+	var near: ItemPickup = ItemPickup.spawn(self, CarriedItem.create_from_tool_data(worm), player.global_position + Vector3(0, 0, -3))
+	var far: ItemPickup = ItemPickup.spawn(self, CarriedItem.create_from_tool_data(worm), player.global_position + Vector3(0, 0, -40))
+	player.nearby_items_ui.call("refresh_targets")
+	assert_eq(player.nearby_items_ui.call("get_target_count"), 1, "só o perto entra")
+	near.queue_free()
+	far.queue_free()

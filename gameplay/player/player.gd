@@ -74,6 +74,11 @@ signal died
 ## Cone frontal de recurso quando o raycast não acerta (cosseno do meio-ângulo).
 @export_range(-1.0, 1.0, 0.05) var pickup_cone_dot: float = 0.85
 @export var drop_impulse: float = 1.4
+## Segurar [Q] carrega um arremesso: após throw_charge_delay, sobe até throw_max_impulse
+## em throw_charge_time (toque rápido = largar como antes).
+@export var throw_max_impulse: float = 9.0
+@export var throw_charge_delay: float = 0.15
+@export var throw_charge_time: float = 0.5
 
 @export_group("Ferramentas Compráveis")
 @export var slingshot_damage: float = 20.0
@@ -323,6 +328,7 @@ func _ready() -> void:
 	_hit_feedback = HIT_FEEDBACK_SCRIPT.new()
 	add_child(_hit_feedback)
 	_setup_tool_sway()
+	_setup_nearby_items_ui()
 
 	_apply_backpack_capacity()
 	_apply_shovel_level()
@@ -1128,6 +1134,20 @@ func _on_swing_hit() -> void:
 		_shake_camera(0.02, 0.15)
 
 
+var nearby_items_ui: Control = null
+const NEARBY_ITEMS_UI_SCRIPT: Script = preload("res://gameplay/player/nearby_items_ui.gd")
+
+
+func _setup_nearby_items_ui() -> void:
+	var hud: Node = get_node_or_null(^"HUD")
+	if hud == null:
+		return
+	nearby_items_ui = NEARBY_ITEMS_UI_SCRIPT.new()
+	nearby_items_ui.name = "NearbyItems"
+	nearby_items_ui.set("player", self)
+	hud.add_child(nearby_items_ui)
+
+
 func _setup_tool_sway() -> void:
 	if camera == null:
 		return
@@ -1156,7 +1176,8 @@ func update_tool_sway(delta: float) -> void:
 		_equip_left = maxf(_equip_left - delta, 0.0)
 		var t: float = _equip_left / maxf(tool_equip_time, 0.001)
 		equip = t * t  # sai de baixo e assenta com ease-out
-	tool_sway.position = Vector3(_sway_offset.x, _sway_offset.y + breathe - equip * 0.12, 0.0) + bob
+	var charge: float = get_throw_charge()
+	tool_sway.position = Vector3(_sway_offset.x, _sway_offset.y + breathe - equip * 0.12 + charge * 0.03, charge * 0.12) + bob
 	var k: float = deg_to_rad(tool_sway_rot_deg) / maxf(tool_sway_max, 0.0001)
 	tool_sway.rotation = Vector3(-_sway_offset.y * k + equip * 0.5, _sway_offset.x * k, -_sway_offset.x * k * 0.6)
 
@@ -1180,8 +1201,18 @@ func _handle_inventory_actions() -> void:
 			inventory.select(i)
 	if Input.is_action_just_pressed("interact"):
 		_interact()
-	if InputMap.has_action("drop") and Input.is_action_just_pressed("drop"):
-		_drop_selected()
+	if InputMap.has_action("drop"):
+		if Input.is_action_just_pressed("drop"):
+			_drop_hold = 0.0
+			_drop_holding = inventory.get_selected() != null
+			if not _drop_holding:
+				_drop_selected()
+		elif _drop_holding and Input.is_action_pressed("drop"):
+			_drop_hold += get_physics_process_delta_time()
+		elif _drop_holding:
+			_drop_holding = false
+			_drop_selected(get_throw_charge())
+			_drop_hold = 0.0
 
 
 func _interact() -> void:
@@ -1261,16 +1292,38 @@ func on_pickup_denied() -> void:
 	_show_temporary_message("Alguém apanhou primeiro.", Color(0.9, 0.9, 0.9), 1.2)
 
 
-func _drop_selected() -> void:
+var _drop_hold: float = 0.0
+var _drop_holding: bool = false
+
+
+## 0..1 do arremesso a ser carregado com [Q] (0 = só largar).
+func get_throw_charge() -> float:
+	if not _drop_holding and _drop_hold <= 0.0:
+		return 0.0
+	return clampf((_drop_hold - throw_charge_delay) / maxf(throw_charge_time, 0.01), 0.0, 1.0)
+
+
+## Impulso do item largado: toque = cai à frente; carregado = voa na direção da mira
+## (somando a velocidade do jogador, como um arremesso de verdade).
+func get_throw_impulse(charge: float) -> Vector3:
+	var fwd: Vector3 = -camera.global_basis.z
+	var flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	if charge <= 0.0:
+		return flat * drop_impulse + Vector3.UP * 0.6
+	var aim: Vector3 = (fwd + Vector3.UP * 0.25).normalized()
+	var carry: Vector3 = Vector3(velocity.x, 0.0, velocity.z) * 0.5
+	return aim * lerpf(drop_impulse, throw_max_impulse, charge) + carry
+
+
+func _drop_selected(charge: float = 0.0) -> void:
 	var c: CarriedItem = inventory.take_selected()
 	if c == null:
 		_show_temporary_message("Slot vazio.", Color(0.9, 0.9, 0.9), 0.8)
 		return
 	var fwd: Vector3 = -camera.global_basis.z
 	var pos: Vector3 = camera.global_position + fwd * 0.7 + Vector3.DOWN * 0.3
-	var flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z).normalized()
-	ItemPickup.spawn(get_parent(), c, pos, flat * drop_impulse + Vector3.UP * 0.6)
-	SFX.play_at(SFX.DROP, pos, -3.0)
+	ItemPickup.spawn(get_parent(), c, pos, get_throw_impulse(charge))
+	SFX.play_at(SFX.DROP if charge < 0.3 else SFX.SLINGSHOT_FIRE, pos, -3.0)
 
 
 ## Interactable (#39/#40): o [E] fica com o jogador quando ele tem alvo próprio (produto da
