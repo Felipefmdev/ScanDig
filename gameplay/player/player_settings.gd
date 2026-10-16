@@ -37,7 +37,12 @@ static func load_settings() -> Dictionary:
 
 
 static func save_settings(values: Dictionary) -> Error:
+	# Carrega antes de gravar: o mesmo arquivo guarda o nome do jogador ([player] name) e o
+	# [online] do NetworkManager (#76). Só um arquivo inexistente começa vazio.
 	var cfg: ConfigFile = ConfigFile.new()
+	var load_err: Error = cfg.load(settings_path())
+	if load_err != OK and load_err != ERR_FILE_NOT_FOUND:
+		push_warning("player_settings: %s não abriu (%s); gravando só as opções." % [settings_path(), error_string(load_err)])
 	var clean: Dictionary = sanitize(values)
 	for key: String in clean:
 		cfg.set_value(SECTION, key, clean[key])
