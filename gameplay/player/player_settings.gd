@@ -1,64 +1,43 @@
 extends RefCounted
 
-## Preferências do jogador (não do progresso): ficam em user://, fora do save do mundo,
-## e valem para todos os mapas e sessões.
+## Preferências do jogador (não do progresso). Invólucro fino do SettingsManager (autoload
+## CoreSettings, #77), dono do user://scandig_settings.cfg: as opções ficam na seção [gameplay]
+## (as antigas de [player] são migradas por ele). Opções novas de jogador entram por lá.
 
-const PATH: String = "user://scandig_settings.cfg"
-const SECTION: String = "player"
-const DEFAULTS: Dictionary = {
-	"mouse_sensitivity": 0.0025,
-	"fov": 75.0,
-	"view_bobbing": true,
-}
-const SENSITIVITY_RANGE: Vector2 = Vector2(0.0005, 0.008)
-const FOV_RANGE: Vector2 = Vector2(60.0, 100.0)
-
-## Caminho trocável nos testes (para não tocar nas preferências reais). Fica no Engine e não
-## numa static var: o GUT recarrega scripts e cada cópia teria a sua.
-const PATH_META: StringName = &"scandig_settings_path"
+const PATH: String = SettingsManager.DEFAULT_PATH
+const SECTION: String = SettingsManager.GAMEPLAY
+const DEFAULTS: Dictionary = SettingsManager.DEFAULTS[SettingsManager.GAMEPLAY]
+const SENSITIVITY_RANGE: Vector2 = SettingsManager.SENSITIVITY_RANGE
+const FOV_RANGE: Vector2 = SettingsManager.FOV_RANGE
 
 
+## Testes: troca o arquivo do SettingsManager e relê.
 static func set_settings_path(p: String) -> void:
-	Engine.set_meta(PATH_META, p)
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null:
+		return
+	sm.settings_path = p
+	sm.load_settings()
 
 
 static func settings_path() -> String:
-	return str(Engine.get_meta(PATH_META, PATH))
+	var sm: SettingsManager = SettingsManager.instance
+	return sm.settings_path if sm != null else PATH
 
 
 static func load_settings() -> Dictionary:
-	var out: Dictionary = DEFAULTS.duplicate()
-	var cfg: ConfigFile = ConfigFile.new()
-	if cfg.load(settings_path()) != OK:
-		return out
-	for key: String in DEFAULTS:
-		out[key] = cfg.get_value(SECTION, key, DEFAULTS[key])
-	return sanitize(out)
+	var sm: SettingsManager = SettingsManager.instance
+	return sm.get_section(SECTION) if sm != null else DEFAULTS.duplicate()
 
 
+## Aplica (o player escuta CoreSettings.settings_changed) e grava preservando as outras seções.
 static func save_settings(values: Dictionary) -> Error:
-	# Carrega antes de gravar: o mesmo arquivo guarda o nome do jogador ([player] name) e o
-	# [online] do NetworkManager (#76). Só um arquivo inexistente começa vazio.
-	var cfg: ConfigFile = ConfigFile.new()
-	var load_err: Error = cfg.load(settings_path())
-	if load_err != OK and load_err != ERR_FILE_NOT_FOUND:
-		push_warning("player_settings: %s não abriu (%s); gravando só as opções." % [settings_path(), error_string(load_err)])
-	var clean: Dictionary = sanitize(values)
-	for key: String in clean:
-		cfg.set_value(SECTION, key, clean[key])
-	return cfg.save(settings_path())
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null:
+		return ERR_UNAVAILABLE
+	sm.set_section(SECTION, values, false)
+	return sm.save_settings()
 
 
-## Tipos e faixas válidos: um arquivo editado à mão não quebra o jogo.
 static func sanitize(values: Dictionary) -> Dictionary:
-	var out: Dictionary = DEFAULTS.duplicate()
-	var sens: Variant = values.get("mouse_sensitivity")
-	if sens is float or sens is int:
-		out["mouse_sensitivity"] = clampf(float(sens), SENSITIVITY_RANGE.x, SENSITIVITY_RANGE.y)
-	var fov: Variant = values.get("fov")
-	if fov is float or fov is int:
-		out["fov"] = clampf(float(fov), FOV_RANGE.x, FOV_RANGE.y)
-	var bob: Variant = values.get("view_bobbing")
-	if bob is bool:
-		out["view_bobbing"] = bob
-	return out
+	return SettingsManager.sanitize(SECTION, values)

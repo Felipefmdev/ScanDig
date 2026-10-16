@@ -36,6 +36,7 @@ signal player_revived(player: Player, by_player: Player)
 @export var fall_gravity_multiplier: float = 1.6
 @export_group("Câmera")
 @export var view_bobbing: bool = true
+@export var invert_y: bool = false
 ## Amplitudes do balanço (m) a velocidade de andar; correndo cresce junto.
 @export var head_bob_vertical: float = 0.035
 @export var head_bob_horizontal: float = 0.02
@@ -455,10 +456,7 @@ func _add_mouse_if_empty(action: StringName, button: MouseButton) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not is_settings_open():
-		_sway_look += (event as InputEventMouseMotion).relative
-		rotate_y(-event.relative.x * mouse_sensitivity)
-		head.rotate_x(-event.relative.y * mouse_sensitivity)
-		head.rotation.x = clampf(head.rotation.x, deg_to_rad(-80.0), deg_to_rad(80.0))
+		apply_mouse_look((event as InputEventMouseMotion).relative)
 
 	# [Esc] (ação "pause") é do menu de pausa (CorePauseMenu, #77).
 	if is_settings_open() or is_downed:
@@ -471,6 +469,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			inventory.cycle(-1)
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			inventory.cycle(1)
+
+
+## Olhar com o mouse; invert_y inverte o eixo vertical (Jogabilidade, #77).
+func apply_mouse_look(relative: Vector2) -> void:
+	_sway_look += relative
+	rotate_y(-relative.x * mouse_sensitivity)
+	head.rotate_x(-relative.y * mouse_sensitivity * (-1.0 if invert_y else 1.0))
+	head.rotation.x = clampf(head.rotation.x, deg_to_rad(-80.0), deg_to_rad(80.0))
 
 
 func _physics_process(delta: float) -> void:
@@ -1532,9 +1538,19 @@ func _on_swing_hit() -> void:
 const SETTINGS_SCRIPT: Script = preload("res://gameplay/player/player_settings.gd")
 
 
-## O [Esc] abre o menu de pausa (CorePauseMenu, #77); as opções vão para a aba Jogabilidade.
+## Opções vêm do CoreSettings (#77); a tela é a aba Jogabilidade do menu de pausa.
 func _setup_settings() -> void:
 	apply_settings(SETTINGS_SCRIPT.load_settings())
+	var hud: Node = get_node_or_null(^"HUD")
+	if hud != null:
+		hud.add_to_group(SettingsManager.HUD_TEXT_GROUP)
+	if SettingsManager.instance != null:
+		SettingsManager.instance.settings_changed.connect(_on_core_settings_changed)
+
+
+func _on_core_settings_changed(section: String, values: Dictionary) -> void:
+	if section == SettingsManager.GAMEPLAY:
+		apply_settings(values)
 
 
 ## Menu de pausa aberto: sem olhar, mover, atacar nem cavar (em coop o jogo segue).
@@ -1556,6 +1572,7 @@ func current_settings() -> Dictionary:
 		"mouse_sensitivity": mouse_sensitivity,
 		"fov": camera.fov if camera != null else 75.0,
 		"view_bobbing": view_bobbing,
+		"invert_y": invert_y,
 	}
 
 
@@ -1563,8 +1580,10 @@ func apply_settings(values: Dictionary) -> void:
 	var v: Dictionary = SETTINGS_SCRIPT.sanitize(values)
 	mouse_sensitivity = v["mouse_sensitivity"]
 	view_bobbing = v["view_bobbing"]
+	invert_y = v["invert_y"]
 	if camera != null:
 		camera.fov = v["fov"]
+	SettingsManager.apply_hud_text_scale(get_node_or_null(^"HUD"), float(v["hud_text_scale"]))
 
 
 var nearby_items_ui: Control = null

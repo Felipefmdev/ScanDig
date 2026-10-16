@@ -5,7 +5,7 @@ extends CanvasLayer
 ## Em solo pausa a árvore; em coop não pausa (o player consulta is_open() e para o input local).
 ## Não abre com o carregamento, o resumo do dia ou o aviso de queda do host na tela.
 ## Autoload CorePauseMenu. Abre e fecha pela ação "pause" (Esc); dentro das Configurações ou da
-## confirmação de saída, o Esc volta ao cartão.
+## confirmação de saída, o Esc volta ao cartão. Também mostra o contador de FPS (Jogabilidade).
 
 signal open_changed(open: bool)
 
@@ -24,10 +24,12 @@ var quit_panel: PanelContainer = null
 var quit_yes_button: Button = null
 var quit_no_button: Button = null
 var settings_menu: SettingsMenu = null
+var fps_label: Label = null
 
 var _open: bool = false
 var _paused_by_me: bool = false
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
+var _fps_refresh: float = 0.0
 
 
 static func is_open() -> bool:
@@ -53,6 +55,11 @@ func _ready() -> void:
 		return
 	_build()
 	root_control.visible = false
+	_build_fps_label()
+	var sm: SettingsManager = SettingsManager.instance
+	if sm != null:
+		sm.settings_changed.connect(_on_settings_changed)
+		_on_settings_changed(SettingsManager.GAMEPLAY, sm.get_section(SettingsManager.GAMEPLAY))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -65,6 +72,36 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		toggle()
 	get_viewport().set_input_as_handled()
+
+
+func _process(delta: float) -> void:
+	if fps_label == null or not fps_label.visible:
+		return
+	_fps_refresh -= delta
+	if _fps_refresh <= 0.0:
+		_fps_refresh = 0.5
+		fps_label.text = "%d FPS" % int(Engine.get_frames_per_second())
+
+
+func _build_fps_label() -> void:
+	fps_label = Label.new()
+	fps_label.name = "FpsLabel"
+	fps_label.theme = root_control.theme
+	# Texto claro com contorno: legível sobre o mundo e sobre os painéis do HUD.
+	fps_label.add_theme_font_size_override(&"font_size", 14)
+	fps_label.add_theme_color_override(&"font_color", UiPalette.PAPER)
+	fps_label.add_theme_color_override(&"font_outline_color", UiPalette.INK)
+	fps_label.add_theme_constant_override(&"outline_size", 5)
+	fps_label.position = Vector2(6, 0)
+	fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fps_label.visible = false
+	add_child(fps_label)
+
+
+func _on_settings_changed(section: String, values: Dictionary) -> void:
+	if section == SettingsManager.GAMEPLAY and fps_label != null:
+		fps_label.visible = bool(values.get("show_fps", false))
+		_fps_refresh = 0.0
 
 
 # --- Abrir / fechar ------------------------------------------------------------

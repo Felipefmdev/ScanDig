@@ -59,7 +59,7 @@ func _run() -> void:
 	sm.set_section(SettingsManager.AUDIO, {"master": 0.5, "music": 0.0, "sfx": 0.8})
 	sm.set_section(SettingsManager.VIDEO, {"vsync": false, "max_fps": 60, "ui_scale": 1.2, "quality": "low"})
 	var cfg: ConfigFile = _read()
-	_check(str(cfg.get_value("player", "name", "")) == "Murilo" and is_equal_approx(float(cfg.get_value("player", "fov", 0.0)), 90.0), "[player] preservado")
+	_check(str(cfg.get_value("player", "name", "")) == "Murilo" and is_equal_approx(float(cfg.get_value("gameplay", "fov", 0.0)), 90.0), "nome no [player]; fov antigo migrado para [gameplay]")
 	_check(int(cfg.get_value("online", "noray_port", 0)) == 9999, "[online] preservado")
 	_check(_changed == ["audio", "video"], "settings_changed por seção: %s" % str(_changed))
 

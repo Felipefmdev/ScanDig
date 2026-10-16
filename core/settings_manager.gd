@@ -1,9 +1,9 @@
 class_name SettingsManager
 extends Node
 
-## Configurações do jogo (vídeo, áudio; depois controles e jogabilidade, #77). Único dono do
+## Configurações do jogo (vídeo, áudio, controles e jogabilidade, #77). Único dono do
 ## user://scandig_settings.cfg: lê, aplica e grava. Preserva as seções que não são dele
-## ([player] do nome e das opções do Esc, [online] do NetworkManager). A UI só fala com ele.
+## ([player] name e [online] do NetworkManager). A UI e o player_settings.gd só falam com ele.
 ## Autoload CoreSettings.
 
 signal settings_changed(section: String, values: Dictionary)
@@ -14,6 +14,7 @@ const DEFAULT_PATH: String = "user://scandig_settings.cfg"
 const VIDEO: String = "video"
 const AUDIO: String = "audio"
 const CONTROLS: String = "controls"
+const GAMEPLAY: String = "gameplay"
 
 const WINDOW_MODES: Array[String] = ["windowed", "fullscreen", "borderless"]
 const FPS_LIMITS: Array[int] = [30, 60, 120, 144, 0]
@@ -27,6 +28,16 @@ const RESOLUTIONS: Array[Vector2i] = [
 ## Buses de áudio controlados (o Music existe no default_bus_layout.tres mesmo sem música).
 const AUDIO_BUSES: Dictionary = {"master": &"Master", "music": &"Music", "sfx": &"SFX"}
 const VIDEO_TRIAL_SECONDS: float = 10.0
+const SENSITIVITY_RANGE: Vector2 = Vector2(0.0005, 0.008)
+const FOV_RANGE: Vector2 = Vector2(60.0, 100.0)
+const HUD_TEXT_SCALE_RANGE: Vector2 = Vector2(0.8, 1.5)
+## Antes do #77 as opções do Esc ficavam em [player] (player_settings.gd). Lidas se o arquivo
+## ainda não tem [gameplay] e apagadas do [player] ao gravar (o nome continua lá).
+const LEGACY_GAMEPLAY_KEYS: Array[String] = ["mouse_sensitivity", "fov", "view_bobbing"]
+const LEGACY_SECTION: String = "player"
+## Nós de HUD cujo texto acompanha o tamanho do texto do HUD (o HUD do player entra sozinho).
+const HUD_TEXT_GROUP: StringName = &"settings_hud_text"
+const _BASE_FONT_META: StringName = &"_settings_base_font_size"
 
 const DEFAULTS: Dictionary = {
 	VIDEO: {
@@ -44,6 +55,14 @@ const DEFAULTS: Dictionary = {
 	},
 	# Só as trocas do jogador; o resto vem de DEFAULT_BINDINGS.
 	CONTROLS: {},
+	GAMEPLAY: {
+		"mouse_sensitivity": 0.0025,
+		"fov": 75.0,
+		"view_bobbing": true,
+		"invert_y": false,
+		"show_fps": false,
+		"hud_text_scale": 1.0,
+	},
 }
 
 ## Por qualidade: MSAA 3D, escala do render 3D e tamanho dos atlas de sombra.
@@ -81,6 +100,7 @@ func _ready() -> void:
 	else:
 		load_settings()
 	apply_all()
+	get_tree().node_added.connect(_on_node_added)
 
 
 # --- Leitura -------------------------------------------------------------------
@@ -101,6 +121,11 @@ func load_settings() -> void:
 	_video_saved = err == OK and cfg.has_section(VIDEO)
 	for section: String in DEFAULTS.keys():
 		var raw: Dictionary = {}
+		if err == OK and section == GAMEPLAY:
+			# Migração: valores antigos de [player]; o [gameplay], se houver, vence.
+			for key: String in LEGACY_GAMEPLAY_KEYS:
+				if cfg.has_section_key(LEGACY_SECTION, key):
+					raw[key] = cfg.get_value(LEGACY_SECTION, key)
 		if err == OK and cfg.has_section(section):
 			for key: String in cfg.get_section_keys(section):
 				raw[key] = cfg.get_value(section, key)
@@ -138,6 +163,19 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 			for action: String in CONTROL_ACTIONS:
 				if _valid_binding(values.get(action)):
 					out[action] = {"type": values[action]["type"], "code": int(values[action]["code"])}
+		GAMEPLAY:
+			var sens: Variant = values.get("mouse_sensitivity")
+			if sens is float or sens is int:
+				out["mouse_sensitivity"] = clampf(float(sens), SENSITIVITY_RANGE.x, SENSITIVITY_RANGE.y)
+			var fov: Variant = values.get("fov")
+			if fov is float or fov is int:
+				out["fov"] = clampf(float(fov), FOV_RANGE.x, FOV_RANGE.y)
+			for key: String in ["view_bobbing", "invert_y", "show_fps"]:
+				if values.get(key) is bool:
+					out[key] = values[key]
+			var hud: Variant = values.get("hud_text_scale")
+			if hud is float or hud is int:
+				out["hud_text_scale"] = clampf(float(hud), HUD_TEXT_SCALE_RANGE.x, HUD_TEXT_SCALE_RANGE.y)
 	return out
 
 
@@ -174,6 +212,10 @@ func save_settings() -> Error:
 		var values: Dictionary = get_section(section)
 		for key: String in values.keys():
 			cfg.set_value(section, key, values[key])
+	# Já migradas para [gameplay]: saem do [player] (o name do NetworkManager fica).
+	for key: String in LEGACY_GAMEPLAY_KEYS:
+		if cfg.has_section_key(LEGACY_SECTION, key):
+			cfg.erase_section_key(LEGACY_SECTION, key)
 	var err: Error = cfg.save(settings_path)
 	if err != OK:
 		push_warning("SettingsManager: falha ao gravar %s (%s)." % [settings_path, error_string(err)])
@@ -254,6 +296,13 @@ func _apply_section(section: String, apply_window: bool) -> void:
 			_apply_audio(get_section(AUDIO))
 		CONTROLS:
 			_apply_controls()
+		GAMEPLAY:
+			# Sensibilidade, FOV, balanço e inverter Y: o player escuta settings_changed.
+			# O contador de FPS é do PauseMenu.
+			var scale: float = float(get_section(GAMEPLAY)["hud_text_scale"])
+			if is_inside_tree():
+				for node: Node in get_tree().get_nodes_in_group(HUD_TEXT_GROUP):
+					apply_hud_text_scale(node, scale)
 
 
 func _apply_audio(values: Dictionary) -> void:
@@ -437,3 +486,59 @@ func _apply_controls() -> void:
 			if ev is InputEventKey or ev is InputEventMouseButton:
 				InputMap.action_erase_event(action, ev)
 		InputMap.action_add_event(action, event_from_binding(get_binding(action)))
+
+
+# --- Jogabilidade (#77, etapa 3) -----------------------------------------------
+
+## Escala o texto de Labels e RichTextLabels sob `root` (o tamanho original fica em meta, então
+## aplicar de novo não acumula). Textos criados depois (mensagens do HUD) entram por node_added.
+static func apply_hud_text_scale(root: Node, scale: float) -> void:
+	if root == null:
+		return
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		_scale_text_node(node, scale)
+		stack.append_array(node.get_children())
+
+
+static func _scale_text_node(node: Node, scale: float) -> void:
+	var control: Control = node as Control
+	if control == null:
+		return
+	var key: StringName = &""
+	if control is Label:
+		key = &"font_size"
+	elif control is RichTextLabel:
+		key = &"normal_font_size"
+	else:
+		return
+	if not control.has_meta(_BASE_FONT_META):
+		control.set_meta(_BASE_FONT_META, control.get_theme_font_size(key))
+	var base: int = int(control.get_meta(_BASE_FONT_META))
+	if is_equal_approx(scale, 1.0):
+		if control.has_theme_font_size_override(key) and control.get_theme_font_size(key) != base:
+			control.add_theme_font_size_override(key, base)
+		return
+	control.add_theme_font_size_override(key, maxi(roundi(base * scale), 1))
+
+
+func _on_node_added(node: Node) -> void:
+	if not (node is Label or node is RichTextLabel):
+		return
+	var scale: float = float(get_section(GAMEPLAY)["hud_text_scale"])
+	if is_equal_approx(scale, 1.0) and not node.has_meta(_BASE_FONT_META):
+		return
+	_scale_new_text.call_deferred(node)
+
+
+## Depois do frame: o código que criou o texto já pôs o tamanho dele.
+func _scale_new_text(node: Node) -> void:
+	if not is_instance_valid(node) or not node.is_inside_tree():
+		return
+	var parent: Node = node.get_parent()
+	while parent != null:
+		if parent.is_in_group(HUD_TEXT_GROUP):
+			_scale_text_node(node, float(get_section(GAMEPLAY)["hud_text_scale"]))
+			return
+		parent = parent.get_parent()

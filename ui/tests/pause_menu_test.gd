@@ -2,7 +2,8 @@
 ## #77: PauseMenu (autoload CorePauseMenu) e SettingsMenu. Solo pausa a árvore, coop (porta 7803)
 ## não; não abre com carregamento ou resumo; botões por papel; Configurações aplica no
 ## SettingsManager (arquivo do teste em user://test_saves/); resolução pede confirmação.
-## Esc (ação "pause") abre e fecha; em coop o player fica parado com o menu aberto e anda ao fechar.
+## Etapa 3: Esc (ação "pause") abre e fecha; aba Jogabilidade; em coop o player fica parado com o
+## menu aberto e anda ao fechar; inverter Y.
 extends SceneTree
 
 const SETTINGS_PATH: String = "user://test_saves/pause_menu_test.cfg"
@@ -99,7 +100,7 @@ func _run() -> void:
 	menu.settings_button.pressed.emit()
 	var settings: SettingsMenu = menu.settings_menu
 	_check(settings.visible and not menu.card.visible, "configurações abertas no lugar do cartão")
-	_check(settings.tabs.get_tab_count() == 4 and not settings.tabs.is_tab_disabled(2) and settings.tabs.is_tab_disabled(3), "abas: Vídeo, Áudio, Controles; Jogabilidade desativada")
+	_check(settings.tabs.get_tab_count() == 4 and not settings.tabs.is_tab_disabled(2) and not settings.tabs.is_tab_disabled(3), "abas: Vídeo, Áudio, Controles e Jogabilidade, todas ativas")
 	(settings.audio_sliders["master"] as HSlider).value = 40.0
 	(settings.audio_sliders["music"] as HSlider).value = 0.0
 	settings.apply_button.pressed.emit()
@@ -116,6 +117,7 @@ func _run() -> void:
 	await _wait(2)
 	_check(not sm.is_video_trial_active() and sm.get_value(SettingsManager.VIDEO, "resolution") == before_res and not settings.confirm_panel.visible, "voltar ao anterior restaura a resolução")
 	await _check_controls(settings, sm)
+	await _check_gameplay(settings, sm, menu)
 	settings.back_button.pressed.emit()
 	_check(menu.card.visible and not settings.visible, "voltar das configurações mostra o cartão")
 
@@ -134,7 +136,7 @@ func _run() -> void:
 	_check(menu.leave_button.visible, "coop: sair da sessão visível")
 	menu.close()
 	_check(not PauseMenu.is_open() and not paused, "coop: fecha")
-	await _check_player(menu)
+	await _check_player(menu, sm)
 	net.disconnect_game()
 	await _wait(3)
 
@@ -174,8 +176,34 @@ func _check_controls(settings: SettingsMenu, sm: SettingsManager) -> void:
 	settings.tabs.current_tab = SettingsMenu.TAB_VIDEO
 
 
+## Etapa 3: aba Jogabilidade aplica e grava no [gameplay]; FPS aparece; padrão restaura.
+func _check_gameplay(settings: SettingsMenu, sm: SettingsManager, menu: PauseMenu) -> void:
+	settings.tabs.current_tab = SettingsMenu.TAB_GAMEPLAY
+	await _wait(2)
+	_check(is_equal_approx(settings.sensitivity_slider.value, 100.0) and is_equal_approx(settings.fov_slider.value, 75.0) and settings.bobbing_check.button_pressed and not settings.invert_y_check.button_pressed, "Jogabilidade mostra os padrões")
+	_check(settings.language_option.disabled and settings.language_option.get_item_text(0) == "Português (Brasil)", "idioma: só português, desativado")
+	settings.sensitivity_slider.value = 160.0
+	settings.fov_slider.value = 90.0
+	settings.invert_y_check.button_pressed = true
+	settings.bobbing_check.button_pressed = false
+	settings.show_fps_check.button_pressed = true
+	settings.hud_text_slider.value = 120.0
+	_check(is_equal_approx(float(sm.get_value(SettingsManager.GAMEPLAY, "fov")), 75.0), "pendente até Aplicar")
+	settings.apply_button.pressed.emit()
+	var g: Dictionary = sm.get_section(SettingsManager.GAMEPLAY)
+	_check(is_equal_approx(float(g["mouse_sensitivity"]), 0.004) and is_equal_approx(float(g["fov"]), 90.0) and g["invert_y"] == true and g["view_bobbing"] == false and g["show_fps"] == true and is_equal_approx(float(g["hud_text_scale"]), 1.2), "aplicado: %s" % str(g))
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	_check(is_equal_approx(float(cfg.get_value("gameplay", "fov", 0.0)), 90.0) and cfg.get_value("gameplay", "invert_y", false) == true, "gravado em [gameplay]")
+	_check(menu.fps_label.visible, "mostrar FPS liga o contador")
+	settings.defaults_button.pressed.emit()
+	_check(sm.get_section(SettingsManager.GAMEPLAY) == SettingsManager.DEFAULTS[SettingsManager.GAMEPLAY] and not menu.fps_label.visible and is_equal_approx(settings.fov_slider.value, 75.0), "restaurar padrão na Jogabilidade")
+	settings.tabs.current_tab = SettingsMenu.TAB_VIDEO
+
+
 ## Coop: com o menu aberto o player local não anda nem pula (a física segue); ao fechar, anda.
-func _check_player(menu: PauseMenu) -> void:
+## Inverter Y e tamanho do texto do HUD chegam ao player pelo CoreSettings.
+func _check_player(menu: PauseMenu, sm: SettingsManager) -> void:
 	# O lobby não tem player (nasce nos mapas): um player do host num chão longe da base.
 	var arena: Node3D = Node3D.new()
 	arena.position = Vector3(0.0, -500.0, 0.0)
@@ -212,4 +240,27 @@ func _check_player(menu: PauseMenu) -> void:
 	_check(flat.length() > 0.5, "menu fechado: player anda (vel %.2f)" % flat.length())
 	Input.action_release("move_forward")
 
+	# Inverter Y.
+	sm.set_section(SettingsManager.GAMEPLAY, {"invert_y": false})
+	player.head.rotation.x = 0.0
+	player.apply_mouse_look(Vector2(0.0, 10.0))
+	var normal: float = player.head.rotation.x
+	sm.set_section(SettingsManager.GAMEPLAY, {"invert_y": true})
+	_check(player.invert_y, "inverter Y chega ao player")
+	player.head.rotation.x = 0.0
+	player.apply_mouse_look(Vector2(0.0, 10.0))
+	_check(normal < 0.0 and is_equal_approx(player.head.rotation.x, -normal), "inverter Y: %.4f vira %.4f" % [normal, player.head.rotation.x])
+
+	# Tamanho do texto do HUD (inclusive texto criado depois).
+	var label: Label = player.get_node(^"HUD/SessionInfoLabel") as Label
+	var base: int = label.get_theme_font_size(&"font_size")
+	sm.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.5})
+	_check(label.get_theme_font_size(&"font_size") == roundi(base * 1.5), "HUD 150 %%: %d → %d" % [base, label.get_theme_font_size(&"font_size")])
+	var late: Label = Label.new()
+	player.get_node(^"HUD").add_child(late)
+	var late_base: int = late.get_theme_font_size(&"font_size")
+	await _wait(2)
+	_check(late.get_theme_font_size(&"font_size") == roundi(late_base * 1.5), "texto novo no HUD também escala: %d" % late.get_theme_font_size(&"font_size"))
+	sm.restore_defaults(SettingsManager.GAMEPLAY)
+	_check(label.get_theme_font_size(&"font_size") == base and not player.invert_y, "padrão volta o HUD e o eixo Y")
 	arena.queue_free()

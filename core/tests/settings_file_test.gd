@@ -1,6 +1,7 @@
 # Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://core/tests/settings_file_test.gd
-## #76: o user://scandig_settings.cfg tem dois donos (opções do player e nome/[online] do
-## NetworkManager). Gravar um não pode apagar o outro. O arquivo real do jogador é copiado e
+## #76: o user://scandig_settings.cfg tem dois escritores (SettingsManager, com as opções do
+## player em [gameplay] desde o #77, e o nome/[online] do NetworkManager). Gravar um não pode
+## apagar o outro. O arquivo real do jogador é copiado e
 ## restaurado no fim.
 extends SceneTree
 
@@ -49,7 +50,7 @@ func _run() -> void:
 	var after_player: ConfigFile = _read()
 	_check(str(after_player.get_value("player", "name", "")) == "Murilo", "nome continua: '%s'" % str(after_player.get_value("player", "name", "")))
 	_check(str(after_player.get_value("online", "noray_address", "")) == "noray.exemplo.org" and int(after_player.get_value("online", "noray_port", 0)) == 9999, "[online] continua")
-	_check(is_equal_approx(float(after_player.get_value("player", "fov", 0.0)), 90.0), "fov gravado")
+	_check(is_equal_approx(float(after_player.get_value("gameplay", "fov", 0.0)), 90.0), "fov gravado em [gameplay]")
 
 	# 2. O contrário: salvar o nome pelo NetworkManager não apaga as opções do player.
 	var net: NetworkManager = NetworkManager.instance
@@ -58,8 +59,8 @@ func _run() -> void:
 		net.set_local_player_name("Outro Nome")
 		var after_name: ConfigFile = _read()
 		_check(str(after_name.get_value("player", "name", "")) == "Outro Nome", "nome novo gravado")
-		var prefs: Dictionary = PLAYER_SETTINGS.call(&"load_settings")
-		_check(is_equal_approx(float(prefs["fov"]), 90.0) and prefs["view_bobbing"] == false and is_equal_approx(float(prefs["mouse_sensitivity"]), 0.004), "opções do player continuam: %s" % str(prefs))
+		var fov: float = float(after_name.get_value("gameplay", "fov", 0.0))
+		_check(is_equal_approx(fov, 90.0) and after_name.get_value("gameplay", "view_bobbing", true) == false and is_equal_approx(float(after_name.get_value("gameplay", "mouse_sensitivity", 0.0)), 0.004), "opções do player continuam no arquivo")
 		_check(str(after_name.get_value("online", "noray_address", "")) == "noray.exemplo.org", "[online] continua depois do nome")
 
 	# 3. Sem arquivo: as opções criam o arquivo do zero.

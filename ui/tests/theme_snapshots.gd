@@ -167,6 +167,17 @@ func _run() -> void:
 		await _shot("config_audio")
 		pause.settings_menu.tabs.current_tab = 2
 		await _shot("config_controles")
+		pause.settings_menu.tabs.current_tab = 3
+		await _shot("config_jogabilidade")
+		# Fim da aba (Idioma) com o contador de FPS ligado (sem gravar no arquivo do jogador).
+		var page: ScrollContainer = pause.settings_menu.tabs.get_child(3) as ScrollContainer
+		page.scroll_vertical = 10000
+		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"show_fps": true}, false)
+		pause.settings_menu.refresh()
+		await _shot("config_jogabilidade_fim")
+		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"show_fps": false}, false)
+		pause.settings_menu.refresh()
+		page.scroll_vertical = 0
 		pause.settings_menu.tabs.current_tab = 0
 		pause.close()
 

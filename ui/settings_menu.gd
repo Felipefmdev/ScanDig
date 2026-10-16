@@ -13,6 +13,9 @@ const AUDIO_LABELS: Dictionary = {"master": "Volume geral", "music": "Música", 
 const TAB_VIDEO: int = 0
 const TAB_AUDIO: int = 1
 const TAB_CONTROLS: int = 2
+const TAB_GAMEPLAY: int = 3
+## Sensibilidade mostrada em % do padrão (0.0025 = 100 %), como no painel antigo do Esc.
+const SENSITIVITY_UNIT: float = 0.0025
 const CAPTURE_TEXT: String = "Pressione uma tecla…"
 
 var tabs: TabContainer = null
@@ -40,6 +43,16 @@ var conflict_cancel_button: Button = null
 ## Ação esperando tecla ("" = nenhuma) e o binding em conflito aguardando Trocar/Cancelar.
 var capturing: String = ""
 var _conflict_binding: Dictionary = {}
+var sensitivity_slider: HSlider = null
+var sensitivity_value: Label = null
+var invert_y_check: CheckBox = null
+var fov_slider: HSlider = null
+var fov_value: Label = null
+var bobbing_check: CheckBox = null
+var show_fps_check: CheckBox = null
+var hud_text_slider: HSlider = null
+var hud_text_value: Label = null
+var language_option: OptionButton = null
 
 var _resolutions: Array[Vector2i] = []
 var _trial_left: float = 0.0
@@ -106,6 +119,13 @@ func _slider_row(grid: GridContainer, text: String, min_value: float, max_value:
 	box.add_child(value)
 	_row(grid, text, box)
 	return [slider, value]
+
+
+func _checkbox(text: String) -> CheckBox:
+	var check: CheckBox = CheckBox.new()
+	check.text = text
+	check.focus_mode = Control.FOCUS_NONE
+	return check
 
 
 func _grid() -> GridContainer:
@@ -194,14 +214,43 @@ func _build() -> void:
 	scroll.name = "Controles"
 	tabs.add_child(scroll)
 
-	# Jogabilidade (etapa 3, #77).
-	var soon: Label = Label.new()
-	soon.text = "Em breve."
-	soon.theme_type_variation = &"HintLabel"
-	var gameplay_page: MarginContainer = _margin(soon, 14)
-	gameplay_page.name = "Jogabilidade"
-	tabs.add_child(gameplay_page)
-	tabs.set_tab_disabled(tabs.get_tab_count() - 1, true)
+	# Jogabilidade (etapa 3): as opções do antigo painel do Esc do player e as novas.
+	var gameplay: GridContainer = _grid()
+	var sens_row: Array = _slider_row(gameplay, "Sensibilidade do mouse",
+		roundf(SettingsManager.SENSITIVITY_RANGE.x / SENSITIVITY_UNIT * 100.0),
+		roundf(SettingsManager.SENSITIVITY_RANGE.y / SENSITIVITY_UNIT * 100.0), 5.0)
+	sensitivity_slider = sens_row[0]
+	sensitivity_value = sens_row[1]
+	sensitivity_slider.value_changed.connect(func(v: float) -> void: sensitivity_value.text = "%d %%" % int(v))
+	invert_y_check = _checkbox("Ligado")
+	_row(gameplay, "Inverter eixo Y", invert_y_check)
+	var fov_row: Array = _slider_row(gameplay, "Campo de visão", SettingsManager.FOV_RANGE.x, SettingsManager.FOV_RANGE.y, 1.0)
+	fov_slider = fov_row[0]
+	fov_value = fov_row[1]
+	fov_slider.value_changed.connect(func(v: float) -> void: fov_value.text = "%d°" % int(v))
+	bobbing_check = _checkbox("Ligado")
+	_row(gameplay, "Balanço da câmera ao andar", bobbing_check)
+	show_fps_check = _checkbox("Ligado")
+	_row(gameplay, "Mostrar FPS", show_fps_check)
+	var hud_row: Array = _slider_row(gameplay, "Tamanho do texto do HUD",
+		SettingsManager.HUD_TEXT_SCALE_RANGE.x * 100.0, SettingsManager.HUD_TEXT_SCALE_RANGE.y * 100.0, 10.0)
+	hud_text_slider = hud_row[0]
+	hud_text_value = hud_row[1]
+	hud_text_slider.value_changed.connect(func(v: float) -> void: hud_text_value.text = "%d %%" % int(v))
+	# Idioma: só português por enquanto (sem tradução ainda).
+	language_option = _option(["Português (Brasil)"])
+	language_option.disabled = true
+	language_option.tooltip_text = "Outros idiomas em breve."
+	_row(gameplay, "Idioma", language_option)
+	var gameplay_scroll: ScrollContainer = ScrollContainer.new()
+	gameplay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	gameplay_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	gameplay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var gameplay_page: MarginContainer = _margin(gameplay, 14)
+	gameplay_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gameplay_scroll.add_child(gameplay_page)
+	gameplay_scroll.name = "Jogabilidade"
+	tabs.add_child(gameplay_scroll)
 
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)
@@ -303,6 +352,27 @@ func refresh() -> void:
 		var slider: HSlider = audio_sliders[key]
 		slider.value = roundf(float(audio[key]) * 100.0)
 		(audio_values[key] as Label).text = "Mudo" if slider.value <= 0.0 else "%d %%" % int(slider.value)
+	var gameplay: Dictionary = sm.get_section(SettingsManager.GAMEPLAY)
+	sensitivity_slider.value = roundf(float(gameplay["mouse_sensitivity"]) / SENSITIVITY_UNIT * 100.0)
+	sensitivity_value.text = "%d %%" % int(sensitivity_slider.value)
+	invert_y_check.button_pressed = bool(gameplay["invert_y"])
+	fov_slider.value = float(gameplay["fov"])
+	fov_value.text = "%d°" % int(fov_slider.value)
+	bobbing_check.button_pressed = bool(gameplay["view_bobbing"])
+	show_fps_check.button_pressed = bool(gameplay["show_fps"])
+	hud_text_slider.value = roundf(float(gameplay["hud_text_scale"]) * 100.0)
+	hud_text_value.text = "%d %%" % int(hud_text_slider.value)
+
+
+func pending_gameplay() -> Dictionary:
+	return {
+		"mouse_sensitivity": sensitivity_slider.value / 100.0 * SENSITIVITY_UNIT,
+		"invert_y": invert_y_check.button_pressed,
+		"fov": fov_slider.value,
+		"view_bobbing": bobbing_check.button_pressed,
+		"show_fps": show_fps_check.button_pressed,
+		"hud_text_scale": hud_text_slider.value / 100.0,
+	}
 
 
 func pending_video() -> Dictionary:
@@ -337,6 +407,7 @@ func _on_apply_pressed() -> void:
 	if sm == null:
 		return
 	sm.set_section(SettingsManager.AUDIO, pending_audio())
+	sm.set_section(SettingsManager.GAMEPLAY, pending_gameplay())
 	var video: Dictionary = pending_video()
 	if SettingsManager.needs_video_trial(sm.get_section(SettingsManager.VIDEO), video):
 		_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
@@ -354,6 +425,8 @@ func _on_defaults_pressed() -> void:
 	if tabs.current_tab == TAB_CONTROLS:
 		_end_capture()
 		sm.reset_controls()
+	elif tabs.current_tab == TAB_GAMEPLAY:
+		sm.restore_defaults(SettingsManager.GAMEPLAY)
 	elif tabs.current_tab == TAB_AUDIO:
 		sm.restore_defaults(SettingsManager.AUDIO)
 	elif tabs.current_tab == TAB_VIDEO:

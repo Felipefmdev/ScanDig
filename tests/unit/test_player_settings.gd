@@ -1,7 +1,7 @@
 extends GutTest
 
-## Opções do jogador: sensibilidade, campo de visão e balanço da câmera. O [Esc] abre o menu de
-## pausa (CorePauseMenu, #77).
+## Opções do jogador: sensibilidade, campo de visão e balanço da câmera. Desde o #77 ficam no
+## CoreSettings ([gameplay]) e a tela é a aba Jogabilidade do menu de pausa (Esc).
 
 const PLAYER_SCENE: PackedScene = preload("res://gameplay/player/player.tscn")
 const SETTINGS: Script = preload("res://gameplay/player/player_settings.gd")
@@ -13,9 +13,9 @@ var _orig_path: String = ""
 func before_each() -> void:
 	_orig_path = SETTINGS.settings_path()
 	DirAccess.make_dir_recursive_absolute("user://test_saves")
-	SETTINGS.set_settings_path(TEST_PATH)
 	if FileAccess.file_exists(TEST_PATH):
 		DirAccess.remove_absolute(TEST_PATH)
+	SETTINGS.set_settings_path(TEST_PATH)
 
 
 func after_each() -> void:
@@ -50,6 +50,9 @@ func test_pause_menu_toggles_and_settings_apply() -> void:
 	assert_eq(Input.mouse_mode, Input.MOUSE_MODE_VISIBLE, "mouse livre com o menu aberto")
 	player.toggle_settings(false)
 	assert_false(player.is_settings_open())
-	player.apply_settings({"fov": 95.0, "view_bobbing": false})
-	assert_almost_eq(player.camera.fov, 95.0, 0.01, "campo de visão aplicado")
+	SETTINGS.save_settings({"fov": 95.0, "view_bobbing": false})
+	assert_almost_eq(player.camera.fov, 95.0, 0.01, "campo de visão aplicado na hora")
 	assert_false(player.view_bobbing)
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.load(TEST_PATH)
+	assert_almost_eq(float(cfg.get_value("gameplay", "fov", 0.0)), 95.0, 0.01, "gravado no arquivo")
