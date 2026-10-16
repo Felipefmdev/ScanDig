@@ -13,6 +13,7 @@ signal video_trial_finished(kept: bool)
 const DEFAULT_PATH: String = "user://scandig_settings.cfg"
 const VIDEO: String = "video"
 const AUDIO: String = "audio"
+const CONTROLS: String = "controls"
 
 const WINDOW_MODES: Array[String] = ["windowed", "fullscreen", "borderless"]
 const FPS_LIMITS: Array[int] = [30, 60, 120, 144, 0]
@@ -41,6 +42,8 @@ const DEFAULTS: Dictionary = {
 		"music": 1.0,
 		"sfx": 1.0,
 	},
+	# Só as trocas do jogador; o resto vem de DEFAULT_BINDINGS.
+	CONTROLS: {},
 }
 
 ## Por qualidade: MSAA 3D, escala do render 3D e tamanho dos atlas de sombra.
@@ -131,6 +134,10 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 				var v: Variant = values.get(key)
 				if v is float or v is int:
 					out[key] = clampf(float(v), 0.0, 1.0)
+		CONTROLS:
+			for action: String in CONTROL_ACTIONS:
+				if _valid_binding(values.get(action)):
+					out[action] = {"type": values[action]["type"], "code": int(values[action]["code"])}
 	return out
 
 
@@ -161,6 +168,9 @@ func save_settings() -> Error:
 	if load_err != OK and load_err != ERR_FILE_NOT_FOUND:
 		push_warning("SettingsManager: %s não abriu (%s); gravando só as configurações." % [settings_path, error_string(load_err)])
 	for section: String in DEFAULTS.keys():
+		# A seção inteira é deste manager: apaga antes (uma troca desfeita some do arquivo).
+		if cfg.has_section(section):
+			cfg.erase_section(section)
 		var values: Dictionary = get_section(section)
 		for key: String in values.keys():
 			cfg.set_value(section, key, values[key])
@@ -242,6 +252,8 @@ func _apply_section(section: String, apply_window: bool) -> void:
 			_apply_video(get_section(VIDEO), apply_window)
 		AUDIO:
 			_apply_audio(get_section(AUDIO))
+		CONTROLS:
+			_apply_controls()
 
 
 func _apply_audio(values: Dictionary) -> void:
@@ -283,3 +295,145 @@ func _apply_video(values: Dictionary, apply_window: bool) -> void:
 			var screen: Rect2i = DisplayServer.screen_get_usable_rect()
 			if screen.size.x > 0:
 				DisplayServer.window_set_position(screen.position + (screen.size - res) / 2)
+
+
+# --- Controles (#77, etapa 2) --------------------------------------------------
+
+## Ações remapeáveis, na ordem da aba Controles.
+const CONTROL_ACTIONS: Array[String] = [
+	"move_forward", "move_backward", "move_left", "move_right", "jump", "sprint",
+	"interact", "use_tool", "careful_dig", "attack", "drop",
+	"slot_1", "slot_2", "slot_3", "slot_4", "slot_5", "slot_6", "slot_7", "slot_8", "pause",
+]
+const ACTION_LABELS: Dictionary = {
+	"move_forward": "Andar para frente", "move_backward": "Andar para trás",
+	"move_left": "Andar para a esquerda", "move_right": "Andar para a direita",
+	"jump": "Pular", "sprint": "Correr", "interact": "Interagir / pegar",
+	"use_tool": "Usar ferramenta", "careful_dig": "Cavar com cuidado", "attack": "Atacar",
+	"drop": "Soltar / arremessar item", "slot_1": "Espaço 1 da mochila", "slot_2": "Espaço 2 da mochila",
+	"slot_3": "Espaço 3 da mochila", "slot_4": "Espaço 4 da mochila", "slot_5": "Espaço 5 da mochila",
+	"slot_6": "Espaço 6 da mochila", "slot_7": "Espaço 7 da mochila", "slot_8": "Espaço 8 da mochila",
+	"pause": "Pausa",
+}
+## Mesmos padrões do [input] do project.godot e do _ensure_default_input_mappings do player
+## (tecla física). {"type": "key"|"mouse", "code": physical_keycode | button_index}
+const DEFAULT_BINDINGS: Dictionary = {
+	"move_forward": {"type": "key", "code": KEY_W}, "move_backward": {"type": "key", "code": KEY_S},
+	"move_left": {"type": "key", "code": KEY_A}, "move_right": {"type": "key", "code": KEY_D},
+	"jump": {"type": "key", "code": KEY_SPACE}, "sprint": {"type": "key", "code": KEY_SHIFT},
+	"interact": {"type": "key", "code": KEY_E}, "use_tool": {"type": "mouse", "code": MOUSE_BUTTON_LEFT},
+	"careful_dig": {"type": "mouse", "code": MOUSE_BUTTON_RIGHT}, "attack": {"type": "key", "code": KEY_F},
+	"drop": {"type": "key", "code": KEY_Q},
+	"slot_1": {"type": "key", "code": KEY_1}, "slot_2": {"type": "key", "code": KEY_2},
+	"slot_3": {"type": "key", "code": KEY_3}, "slot_4": {"type": "key", "code": KEY_4},
+	"slot_5": {"type": "key", "code": KEY_5}, "slot_6": {"type": "key", "code": KEY_6},
+	"slot_7": {"type": "key", "code": KEY_7}, "slot_8": {"type": "key", "code": KEY_8},
+	"pause": {"type": "key", "code": KEY_ESCAPE},
+}
+const KEY_NAMES: Dictionary = {
+	KEY_SPACE: "Espaço", KEY_SHIFT: "Shift", KEY_CTRL: "Ctrl", KEY_ALT: "Alt", KEY_ENTER: "Enter",
+	KEY_KP_ENTER: "Enter (numérico)", KEY_TAB: "Tab", KEY_ESCAPE: "Esc", KEY_BACKSPACE: "Backspace",
+	KEY_CAPSLOCK: "Caps Lock", KEY_UP: "Seta para cima", KEY_DOWN: "Seta para baixo",
+	KEY_LEFT: "Seta para a esquerda", KEY_RIGHT: "Seta para a direita", KEY_DELETE: "Delete",
+	KEY_INSERT: "Insert", KEY_HOME: "Home", KEY_END: "End", KEY_PAGEUP: "Page Up", KEY_PAGEDOWN: "Page Down",
+}
+const MOUSE_NAMES: Dictionary = {
+	MOUSE_BUTTON_LEFT: "Botão esquerdo", MOUSE_BUTTON_RIGHT: "Botão direito",
+	MOUSE_BUTTON_MIDDLE: "Botão do meio", MOUSE_BUTTON_WHEEL_UP: "Roda para cima",
+	MOUSE_BUTTON_WHEEL_DOWN: "Roda para baixo", MOUSE_BUTTON_XBUTTON1: "Botão lateral 1",
+	MOUSE_BUTTON_XBUTTON2: "Botão lateral 2",
+}
+
+
+static func _valid_binding(value: Variant) -> bool:
+	if not value is Dictionary:
+		return false
+	var b: Dictionary = value
+	return (b.get("type") == "key" or b.get("type") == "mouse") and (b.get("code") is int) and int(b["code"]) > 0
+
+
+## Tecla ou botão atual da ação (o salvo ou o padrão).
+func get_binding(action: String) -> Dictionary:
+	var saved: Dictionary = get_section(CONTROLS)
+	if _valid_binding(saved.get(action)):
+		return (saved[action] as Dictionary).duplicate()
+	return (DEFAULT_BINDINGS.get(action, {}) as Dictionary).duplicate()
+
+
+## Outra ação que já usa este binding, ou "".
+func find_conflict(action: String, binding: Dictionary) -> String:
+	for other: String in CONTROL_ACTIONS:
+		if other != action and get_binding(other) == binding:
+			return other
+	return ""
+
+
+## Troca o binding de uma ação. Com conflito: false, a menos que swap (a outra ação fica com o
+## binding antigo desta).
+func set_binding(action: String, binding: Dictionary, swap: bool = false) -> bool:
+	if not CONTROL_ACTIONS.has(action) or not _valid_binding(binding):
+		return false
+	var other: String = find_conflict(action, binding)
+	if not other.is_empty() and not swap:
+		return false
+	var controls: Dictionary = get_section(CONTROLS)
+	if not other.is_empty():
+		controls[other] = get_binding(action)
+	controls[action] = {"type": binding["type"], "code": int(binding["code"])}
+	_values[CONTROLS] = sanitize(CONTROLS, controls)
+	_apply_section(CONTROLS, false)
+	save_settings()
+	settings_changed.emit(CONTROLS, get_section(CONTROLS))
+	return true
+
+
+func reset_controls() -> void:
+	_values[CONTROLS] = {}
+	_apply_section(CONTROLS, false)
+	save_settings()
+	settings_changed.emit(CONTROLS, {})
+
+
+## Binding a partir de um evento capturado na tela ({} se não for tecla nem botão do mouse).
+static func binding_from_event(event: InputEvent) -> Dictionary:
+	var key: InputEventKey = event as InputEventKey
+	if key != null:
+		var code: int = key.physical_keycode if key.physical_keycode != KEY_NONE else key.keycode
+		return {"type": "key", "code": code} if code > 0 else {}
+	var mouse: InputEventMouseButton = event as InputEventMouseButton
+	if mouse != null and mouse.button_index > 0:
+		return {"type": "mouse", "code": int(mouse.button_index)}
+	return {}
+
+
+static func event_from_binding(binding: Dictionary) -> InputEvent:
+	if binding.get("type") == "mouse":
+		var mouse: InputEventMouseButton = InputEventMouseButton.new()
+		mouse.button_index = int(binding["code"]) as MouseButton
+		return mouse
+	var key: InputEventKey = InputEventKey.new()
+	key.physical_keycode = int(binding.get("code", 0)) as Key
+	return key
+
+
+## Nome legível em português ("Espaço", "Botão esquerdo", "E").
+static func binding_label(binding: Dictionary) -> String:
+	if not _valid_binding(binding):
+		return "—"
+	var code: int = int(binding["code"])
+	if binding["type"] == "mouse":
+		return str(MOUSE_NAMES.get(code, "Botão %d do mouse" % code))
+	if KEY_NAMES.has(code):
+		return str(KEY_NAMES[code])
+	return OS.get_keycode_string(code as Key)
+
+
+## Troca no InputMap os eventos de teclado e mouse de cada ação (controle de jogo fica).
+func _apply_controls() -> void:
+	for action: String in CONTROL_ACTIONS:
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+		for ev: InputEvent in InputMap.action_get_events(action):
+			if ev is InputEventKey or ev is InputEventMouseButton:
+				InputMap.action_erase_event(action, ev)
+		InputMap.action_add_event(action, event_from_binding(get_binding(action)))

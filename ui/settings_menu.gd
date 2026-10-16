@@ -12,6 +12,8 @@ const QUALITY_LABELS: Dictionary = {"low": "Baixa", "medium": "Média", "high": 
 const AUDIO_LABELS: Dictionary = {"master": "Volume geral", "music": "Música", "sfx": "Efeitos"}
 const TAB_VIDEO: int = 0
 const TAB_AUDIO: int = 1
+const TAB_CONTROLS: int = 2
+const CAPTURE_TEXT: String = "Pressione uma tecla…"
 
 var tabs: TabContainer = null
 var window_mode_option: OptionButton = null
@@ -30,6 +32,14 @@ var confirm_panel: PanelContainer = null
 var confirm_label: Label = null
 var keep_button: Button = null
 var revert_button: Button = null
+var control_buttons: Dictionary = {}
+var conflict_panel: PanelContainer = null
+var conflict_label: Label = null
+var swap_button: Button = null
+var conflict_cancel_button: Button = null
+## Ação esperando tecla ("" = nenhuma) e o binding em conflito aguardando Trocar/Cancelar.
+var capturing: String = ""
+var _conflict_binding: Dictionary = {}
 
 var _resolutions: Array[Vector2i] = []
 var _trial_left: float = 0.0
@@ -165,15 +175,33 @@ func _build() -> void:
 	audio_page.name = "Áudio"
 	tabs.add_child(audio_page)
 
-	# Etapas 2 e 3 (#77).
-	for tab_name: String in ["Controles", "Jogabilidade"]:
-		var soon: Label = Label.new()
-		soon.text = "Em breve."
-		soon.theme_type_variation = &"HintLabel"
-		var page: MarginContainer = _margin(soon, 14)
-		page.name = tab_name
-		tabs.add_child(page)
-		tabs.set_tab_disabled(tabs.get_tab_count() - 1, true)
+	# Controles (etapa 2): uma linha por ação; clicar espera a tecla nova.
+	var controls: GridContainer = _grid()
+	for action: String in SettingsManager.CONTROL_ACTIONS:
+		var bind_button: Button = Button.new()
+		bind_button.custom_minimum_size = Vector2(0, 36)
+		bind_button.focus_mode = Control.FOCUS_NONE
+		bind_button.pressed.connect(start_capture.bind(action))
+		control_buttons[action] = bind_button
+		_row(controls, SettingsManager.ACTION_LABELS[action], bind_button)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var controls_page: MarginContainer = _margin(controls, 14)
+	controls_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(controls_page)
+	scroll.name = "Controles"
+	tabs.add_child(scroll)
+
+	# Jogabilidade (etapa 3, #77).
+	var soon: Label = Label.new()
+	soon.text = "Em breve."
+	soon.theme_type_variation = &"HintLabel"
+	var gameplay_page: MarginContainer = _margin(soon, 14)
+	gameplay_page.name = "Jogabilidade"
+	tabs.add_child(gameplay_page)
+	tabs.set_tab_disabled(tabs.get_tab_count() - 1, true)
 
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)
@@ -218,6 +246,33 @@ func _build() -> void:
 	confirm_box.add_child(confirm_buttons)
 	confirm_panel.add_child(_margin(confirm_box, 18))
 	box.add_child(confirm_panel)
+	# Conflito de tecla (por cima das abas).
+	conflict_panel = PanelContainer.new()
+	conflict_panel.theme_type_variation = &"WornPanel"
+	conflict_panel.visible = false
+	var conflict_box: VBoxContainer = VBoxContainer.new()
+	conflict_box.add_theme_constant_override("separation", 12)
+	conflict_label = Label.new()
+	conflict_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	conflict_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	conflict_box.add_child(conflict_label)
+	var conflict_buttons: HBoxContainer = HBoxContainer.new()
+	conflict_buttons.add_theme_constant_override("separation", 12)
+	conflict_cancel_button = Button.new()
+	conflict_cancel_button.text = "Cancelar"
+	swap_button = Button.new()
+	swap_button.text = "Trocar"
+	swap_button.theme_type_variation = &"PrimaryButton"
+	for button: Button in [conflict_cancel_button, swap_button]:
+		button.custom_minimum_size = Vector2(0, 44)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.focus_mode = Control.FOCUS_NONE
+		conflict_buttons.add_child(button)
+	conflict_box.add_child(conflict_buttons)
+	conflict_panel.add_child(_margin(conflict_box, 18))
+	box.add_child(conflict_panel)
+	swap_button.pressed.connect(_on_swap_pressed)
+	conflict_cancel_button.pressed.connect(_end_capture)
 	keep_button.pressed.connect(func() -> void: SettingsManager.instance.confirm_video_trial())
 	revert_button.pressed.connect(func() -> void: SettingsManager.instance.revert_video_trial())
 
@@ -242,6 +297,7 @@ func refresh() -> void:
 	ui_scale_value.text = "%d %%" % int(ui_scale_slider.value)
 	quality_option.select(maxi(QUALITY_LABELS.keys().find(video["quality"]), 0))
 	_update_resolution_enabled()
+	_refresh_controls()
 	var audio: Dictionary = sm.get_section(SettingsManager.AUDIO)
 	for key: String in audio_sliders.keys():
 		var slider: HSlider = audio_sliders[key]
@@ -295,7 +351,10 @@ func _on_defaults_pressed() -> void:
 	var sm: SettingsManager = SettingsManager.instance
 	if sm == null:
 		return
-	if tabs.current_tab == TAB_AUDIO:
+	if tabs.current_tab == TAB_CONTROLS:
+		_end_capture()
+		sm.reset_controls()
+	elif tabs.current_tab == TAB_AUDIO:
 		sm.restore_defaults(SettingsManager.AUDIO)
 	elif tabs.current_tab == TAB_VIDEO:
 		var defaults: Dictionary = (SettingsManager.DEFAULTS[SettingsManager.VIDEO] as Dictionary).duplicate()
@@ -310,6 +369,7 @@ func _on_defaults_pressed() -> void:
 
 
 func _on_back_pressed() -> void:
+	_end_capture()
 	var sm: SettingsManager = SettingsManager.instance
 	if sm != null and sm.is_video_trial_active():
 		sm.revert_video_trial()
@@ -321,3 +381,72 @@ func _on_video_trial_finished(_kept: bool) -> void:
 	confirm_panel.visible = false
 	tabs.visible = true
 	refresh()
+
+
+# --- Controles (etapa 2) -------------------------------------------------------
+
+func _refresh_controls() -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null:
+		return
+	for action: String in control_buttons.keys():
+		var button: Button = control_buttons[action]
+		button.text = CAPTURE_TEXT if action == capturing else SettingsManager.binding_label(sm.get_binding(action))
+
+
+## Clicou na ação: a próxima tecla ou botão do mouse vira o binding dela. Esc cancela.
+func start_capture(action: String) -> void:
+	capturing = action
+	_conflict_binding = {}
+	conflict_panel.visible = false
+	_refresh_controls()
+
+
+func _end_capture() -> void:
+	capturing = ""
+	_conflict_binding = {}
+	if conflict_panel != null:
+		conflict_panel.visible = false
+		tabs.visible = true
+	_refresh_controls()
+
+
+func _input(event: InputEvent) -> void:
+	if capturing.is_empty() or not _conflict_binding.is_empty() or not is_visible_in_tree():
+		return
+	var key: InputEventKey = event as InputEventKey
+	var mouse: InputEventMouseButton = event as InputEventMouseButton
+	if key != null and (not key.pressed or key.echo):
+		return
+	if mouse != null and not mouse.pressed:
+		return
+	if key == null and mouse == null:
+		return
+	get_viewport().set_input_as_handled()
+	if key != null and (key.physical_keycode == KEY_ESCAPE or key.keycode == KEY_ESCAPE):
+		_end_capture()
+		return
+	capture_binding(SettingsManager.binding_from_event(event))
+
+
+## Aplica o binding capturado; com conflito, pergunta antes de trocar.
+func capture_binding(binding: Dictionary) -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null or capturing.is_empty() or binding.is_empty():
+		return
+	var other: String = sm.find_conflict(capturing, binding)
+	if other.is_empty():
+		sm.set_binding(capturing, binding)
+		_end_capture()
+		return
+	_conflict_binding = binding
+	conflict_label.text = "«%s» já está em %s.\nTrocar as duas ações?" % [SettingsManager.binding_label(binding), SettingsManager.ACTION_LABELS[other]]
+	conflict_panel.visible = true
+	tabs.visible = false
+
+
+func _on_swap_pressed() -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm != null and not capturing.is_empty() and not _conflict_binding.is_empty():
+		sm.set_binding(capturing, _conflict_binding, true)
+	_end_capture()

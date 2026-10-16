@@ -50,6 +50,8 @@ func _run() -> void:
 	menu.open_changed.connect(func(open: bool) -> void: _open_signals.append(open))
 	_check(not PauseMenu.is_open() and not menu.root_control.visible, "começa fechado")
 	_check(menu.layer > 1 and menu.layer < ui.layer, "camada acima do HUD e abaixo do SessionUI: %d" % menu.layer)
+	var dim: ColorRect = menu.root_control.get_node(^"Dim") as ColorRect
+	_check(dim != null and dim.mouse_filter == Control.MOUSE_FILTER_STOP and dim.color.a >= 0.5, "fundo escurecido de tela cheia que segura o mouse")
 
 	# 1. Solo: pausa a árvore e solta o mouse; fechar despausa.
 	_check(menu.open() and PauseMenu.is_open() and menu.root_control.visible, "solo: abre")
@@ -84,7 +86,7 @@ func _run() -> void:
 	menu.settings_button.pressed.emit()
 	var settings: SettingsMenu = menu.settings_menu
 	_check(settings.visible and not menu.card.visible, "configurações abertas no lugar do cartão")
-	_check(settings.tabs.get_tab_count() == 4 and settings.tabs.is_tab_disabled(2) and settings.tabs.is_tab_disabled(3), "abas: Vídeo, Áudio e Controles/Jogabilidade desativadas")
+	_check(settings.tabs.get_tab_count() == 4 and not settings.tabs.is_tab_disabled(2) and settings.tabs.is_tab_disabled(3), "abas: Vídeo, Áudio, Controles; Jogabilidade desativada")
 	(settings.audio_sliders["master"] as HSlider).value = 40.0
 	(settings.audio_sliders["music"] as HSlider).value = 0.0
 	settings.apply_button.pressed.emit()
@@ -100,6 +102,7 @@ func _run() -> void:
 	settings.revert_button.pressed.emit()
 	await _wait(2)
 	_check(not sm.is_video_trial_active() and sm.get_value(SettingsManager.VIDEO, "resolution") == before_res and not settings.confirm_panel.visible, "voltar ao anterior restaura a resolução")
+	await _check_controls(settings, sm)
 	settings.back_button.pressed.emit()
 	_check(menu.card.visible and not settings.visible, "voltar das configurações mostra o cartão")
 
@@ -122,3 +125,36 @@ func _run() -> void:
 	await _wait(3)
 
 	_finish()
+
+
+func _press(code: Key) -> void:
+	var ev: InputEventKey = InputEventKey.new()
+	ev.physical_keycode = code
+	ev.keycode = code
+	ev.pressed = true
+	root.push_input(ev)
+	await _wait(1)
+
+
+## Etapa 2: capturar tecla na aba Controles (Esc cancela, conflito pergunta, padrão restaura).
+func _check_controls(settings: SettingsMenu, sm: SettingsManager) -> void:
+	settings.tabs.current_tab = SettingsMenu.TAB_CONTROLS
+	await _wait(2)
+	var jump: Button = settings.control_buttons["jump"]
+	_check(jump.text == "Espaço", "pular mostra Espaço: %s" % jump.text)
+	jump.pressed.emit()
+	_check(settings.capturing == "jump" and jump.text == SettingsMenu.CAPTURE_TEXT, "clicar espera a tecla")
+	await _press(KEY_K)
+	_check(settings.capturing == "" and sm.get_binding("jump") == {"type": "key", "code": KEY_K} and jump.text == "K", "pular → K: %s" % jump.text)
+	(settings.control_buttons["drop"] as Button).pressed.emit()
+	await _press(KEY_ESCAPE)
+	_check(settings.capturing == "" and sm.get_binding("drop") == {"type": "key", "code": KEY_Q}, "Esc cancela a captura")
+	(settings.control_buttons["interact"] as Button).pressed.emit()
+	await _press(KEY_K)
+	_check(settings.conflict_panel.visible and settings.conflict_label.text.contains("Pular"), "conflito avisa: %s" % settings.conflict_label.text)
+	settings.swap_button.pressed.emit()
+	_check(sm.get_binding("interact") == {"type": "key", "code": KEY_K} and sm.get_binding("jump") == {"type": "key", "code": KEY_E}, "trocar: interagir K, pular E")
+	_check(not settings.conflict_panel.visible and settings.tabs.visible, "conflito fechado")
+	settings.defaults_button.pressed.emit()
+	_check(sm.get_binding("jump") == {"type": "key", "code": KEY_SPACE} and jump.text == "Espaço", "restaurar padrão nos controles")
+	settings.tabs.current_tab = SettingsMenu.TAB_VIDEO
