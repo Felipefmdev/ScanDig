@@ -62,7 +62,7 @@ autowrap_mode = 3
 
 [node name="BuyDetectorButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Detector  •  Nível 0/3
 Comprar nível 1 — R$ 300"
@@ -72,7 +72,7 @@ clip_text = true
 
 [node name="BuyPinpointerButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Pinpointer de Precisão  •  Nível 0/1
 Comprar nível 1 — R$ 500"
@@ -82,7 +82,7 @@ clip_text = true
 
 [node name="BuyShovelButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Pá de Fibra  •  Nível 0/1
 Comprar nível 1 — R$ 800"
@@ -92,7 +92,7 @@ clip_text = true
 
 [node name="BuyBackpackButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Mochila Reforçada  •  Nível 0/3
 Comprar nível 1 — R$ 400"
