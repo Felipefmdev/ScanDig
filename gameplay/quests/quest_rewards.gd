@@ -60,8 +60,11 @@ static func is_secret_found(secret_id: String) -> bool:
 
 
 ## Host: larga um item do catálogo no chão (replicado pelo PickupsRoot). Devolve false se o
-## item não existir em res://items/catalog/.
+## item não existir em res://items/catalog/. Se não houver PickupsRoot, protege contra largar
+## no Lobby ou fora de uma expedição/mapa 3D (#67).
 static func drop_item(tree: SceneTree, item_id: String, pos: Vector3, impulse: Vector3 = Vector3(0.0, 2.5, 0.0)) -> bool:
+	if tree == null:
+		return false
 	var path: String = "res://items/catalog/%s.tres" % item_id
 	if item_id.is_empty() or not ResourceLoader.exists(path):
 		push_warning("%s item em falta no catalogo: %s" % [LOG_PREFIX, item_id])
@@ -74,8 +77,13 @@ static func drop_item(tree: SceneTree, item_id: String, pos: Vector3, impulse: V
 	if root != null:
 		root.drop(c, pos, impulse)
 		return true
-	var scene: Node = tree.current_scene if tree != null else null
-	if scene == null:
+	var scene: Node = tree.current_scene
+	# Se a cena atual for explicitamente o Lobby, evita poluir a base com drops físicos (#67).
+	if scene != null and (scene.name == "LobbyBase" or scene.name.begins_with("Lobby")):
+		push_warning("%s drop_item recusado: sem PickupsRoot e cena atual e lobby (%s)" % [LOG_PREFIX, scene.name])
+		return false
+	if scene == null or not (scene is Node3D):
+		push_warning("%s drop_item recusado: sem PickupsRoot e cena atual nao e Node3D" % LOG_PREFIX)
 		return false
 	ItemPickup.spawn(scene, c, pos, impulse)
 	return true
