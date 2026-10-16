@@ -47,7 +47,30 @@ func launch(impulse: Vector3) -> void:
 	if impulse == Vector3.ZERO:
 		return
 	apply_central_impulse(impulse)
-	apply_torque_impulse(Vector3(randf_range(-0.05, 0.05), randf_range(-0.1, 0.1), randf_range(-0.05, 0.05)))
+	var spin: float = clampf(impulse.length() * 0.06, 0.05, 0.35)
+	apply_torque_impulse(Vector3(randf_range(-spin, spin), randf_range(-spin, spin) * 2.0, randf_range(-spin, spin)))
+
+
+## Empurrão de um golpe (estilo How to Fish: tudo é físico). Em coop a física é do host:
+## o cliente pede e o host aplica, com teto para um peer não arremessar itens pelo mapa.
+const MAX_PUSH: float = 6.0
+
+
+func push(impulse: Vector3) -> void:
+	impulse = impulse.limit_length(MAX_PUSH)
+	if networked and not multiplayer.is_server():
+		_request_push.rpc_id(1, impulse)
+		return
+	sleeping = false
+	launch(impulse)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_push(impulse: Vector3) -> void:
+	if not multiplayer.is_server():
+		return
+	sleeping = false
+	launch(impulse.limit_length(MAX_PUSH))
 
 
 ## PickupsRoot: prepara o nó para a rede antes de entrar na árvore (host e clientes).
@@ -70,7 +93,33 @@ func setup_network(local_pos: Vector3, impulse: Vector3) -> void:
 	NetVisibility.watch(sync)
 
 
+## Comida viva (minhoca, tatuíra...) se debate no chão como peixe fora d'água.
+const WRIGGLE_INTERVAL: Vector2 = Vector2(0.7, 1.6)
+const WRIGGLE_UP: float = 1.6
+const WRIGGLE_SIDE: float = 0.9
+var _wriggle_left: float = 1.0
+
+
+func is_wriggling_food() -> bool:
+	return carried != null and carried.tool_data != null 		and carried.tool_data.category == ToolData.Category.FOOD and carried.tool_data.wriggles
+
+
+func _wriggle(delta: float) -> void:
+	_wriggle_left -= delta
+	if _wriggle_left > 0.0:
+		return
+	_wriggle_left = randf_range(WRIGGLE_INTERVAL.x, WRIGGLE_INTERVAL.y)
+	if linear_velocity.length() > 0.8:
+		return  # ainda no ar: espera assentar
+	sleeping = false
+	var side: Vector3 = Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)).normalized() * WRIGGLE_SIDE
+	apply_central_impulse((Vector3.UP * WRIGGLE_UP + side) * mass)
+	apply_torque_impulse(Vector3(randf_range(-0.15, 0.15), randf_range(-0.3, 0.3), randf_range(-0.15, 0.15)) * mass)
+
+
 func _physics_process(delta: float) -> void:
+	if is_wriggling_food() and (not networked or multiplayer.is_server()):
+		_wriggle(delta)
 	if not networked:
 		return
 	if multiplayer.is_server():

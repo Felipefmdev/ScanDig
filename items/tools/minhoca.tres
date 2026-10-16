@@ -15,3 +15,4 @@ heal_amount = 10.0
 hunger_restore = 15.0
 dig_maps = PackedStringArray("campo", "ruinas")
 dig_weight = 3.0
+wriggles = true

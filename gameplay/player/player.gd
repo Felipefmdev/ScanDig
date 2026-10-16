@@ -1531,8 +1531,27 @@ func _on_swing_hit() -> void:
 		_register_hit(target, damage)
 		hits += 1
 
+	hits += push_pickups_in_cone(origin, forward, attack_range, attack_cone_dot, 3.5)
 	if hits > 0:
 		_shake_camera(0.02, 0.15)
+
+
+## Itens soltos no cone do golpe saem voando (o golpe "acerta" o mundo, não só inimigos).
+func push_pickups_in_cone(origin: Vector3, forward: Vector3, reach: float, cone_dot: float, strength: float) -> int:
+	var pushed: int = 0
+	for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+		var p: ItemPickup = n as ItemPickup
+		if p == null or not is_instance_valid(p):
+			continue
+		var to: Vector3 = p.global_position - origin
+		to.y = 0.0
+		var d: float = to.length()
+		if d > reach or (d > 0.05 and forward.dot(to / d) < cone_dot):
+			continue
+		var dir: Vector3 = (to / d) if d > 0.05 else forward
+		p.push(dir * strength + Vector3.UP * strength * 0.6)
+		pushed += 1
+	return pushed
 
 
 const SETTINGS_SCRIPT: Script = preload("res://gameplay/player/player_settings.gd")
@@ -1640,6 +1659,8 @@ func _register_hit(target: Node3D, damage: float) -> void:
 		return
 	var killed: bool = target.has_method("is_alive") and not bool(target.call("is_alive"))
 	_hit_feedback.show_hit(target.global_position + Vector3.UP * 0.6, damage, killed)
+	if killed:
+		_shake_camera(0.06, 0.25)  # matar pesa mais que acertar
 
 
 # ---------------------------------------------------------------------------
@@ -2290,10 +2311,13 @@ func attack_pitchfork() -> int:
 
 		hits += 1
 
+	# A estocada também atira os itens soltos à frente (mais forte que a pá).
+	var items_hit: int = push_pickups_in_cone(global_position, forward, pitchfork_range, pitchfork_cone_dot, 5.0)
 	if hits > 0:
 		_shake_camera(0.03, 0.18)
 		SFX.play_ui(SFX.STONE_IMPACT, -2.0, 0.1)
-		_show_temporary_message("🔱 Golpe de Forcado! (%d de dano)" % int(pitchfork_damage), Color(1.0, 0.85, 0.4), 0.9)
+	elif items_hit > 0:
+		SFX.play_ui(SFX.STONE_IMPACT, -6.0, 0.1)
 	else:
 		SFX.play_ui(SFX.SLINGSHOT_FIRE, -10.0, 0.2)
 

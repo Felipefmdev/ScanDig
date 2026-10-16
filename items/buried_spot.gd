@@ -395,4 +395,5 @@ func _spawn_pickup(final_val: int) -> void:
 	var c: CarriedItem = CarriedItem.create(item, final_val, integrity, is_rare_variant, is_clean)
 	# Salta para fora do buraco numa direção aleatória.
 	var dir: Vector3 = Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)).normalized()
-	ItemPickup.spawn(parent, c, global_position + Vector3.UP * 0.35, Vector3.UP * 2.2 + dir * 0.6)
+	# Salta da terra (estilo How to Fish: o achado chega pulando, não pousa).
+	ItemPickup.spawn(parent, c, global_position + Vector3.UP * 0.35, Vector3.UP * 4.0 + dir * 1.0)

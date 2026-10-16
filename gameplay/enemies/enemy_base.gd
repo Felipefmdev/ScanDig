@@ -56,6 +56,10 @@ const REQUEST_MAX_FLEE: float = 10.0
 @export var stun_fx_height: float = 0.6
 
 var health: float = 50.0
+## Origem do último golpe (para a morte voar para o lado certo).
+var _last_hit_from: Vector3 = Vector3.INF
+var _flung: bool = false
+const DEATH_FLING: Script = preload("res://gameplay/enemies/death_fling.gd")
 ## Posto a true pelo MultiplayerSpawner (fase 3, #24): só o host simula; os clientes só
 ## recebem position/rotation/state/health/stunned/fleeing.
 var replicated: bool = false
@@ -150,6 +154,10 @@ func _physics_process(delta: float) -> void:
 	if not has_simulation_authority():
 		if not _dead:
 			_update_remote_motion(delta)
+		# Cliente: a vida replicada chegou a 0 antes do despawn do host; o voo é local.
+		if health <= 0.0 and not _flung and _uses_default_death():
+			spawn_particles(global_position + Vector3.UP * 0.25, death_color, 28, 3.5)
+			death_fling()
 		return
 	if _dead:
 		return
@@ -253,6 +261,8 @@ func take_damage(amount: float, from: Vector3 = Vector3.INF) -> void:
 	if final_amount <= 0.0:
 		return
 	health = clampf(health - final_amount, 0.0, max_health)
+	if from != Vector3.INF:
+		_last_hit_from = from
 	_flash(BLOCK_FLASH_COLOR if final_amount < amount else FLASH_COLOR)
 	damaged.emit(final_amount, health)
 	if health <= 0.0:
@@ -586,10 +596,24 @@ func _on_flee_started() -> void:
 	pass
 
 
+## Nos clientes o corpo voa para inimigos comuns; chefes têm morte própria (no host).
+func _uses_default_death() -> bool:
+	return not is_in_group(&"bosses")
+
+
 ## Chamado uma vez ao morrer, antes de libertar o nó. Por omissão: partículas + queue_free.
 func _on_died() -> void:
 	spawn_particles(global_position + Vector3.UP * 0.25, death_color, 28, 3.5)
+	death_fling()
 	queue_free()
+
+
+## O corpo sai voando e girando (cosmético). Chefes podem chamar no seu _on_died.
+func death_fling() -> void:
+	if _flung:
+		return
+	_flung = true
+	DEATH_FLING.fling(self, _last_hit_from)
 
 
 # ---------------------------------------------------------------------------

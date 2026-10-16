@@ -29,3 +29,5 @@ enum Category {
 @export var dig_maps: PackedStringArray = PackedStringArray()
 ## Peso no sorteio entre as comidas do mesmo mapa.
 @export var dig_weight: float = 1.0
+## Comida viva: no chão se debate e tenta fugir (minhoca, tatuíra, larva).
+@export var wriggles: bool = false
