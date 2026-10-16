@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"larva_termica"
+display_name = "Larva Térmica"
+description = "Morna ao toque. Recupera 22 de vida."
+price = 0
+category = 2
+charges = 1
+color = Color(1, 0.55, 0.25, 1)
+heal_amount = 22.0
+dig_maps = PackedStringArray("cratera")
+dig_weight = 1.5

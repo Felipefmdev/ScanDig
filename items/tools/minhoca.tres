@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")
+id = &"minhoca"
+display_name = "Minhoca"
+description = "Gorda e mexendo. Recupera 10 de vida."
+price = 0
+category = 2
+charges = 1
+color = Color(0.86, 0.5, 0.52, 1)
+heal_amount = 10.0
+dig_maps = PackedStringArray("campo", "ruinas")
+dig_weight = 3.0

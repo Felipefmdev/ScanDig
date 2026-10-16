@@ -7,6 +7,7 @@ extends Resource
 enum Category {
 	WEAPON = 0,      ## Uso infinito (ex.: estilingue)
 	CONSUMABLE = 1,  ## Gasta cargas e some quando acabam (ex.: repelente)
+	FOOD = 2,        ## Comida escavada: não se compra; comer cura `heal_amount`
 }
 
 @export var id: StringName = &""
@@ -19,3 +20,10 @@ enum Category {
 @export var color: Color = Color(0.9, 0.6, 0.2)
 ## Visual opcional quando está no chão; sem cena, usa uma caixa com `color`.
 @export var world_scene: PackedScene = null
+@export_group("Comida")
+## Vida recuperada ao comer (só FOOD).
+@export var heal_amount: float = 0.0
+## Mapas (MapData.id) onde aparece ao cavar fora de um sinal.
+@export var dig_maps: PackedStringArray = PackedStringArray()
+## Peso no sorteio entre as comidas do mesmo mapa.
+@export var dig_weight: float = 1.0

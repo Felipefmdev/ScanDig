@@ -136,6 +136,12 @@ const THREAT_COLORS: Array[Color] = [
 ## #34: o que sai de uma pazada fora de um sinal, pelo chão de cada mapa (MapData.id).
 const EMPTY_DIG_GROUND: Dictionary = {"praia": "Só areia...", "campo": "Só terra..."}
 const EMPTY_DIG_DEFAULT: String = "Nada aqui..."
+## Chance de uma pazada fora de sinal render comida (cuidadosa mexe mais a terra).
+const FOOD_DIG_CHANCE: float = 0.3
+const FOOD_DIG_CHANCE_CAREFUL: float = 0.45
+## Comidas (ToolData FOOD) carregadas uma vez de GameState.TOOLS_DIR.
+static var _food_cache: Array[ToolData] = []
+static var _food_cache_loaded: bool = false
 const MAX_MESSAGES: int = 3
 ## Linhas no total (uma descoberta tem 3-4): a pilha não desce até à mira em janelas pequenas.
 const MAX_MESSAGE_LINES: int = 4
@@ -537,7 +543,11 @@ func _on_shovel_impact(ground_point: Vector3) -> void:
 		var res: Dictionary = spot.dig(_dig_is_careful, get_dig_damage_multiplier())
 		_show_dig_feedback(res, _dig_is_careful)
 	else:
-		_show_temporary_message(get_empty_dig_message(), Color(0.95, 0.4, 0.4), 1.2)
+		var food: ToolData = roll_dig_food(_current_map_id(), _dig_is_careful)
+		if food != null:
+			_give_dug_food(food)
+		else:
+			_show_temporary_message(get_empty_dig_message(), Color(0.95, 0.4, 0.4), 1.2)
 
 
 func _on_shovel_throw_dirt(blade_position: Vector3, side: Vector3) -> void:
@@ -1364,6 +1374,9 @@ func _handle_use_tool_action() -> void:
 	var c: CarriedItem = inventory.get_selected()
 	if c == null or c.tool_data == null:
 		return
+	if c.tool_data.category == ToolData.Category.FOOD:
+		eat(c)
+		return
 	match c.tool_id:
 		TOOL_SLINGSHOT:
 			_fire_slingshot()
@@ -1402,6 +1415,80 @@ func _flash_lantern(c: CarriedItem) -> void:
 		_use_cooldown = LANTERN_COOLDOWN
 	if hit > 0:
 		_show_temporary_message("Flash! %d atordoado%s" % [hit, "" if hit == 1 else "s"], Color(1.0, 0.95, 0.6), 1.2)
+
+
+## Come a comida do slot: cura heal_amount e gasta a unidade. Falso se não comeu.
+func eat(c: CarriedItem) -> bool:
+	if c == null or c.tool_data == null or c.tool_data.category != ToolData.Category.FOOD:
+		return false
+	if health >= max_health:
+		_show_temporary_message("Sem fome agora: a vida já está cheia.", Color(0.9, 0.9, 0.9), 1.0)
+		return false
+	var amount: float = c.tool_data.heal_amount
+	heal(amount)
+	SFX.play_ui(SFX.MEDKIT, -6.0, 0.15)
+	_show_temporary_message("😋 %s: +%d de vida" % [c.tool_name, int(amount)], Color(0.5, 1.0, 0.55), 1.2)
+	# Sem o aviso "acabou" do _consume: comer é sempre uma unidade só.
+	if c.consume_charge():
+		var idx: int = inventory.slots.find(c)
+		if idx >= 0:
+			inventory.remove_at(idx)
+	else:
+		inventory.notify_changed()
+	_use_cooldown = 0.6
+	return true
+
+
+## Comidas que podem sair do chão de `map_id`.
+static func foods_for_map(map_id: String) -> Array[ToolData]:
+	if not _food_cache_loaded:
+		_food_cache_loaded = true
+		var dir: DirAccess = DirAccess.open(GameState.TOOLS_DIR)
+		if dir != null:
+			for file_name: String in dir.get_files():
+				var clean: String = file_name.trim_suffix(".remap")
+				if not clean.ends_with(".tres"):
+					continue
+				var td: ToolData = load("%s/%s" % [GameState.TOOLS_DIR, clean]) as ToolData
+				if td != null and td.category == ToolData.Category.FOOD:
+					_food_cache.append(td)
+	var out: Array[ToolData] = []
+	for td: ToolData in _food_cache:
+		if td.dig_maps.has(map_id):
+			out.append(td)
+	return out
+
+
+## Sorteia a comida de uma pazada fora de sinal (null = só terra). `roll` permite testar.
+static func roll_dig_food(map_id: String, careful: bool, roll: float = -1.0) -> ToolData:
+	var pool: Array[ToolData] = foods_for_map(map_id)
+	if pool.is_empty():
+		return null
+	if roll < 0.0:
+		roll = randf()
+	var chance: float = FOOD_DIG_CHANCE_CAREFUL if careful else FOOD_DIG_CHANCE
+	if roll >= chance:
+		return null
+	# Reaproveita o mesmo número para escolher qual: roll/chance cai em [0, 1).
+	var total: float = 0.0
+	for td: ToolData in pool:
+		total += maxf(td.dig_weight, 0.0)
+	var pick: float = (roll / chance) * total
+	for td: ToolData in pool:
+		pick -= maxf(td.dig_weight, 0.0)
+		if pick < 0.0:
+			return td
+	return pool.back()
+
+
+func _give_dug_food(food: ToolData) -> void:
+	if inventory.is_full():
+		_show_temporary_message("🪱 Saiu %s, mas a mochila está cheia e escapou." % food.display_name.to_lower(),
+			Color(1.0, 0.6, 0.3), 1.6)
+		return
+	inventory.add_item(CarriedItem.create_from_tool_data(food))
+	SFX.play_ui(SFX.PICKUP, -4.0)
+	_show_temporary_message("🪱 Achou: %s! (clique para comer)" % food.display_name, Color(0.75, 0.95, 0.55), 1.8)
 
 
 ## Gasta uma carga do item selecionado; remove-o do slot quando acaba.

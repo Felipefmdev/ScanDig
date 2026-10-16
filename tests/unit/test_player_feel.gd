@@ -86,3 +86,41 @@ func _count_labels(root: Node) -> int:
 		if c is Label3D:
 			n += 1
 	return n
+
+
+# --- Comida escavada ---------------------------------------------------------
+
+func test_each_map_has_dig_food() -> void:
+	for map_id: String in ["praia", "campo", "ruinas", "geleira", "cratera"]:
+		var foods: Array[ToolData] = Player.foods_for_map(map_id)
+		assert_gt(foods.size(), 0, "%s tem comida no chão" % map_id)
+		for td: ToolData in foods:
+			assert_gt(td.heal_amount, 0.0, "%s cura" % td.id)
+			assert_eq(td.price, 0, "%s não se compra" % td.id)
+	assert_true(Player.foods_for_map("campo").any(func(t: ToolData) -> bool: return t.id == &"minhoca"),
+		"minhoca no Campo")
+
+
+func test_roll_dig_food_respects_chance() -> void:
+	assert_not_null(Player.roll_dig_food("campo", false, 0.0), "rolagem baixa dá comida")
+	assert_null(Player.roll_dig_food("campo", false, Player.FOOD_DIG_CHANCE + 0.01), "acima da chance: só terra")
+	assert_not_null(Player.roll_dig_food("campo", true, Player.FOOD_DIG_CHANCE + 0.01), "cuidadosa tem mais chance")
+	assert_null(Player.roll_dig_food("mapa_inexistente", true, 0.0))
+
+
+func test_eating_heals_and_consumes() -> void:
+	var player: Player = _spawn_player()
+	var worm: ToolData = load("res://items/tools/minhoca.tres") as ToolData
+	var c: CarriedItem = CarriedItem.create_from_tool_data(worm)
+	player.inventory.add_item(c)
+	assert_false(player.eat(c), "vida cheia: não come")
+	player.health = 50.0
+	assert_true(player.eat(c))
+	assert_almost_eq(player.health, 50.0 + worm.heal_amount, 0.001)
+	assert_eq(player.inventory.slots.find(c), -1, "a minhoca sai da mochila")
+
+
+func test_food_is_not_purchasable() -> void:
+	var td: ToolData = load("res://items/tools/batata_esquecida.tres") as ToolData
+	assert_eq(td.category, ToolData.Category.FOOD)
+	assert_lte(td.price, 0, "GameState recusa compra com preço 0")
