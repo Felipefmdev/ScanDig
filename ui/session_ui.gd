@@ -294,6 +294,7 @@ func _show_next_toast() -> void:
 	toast_label.text = _toast_queue.pop_front()
 	toast_panel.visible = true
 	_toast_token += 1
+	var token: int = _toast_token
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
