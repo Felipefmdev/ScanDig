@@ -153,3 +153,33 @@ func test_raw_meat_can_cause_nausea() -> void:
 	assert_true(player.eat(c))
 	assert_almost_eq(player.health, 50.0, 0.001, "enjoado não cura")
 	assert_lt(player.hunger, 50.0, "e perde saciedade")
+
+
+# --- Ladrões mais ousados ----------------------------------------------------
+
+func test_seagull_snatches_loose_items_but_not_tools() -> void:
+	for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+		n.free()  # sobras de outros testes
+	var gull: Seagull = (load("res://gameplay/enemies/seagull/seagull.tscn") as PackedScene).instantiate() as Seagull
+	add_child_autofree(gull)
+	gull.global_position = Vector3(0, 3, 0)
+	var detector: ItemPickup = ItemPickup.spawn(self, CarriedItem.create_tool(&"detector", "Detetor"), Vector3(0.5, 0.2, 0))
+	var potato: ToolData = load("res://items/tools/batata_esquecida.tres") as ToolData
+	var food: ItemPickup = ItemPickup.spawn(self, CarriedItem.create_from_tool_data(potato), Vector3(3, 0.2, 0))
+	assert_eq(gull.find_ground_loot(Vector3.ZERO), food, "ignora o detetor, vai à comida")
+	gull._ground_target = food
+	gull.global_position = food.global_position + Vector3.UP * 0.2
+	gull._process_ground_steal(0.016)
+	assert_true(gull.has_stolen, "levou o item")
+	assert_true(food.is_queued_for_deletion(), "sumiu do chão")
+	detector.queue_free()
+
+
+func test_backpack_thief_takes_food_when_no_finds() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	var worm: ToolData = load("res://items/tools/minhoca.tres") as ToolData
+	player.inventory.add_item(CarriedItem.create_from_tool_data(worm))
+	var stolen: CarriedItem = player.steal_loot()
+	assert_not_null(stolen, "sem achados, rouba a comida")
+	assert_eq(stolen.tool_data.id, &"minhoca")

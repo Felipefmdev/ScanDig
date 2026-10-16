@@ -31,6 +31,12 @@ const KAMIKAZE_SPEED: float = 16.0
 const KAMIKAZE_RADIUS: float = 1.3
 const STUCK_TIME: float = 2.6
 const KAMIKAZE_DAMAGE: float = 8.0
+## Estudo How to Fish (pássaros roubam o que está no chão): na hora do mergulho, às vezes vai
+## a um item solto perto do jogador em vez de ir à mochila. Só itens escavados e comida.
+const GROUND_STEAL_CHANCE: float = 0.5
+const GROUND_STEAL_RADIUS: float = 8.0
+const GROUND_GRAB_DISTANCE: float = 0.7
+var _ground_target: ItemPickup = null
 
 @export var circle_radius: float = 6.0
 ## Altura do voo em círculo acima do jogador.
@@ -163,11 +169,51 @@ func _process_circle(delta: float) -> void:
 	goal.y = target.global_position.y + circle_height + sin(_state_time * 0.8) * 0.6
 	_fly_towards(goal, fly_speed * 1.3, delta)
 
+	if _ground_target != null:
+		_process_ground_steal(delta)
+		return
 	_circle_left -= delta
 	if _circle_left <= 0.0:
 		_dives += 1
 		SFX.play_at(SFX.SEAGULL_DIVE, global_position)
+		var loose: ItemPickup = find_ground_loot(target.global_position)
+		if loose != null and randf() < GROUND_STEAL_CHANCE:
+			_ground_target = loose
+			return
 		_enter_state(_choose_dive(target))
+
+
+## Item solto mais perto de `near` que vale a pena roubar (achados e comida; nada de
+## ferramentas, para não sumir com o detetor de ninguém).
+func find_ground_loot(near: Vector3) -> ItemPickup:
+	var best: ItemPickup = null
+	var best_d: float = GROUND_STEAL_RADIUS
+	for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+		var p: ItemPickup = n as ItemPickup
+		if p == null or not is_instance_valid(p) or p.is_queued_for_deletion() or p.carried == null:
+			continue
+		var c: CarriedItem = p.carried
+		var worth: bool = not c.is_tool() or (c.tool_data != null and c.tool_data.category == ToolData.Category.FOOD)
+		if not worth:
+			continue
+		var d: float = p.global_position.distance_to(near)
+		if d < best_d:
+			best_d = d
+			best = p
+	return best
+
+
+func _process_ground_steal(delta: float) -> void:
+	if not is_instance_valid(_ground_target) or _ground_target.is_queued_for_deletion() or _ground_target.carried == null:
+		_ground_target = null
+		_after_failed_dive()
+		return
+	var goal: Vector3 = _ground_target.global_position + Vector3.UP * 0.2
+	_fly_towards(goal, dive_speed, delta, 6.0)
+	if global_position.distance_to(goal) <= GROUND_GRAB_DISTANCE:
+		var loot: CarriedItem = _ground_target.take()
+		_ground_target = null
+		_on_loot_reply(loot, null)
 
 
 func _process_dive(delta: float) -> void:

@@ -2086,6 +2086,12 @@ func steal_loot() -> CarriedItem:
 		if SellPoint.can_deliver(inventory.slots[i]):
 			candidates.append(i)
 	if candidates.is_empty():
+		# Sem achados, leva a comida (o lanche também é roubável).
+		for i: int in inventory.slots.size():
+			var s_item: CarriedItem = inventory.slots[i]
+			if s_item != null and s_item.tool_data != null and s_item.tool_data.category == ToolData.Category.FOOD:
+				candidates.append(i)
+	if candidates.is_empty():
 		return null
 	var c: CarriedItem = inventory.remove_at(candidates.pick_random())
 	if c != null:
