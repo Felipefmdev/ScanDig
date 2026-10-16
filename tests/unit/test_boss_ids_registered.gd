@@ -28,3 +28,26 @@ func test_every_boss_script_id_is_known() -> void:
 		var boss_id: String = str(consts["BOSS_ID"])
 		assert_true(known.has(boss_id), "%s (%s) registrado no GameState" % [boss_id, file_name])
 	assert_gt(checked, 10, "achou os scripts de chefe")
+
+
+func test_defeated_bosses_accepts_and_stores_all_bosses() -> void:
+	var gs: GameState = GameState.new()
+	add_child_autoqfree(gs)
+	gs.defeated_bosses.clear()
+
+	var all_bosses: Array[String] = _known_ids()
+	for boss_id: String in all_bosses:
+		gs._host_report_boss_defeated(boss_id)
+		assert_true(gs.is_boss_defeated(boss_id), "GameState aceita e armazena '%s'" % boss_id)
+		assert_true(gs.defeated_bosses.has(boss_id), "defeated_bosses contem '%s'" % boss_id)
+
+	assert_eq(gs.defeated_bosses.size(), all_bosses.size(), "todos os chefes conhecidos armazenados")
+
+	# Nao duplica chamadas repetidas
+	gs._host_report_boss_defeated("the_sleeper")
+	assert_eq(gs.defeated_bosses.size(), all_bosses.size(), "nao duplica chefe ja derrotado")
+
+	# Rejeita chefe desconhecido
+	gs._host_report_boss_defeated("chefe_desconhecido_xyz")
+	assert_false(gs.is_boss_defeated("chefe_desconhecido_xyz"), "chefe desconhecido nao e aceito")
+	assert_false(gs.defeated_bosses.has("chefe_desconhecido_xyz"))
