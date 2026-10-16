@@ -34,11 +34,15 @@ func _run() -> void:
 	var original: String = FileAccess.get_file_as_string(save.save_path)
 	_check(not save.is_progress_applied() and gs.team_money == 100, "save ainda não aplicado antes de hospedar")
 
+	# O cliente entra, sincroniza e sai em menos de 0,25 s na CI: o polling de connected_players
+	# perdia a entrada. O sinal registra a conexão mesmo que ela já tenha acabado.
+	var peers_seen: Array[int] = []
+	get_multiplayer().peer_connected.connect(func(id: int) -> void: peers_seen.append(id))
 	_check(net.host_game(PORT) == OK, "host_game")
 	print("HOST after_host_game day=", gs.current_day, " money=", gs.team_money, " applied=", save.is_progress_applied())
 	_check(save.is_progress_applied() and gs.current_day == 5 and gs.team_money == 3200, "host_game aplicou o save")
 
-	var joined: bool = await _wait_until(func() -> bool: return net.connected_players.size() >= 2, 20.0)
+	var joined: bool = await _wait_until(func() -> bool: return not peers_seen.is_empty(), 20.0)
 	_check(joined, "cliente não entrou em 20 s")
 	var left: bool = await _wait_until(func() -> bool: return net.connected_players.size() == 1, 30.0)
 	_check(left, "cliente não saiu em 30 s")
