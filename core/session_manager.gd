@@ -17,6 +17,12 @@ signal peer_scene_ready(peer_id: int, map_id: String)
 signal expedition_ending(map_id: String)
 
 const LOBBY_SCENE: String = "res://world/lobby_base.tscn"
+## Tela inicial (#100), a main scene do projeto.
+const TITLE_SCENE: String = "res://world/title_screen.tscn"
+## Como a base foi aberta pela tela inicial (#100): "solo" esconde o MultiplayerMenu, "coop"
+## mostra. "" (bots, testes, cena aberta direto) = como sempre foi.
+const LAUNCH_SOLO: String = "solo"
+const LAUNCH_COOP: String = "coop"
 const MAP_SCENE_FORMAT: String = "res://world/map_%s.tscn"
 const MAPS_DIR: String = "res://items/maps"
 const HOST_PEER_ID: int = 1
@@ -24,6 +30,8 @@ const HOST_PEER_ID: int = 1
 const MAP_ORDER: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera"]
 
 static var instance: SessionManager = null
+## Intenção de lançamento lida pelo lobby no _ready (LAUNCH_SOLO, LAUNCH_COOP ou "").
+static var launch_mode: String = ""
 
 var _current_map: MapData = null
 var _last_summary: Dictionary = {}

@@ -96,6 +96,11 @@ func _ready() -> void:
 		# Apagar o progresso é ação de perigo (theme ScanDig, #51).
 		new_game_dialog.get_ok_button().theme_type_variation = &"DangerButton"
 
+	# Base aberta pela tela inicial em "Novo jogo/Continuar/Carregar" (solo, #100): o menu de rede
+	# começa oculto. Modo vazio (bots, testes, lobby aberto direto) = como sempre.
+	if SessionManager.launch_mode == SessionManager.LAUNCH_SOLO:
+		visible = false
+
 	_resolve_network_manager()
 	_setup_name_field()
 	_setup_online_mode()

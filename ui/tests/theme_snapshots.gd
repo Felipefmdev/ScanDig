@@ -245,5 +245,44 @@ func _run() -> void:
 	fake.queue_free()
 	boss_hud.queue_free()
 	GameState.instance.reset_state()
+	await _title_shots()
 	quit()
+
+
+## Tela inicial e slots (#100): sem save, com save, seletor (1 com ★, 1 ocupado, 1 vazio) e a
+## confirmação de apagar. A cena do lobby sai antes (a tela inicial tem câmera e céu próprios).
+func _title_shots() -> void:
+	current_scene.queue_free()
+	# Deixa acabar a chuva da captura do clima (as últimas gotas ainda caem).
+	await create_timer(1.0).timeout
+	var save: SaveManager = SaveManager.instance
+	for n: int in range(1, SaveManager.SLOT_COUNT + 1):
+		if FileAccess.file_exists(save.slot_path(n)):
+			DirAccess.remove_absolute(save.slot_path(n))
+	var title: TitleScreen = (load("res://world/title_screen.tscn") as PackedScene).instantiate() as TitleScreen
+	title.auto_skip = false
+	title.scene_change_enabled = false
+	root.add_child(title)
+	await _shot("titulo_sem_save")
+	var slots: Array = [
+		{"day": 23, "money": 48250, "found": 52, "completed": true, "at": 1760700000},
+		{"day": 6, "money": 1840, "found": 11, "completed": false, "at": 1760640000},
+	]
+	for i: int in slots.size():
+		var s: Dictionary = slots[i]
+		var items: Array = []
+		for k: int in int(s["found"]):
+			items.append("item_%d" % k)
+		var file: FileAccess = FileAccess.open(save.slot_path(i + 1), FileAccess.WRITE)
+		file.store_string(JSON.stringify({"version": SaveManager.SAVE_VERSION, "saved_at": s["at"], "team_money": s["money"],
+			"current_day": s["day"], "discovered_items": items, "game_completed": s["completed"]}))
+		file.close()
+	title.show_main()
+	await _shot("titulo_com_save")
+	title.show_slots("load")
+	await _shot("titulo_slots")
+	print("RECT titulo slots ", _rect(title.slots_panel))
+	title.slot_delete_buttons[1].pressed.emit()
+	await _shot("titulo_apagar")
+	title.queue_free()
 

@@ -355,6 +355,11 @@ func start_new_game() -> Error              # host/offline, fora de expedição;
 - Com `--script`/`-s` (GUT, testes headless, capturas) ou `--bot=`, nada disso roda: o save fica no caminho base, como antes, e os testes/bots trocam com `use_test_save_dir`/`set_save_path`.
 - `scandig_settings.cfg` e `scandig_hints.cfg` continuam globais (não são por slot).
 
+### Tela inicial (#100)
+- `run/main_scene` = `res://world/title_screen.tscn` (`TitleScreen`, `ui/title_screen.gd`): Continuar (último slot; some sem save), Novo jogo, Carregar, Coop, Configurações (a SettingsMenu do #77) e Sair, navegáveis por teclado/controle. O fundo 3D é só enfeite: sem jogador, rede nem spawners.
+- Solo: `select_slot` + `continue_game`/`start_new_game`, `SessionManager.launch_mode = "solo"` e a base abre com o MultiplayerMenu oculto. Coop: o slot escolhido é o do host, `launch_mode = "coop"` e o MultiplayerMenu fica aberto, como antes. `launch_mode == ""` (bots, testes, lobby aberto direto) = comportamento de sempre.
+- **Pulada** (`TitleScreen.should_skip(args, user_args)`) com `--script`/`-s` (GUT, testes headless, capturas) ou `--bot=`: troca na hora para o lobby, no slot/caminho de teste. Se o roteiro do bot também trocar de cena no mesmo frame, vale a troca do bot.
+
 ### Arquivos em `user://`
 | Arquivo | Quando |
 | :--- | :--- |
