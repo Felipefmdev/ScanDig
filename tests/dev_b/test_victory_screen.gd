@@ -158,3 +158,46 @@ func test_pause_action_closes() -> void:
 	ev.pressed = true
 	_screen()._unhandled_input(ev)
 	assert_false(VictoryScreen.is_open(), "Esc fecha a tela")
+
+
+# --- Créditos (#81) ------------------------------------------------------------
+
+func test_credits_button_swaps_card_view() -> void:
+	var screen: VictoryScreen = _screen()
+	GameState.instance._host_report_boss_defeated("the_sleeper")
+	assert_true(screen.summary_view.visible, "abre nas contagens")
+	assert_false(screen.credits_view.visible)
+	screen.credits_button.pressed.emit()
+	assert_true(screen.credits_view.is_visible_in_tree(), "Créditos mostra os créditos")
+	assert_false(screen.summary_view.visible, "e esconde as contagens")
+	assert_string_contains(screen.credits_label.text, VictoryScreen.CREDITS_TEXT)
+	assert_true(VictoryScreen.is_open(), "Créditos não fecha a tela")
+	screen.credits_back_button.pressed.emit()
+	assert_true(screen.summary_view.is_visible_in_tree(), "Voltar mostra as contagens")
+	assert_false(screen.credits_view.visible)
+	assert_true(VictoryScreen.is_open())
+
+
+func test_reopen_starts_on_summary() -> void:
+	var screen: VictoryScreen = _screen()
+	GameState.instance._host_report_boss_defeated("the_sleeper")
+	screen.credits_button.pressed.emit()
+	screen.close()
+	screen.open()
+	assert_true(VictoryScreen.is_open())
+	assert_true(screen.summary_view.visible, "reabre nas contagens")
+	assert_false(screen.credits_view.visible)
+
+
+func test_pause_action_in_credits_goes_back() -> void:
+	var screen: VictoryScreen = _screen()
+	GameState.instance._host_report_boss_defeated("the_sleeper")
+	screen.credits_button.pressed.emit()
+	var ev: InputEventAction = InputEventAction.new()
+	ev.action = &"pause"
+	ev.pressed = true
+	screen._unhandled_input(ev)
+	assert_true(VictoryScreen.is_open(), "Esc nos créditos não fecha")
+	assert_true(screen.summary_view.visible, "volta às contagens")
+	screen._unhandled_input(ev)
+	assert_false(VictoryScreen.is_open(), "Esc nas contagens fecha")

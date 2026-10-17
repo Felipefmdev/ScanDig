@@ -3,7 +3,8 @@ extends CanvasLayer
 
 ## Tela "Jogo concluído" (#81). Abre só na vitória ao vivo (GameState.game_victory: the_sleeper
 ## vencido nesta sessão). Carregar um save concluído, entrar no meio ou reconectar não abre.
-## Mostra Peças, Segredos e Diário e tem o botão "Continuar explorando". Enquanto está aberta,
+## Mostra Peças, Segredos e Diário e tem os botões "Continuar explorando" e "Créditos" (o mesmo
+## cartão troca para os créditos; "Voltar" ou Esc volta às contagens). Enquanto está aberta,
 ## o player não se mexe (is_settings_open) e o menu de pausa não abre. Fecha na troca de cena.
 ## Autoload CoreVictoryScreen, camada 46: acima da pausa (45), abaixo da SessionUI (50) para o
 ## carregamento cobrir.
@@ -12,6 +13,9 @@ signal open_changed(open: bool)
 
 const TITLE_TEXT: String = "Jogo concluído"
 const SUBTITLE_TEXT: String = "O Que Dorme foi vencido. O museu continua aberto:\nainda há peças, segredos e bichos por achar."
+const CREDITS_TITLE: String = "— CRÉDITOS —"
+## Fonte única dos créditos (veio do overlay do gameplay/environment/crater_altar.gd).
+const CREDITS_TEXT: String = "Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral\nBroca (Dev_Player) — Controlo 1ª Pessoa, Ferramentas, Terrenos e Segredos\nSonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes\nDev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo\nFelipe — Concepção, Arte Low-Poly Toon e Direção Criativa"
 
 static var instance: VictoryScreen = null
 
@@ -21,6 +25,12 @@ var items_value: Label = null
 var secrets_value: Label = null
 var creatures_value: Label = null
 var continue_button: Button = null
+var credits_button: Button = null
+var credits_back_button: Button = null
+## Vistas do mesmo cartão: contagens (padrão ao abrir) e créditos.
+var summary_view: Control = null
+var credits_view: Control = null
+var credits_label: Label = null
 
 var _open: bool = false
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
@@ -78,9 +88,13 @@ func _on_state_synced() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _open and event.is_action_pressed(&"pause", false, true):
+	if not _open or not event.is_action_pressed(&"pause", false, true):
+		return
+	if credits_view.visible:
+		show_summary()
+	else:
 		close()
-		get_viewport().set_input_as_handled()
+	get_viewport().set_input_as_handled()
 
 
 # --- Abrir / fechar ------------------------------------------------------------
@@ -92,6 +106,7 @@ func open() -> void:
 	if PauseMenu.instance != null and PauseMenu.is_open():
 		PauseMenu.instance.close()
 	refresh()
+	show_summary()
 	_open = true
 	root_control.visible = true
 	_previous_mouse_mode = Input.mouse_mode
@@ -111,6 +126,16 @@ func close() -> void:
 	if SessionUI.instance != null and SessionUI.instance.expedition_bar != null:
 		SessionUI.instance.call(&"_refresh_expedition_bar")
 	open_changed.emit(false)
+
+
+func show_credits() -> void:
+	summary_view.visible = false
+	credits_view.visible = true
+
+
+func show_summary() -> void:
+	credits_view.visible = false
+	summary_view.visible = true
 
 
 ## Contagens do GameState na hora em que abre.
@@ -139,9 +164,12 @@ func _build() -> void:
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 26)
 	card.add_child(margin)
+	var views: VBoxContainer = VBoxContainer.new()
+	margin.add_child(views)
 	var box: VBoxContainer = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 14)
-	margin.add_child(box)
+	summary_view = box
+	views.add_child(box)
 
 	var title_row: HBoxContainer = HBoxContainer.new()
 	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -184,6 +212,45 @@ func _build() -> void:
 	continue_button.focus_mode = Control.FOCUS_NONE
 	continue_button.pressed.connect(close)
 	box.add_child(continue_button)
+	credits_button = Button.new()
+	credits_button.text = "Créditos"
+	credits_button.custom_minimum_size = Vector2(320, 44)
+	credits_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	credits_button.focus_mode = Control.FOCUS_NONE
+	credits_button.pressed.connect(show_credits)
+	box.add_child(credits_button)
+
+	credits_view = _build_credits()
+	credits_view.visible = false
+	views.add_child(credits_view)
+
+
+func _build_credits() -> VBoxContainer:
+	var box: VBoxContainer = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	var title: Label = Label.new()
+	title.text = CREDITS_TITLE
+	title.theme_type_variation = &"TitleLabel"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
+	box.add_child(title)
+	box.add_child(HSeparator.new())
+	credits_label = Label.new()
+	credits_label.text = CREDITS_TEXT
+	credits_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	credits_label.add_theme_color_override(&"font_color", UiPalette.INK)
+	credits_label.add_theme_constant_override(&"line_spacing", 6)
+	box.add_child(credits_label)
+	box.add_child(HSeparator.new())
+	credits_back_button = Button.new()
+	credits_back_button.text = "Voltar"
+	credits_back_button.theme_type_variation = &"PrimaryButton"
+	credits_back_button.custom_minimum_size = Vector2(320, 48)
+	credits_back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	credits_back_button.focus_mode = Control.FOCUS_NONE
+	credits_back_button.pressed.connect(show_summary)
+	box.add_child(credits_back_button)
+	return box
 
 
 func _count_row(grid: GridContainer, text: String) -> Label:

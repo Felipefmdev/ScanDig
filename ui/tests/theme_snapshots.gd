@@ -213,8 +213,14 @@ func _run() -> void:
 		won["seen_creatures"] = ["crab", "hermit_crab", "seagull", "mole", "bat"]
 		GameState.instance.load_snapshot(won)
 		GameState.instance._host_report_boss_defeated("the_sleeper")
+		# Sobras das capturas anteriores (toast do segredo do snapshot acima, barra de chefe).
+		ui._clear_toasts()
+		boss_hud.visible = false
 		await _shot("jogo_concluido")
 		print("RECT vitória ", _rect(VictoryScreen.instance.card))
+		VictoryScreen.instance.credits_button.pressed.emit()
+		await _shot("victory_credits")
+		print("RECT créditos ", _rect(VictoryScreen.instance.card))
 		VictoryScreen.instance.close()
 
 
