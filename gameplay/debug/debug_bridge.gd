@@ -12,6 +12,7 @@ const STEP_KEYS: PackedStringArray = [
 	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore", "fight",
 	"host", "join", "start_expedition", "sleep", "face_player", "goto_player",
 	"interact", "call", "ui_tab", "ui_select", "ui_press", "rescue",
+	"give", "use_item", "set_boss_time", "seagull_poop", "spawn_enemy",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
@@ -21,6 +22,7 @@ const CONDITION_VARS: PackedStringArray = [
 	"money", "inventory", "enemies", "spots", "time", "health",
 	"nearest_spot", "free_slots", "deliverable", "sell_dist", "pickup_dist", "enemy_dist", "players",
 	"wave_round", "wave_phase", "wave_left", "bosses", "in_expedition", "downed",
+	"explosions", "splats", "meat", "food", "item_count",
 ]
 ## Variáveis com prefixo (#39): flag_<bandeira do WorldFlags> (1/0) e quest_<nome do NPC>
 ## (estado da missão 0..4: OFFER, ACTIVE, READY, EVENT, DONE).
@@ -42,6 +44,8 @@ const DEFAULT_WAIT_TIMEOUT: float = 60.0
 ## Só o jogador local (Player.LOCAL_GROUP); todos os jogadores estão em PLAYERS_GROUP.
 const PLAYER_GROUP: StringName = &"player"
 const PLAYERS_GROUP: StringName = &"players"
+## Ferramentas que "give"/"use_item" aceitam: res://items/tools/<id>.tres.
+const TOOLS_DIR: String = "res://items/tools/"
 ## Jogadores caídos (#79, Player.DOWNED_GROUP): saem de "player"/"players" enquanto caídos.
 const DOWNED_GROUP: StringName = &"downed_players"
 ## Porta por omissão dos passos host/join (a do CoreNetwork é 7777).
@@ -60,6 +64,9 @@ var _start_msec: int = 0
 var _game_time: float = 0.0
 var _executed: int = 0
 var _errors: PackedStringArray = []
+## Contadores de rede (coop_systems): explosões vistas (show_explosion) e cocôs na cara.
+var _explosions: int = 0
+var _splats: int = 0
 var _screenshots: PackedStringArray = []
 var _dumps: PackedStringArray = []
 var _waits: Array[Dictionary] = []
@@ -288,6 +295,31 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 				return "'radius' deve ser > 0"
 			step["radius"] = float(radius)
 			step["timeout"] = timeout
+		"give", "use_item":
+			if not value is String or (value as String).is_empty() or (value as String).contains("/"):
+				return "'%s' deve ser o id da ferramenta (items/tools/<id>.tres)" % kind
+			step["tool"] = value
+			step["for"] = TAP_SECONDS
+			if d.has("for"):
+				if not _is_number(d["for"]) or float(d["for"]) <= 0.0:
+					return "'for' deve ser > 0"
+				step["for"] = float(d["for"])
+		"set_boss_time":
+			if not _is_number(value) or float(value) < 0.0:
+				return "'set_boss_time' deve ser um numero >= 0 (segundos ja lutados)"
+			step["seconds"] = float(value)
+		"seagull_poop":
+			if not value is String or not (value in ["remote", "local"]):
+				return "'seagull_poop' so aceita \"remote\" ou \"local\""
+			step["target"] = value
+		"spawn_enemy":
+			if not value is String or not EnemySpawner.has_kind_scene(StringName(value)):
+				return "'spawn_enemy' deve ser um kind do EnemySpawner (ex.: snake)"
+			var near: Variant = d.get("near", "remote")
+			if not near is String or not (near in ["remote", "local"]):
+				return "'near' so aceita \"remote\" ou \"local\""
+			step["enemy"] = value
+			step["near"] = near
 		"goto_sell", "sell", "quit", "rescue":
 			if not (value is bool and value):
 				return "'%s' deve ser true" % kind
@@ -489,6 +521,8 @@ func _run(script_path: String) -> void:
 
 func _start_monitoring() -> void:
 	_monitoring = true
+	if not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
 	_m["start_money"] = int(_condition_value("money"))
 	for n: Node in get_tree().get_nodes_in_group(SELL_POINT_GROUP):
 		if n is SellPoint:
@@ -666,6 +700,16 @@ func _execute(step: Dictionary) -> void:
 			_debug_call(step["target"], step["method"])
 		"rescue":
 			await _rescue(step["timeout"])
+		"give":
+			_give(step["tool"])
+		"use_item":
+			await _use_item(step["tool"], step["for"])
+		"set_boss_time":
+			_set_boss_time(step["seconds"])
+		"seagull_poop":
+			await _seagull_poop(step["target"])
+		"spawn_enemy":
+			_spawn_enemy(step["enemy"], step["near"])
 		"quit":
 			pass
 
@@ -863,6 +907,10 @@ func _walk_to(target: Vector3, arrive: float, timeout: float, y_offset: float, s
 ## inimigos ao alcance.
 func _fight(seconds: float, radius: float) -> void:
 	var player: Node3D = _player()
+	if player == null and _local_downed() != null:
+		# Caído (#79): espera o resgate em vez de encher o log de avisos.
+		await _sleep(1.0)
+		return
 	if player == null:
 		_fail("fight: jogador nao encontrado")
 		return
@@ -1220,6 +1268,23 @@ func _condition_value(var_name: String) -> float:
 			return Vector2(d.x, d.z).length()
 		"players":
 			return float(get_tree().get_nodes_in_group(PLAYERS_GROUP).size())
+		"explosions":
+			return float(_explosions)
+		"splats":
+			return float(_splats)
+		"meat":
+			return float(_count_tool_on_ground("carne_crua"))
+		"food":
+			var inv_f: Inventory = _player_inventory()
+			var n_food: int = 0
+			if inv_f != null:
+				for c: CarriedItem in inv_f.slots:
+					if c != null and c.tool_data != null and c.tool_data.category == ToolData.Category.FOOD:
+						n_food += 1
+			return float(n_food)
+		"item_count":
+			var inv_i: Inventory = _player_inventory()
+			return float(inv_i.get_count()) if inv_i != null else 0.0
 		"downed":
 			var me: Node3D = _player()
 			var n_down: int = 0
@@ -1648,6 +1713,138 @@ func _bot_auto_eat(delta: float) -> void:
 
 func _player() -> Node3D:
 	return get_tree().get_first_node_in_group(PLAYER_GROUP) as Node3D
+
+
+## Conta explosões (o clarão de Player.show_explosion) e cocôs (CanvasLayer do poop_splat)
+## em qualquer peer: é o que prova que o rpc chegou.
+func _on_node_added(n: Node) -> void:
+	if n is OmniLight3D and (n as OmniLight3D).light_color.is_equal_approx(Color(1.0, 0.7, 0.3)):
+		_explosions += 1
+		_log("  explosao #%d" % _explosions)
+	elif n is CanvasLayer and (n as CanvasLayer).layer == 4 and n.get_parent() != null and n.get_parent() == _player():
+		_splats += 1
+		_log("  coco na cara #%d" % _splats)
+
+
+## Pickups no chão com a ferramenta `tool` (ex.: carne_crua largada por um inimigo).
+func _count_tool_on_ground(tool: String) -> int:
+	var n_found: int = 0
+	for n: Node in get_tree().get_nodes_in_group(PICKUP_GROUP):
+		var pk: ItemPickup = n as ItemPickup
+		if pk != null and is_instance_valid(pk) and pk.carried != null and String(pk.carried.tool_id) == tool:
+			n_found += 1
+	return n_found
+
+
+func _load_tool(tool: String) -> ToolData:
+	var path: String = TOOLS_DIR + tool + ".tres"
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path) as ToolData
+
+
+## Passo "give": põe uma ferramenta/comida na mochila local (atalho de debug).
+func _give(tool: String) -> void:
+	var td: ToolData = _load_tool(tool)
+	var inv: Inventory = _player_inventory()
+	if td == null:
+		_error("give: ferramenta '%s' inexistente" % tool)
+	elif inv == null:
+		_fail("give: sem mochila (jogador nao encontrado)")
+	elif not inv.add_item(CarriedItem.create_from_tool_data(td)):
+		_fail("give: mochila cheia")
+	else:
+		_log("  give: %s" % tool)
+
+
+## Passo "use_item": seleciona o slot com a ferramenta e segura use_tool `hold` s (comer pede ~1 s).
+func _use_item(tool: String, hold: float) -> void:
+	var inv: Inventory = _player_inventory()
+	if inv == null:
+		_fail("use_item: sem mochila (jogador nao encontrado)")
+		return
+	var idx: int = -1
+	for i: int in inv.slots.size():
+		var c: CarriedItem = inv.slots[i]
+		if c != null and String(c.tool_id) == tool:
+			idx = i
+			break
+	if idx < 0:
+		_fail("use_item: '%s' nao esta na mochila" % tool)
+		return
+	inv.select(idx)
+	await _sleep(0.15)
+	Input.action_press("use_tool")
+	await _sleep(hold)
+	Input.action_release("use_tool")
+	await _sleep(0.1)
+
+
+## Passo "set_boss_time" (só host): põe os chefes vivos com `seconds` de luta (a fuga é aos 300 s).
+func _set_boss_time(seconds: float) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		_log("  set_boss_time: ignorado no convidado (o relogio e do host)")
+		return
+	var n_set: int = 0
+	for n: Node in get_tree().get_nodes_in_group(&"bosses"):
+		var b: EnemyBase = n as EnemyBase
+		if b != null and is_instance_valid(b) and b.is_alive():
+			b.boss_time = seconds
+			n_set += 1
+	if n_set == 0:
+		_fail("set_boss_time: nenhum chefe vivo")
+	else:
+		_log("  set_boss_time: %d chefe(s) em %.0f s" % [n_set, seconds])
+
+
+## Passo "seagull_poop" (só host): garante uma gaivota e larga-lhe um cocô por cima da cabeça
+## do jogador alvo ("remote" = o convidado mais próximo). Prova o rpc poop_splat.
+func _seagull_poop(target: String) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		_log("  seagull_poop: ignorado no convidado (as gaivotas sao do host)")
+		return
+	var me: Node3D = _player()
+	var victim: Node3D = me if target == "local" else (_nearest_remote_player(me) if me != null else null)
+	if victim == null:
+		_fail("seagull_poop: jogador alvo nao encontrado")
+		return
+	var gull: Node3D = null
+	for n: Node in get_tree().get_nodes_in_group(ENEMY_GROUP):
+		if n is Node3D and is_instance_valid(n) and n.has_method("drop_poop"):
+			gull = n
+			break
+	if gull == null:
+		var spawner: Node = _find_named("EnemySpawner")
+		if spawner != null and spawner.has_method("spawn_from_data"):
+			gull = spawner.call("spawn_from_data", {"kind": "seagull", "pos": victim.global_position + Vector3.UP * 4.0, "level": 0}) as Node3D
+		await _sleep(0.3)
+	if gull == null or not is_instance_valid(gull) or not is_instance_valid(victim):
+		_fail("seagull_poop: nao foi possivel criar gaivota")
+		return
+	gull.global_position = victim.global_position + Vector3.UP * 2.6
+	gull.call("drop_poop")
+	_log("  seagull_poop: coco largado sobre %s" % victim.name)
+
+
+## Passo "spawn_enemy" (só host): cria um inimigo do EnemySpawner a ~5 m do jogador alvo
+## (para testar drops, ex.: Carne Crua, em mapas cujos inimigos não a largam).
+func _spawn_enemy(kind: String, near: String) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		_log("  spawn_enemy: ignorado no convidado (os inimigos sao do host)")
+		return
+	var me: Node3D = _player()
+	var target: Node3D = me if near == "local" else (_nearest_remote_player(me) if me != null else null)
+	var spawner: Node = _find_named("EnemySpawner")
+	if target == null or spawner == null or not spawner.has_method("spawn_from_data"):
+		_fail("spawn_enemy: sem alvo ou sem EnemySpawner")
+		return
+	var a: float = randf() * TAU
+	var pos: Vector3 = target.global_position + Vector3(cos(a), 0.5, sin(a)) * 5.0
+	var e: Node = spawner.call("spawn_from_data", EnemySpawner.make_spawn_data(StringName(kind), pos, 0)) as Node
+	if e == null:
+		_fail("spawn_enemy: o spawner recusou '%s'" % kind)
+	else:
+		_log("  spawn_enemy: %s em %s" % [kind, _vec(pos)])
 
 
 ## O jogador local quando está caído (#79): sai do grupo "player" e fica só em DOWNED_GROUP.

@@ -1,0 +1,179 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 20,
+	"steps": [
+		{
+			"t": 1.0,
+			"host": 7810
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"set_state": {
+				"unlocked_maps": [
+					"praia",
+					"campo",
+					"ruinas"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole",
+					"crow_king",
+					"scarecrow"
+				],
+				"upgrade_levels": {
+					"detector": 4,
+					"shovel": 3
+				},
+				"team_money": 3000
+			}
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"start_expedition": "ruinas",
+			"timeout": 30
+		},
+		{
+			"wait_until": "players>=2",
+			"timeout": 60
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"screenshot": "h0_entrada"
+		},
+		{
+			"wait_until": "explosions>=1",
+			"timeout": 40
+		},
+		{
+			"t": 0,
+			"dump": "h1_dinamite_cliente"
+		},
+		{
+			"t": 0,
+			"give": "dinamite"
+		},
+		{
+			"t": 0,
+			"face_player": "remote"
+		},
+		{
+			"t": 0,
+			"use_item": "dinamite"
+		},
+		{
+			"wait_until": "explosions>=2",
+			"timeout": 10
+		},
+		{
+			"sleep": 1.0
+		},
+		{
+			"t": 0,
+			"screenshot": "h2_dinamite_host"
+		},
+		{
+			"t": 0,
+			"dump": "h2_dinamite_host"
+		},
+		{
+			"t": 0,
+			"seagull_poop": "remote"
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"seagull_poop": "remote"
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"give": "carne_crua"
+		},
+		{
+			"loop": [
+				{
+					"use_item": "carne_crua",
+					"for": 1.4
+				},
+				{
+					"sleep": 0.4
+				}
+			],
+			"until": "food<1",
+			"timeout": 15
+		},
+		{
+			"wait_until": "bosses>=1",
+			"timeout": 120
+		},
+		{
+			"sleep": 4.0
+		},
+		{
+			"t": 0,
+			"screenshot": "h3_chefe"
+		},
+		{
+			"t": 0,
+			"set_boss_time": 295
+		},
+		{
+			"wait_until": "bosses==0",
+			"timeout": 30
+		},
+		{
+			"sleep": 1.0
+		},
+		{
+			"t": 0,
+			"screenshot": "h4_chefe_fugiu"
+		},
+		{
+			"t": 0,
+			"dump": "h4_chefe_fugiu"
+		},
+		{
+			"loop": [
+				{
+					"if": "downed>=1",
+					"rescue": true,
+					"timeout": 90
+				},
+				{
+					"if": "enemies<3",
+					"spawn_enemy": "snake",
+					"near": "remote"
+				},
+				{
+					"sleep": 2.0
+				}
+			],
+			"until": "meat>=1",
+			"timeout": 300
+		},
+		{
+			"t": 0,
+			"dump": "h5_carne"
+		},
+		{
+			"sleep": 20.0
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}

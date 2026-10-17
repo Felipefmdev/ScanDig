@@ -224,3 +224,49 @@ func test_coop_scripts_with_rescue_are_valid() -> void:
 		var r: Dictionary = Bridge.parse_script(JSON.parse_string(text))
 		assert_true(r["ok"], "%s: %s" % [f, r["errors"]])
 		assert_true(text.contains("\"rescue\""), "%s tem passo rescue" % f)
+
+
+func test_coop_systems_steps_parse() -> void:
+	var r: Dictionary = Bridge.parse_script({
+		"scene": "res://world/lobby_base.tscn",
+		"steps": [
+			{"t": 0, "give": "dinamite"},
+			{"t": 0, "use_item": "carne_crua", "for": 1.4},
+			{"t": 0, "set_boss_time": 295},
+			{"t": 0, "seagull_poop": "remote"},
+			{"t": 0, "spawn_enemy": "snake", "near": "local"},
+			{"wait_until": "explosions>=2", "timeout": 5},
+			{"wait_until": "splats>=1", "timeout": 5},
+			{"wait_until": "meat>=1", "timeout": 5},
+			{"wait_until": "food<1", "timeout": 5},
+		],
+	})
+	assert_true(r["ok"], str(r["errors"]))
+	var steps: Array = r["steps"]
+	assert_eq(steps[0]["tool"], "dinamite")
+	assert_eq(steps[0]["for"], Bridge.TAP_SECONDS)
+	assert_eq(steps[1]["for"], 1.4)
+	assert_eq(steps[2]["seconds"], 295.0)
+	assert_eq(steps[3]["target"], "remote")
+	assert_eq(steps[4]["enemy"], "snake")
+	assert_eq(steps[4]["near"], "local")
+
+
+func test_coop_systems_steps_reject_bad_values() -> void:
+	for bad: Dictionary in [
+		{"t": 0, "give": ""},
+		{"t": 0, "give": "../core/x"},
+		{"t": 0, "use_item": "dinamite", "for": 0},
+		{"t": 0, "set_boss_time": -1},
+		{"t": 0, "set_boss_time": "300"},
+		{"t": 0, "seagull_poop": "todos"},
+		{"t": 0, "spawn_enemy": "dragao"},
+		{"t": 0, "spawn_enemy": "snake", "near": "longe"},
+	]:
+		assert_typeof(Bridge.parse_step(bad), TYPE_STRING, str(bad))
+
+
+func test_coop_systems_scripts_are_valid() -> void:
+	for f: String in ["coop_systems_host", "coop_systems_client"]:
+		var r: Dictionary = Bridge.parse_script(JSON.parse_string(FileAccess.get_file_as_string("res://tools/bot/%s.json" % f)))
+		assert_true(r["ok"], "%s: %s" % [f, r["errors"]])
