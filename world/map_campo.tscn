@@ -33,7 +33,7 @@
 [ext_resource type="PackedScene" path="res://gameplay/quests/campo/campo_secrets.tscn" id="q_campo_secrets"]
 [ext_resource type="Script" path="res://items/shop_offer.gd" id="s_shop_offer"]
 [ext_resource type="Resource" uid="uid://dl0lf0jvb2ceo" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
-[ext_resource type="Resource" uid="uid://by7msg0gg6mj3" path="res://items/tools/estilingue.tres" id="t_estilingue"]
+[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="t_estilingue"]
 [ext_resource type="Resource" uid="uid://cm315ea2rqmc6" path="res://items/tools/forcado.tres" id="t_forcado"]
 [ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
 [ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
