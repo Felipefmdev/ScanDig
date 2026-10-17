@@ -67,6 +67,72 @@ static func face(st: SurfaceTool, head: Vector3, hr: float, brow: Color, mood: i
 			LowPolyMesh.box(st, m, Vector3(hr * 0.3, hr * 0.05, 0.014), Basis.IDENTITY, MOUTH)
 
 
+## Cria componentes animados de cara para o How to Fish (olhos móveis + boca articulada na fala)
+static func build_animated_face(parent: Node3D, head: Vector3, hr: float, brow: Color, mood: int = 2,
+		eye_y: float = 0.03, eye_gap: float = 0.36) -> Node3D:
+	var head_node: Node3D = Node3D.new()
+	head_node.name = "NpcHead"
+	head_node.position = head
+	parent.add_child(head_node)
+	
+	var mat: ShaderMaterial = cloth_material(0.0)
+	
+	# Esclerótica e sobrancelhas
+	var st_eyes: SurfaceTool = SurfaceTool.new()
+	st_eyes.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var z: float = -hr * 0.93
+	for sx: float in [-1.0, 1.0]:
+		var e: Vector3 = Vector3(sx * hr * eye_gap, eye_y, z)
+		LowPolyMesh.box(st_eyes, e, Vector3(hr * 0.24, hr * 0.26, 0.012), Basis.IDENTITY, EYE_WHITE)
+		LowPolyMesh.box(st_eyes, e + Vector3(0, hr * 0.2, 0.0), Vector3(hr * 0.3, hr * 0.06, 0.02), Basis(Vector3.FORWARD, sx * 0.18), brow)
+	var eyes_mesh: MeshInstance3D = MeshInstance3D.new()
+	eyes_mesh.name = "EyesWhite"
+	eyes_mesh.mesh = ToonKit.commit(st_eyes)
+	eyes_mesh.material_override = mat
+	head_node.add_child(eyes_mesh)
+
+	# Pupilas (nó separado NpcPupils para rastreamento visual do jogador)
+	var pupils_node: Node3D = Node3D.new()
+	pupils_node.name = "NpcPupils"
+	var st_pupils: SurfaceTool = SurfaceTool.new()
+	st_pupils.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for sx: float in [-1.0, 1.0]:
+		var e: Vector3 = Vector3(sx * hr * eye_gap, eye_y, z)
+		LowPolyMesh.box(st_pupils, e + Vector3(sx * -hr * 0.03, -hr * 0.02, -0.008), Vector3(hr * 0.12, hr * 0.16, 0.01), Basis.IDENTITY, PUPIL)
+	var pupils_mesh: MeshInstance3D = MeshInstance3D.new()
+	pupils_mesh.name = "PupilsMesh"
+	pupils_mesh.mesh = ToonKit.commit(st_pupils)
+	pupils_mesh.material_override = mat
+	pupils_node.add_child(pupils_mesh)
+	head_node.add_child(pupils_node)
+
+	# Boca articulada (nó separado NpcMouth para escala na fala)
+	var mouth_node: Node3D = Node3D.new()
+	mouth_node.name = "NpcMouth"
+	var m_pos: Vector3 = Vector3(0, -hr * 0.42, z + 0.005)
+	mouth_node.position = m_pos
+	var st_mouth: SurfaceTool = SurfaceTool.new()
+	st_mouth.begin(Mesh.PRIMITIVE_TRIANGLES)
+	match mood:
+		1:
+			LowPolyMesh.box(st_mouth, Vector3.ZERO, Vector3(hr * 0.42, hr * 0.16, 0.014), Basis.IDENTITY, MOUTH)
+			LowPolyMesh.box(st_mouth, Vector3(0, hr * 0.04, -0.006), Vector3(hr * 0.36, hr * 0.06, 0.01), Basis.IDENTITY, TEETH)
+		2:
+			LowPolyMesh.box(st_mouth, Vector3.ZERO, Vector3(hr * 0.34, hr * 0.06, 0.014), Basis(Vector3.FORWARD, 0.0), MOUTH)
+			for sx: float in [-1.0, 1.0]:
+				LowPolyMesh.box(st_mouth, Vector3(sx * hr * 0.19, hr * 0.04, 0), Vector3(hr * 0.08, hr * 0.05, 0.014), Basis(Vector3.FORWARD, sx * 0.6), MOUTH)
+		_:
+			LowPolyMesh.box(st_mouth, Vector3.ZERO, Vector3(hr * 0.3, hr * 0.05, 0.014), Basis.IDENTITY, MOUTH)
+	var mouth_mesh: MeshInstance3D = MeshInstance3D.new()
+	mouth_mesh.name = "MouthMesh"
+	mouth_mesh.mesh = ToonKit.commit(st_mouth)
+	mouth_mesh.material_override = mat
+	mouth_node.add_child(mouth_mesh)
+	head_node.add_child(mouth_node)
+
+	return head_node
+
+
 ## Nariz facetado.
 static func nose(st: SurfaceTool, head: Vector3, hr: float, color: Color, size: float = 1.0) -> void:
 	LowPolyMesh.prism(st, head + Vector3(0, -hr * 0.05, -hr * 0.9), head + Vector3(0, -hr * 0.2, -hr * (1.05 + 0.12 * size)),

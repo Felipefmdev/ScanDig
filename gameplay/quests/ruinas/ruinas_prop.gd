@@ -178,7 +178,7 @@ func _ines(st: SurfaceTool) -> void:
 	var head: Vector3 = Vector3(0.0, 1.36, -0.01)
 	NpcBody.blob(st, head, Vector3(0.14, 0.16, 0.14), skin, 8)
 	NpcBody.nose(st, head, 0.14, skin_dark, 0.8)
-	NpcBody.face(st, head, 0.14, hair, 2)
+	NpcBody.build_animated_face(self, head, 0.14, hair, 2)
 	NpcBody.blob(st, head + Vector3(0, 0.04, 0.03), Vector3(0.15, 0.15, 0.14), hair, 8)
 	for sx: float in [-1.0, 1.0]:
 		LowPolyMesh.box(st, head + Vector3(sx * 0.13, -0.02, -0.06), Vector3(0.04, 0.16, 0.08), Basis(Vector3.FORWARD, sx * 0.1), hair)

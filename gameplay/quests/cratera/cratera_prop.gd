@@ -201,7 +201,7 @@ func _build_dra_vega(st: SurfaceTool) -> void:
 	NpcBody.blob(st, head, Vector3(0.15, 0.17, 0.15), skin, 8)
 	NpcBody.blob(st, head + Vector3(0, -0.1, -0.03), Vector3(0.1, 0.06, 0.1), skin, 6)
 	NpcBody.nose(st, head, 0.15, skin_dark, 0.9)
-	NpcBody.face(st, head, 0.15, hair_dark, 1)
+	NpcBody.build_animated_face(self, head, 0.15, hair_dark, 1)
 	# Afro enorme: nuvem de caracóis facetados à volta e por cima (deixa a cara livre)
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 7

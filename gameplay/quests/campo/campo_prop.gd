@@ -195,7 +195,7 @@ func _lurdes(st: SurfaceTool) -> void:
 	var head: Vector3 = Vector3(0.0, 1.31, -0.06)
 	NpcBody.blob(st, head, Vector3(0.14, 0.15, 0.14), skin, 8)
 	NpcBody.nose(st, head, 0.14, skin_dark, 1.0)
-	NpcBody.face(st, head, 0.14, Color(0.8, 0.78, 0.74, 0.0), 2)
+	NpcBody.build_animated_face(self, head, 0.14, Color(0.8, 0.78, 0.74, 0.0), 2)
 	for sx: float in [-1.0, 1.0]:
 		LowPolyMesh.box(st, head + Vector3(sx * 0.085, -0.04, -0.12), Vector3(0.045, 0.03, 0.01), Basis.IDENTITY, Color(0.92, 0.55, 0.5, 0.0))
 	# Óculos redondos (aros finos escuros à volta dos olhos)

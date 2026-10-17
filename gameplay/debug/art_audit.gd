@@ -86,11 +86,14 @@ func _capture() -> void:
 		await get_tree().process_frame
 	# Chefes e inimigos que nascem numa pose ou debaixo da terra (ex.: múmia, toupeira)
 	var body: Node3D = _subject.get(&"_body_root") as Node3D
+	if body == null:
+		body = _subject.get(&"body_root") as Node3D
 	if body != null:
 		body.rotation = Vector3.ZERO
+		body.position = Vector3.ZERO
 		body.visible = true
 	if _subject is EnemyBase:
-		_subject.position.y = 0.0
+		_subject.position = Vector3.ZERO
 	var box: AABB = _mesh_aabb(_subject)
 	var center: Vector3 = box.get_center()
 	var radius: float = maxf(box.size.length() * 0.5, 0.2)

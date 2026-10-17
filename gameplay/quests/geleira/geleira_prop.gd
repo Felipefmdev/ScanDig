@@ -210,7 +210,7 @@ func _bjorn(st: SurfaceTool) -> void:
 	var head: Vector3 = Vector3(0.0, 1.42, -0.04)
 	NpcBody.blob(st, head, Vector3(0.17, 0.17, 0.16), skin, 8)
 	NpcBody.nose(st, head, 0.17, Color(0.86, 0.5, 0.42, 0.0), 1.5)
-	NpcBody.face(st, head, 0.17, beard, 0, 0.04)
+	NpcBody.build_animated_face(self, head, 0.17, beard, 0, 0.04)
 	for sx: float in [-1.0, 1.0]:
 		NpcBody.blob(st, head + Vector3(sx * 0.1, -0.03, -0.12), Vector3(0.045, 0.035, 0.02), cheek, 6)
 		NpcBody.blob(st, head + Vector3(sx * 0.07, 0.085, -0.15), Vector3(0.05, 0.022, 0.02), beard, 5)

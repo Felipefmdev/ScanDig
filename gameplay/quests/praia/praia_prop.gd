@@ -163,6 +163,14 @@ func _fisherman(st: SurfaceTool) -> void:
 		NpcBody.hand(st, hd, 0.055, skin, sx)
 	# Cabeça, nariz grande e bochechas
 	var head: Vector3 = Vector3(0.0, 1.27, -0.04)
+	var head_node: Node3D = Node3D.new()
+	head_node.name = "NpcHead"
+	head_node.position = head
+	add_child(head_node)
+	var mouth_node: Node3D = Node3D.new()
+	mouth_node.name = "NpcMouth"
+	mouth_node.position = Vector3(0.0, -0.08, -0.16)
+	head_node.add_child(mouth_node)
 	NpcBody.blob(st, head, Vector3(0.16, 0.17, 0.16), skin, 8)
 	NpcBody.nose(st, head, 0.16, Color(0.82, 0.5, 0.4, 0.0), 1.3)
 	# Óculos de sol: duas lentes pretas largas + ponte
@@ -193,8 +201,10 @@ func _fisherman(st: SurfaceTool) -> void:
 		if k >= 2:
 			LowPolyMesh.box(st, pts[k + 1] + Vector3(0, -0.02, 0), Vector3(0.025, 0.03, 0.01), Basis.IDENTITY, metal)
 	LowPolyMesh.prism(st, grip + Vector3(0.0, -0.08, 0.02), grip + Vector3(0.06, -0.08, 0.02), 0.05, 0.05, 8, metal)
-	# Linha a cair da ponta
-	NpcBody.limb(st, pts[-1], pts[-1] + Vector3(0.05, -1.6, -0.2), 0.004, 0.004, Color(0.2, 0.2, 0.2, 0.0), 3)
+	# Linha a cair da ponta da cana com chumbada
+	var line_end: Vector3 = pts[-1] + Vector3(0.02, -0.42, -0.05)
+	NpcBody.limb(st, pts[-1], line_end, 0.005, 0.005, Color(0.3, 0.3, 0.3, 0.0), 3)
+	LowPolyMesh.prism(st, line_end, line_end + Vector3(0.0, -0.04, 0.0), 0.015, 0.005, 5, metal)
 
 
 ## Concha-vieira grande, de pé, em leque com nervuras alternadas.
