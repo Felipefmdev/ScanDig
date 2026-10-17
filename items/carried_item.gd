@@ -155,6 +155,24 @@ func consume_charge() -> bool:
 	return charges <= 0
 
 
+## Achados intactos (#93): um achado frágil pode estragar-se depois de cavado (golpes com ele
+## na mochila, quedas fortes, explosões). Perde integridade, o valor recalcula-se e perde o
+## selo de intacto. Devolve verdadeiro se o selo se perdeu agora.
+const MIN_INTEGRITY: float = 0.05
+
+
+func damage_integrity(amount: float) -> bool:
+	if item == null or is_tool() or amount <= 0.0:
+		return false
+	var was_intact: bool = is_clean
+	integrity = maxf(MIN_INTEGRITY, integrity - amount)
+	final_value = item.calculate_value(integrity)
+	if is_rare_variant:
+		final_value = int(round(float(final_value) * BuriedSpot.RARE_VALUE_MULTIPLIER))
+	is_clean = false
+	return was_intact
+
+
 func is_tool() -> bool:
 	return tool_id != &""
 

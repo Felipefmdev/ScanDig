@@ -123,6 +123,8 @@ var defeated_bosses: Array[String] = []
 var completed_quests: Array[String] = []
 var found_secrets: Array[String] = []
 var seen_creatures: Array[String] = []
+## Coleção de peças entregues intactas (#93): uma entrada por item do catálogo.
+var intact_items: Array[String] = []
 var game_completed: bool = false
 
 
@@ -531,6 +533,23 @@ func _host_report_secret(secret_id: String) -> void:
 	_broadcast_snapshot()
 
 
+## Um achado chegou intacto à base (#93). Primeira vez de cada peça entra na coleção.
+func request_report_intact(item_id: String) -> void:
+	_send_to_host(&"_host_report_intact", [item_id])
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_report_intact(item_id: String) -> void:
+	if not is_authority() or intact_items.has(item_id) or _load_item(item_id) == null:
+		return
+	var data: Dictionary = get_snapshot()
+	var intact: Array = Array(intact_items).duplicate()
+	intact.append(item_id)
+	data["intact_items"] = intact
+	apply_snapshot(data)
+	_broadcast_snapshot()
+
+
 ## Uma criatura morreu (no host). Primeira vez de cada tipo entra no diário.
 ## Golpe de um convidado (EnemyBase._rpc_request_hit → _die): ainda estamos dentro da RPC dele,
 ## get_remote_sender_id() é o convidado e o _is_host_sender recusaria. Adiado, roda fora da RPC
@@ -622,6 +641,7 @@ func get_snapshot() -> Dictionary:
 		"completed_quests": Array(completed_quests),
 		"found_secrets": Array(found_secrets),
 		"seen_creatures": Array(seen_creatures),
+		"intact_items": Array(intact_items),
 		"game_completed": game_completed,
 	}
 
@@ -658,6 +678,8 @@ func apply_snapshot(data: Dictionary) -> void:
 		game_completed = bool(data["game_completed"])
 	if defeated_bosses.has("the_sleeper"):
 		game_completed = true
+	if data.get("intact_items") is Array:
+		intact_items = _to_id_list(data["intact_items"])
 	if data.get("upgrade_levels") is Dictionary:
 		# JSON devolve números como float e pode conter chaves obsoletas.
 		var source: Dictionary = data["upgrade_levels"]
@@ -788,6 +810,7 @@ func reset_state() -> void:
 	completed_quests.clear()
 	found_secrets.clear()
 	seen_creatures.clear()
+	intact_items.clear()
 	game_completed = false
 	_broadcast_snapshot()
 

@@ -601,7 +601,8 @@ func _refresh_museum_display() -> void:
 		discovered = _game_state.discovered_items
 	
 	for item in _catalog_items:
-		museum_item_list.add_item(museum_line(item, discovered.has(item.id)))
+		var intact: bool = _game_state != null and _game_state.intact_items.has(item.id)
+		museum_item_list.add_item(museum_line(item, discovered.has(item.id), intact))
 
 	if tab_container != null and tab_container.get_tab_count() > 1:
 		if _game_state != null and _game_state.game_completed:
@@ -614,10 +615,11 @@ func _refresh_museum_display() -> void:
 
 ## Linha do Museu. Itens que não são escavados (missão, relíquia escondida, troféu de chefe,
 ## easter egg) têm depth_cm 0: mostram "Achado especial" no lugar da profundidade.
-static func museum_line(item: ItemData, is_found: bool) -> String:
+static func museum_line(item: ItemData, is_found: bool, is_intact: bool = false) -> String:
 	var status_str: String = "[DESCOBERTO]" if is_found else "[ ? ]"
 	var detail: String = "Profundidade: %d cm" % item.depth_cm if item.depth_cm > 0 else "Achado especial"
-	return "%s %s (Valor: %s | %s)" % [status_str, item.display_name, UiFormat.money(item.base_value), detail]
+	var line: String = "%s %s (Valor: %s | %s)" % [status_str, item.display_name, UiFormat.money(item.base_value), detail]
+	return line + ("  ✦ intacto" if is_intact else "")
 
 
 func _refresh_secrets_label() -> void:

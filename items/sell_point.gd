@@ -42,6 +42,8 @@ func deliver(items: Array[CarriedItem]) -> int:
 			continue
 		var val: int = get_item_delivery_value(c)
 		DiscoveryBridge.report_item_found(c.item, val)
+		if c.is_clean and GameState.instance != null:
+			GameState.instance.request_report_intact(c.item.id)
 		total += val
 		count += 1
 	items_delivered.emit(count, total)
