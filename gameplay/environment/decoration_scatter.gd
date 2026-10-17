@@ -19,6 +19,7 @@ extends Node3D
 @export var open_sides: PackedInt32Array = PackedInt32Array()
 
 const GROUND_MASK: int = 1
+const AMBIENT_LIFE: Script = preload("res://gameplay/environment/ambient_life.gd")
 const DEFAULT_HALF: float = 28.0
 
 var _kinds: Dictionary = {}  # nome -> {mesh, transforms}
@@ -31,6 +32,10 @@ func _ready() -> void:
 	if not is_inside_tree():
 		return
 	build()
+	var life: Node3D = AMBIENT_LIFE.new()
+	life.name = "AmbientLife"
+	life.set("theme", theme)
+	add_child(life)
 
 
 func build() -> int:
