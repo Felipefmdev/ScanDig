@@ -103,6 +103,11 @@
 		{
 			"loop": [
 				{
+					"if": "downed>=1",
+					"rescue": true,
+					"timeout": 90
+				},
+				{
 					"if": "enemy_dist>30",
 					"teleport": [
 						19.0,

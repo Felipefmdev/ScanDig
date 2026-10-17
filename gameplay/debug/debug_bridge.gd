@@ -11,7 +11,7 @@ const STEP_KEYS: PackedStringArray = [
 	"press", "tap", "look", "screenshot", "dump", "teleport", "look_at", "goto_spot", "wait_until", "quit",
 	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore", "fight",
 	"host", "join", "start_expedition", "sleep", "face_player", "goto_player",
-	"interact", "call", "ui_tab", "ui_select", "ui_press",
+	"interact", "call", "ui_tab", "ui_select", "ui_press", "rescue",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
@@ -20,7 +20,7 @@ const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop", "sleep"]
 const CONDITION_VARS: PackedStringArray = [
 	"money", "inventory", "enemies", "spots", "time", "health",
 	"nearest_spot", "free_slots", "deliverable", "sell_dist", "pickup_dist", "enemy_dist", "players",
-	"wave_round", "wave_phase", "wave_left", "bosses", "in_expedition",
+	"wave_round", "wave_phase", "wave_left", "bosses", "in_expedition", "downed",
 ]
 ## Variáveis com prefixo (#39): flag_<bandeira do WorldFlags> (1/0) e quest_<nome do NPC>
 ## (estado da missão 0..4: OFFER, ACTIVE, READY, EVENT, DONE).
@@ -42,6 +42,8 @@ const DEFAULT_WAIT_TIMEOUT: float = 60.0
 ## Só o jogador local (Player.LOCAL_GROUP); todos os jogadores estão em PLAYERS_GROUP.
 const PLAYER_GROUP: StringName = &"player"
 const PLAYERS_GROUP: StringName = &"players"
+## Jogadores caídos (#79, Player.DOWNED_GROUP): saem de "player"/"players" enquanto caídos.
+const DOWNED_GROUP: StringName = &"downed_players"
 ## Porta por omissão dos passos host/join (a do CoreNetwork é 7777).
 const DEFAULT_NET_PORT: int = 7777
 const ENEMY_GROUP: StringName = &"enemies"
@@ -171,6 +173,8 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 	var timeout_default: float = DEFAULT_WAIT_TIMEOUT
 	if kind in ["dig_spot", "pickup", "goto_sell", "goto_spot", "explore", "fight", "interact"]:
 		timeout_default = 30.0
+	elif kind == "rescue":
+		timeout_default = 90.0
 	if d.has("timeout"):
 		if not _is_number(d["timeout"]) or float(d["timeout"]) <= 0.0:
 			return "'timeout' deve ser > 0"
@@ -284,8 +288,8 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 				return "'radius' deve ser > 0"
 			step["radius"] = float(radius)
 			step["timeout"] = timeout
-		"goto_sell", "sell", "quit":
-			if value != true:
+		"goto_sell", "sell", "quit", "rescue":
+			if not (value is bool and value):
 				return "'%s' deve ser true" % kind
 			step["timeout"] = timeout
 		"set_state":
@@ -589,7 +593,9 @@ func _execute(step: Dictionary) -> void:
 			Input.parse_input_event(ev)
 		"teleport":
 			var player: Node3D = _player()
-			if player == null:
+			if player == null and _local_downed() != null:
+				_log("  aviso: teleport ignorado (jogador caido)")
+			elif player == null:
 				_error("teleport: jogador nao encontrado")
 			else:
 				player.global_position = step["position"]
@@ -658,6 +664,8 @@ func _execute(step: Dictionary) -> void:
 			await _interact_with(step["target"], step["walk"], step["timeout"])
 		"call":
 			_debug_call(step["target"], step["method"])
+		"rescue":
+			await _rescue(step["timeout"])
 		"quit":
 			pass
 
@@ -674,6 +682,9 @@ func _hold_action(action: String, seconds: float) -> void:
 ## Vira o jogador (yaw) e a cabeça (pitch) para um ponto do mundo.
 func _look_at(target: Vector3) -> void:
 	var player: Node3D = _player()
+	if player == null and _local_downed() != null:
+		_log("  aviso: look_at ignorado (jogador caido)")
+		return
 	if player == null:
 		_error("look_at: jogador nao encontrado")
 		return
@@ -1209,6 +1220,13 @@ func _condition_value(var_name: String) -> float:
 			return Vector2(d.x, d.z).length()
 		"players":
 			return float(get_tree().get_nodes_in_group(PLAYERS_GROUP).size())
+		"downed":
+			var me: Node3D = _player()
+			var n_down: int = 0
+			for d: Node in get_tree().get_nodes_in_group(DOWNED_GROUP):
+				if d != me:
+					n_down += 1
+			return float(n_down)
 		"wave_round", "wave_phase", "wave_left":
 			var wave: WaveEvent = _active_wave()
 			if wave == null:
@@ -1630,6 +1648,77 @@ func _bot_auto_eat(delta: float) -> void:
 
 func _player() -> Node3D:
 	return get_tree().get_first_node_in_group(PLAYER_GROUP) as Node3D
+
+
+## O jogador local quando está caído (#79): sai do grupo "player" e fica só em DOWNED_GROUP.
+func _local_downed() -> Player:
+	for n: Node in get_tree().get_nodes_in_group(DOWNED_GROUP):
+		var p: Player = n as Player
+		if p != null and is_instance_valid(p) and p.is_local():
+			return p
+	return null
+
+
+## Colega caído mais próximo que ninguém está a carregar (ou que já é carregado por nós).
+func _downed_mate(me: Player) -> Player:
+	var best: Player = null
+	var best_dist: float = INF
+	for n: Node in get_tree().get_nodes_in_group(DOWNED_GROUP):
+		var p: Player = n as Player
+		if p == null or p == me or not is_instance_valid(p) or not p.is_downed:
+			continue
+		if p.carried_by != null and p.carried_by != me:
+			continue
+		var dist: float = p.global_position.distance_to(me.global_position)
+		if dist < best_dist:
+			best_dist = dist
+			best = p
+	return best
+
+
+## Passo "rescue" (#79): anda até ao colega caído, carrega-o até ao ponto de entrega (base) e
+## reanima-o. Sem colega caído não faz nada; se o próprio jogador está caído, espera.
+func _rescue(timeout: float) -> void:
+	var me: Player = _player() as Player
+	if me == null:
+		if _local_downed() != null:
+			_log("  rescue: jogador caido, a espera de resgate")
+		else:
+			_fail("rescue: jogador nao encontrado")
+		return
+	var mate: Player = _downed_mate(me)
+	if mate == null:
+		_log("  rescue: ninguem caido")
+		return
+	var t0: float = _elapsed()
+	if me.carried_player != mate:
+		if not await _walk_to(mate.global_position, 1.5, timeout, 0.3):
+			_log("  rescue: nao chegou ao colega, a tentar carregar na mesma")
+		if not is_inside_tree() or not is_instance_valid(me) or not is_instance_valid(mate):
+			return
+		while me.carried_player != mate:
+			if _elapsed() - t0 >= timeout or not mate.is_downed:
+				_fail("rescue: nao conseguiu carregar o colega")
+				return
+			if mate.carried_by == null:
+				me.carry_player(mate)
+			await _sleep(0.3)
+			if not is_inside_tree() or not is_instance_valid(me) or not is_instance_valid(mate):
+				return
+	_log("  rescue: a carregar %s" % mate.name)
+	var sp: SellPoint = _nearest_sell_point()
+	if sp == null:
+		_fail("rescue: nenhum ponto de entrega para reanimar")
+		return
+	await _walk_to(sp.global_position, 1.2, maxf(timeout - (_elapsed() - t0), 5.0), 0.5)
+	while is_inside_tree() and is_instance_valid(mate) and mate.is_downed:
+		if _elapsed() - t0 >= timeout:
+			_fail("rescue: timeout a reanimar")
+			return
+		me.revive_player(mate)
+		await _sleep(0.3)
+	_m["rescues"] = int(_m.get("rescues", 0)) + 1
+	_log("  rescue: colega reanimado")
 
 
 static func _vec(v: Vector3) -> Array:

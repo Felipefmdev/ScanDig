@@ -68,6 +68,11 @@
 			"t": 0,
 			"loop": [
 				{
+					"if": "downed>=1",
+					"rescue": true,
+					"timeout": 90
+				},
+				{
 					"fight": 20,
 					"radius": 60
 				}

@@ -22,7 +22,7 @@
 		{"t": 0, "fight": 0.4, "radius": 60},
 		{"t": 0, "screenshot": "c1_chefe"},
 		{"t": 0, "dump": "c1_chefe"},
-		{"t": 0, "loop": [{"fight": 20, "radius": 60}], "until": "enemies<1", "timeout": 300},
+		{"t": 0, "loop": [{"if": "downed>=1", "rescue": true, "timeout": 90}, {"fight": 20, "radius": 60}], "until": "enemies<1", "timeout": 300},
 		{"t": 0, "dump": "c2_vencido"},
 		{"t": 0, "screenshot": "c2_vencido"},
 		{"sleep": 3.0},

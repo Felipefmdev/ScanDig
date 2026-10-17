@@ -195,3 +195,32 @@ func test_quest_steps_and_vars() -> void:
 	assert_true(Bridge.parse_condition("bosses==0") is Dictionary)
 	assert_null(Bridge.parse_condition("flag_==1"), "prefixo sem nome")
 	assert_null(Bridge.parse_condition("zzz==1"))
+
+
+func test_rescue_step_parses_with_default_timeout_and_downed_condition() -> void:
+	var r: Dictionary = Bridge.parse_script({
+		"scene": "res://world/lobby_base.tscn",
+		"steps": [
+			{"loop": [{"if": "downed>=1", "rescue": true}, {"sleep": 0.3}], "until": "time>=10", "timeout": 20},
+			{"t": 1, "rescue": true, "timeout": 45},
+		],
+	})
+	assert_true(r["ok"], str(r["errors"]))
+	var inner: Dictionary = (r["steps"][0]["body"] as Array)[0]
+	assert_eq(inner["kind"], "rescue")
+	assert_eq(inner["timeout"], 90.0)
+	assert_eq(inner["if"], [{"var": "downed", "op": ">=", "value": 1.0}])
+	assert_eq(r["steps"][1]["timeout"], 45.0)
+
+
+func test_rescue_step_rejects_non_true_value() -> void:
+	assert_typeof(Bridge.parse_step({"t": 0, "rescue": "sim"}), TYPE_STRING)
+	assert_typeof(Bridge.parse_step({"t": 0, "rescue": false}), TYPE_STRING)
+
+
+func test_coop_scripts_with_rescue_are_valid() -> void:
+	for f: String in ["coop_ruinas_host", "coop_ruinas_client", "coop_boss_host", "coop_boss_client"]:
+		var text: String = FileAccess.get_file_as_string("res://tools/bot/%s.json" % f)
+		var r: Dictionary = Bridge.parse_script(JSON.parse_string(text))
+		assert_true(r["ok"], "%s: %s" % [f, r["errors"]])
+		assert_true(text.contains("\"rescue\""), "%s tem passo rescue" % f)
