@@ -28,8 +28,25 @@ const DUNES: Array = [
 ]
 const SHORE_START_X: float = 25.0
 const NOISE_AMP: float = 0.2
+## Campo de dunas (estudo How to Fish, mesmo método do relevo dos mapas 3-5): cristas largas e
+## suaves até DUNE_AMP m, mais altas longe do mar e a descer até zero antes da linha de água
+## (x >= DUNE_SEA_X, onde ficam o barco do Zé, o pato, o naufrágio e o mar).
+const DUNE_AMP: float = 1.5
+const DUNE_INLAND_X: float = -12.0
+const DUNE_SEA_X: float = 20.0
+## Acalmia (m) à volta das FLAT_ZONES.
+const DUNE_CALM: float = 6.0
+## Adereços das missões e segredos assentes no chão (x, z, raio): castelo de areia, pedra
+## empurrável, garrafas, conchas e anzol. As dunas vão a zero até DUNE_CALM_PROP m à volta.
+const PROP_ZONES: Array[Vector3] = [
+	Vector3(-4.0, -8.0, 3.0), Vector3(-8.0, 18.0, 3.0), Vector3(13.0, 9.0, 2.5),
+	Vector3(16.5, -17.5, 2.5), Vector3(20.0, -8.0, 2.0), Vector3(21.5, -10.5, 2.0),
+	Vector3(19.5, -13.0, 2.0), Vector3(27.2, 4.0, 2.0),
+]
+const DUNE_CALM_PROP: float = 4.0
 
 static var _noise: FastNoiseLite = null
+static var _dunes: FastNoiseLite = null
 
 @export var rebuild_now: bool = false:
 	set(value):
@@ -51,6 +68,31 @@ static func _get_noise() -> FastNoiseLite:
 	return _noise
 
 
+## Altura das dunas largas em (x, z): só positiva (a areia acumula-se), alongada em z como
+## cristas de vento, a zero junto ao mar, nas zonas planas e à volta dos adereços.
+static func dune_at(x: float, z: float) -> float:
+	var inland: float = smoothstep(DUNE_SEA_X, DUNE_INLAND_X, x)
+	if inland <= 0.0:
+		return 0.0
+	var n: float = _get_dunes().get_noise_2d(x * 0.8, z * 1.3)
+	var k: float = clampf((n + 0.15) / 0.75, 0.0, 1.0)
+	var d: float = k * k * (3.0 - 2.0 * k) * DUNE_AMP * inland
+	for f: Vector3 in FLAT_ZONES:
+		d *= smoothstep(f.z, f.z + DUNE_CALM, Vector2(x - f.x, z - f.y).length())
+	for p: Vector3 in PROP_ZONES:
+		d *= smoothstep(p.z, p.z + DUNE_CALM_PROP, Vector2(x - p.x, z - p.y).length())
+	return d
+
+
+static func _get_dunes() -> FastNoiseLite:
+	if _dunes == null:
+		_dunes = FastNoiseLite.new()
+		_dunes.seed = 2626
+		_dunes.frequency = 0.04
+		_dunes.fractal_octaves = 2
+	return _dunes
+
+
 ## Altura do chão em (x, z) — determinística.
 static func height_at(x: float, z: float) -> float:
 	var h: float = _get_noise().get_noise_2d(x, z) * NOISE_AMP
@@ -61,6 +103,7 @@ static func height_at(x: float, z: float) -> float:
 		var u: float = (dx * cos(a) + dz * sin(a)) / d[2]
 		var v: float = (-dx * sin(a) + dz * cos(a)) / d[3]
 		h += d[5] * exp(-(u * u + v * v) * 1.6)
+	h += dune_at(x, z)
 	for f: Vector3 in FLAT_ZONES:
 		var dist: float = Vector2(x - f.x, z - f.y).length()
 		var k: float = smoothstep(f.z, f.z * 0.6, dist)  # 1 no centro, 0 fora
