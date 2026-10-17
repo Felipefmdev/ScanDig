@@ -15,7 +15,7 @@ const STEP_KEYS: PackedStringArray = [
 	"give", "use_item", "set_boss_time", "seagull_poop", "spawn_enemy",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
-const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses"]
+const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses", "map_fragments"]
 ## Passos sem 't' obrigatório (dentro de um loop o tempo absoluto não faz sentido).
 const UNTIMED_KINDS: PackedStringArray = ["wait_until", "loop", "sleep"]
 const CONDITION_VARS: PackedStringArray = [
@@ -335,7 +335,7 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 				return "'team_money' deve ser um numero"
 			if st.has("upgrade_levels") and not st["upgrade_levels"] is Dictionary:
 				return "'upgrade_levels' deve ser um objeto"
-			for key: String in ["unlocked_maps", "defeated_bosses"]:
+			for key: String in ["unlocked_maps", "defeated_bosses", "map_fragments"]:
 				if st.has(key) and not st[key] is Array:
 					return "'%s' deve ser uma lista" % key
 			step["state"] = st

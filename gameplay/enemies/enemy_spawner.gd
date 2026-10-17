@@ -41,6 +41,7 @@ const KIND_SCENES: Dictionary = {
 	&"bat": "res://gameplay/enemies/bat/bat.tscn",
 	&"ancient_guardian": "res://gameplay/enemies/boss/ancient_guardian.tscn",
 	&"idol_mummy": "res://gameplay/enemies/boss/idol_mummy.tscn",
+	&"gold_colossus": "res://gameplay/enemies/boss/gold_colossus.tscn",
 	&"ice_wolf": "res://gameplay/enemies/ice_wolf/ice_wolf.tscn",
 	&"penguin": "res://gameplay/enemies/penguin/penguin.tscn",
 	&"walrus": "res://gameplay/enemies/walrus/walrus.tscn",

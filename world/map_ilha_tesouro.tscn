@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://gameplay/environment/ruins_structure.gd" id="env_structure"]
 [ext_resource type="Script" path="res://gameplay/environment/island_terrain.gd" id="env_terrain"]
 [ext_resource type="Script" path="res://gameplay/quests/ilha/treasure_hoard.gd" id="q_hoard"]
+[ext_resource type="Script" path="res://gameplay/quests/ilha/hoard_wake.gd" id="q_hoard_wake"]
 [ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
 [ext_resource type="PackedScene" uid="uid://3q1pqo6818cx" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
 [ext_resource type="PackedScene" uid="uid://tpyunr7h3idb" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
@@ -267,3 +268,8 @@ open_sides = PackedInt32Array(0, 1, 2, 3)
 [node name="TreasureHoard" type="Node3D" parent="."]
 script = ExtResource("q_hoard")
 map_data = ExtResource("3_cratera")
+
+[node name="HoardWake" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -9)
+script = ExtResource("q_hoard_wake")
+prompt = "[E] Mexer no tesouro"
