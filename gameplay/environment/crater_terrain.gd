@@ -22,6 +22,10 @@ const CRATER_DUST: Color = Color(0.38, 0.32, 0.45)
 const VIOLET_FISSURE: Color = Color(0.56, 0.30, 0.68)
 const METEOR_RUST: Color = Color(0.48, 0.28, 0.20)
 const IMPACT_GLASS: Color = Color(0.35, 0.65, 0.72)
+const MAGMA: Color = Color(0.86, 0.42, 0.16)
+## Veios: largura (no valor absoluto do ruído) e força máxima da cor (fracos de propósito).
+const VEIN_WIDTH: float = 0.05
+const VEIN_STRENGTH: float = 0.3
 
 ## Epicentro da cratera (x, z, raio) e profundidade afundada
 const IMPACT_CENTER: Vector2 = Vector2(0.0, 0.0)
@@ -43,6 +47,8 @@ const NOISE_AMP: float = 0.35
 
 static var _noise: FastNoiseLite = null
 static var _broad: FastNoiseLite = null
+static var _patches: FastNoiseLite = null
+static var _veins: FastNoiseLite = null
 
 @export var rebuild_now: bool = false:
 	set(value):
@@ -104,6 +110,10 @@ static func color_at(x: float, z: float, h: float) -> Color:
 	var n: float = _get_noise().get_noise_2d(z * 1.8 + 20.0, x * 1.8)
 	var c: Color = BASALT_DARK.lerp(BASALT_PURPLE, clampf(0.5 + n * 1.1, 0.0, 1.0))
 
+	# Gradiente para o centro: poeira de impacto clara no epicentro, basalto escuro nas margens
+	var d: float = Vector2(x, z).distance_to(IMPACT_CENTER)
+	c = c.lerp(CRATER_DUST.lightened(0.12), smoothstep(PLAY_HALF, 0.0, d) * 0.45)
+
 	# Fissuras violetas e poeira extraterrestre
 	if h > 0.3:
 		c = c.lerp(CRATER_DUST, clampf((h - 0.3) * 0.6, 0.0, 0.7))
@@ -114,7 +124,37 @@ static func color_at(x: float, z: float, h: float) -> Color:
 	if cw > 0.3:
 		c = c.lerp(METEOR_RUST, cw * 0.4)
 
+	# Manchas de basalto escuro (escoadas antigas), em blocos grandes e irregulares
+	var patch: float = _get_patches().get_noise_2d(x, z)
+	if patch > 0.25:
+		c = c.lerp(BASALT_DARK.darkened(0.25), clampf((patch - 0.25) * 3.0, 0.0, 0.75))
+
+	# Veios fracos de cristal (violeta/ciano) ou de magma (laranja) ao longo de uma linha de ruído
+	var vein: float = absf(_get_veins().get_noise_2d(x, z))
+	if vein < VEIN_WIDTH:
+		var k: float = (1.0 - vein / VEIN_WIDTH) * VEIN_STRENGTH
+		var magma: bool = _get_patches().get_noise_2d(x * 0.4 + 90.0, z * 0.4) > 0.35
+		var crystal: Color = VIOLET_FISSURE.lerp(IMPACT_GLASS, clampf(0.5 + n * 2.0, 0.0, 1.0))
+		c = c.lerp(MAGMA if magma else crystal, k)
 	return c
+
+
+static func _get_patches() -> FastNoiseLite:
+	if _patches == null:
+		_patches = FastNoiseLite.new()
+		_patches.seed = 5150
+		_patches.frequency = 0.08
+		_patches.fractal_octaves = 2
+	return _patches
+
+
+static func _get_veins() -> FastNoiseLite:
+	if _veins == null:
+		_veins = FastNoiseLite.new()
+		_veins.seed = 6061
+		_veins.frequency = 0.045
+		_veins.fractal_octaves = 1
+	return _veins
 
 
 func rebuild() -> void:

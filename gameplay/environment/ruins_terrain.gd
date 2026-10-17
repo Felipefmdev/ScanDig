@@ -23,6 +23,8 @@ const GROUT: Color = Color(0.42, 0.38, 0.33)
 const MOSS: Color = Color(0.38, 0.5, 0.24)
 const CRYPT: Color = Color(0.36, 0.33, 0.32)
 const HILL: Color = Color(0.25, 0.4, 0.18)
+## Terra escura que aparece nas lajes em falta e nas juntas abertas.
+const SOIL: Color = Color(0.4, 0.31, 0.21)
 
 ## Pátio em lajes: círculo (x, z, raio) e corredor até ao templo.
 const PLAZA: Vector3 = Vector3(0.0, -2.0, 11.0)
@@ -40,6 +42,11 @@ const CRYPT_DEPTH: float = 1.3
 const FLAT_ZONES: Array[Vector3] = [Vector3(0.0, 0.0, 3.5), Vector3(3.5, 3.5, 4.0)]
 const NOISE_AMP: float = 0.16
 const TILE: float = 2.0
+## Fração de lajes em falta e de lajes partidas (por laje, estável).
+const MISSING_SLABS: float = 0.07
+const CRACKED_SLABS: float = 0.18
+## Fração de lajes com a junta aberta de cada lado (x e z), com terra/musgo na orla.
+const OPEN_JOINTS: float = 0.1
 
 static var _noise: FastNoiseLite = null
 static var _broad: FastNoiseLite = null
@@ -128,28 +135,60 @@ static func color_at(x: float, z: float, h: float) -> Color:
 	var sand_k: float = smoothstep(4.0, 0.0, absf(Vector2(x - PLAZA.x, z - PLAZA.y).length() - PLAZA.z))
 	c = c.lerp(SAND, sand_k * 0.8)
 	if paved > 0.5:
-		var tx: float = fposmod(x, TILE) / TILE
-		var tz: float = fposmod(z, TILE) / TILE
-		var checker: bool = (int(floorf(x / TILE)) + int(floorf(z / TILE))) % 2 == 0
-		c = PAVE_LIGHT if checker else PAVE_DARK
-		if tx < 0.08 or tz < 0.08:
-			c = GROUT
-		# musgo e lajes partidas
-		if n > 0.22:
-			c = c.lerp(MOSS, 0.7)
+		c = _slab_color(x, z, n, TILE, PAVE_DARK, PAVE_LIGHT)
 	var cw: float = _crypt_weight(x, z)
 	if cw > 0.3:
-		# chão da cripta em lajes escuras
-		var crypt_checker: bool = (int(floorf(x / TILE)) + int(floorf(z / TILE))) % 2 == 0
-		c = CRYPT if crypt_checker else CRYPT.darkened(0.2)
-		if fposmod(x, TILE) / TILE < 0.08 or fposmod(z, TILE) / TILE < 0.08:
-			c = CRYPT.darkened(0.45)
+		# chão da cripta: as mesmas lajes, mais escuras e húmidas
+		c = _slab_color(x, z, n, TILE, CRYPT.darkened(0.2), CRYPT)
 	else:
 		c = c.lerp(CRYPT, cw)
 	var edge: float = maxf(absf(x), absf(z))
 	if edge > PLAY_HALF:
 		c = c.lerp(HILL, clampf((edge - PLAY_HALF) / 6.0, 0.0, 1.0))
 	return c.darkened(clampf(-h * 0.12, 0.0, 0.25))
+
+
+## Inteiro pseudo-aleatório estável por laje (ix, iz) e canal -> [0, 1).
+static func tile_rand(ix: int, iz: int, channel: int) -> float:
+	var k: int = (ix * 73856093) ^ (iz * 19349663) ^ (channel * 83492791)
+	k = (k ^ (k >> 13)) * 1274126177
+	k = k ^ (k >> 16)
+	return float(k & 0xFFFF) / 65536.0
+
+
+## Cor de uma face dentro das lajes (estudo How to Fish: chão variado). As faces têm 1 m e a
+## laje TILE m, por isso o detalhe é por triângulo: tom próprio de cada laje, lajes partidas na
+## diagonal (as duas metades com tons diferentes), lajes em falta (terra e musgo à vista) e a
+## orla de algumas lajes tomada por terra/musgo (as "juntas" largas entre lajes levantadas).
+static func _slab_color(x: float, z: float, n: float, tile: float, dark: Color, light: Color) -> Color:
+	var ix: int = int(floorf(x / tile))
+	var iz: int = int(floorf(z / tile))
+	var tx: float = fposmod(x, tile) / tile
+	var tz: float = fposmod(z, tile) / tile
+	var tone: float = tile_rand(ix, iz, 0)
+	var c: Color = dark.lerp(light, tone)
+	# laje mais quente ou mais fria (pedras de pedreiras diferentes)
+	var tint: float = tile_rand(ix, iz, 1) - 0.5
+	c = Color(c.r + tint * 0.06, c.g, c.b - tint * 0.06)
+	var kind: float = tile_rand(ix, iz, 2)
+	if kind < MISSING_SLABS:
+		# laje em falta: terra com musgo pelo meio
+		return c.lerp(SOIL.lerp(MOSS, clampf(0.5 + n * 2.0, 0.0, 0.8)), 0.75)
+	if kind < MISSING_SLABS + CRACKED_SLABS:
+		# laje partida: a metade de um lado da diagonal assentou e escureceu
+		var flip: bool = tile_rand(ix, iz, 3) < 0.5
+		var side: float = (tx + tz) if flip else (tx + 1.0 - tz)
+		if side > 1.0:
+			c = c.darkened(0.16)
+	# orla de terra/musgo: só em algumas lajes e só do lado onde a junta está aberta
+	var edge_side: float = tile_rand(ix, iz, 4)
+	var near_edge: bool = (tx < 0.25 and edge_side < OPEN_JOINTS) or (tz < 0.25 and edge_side > 1.0 - OPEN_JOINTS)
+	if near_edge:
+		c = c.lerp(SOIL.lerp(MOSS, clampf(0.4 + n * 2.0, 0.0, 0.9)), 0.6)
+	elif n > 0.22:
+		# manchas de musgo por cima das lajes
+		c = c.lerp(MOSS, clampf((n - 0.22) * 4.0, 0.0, 0.7))
+	return c
 
 
 func rebuild() -> void:
