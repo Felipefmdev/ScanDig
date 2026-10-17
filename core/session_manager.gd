@@ -27,7 +27,7 @@ const MAP_SCENE_FORMAT: String = "res://world/map_%s.tscn"
 const MAPS_DIR: String = "res://items/maps"
 const HOST_PEER_ID: int = 1
 ## Ordem de progressão; ids fora da lista vão para o fim, em ordem alfabética.
-const MAP_ORDER: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera"]
+const MAP_ORDER: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera", "ilha_tesouro"]
 
 static var instance: SessionManager = null
 ## Intenção de lançamento lida pelo lobby no _ready (LAUNCH_SOLO, LAUNCH_COOP ou "").

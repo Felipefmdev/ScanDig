@@ -57,6 +57,13 @@ var _purchase_timer: SceneTreeTimer = null
 var _pending_unlock: bool = false
 var _unlock_timer: SceneTreeTimer = null
 
+# Mapa do Tesouro (#112): aba criada em runtime (sem mexer na cena).
+const TREASURE_TAB_TITLE: String = "Mapa do Tesouro"
+const TREASURE_MAX_HINTS: int = 3
+var _treasure_count_label: Label = null
+var _treasure_scroll: TreasureMapScroll = null
+var _treasure_hints_label: Label = null
+
 ## Cor das linhas de mapas que ainda não podem ser jogados.
 const MAP_LOCKED_COLOR: Color = UiPalette.METAL
 
@@ -78,6 +85,7 @@ func _ready() -> void:
 	_setup_museum_controls()
 	# A loja já usa o CoreSession (nome dos mapas) no primeiro refresh.
 	_session = get_node_or_null(SESSION_PATH)
+	_build_treasure_tab()
 	_resolve_game_state()
 	_setup_expeditions()
 	if tab_container != null:
@@ -372,6 +380,7 @@ func _resolve_game_state() -> void:
 	_refresh_secrets_label()
 	_refresh_shop_buttons()
 	_refresh_journal_display()
+	_refresh_treasure_map()
 
 
 func _connect_game_state_signal(signal_name: StringName, callable: Callable) -> void:
@@ -676,6 +685,7 @@ func _on_creature_discovered(_kind: String) -> void:
 func _on_state_synced() -> void:
 	_refresh_secrets_label()
 	_refresh_journal_display()
+	_refresh_treasure_map()
 
 
 func _on_state_updated(_amount: int) -> void:
@@ -704,6 +714,56 @@ func _set_shop_feedback(msg: String) -> void:
 func _set_museum_feedback(msg: String) -> void:
 	if museum_feedback_label != null:
 		museum_feedback_label.text = UiFormat.fix_money_spaces(msg)
+
+
+# --- Mapa do Tesouro (#112) ---------------------------------------------------
+
+func _build_treasure_tab() -> void:
+	if tab_container == null or tab_container.has_node(TREASURE_TAB_TITLE):
+		return
+	var page: VBoxContainer = VBoxContainer.new()
+	page.name = TREASURE_TAB_TITLE
+	page.add_theme_constant_override(&"separation", 8)
+	_treasure_count_label = Label.new()
+	_treasure_count_label.name = "TreasureCountLabel"
+	page.add_child(_treasure_count_label)
+	_treasure_scroll = TreasureMapScroll.new()
+	_treasure_scroll.name = "TreasureMapScroll"
+	_treasure_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page.add_child(_treasure_scroll)
+	_treasure_hints_label = Label.new()
+	_treasure_hints_label.name = "TreasureHintsLabel"
+	_treasure_hints_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page.add_child(_treasure_hints_label)
+	tab_container.add_child(page)
+	_refresh_treasure_map()
+
+
+func _refresh_treasure_map() -> void:
+	if _treasure_scroll == null:
+		return
+	var found: Array[String] = []
+	if _game_state != null:
+		found = _game_state.map_fragments.duplicate()
+	_treasure_scroll.found = found
+	var total: int = GameState.MAP_FRAGMENT_IDS.size()
+	if found.size() >= total:
+		_treasure_count_label.text = "🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipa." % [found.size(), total]
+	else:
+		_treasure_count_label.text = "🗺️ Fragmentos do mapa:" + UiFormat.NBSP + "%d/%d" % [found.size(), total]
+	# Só as próximas dicas: a Base tem a altura da maior aba e tem de caber em 1152x648.
+	var hints: PackedStringArray = []
+	var missing: int = 0
+	for id: String in GameState.MAP_FRAGMENT_IDS:
+		if not found.has(id):
+			missing += 1
+			if hints.size() < TREASURE_MAX_HINTS:
+				hints.append("• " + str(GameState.MAP_FRAGMENTS[id]["hint"]))
+	if missing > hints.size():
+		hints.append("… e mais %d por descobrir." % (missing - hints.size()))
+	_treasure_hints_label.text = "Onde procurar:
+" + "
+".join(hints) if not hints.is_empty() else ""
 
 
 # --- Diário de Campo (#86) ----------------------------------------------------
