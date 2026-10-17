@@ -51,47 +51,70 @@ jobs:
 
   # Build do Windows (#101): só no main (push) ou à mão (workflow_dispatch), depois dos testes.
   # PR não exporta. Preset "Windows Desktop" em export_presets.cfg (x86_64, PCK embutido).
+  # Runner Windows por causa do rcedit (ícone e metadados do .exe).
   export-windows:
     needs: tests
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     env:
       GODOT_VERSION: "4.3"
+      RCEDIT_VERSION: "v2.0.0"
+      RCEDIT_SHA256: "3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Godot ${{ env.GODOT_VERSION }}
+      - name: Download Godot ${{ env.GODOT_VERSION }} (win64)
         run: |
-          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q godot.zip
-          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
-          chmod +x godot
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_win64.exe.zip"
+          7z x -y -bso0 godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_win64_console.exe" godot.exe
+          mv "Godot_v${GODOT_VERSION}-stable_win64.exe" godot_gui.exe
 
       # Só os templates do Windows x86_64 (o .tpz inteiro tem ~1 GB).
       - name: Cache export templates
         id: templates
         uses: actions/cache@v4
         with:
-          path: ~/.local/share/godot/export_templates/4.3.stable
-          key: godot-export-templates-4.3-stable-windows-x86_64
+          path: ~/AppData/Roaming/Godot/export_templates/4.3.stable
+          key: godot-export-templates-4.3-stable-windows-x86_64-win
 
       - name: Download export templates (cache miss)
         if: steps.templates.outputs.cache-hit != 'true'
         run: |
-          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
+          T="$(cygpath -u "$APPDATA")/Godot/export_templates/4.3.stable"
+          mkdir -p "$T"
           curl -sSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          unzip -o -j -q templates.tpz templates/version.txt             templates/windows_release_x86_64.exe templates/windows_release_x86_64_console.exe             templates/windows_debug_x86_64.exe templates/windows_debug_x86_64_console.exe             -d ~/.local/share/godot/export_templates/4.3.stable
+          7z e -y -bso0 templates.tpz -o"$(cygpath -w "$T")" templates/version.txt             templates/windows_release_x86_64.exe templates/windows_release_x86_64_console.exe             templates/windows_debug_x86_64.exe templates/windows_debug_x86_64_console.exe
           rm templates.tpz
-          ls -la ~/.local/share/godot/export_templates/4.3.stable
+          ls -la "$T"
+
+      # rcedit (versão fixa, conferida por SHA-256) apontado no editor_settings do runner.
+      - name: rcedit
+        run: |
+          curl -sSL -o rcedit-x64.exe "https://github.com/electron/rcedit/releases/download/${RCEDIT_VERSION}/rcedit-x64.exe"
+          echo "${RCEDIT_SHA256}  rcedit-x64.exe" | sha256sum -c -
+          RCEDIT="$(cygpath -m "$PWD/rcedit-x64.exe")"
+          APPD="$(cygpath -u "$APPDATA")"
+          mkdir -p "$APPD/Godot"
+          {
+            echo '[gd_resource type="EditorSettings" format=3]'
+            echo ''
+            echo '[resource]'
+            echo "export/windows/rcedit = \"$RCEDIT\""
+          } > "$APPD/Godot/editor_settings-4.3.tres"
+          cat "$APPD/Godot/editor_settings-4.3.tres"
 
       - name: Import project
-        run: ./godot --headless --path . --import
+        run: ./godot.exe --headless --path . --import
 
       # O plugin GUT (só do editor) reclama do próprio config no export: essa linha é ignorada.
       - name: Export Windows (release)
         run: |
           mkdir -p build/windows
-          ./godot --headless --path . --export-release "Windows Desktop" build/windows/ScanDig.exe 2>&1 | tee export.log
+          ./godot.exe --headless --path . --export-release "Windows Desktop" build/windows/ScanDig.exe 2>&1 | tee export.log
           if [ ! -f build/windows/ScanDig.exe ]; then
             echo "::error::build/windows/ScanDig.exe não foi gerado"
             exit 1
@@ -102,10 +125,18 @@ jobs:
           fi
           ls -la build/windows
 
+      # O rcedit gravou ícone e metadados? (sem ele o .exe sai com os da Godot)
+      - name: Check exe metadata
+        shell: pwsh
+        run: |
+          $vi = (Get-Item build/windows/ScanDig.exe).VersionInfo
+          $vi | Format-List FileVersion, ProductVersion, CompanyName, ProductName, FileDescription
+          if ($vi.CompanyName -ne "ScanDig Team" -or $vi.FileVersion -ne "0.1.0.0") { Write-Error "metadados do .exe não aplicados"; exit 1 }
+
       - name: Zip
         run: |
           cd build/windows
-          zip -q -9 ../../ScanDig-windows.zip ScanDig.exe
+          7z a -tzip -mx=9 -bso0 ../../ScanDig-windows.zip ScanDig.exe
           cd ../..
           ls -la ScanDig-windows.zip
 

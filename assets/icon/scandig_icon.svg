@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Ícone do ScanDig (#101): tela do radar do detector e uma pá, nas cores do tema (UiPalette). -->
+  <rect x="10" y="10" width="236" height="236" rx="46" fill="#E8DCC0" stroke="#3E2A1B" stroke-width="14"/>
+  <!-- Tela do radar -->
+  <circle cx="146" cy="112" r="74" fill="#173A28" stroke="#3E2A1B" stroke-width="10"/>
+  <circle cx="146" cy="112" r="48" fill="none" stroke="#5BE37A" stroke-opacity="0.45" stroke-width="5"/>
+  <circle cx="146" cy="112" r="22" fill="none" stroke="#5BE37A" stroke-opacity="0.45" stroke-width="5"/>
+  <path d="M146 112 L146 42 A70 70 0 0 1 206 78 Z" fill="#5BE37A" fill-opacity="0.35"/>
+  <line x1="146" y1="112" x2="206" y2="78" stroke="#8CFF9E" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="178" cy="132" r="11" fill="#E0A82E" stroke="#3E2A1B" stroke-width="4"/>
+  <!-- Pá -->
+  <g transform="rotate(-40 92 168)">
+    <rect x="84" y="100" width="16" height="96" rx="6" fill="#6E4A2D" stroke="#3E2A1B" stroke-width="6"/>
+    <rect x="72" y="92" width="40" height="16" rx="6" fill="#6E4A2D" stroke="#3E2A1B" stroke-width="6"/>
+    <path d="M70 192 L114 192 L114 222 Q92 246 70 222 Z" fill="#9AA6B0" stroke="#3E2A1B" stroke-width="7" stroke-linejoin="round"/>
+  </g>
+</svg>
