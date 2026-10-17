@@ -64,6 +64,7 @@ var language_option: OptionButton = null
 var buttons_row: HBoxContainer = null
 var saved_notice: PanelContainer = null
 var saved_notice_label: Label = null
+var title_label: Label = null
 var discard_panel: PanelContainer = null
 var discard_button: Button = null
 var discard_cancel_button: Button = null
@@ -80,6 +81,7 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(640, 0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
+	_fit_title_row()
 	var sm: SettingsManager = SettingsManager.instance
 	if sm != null:
 		sm.video_trial_finished.connect(_on_video_trial_finished)
@@ -162,11 +164,14 @@ func _build() -> void:
 	box.add_theme_constant_override("separation", 12)
 	add_child(_margin(box, 18))
 
-	var title: Label = Label.new()
-	title.text = "Configurações"
-	title.theme_type_variation = &"TitleLabel"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
+	# Encolhido ao texto: o aviso de salvo aparece à direita dele, na mesma linha.
+	title_label = Label.new()
+	title_label.text = "Configurações"
+	title_label.theme_type_variation = &"TitleLabel"
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	box.add_child(title_label)
 
 	tabs = TabContainer.new()
 	tabs.custom_minimum_size = Vector2(0, 300)
@@ -377,7 +382,7 @@ func _build() -> void:
 	discard_button.pressed.connect(discard)
 	discard_cancel_button.pressed.connect(_hide_discard)
 
-	# "Configurações salvas": por cima do painel (top_level), acima dos botões; some em ~2 s.
+	# "Configurações salvas": por cima do painel (top_level), à direita do título; some em ~2 s.
 	saved_notice = PanelContainer.new()
 	saved_notice.theme_type_variation = &"ToastPanel"
 	saved_notice.top_level = true
@@ -586,11 +591,24 @@ func hide_saved_notice() -> void:
 	saved_notice.visible = false
 
 
-## Centrado no painel, logo acima dos botões (refeito a cada frame: o layout muda ao aplicar).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_THEME_CHANGED and title_label != null:
+		_fit_title_row()
+
+
+## A linha do título tem pelo menos a altura do aviso no tema atual: ele não invade as abas.
+func _fit_title_row() -> void:
+	title_label.custom_minimum_size = Vector2(0, saved_notice.get_combined_minimum_size().y)
+
+
+## Na linha do título, encostado à direita (o título fica no centro, encolhido ao texto). Não
+## cobre as abas nem os botões e não aumenta a altura do painel (cabe em 960x540 com a interface
+## a 130 %). Refeito a cada frame: o layout muda ao aplicar e ao trocar de aba.
 func _place_saved_notice() -> void:
 	saved_notice.reset_size()
-	var anchor_y: float = buttons_row.global_position.y if buttons_row.is_visible_in_tree() else global_position.y + size.y
-	saved_notice.global_position = Vector2(global_position.x + (size.x - saved_notice.size.x) * 0.5, anchor_y - saved_notice.size.y - 10.0)
+	var row: Rect2 = title_label.get_global_rect()
+	var right: float = (title_label.get_parent() as Control).get_global_rect().end.x
+	saved_notice.global_position = Vector2(right - saved_notice.size.x, row.position.y + (row.size.y - saved_notice.size.y) * 0.5)
 
 
 func _on_review_hints_pressed() -> void:

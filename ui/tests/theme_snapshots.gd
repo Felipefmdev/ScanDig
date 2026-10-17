@@ -191,6 +191,32 @@ func _run() -> void:
 		pause.settings_menu.tabs.current_tab = 0
 		pause.close()
 
+	# Avisos da aba Jogabilidade com o HUD a 150 % (sem gravar) e tela "Jogo concluído" (#77, #81).
+	if pause != null and pause.open():
+		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.5}, false)
+		pause.settings_button.pressed.emit()
+		pause.settings_menu.refresh()
+		pause.settings_menu.tabs.current_tab = SettingsMenu.TAB_GAMEPLAY
+		pause.settings_menu.show_saved_notice()
+		await _shot("config_jogabilidade_salvo_hud150")
+		pause.settings_menu.show_saved_notice(SettingsMenu.HINTS_RESET_TEXT)
+		await _shot("config_jogabilidade_dicas_hud150")
+		print("RECT aviso ", _rect(pause.settings_menu.saved_notice), " botões ", _rect(pause.settings_menu.buttons_row), " abas ", _rect(pause.settings_menu.tabs))
+		pause.settings_menu.hide_saved_notice()
+		pause.settings_menu.tabs.current_tab = 0
+		pause.close()
+		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.0}, false)
+	if VictoryScreen.instance != null:
+		var won: Dictionary = GameState.instance.get_snapshot()
+		won["discovered_items"] = ["alianca_ouro", "moeda_antiga", "bussola"]
+		won["found_secrets"] = GameState.SECRETS.slice(0, 7)
+		won["seen_creatures"] = ["crab", "hermit_crab", "seagull", "mole", "bat"]
+		GameState.instance.load_snapshot(won)
+		GameState.instance._host_report_boss_defeated("the_sleeper")
+		await _shot("jogo_concluido")
+		print("RECT vitória ", _rect(VictoryScreen.instance.card))
+		VictoryScreen.instance.close()
+
 
 	session.set("_current_map", null)
 	ui._refresh_expedition_bar()
