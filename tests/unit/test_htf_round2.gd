@@ -269,15 +269,27 @@ func test_low_hunger_triggers_hint() -> void:
 # --- #79: equipa toda caída ----------------------------------------------------
 
 func test_whole_team_downed_respawns_everyone() -> void:
+	# Sozinho e offline não há wipe: o resgate é segurar [E] (#85).
 	var a: Player = PLAYER_SCENE.instantiate() as Player
 	add_child_autofree(a)
 	a.global_position = Vector3(10, 0, 0)
 	a._spawn_transform = Transform3D(Basis.IDENTITY, Vector3(1, 0, 1))
 	a.is_downed = true
 	a._check_team_wipe()
-	assert_false(a.is_downed, "sozinho e caído: reaparece")
+	assert_true(a.is_downed, "sozinho e offline: continua caído (resgate [E])")
+	# Dois na equipa, os dois caídos: todos reaparecem no ponto de partida.
+	var b: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(b)
+	b.global_position = Vector3(-10, 0, 0)
+	b._spawn_transform = Transform3D(Basis.IDENTITY, Vector3(2, 0, 2))
+	b.is_downed = true
+	a._check_team_wipe()
+	assert_false(a.is_downed, "equipa toda caída: reaparece")
+	assert_false(b.is_downed, "o colega também")
 	assert_almost_eq(a.global_position, Vector3(1, 0, 1), Vector3.ONE * 0.01, "no ponto de partida")
+	assert_almost_eq(b.global_position, Vector3(2, 0, 2), Vector3.ONE * 0.01, "no ponto de partida dele")
 	assert_gt(a.health, 0.0)
+	assert_gt(b.health, 0.0)
 
 
 func test_no_wipe_while_someone_stands() -> void:
