@@ -532,6 +532,7 @@ func _physics_process(delta: float) -> void:
 		_apply_horizontal_movement(direction, input_dir, on_floor, delta)
 
 	move_and_slide()
+	_guard_fall_through(delta)
 	if carried_player != null and is_instance_valid(carried_player):
 		carried_player.global_position = global_position - global_transform.basis.z * 0.35 + Vector3.UP * 0.85
 		carried_player.rotation.y = rotation.y
@@ -2969,6 +2970,36 @@ func is_overloaded() -> bool:
 		if c != null and c.item != null and int(c.item.size_category) >= ItemData.SizeCategory.GRANDE:
 			return true
 	return false
+
+
+## How to Fish (PlayerMovement._lastSafePos + TeleportToLand): guarda o último chão firme e,
+## se o jogador atravessar a colisão (empurrão forte numa malha trimesh), volta para lá.
+const SAFE_POS_INTERVAL: float = 0.5
+const FALL_THROUGH_DEPTH: float = 8.0
+var last_safe_position: Vector3 = Vector3.INF
+var _safe_pos_timer: float = 0.0
+
+
+func _guard_fall_through(delta: float) -> void:
+	if not is_local():
+		return
+	if is_on_floor():
+		_safe_pos_timer -= delta
+		if _safe_pos_timer <= 0.0 or last_safe_position == Vector3.INF:
+			_safe_pos_timer = SAFE_POS_INTERVAL
+			last_safe_position = global_position
+		return
+	if last_safe_position != Vector3.INF and global_position.y < last_safe_position.y - FALL_THROUGH_DEPTH:
+		rescue_from_fall()
+
+
+## Volta ao último chão firme (ou ao ponto de partida se nunca pisou chão).
+func rescue_from_fall() -> void:
+	var target: Vector3 = last_safe_position if last_safe_position != Vector3.INF else _spawn_transform.origin
+	velocity = Vector3.ZERO
+	_knockback_time = 0.0
+	global_position = target + Vector3.UP * 0.5
+	_show_temporary_message("🌀 Caíste por um buraco do mundo... de volta ao chão firme.", Color(0.8, 0.9, 1.0), 2.0)
 
 
 ## Velocidade alvo: andar, ou correr com Shift indo pra frente (sem correr agachado na escavação).
