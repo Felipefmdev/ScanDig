@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+[ext_resource type="PackedScene" path="res://gameplay/foods/marisco_world.tscn" id="2_world"]
 
 [resource]
 script = ExtResource("1_tool")
@@ -15,3 +16,5 @@ heal_amount = 18.0
 hunger_restore = 25.0
 dig_maps = PackedStringArray("praia")
 dig_weight = 1.5
+world_scene = ExtResource("2_world")
+

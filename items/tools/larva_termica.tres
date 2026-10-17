@@ -1,11 +1,12 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+[ext_resource type="PackedScene" path="res://gameplay/foods/larva_termica_world.tscn" id="2_world"]
 
 [resource]
 script = ExtResource("1_tool")
 id = &"larva_termica"
-display_name = "Larva Térmica"
+display_name = "Larva TÃ©rmica"
 description = "Morna ao toque. Recupera 22 de vida e mata a fome."
 price = 0
 category = 2
@@ -16,3 +17,5 @@ hunger_restore = 32.0
 dig_maps = PackedStringArray("cratera")
 dig_weight = 1.5
 wriggles = true
+world_scene = ExtResource("2_world")
+

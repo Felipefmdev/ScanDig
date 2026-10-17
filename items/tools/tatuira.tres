@@ -1,12 +1,13 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
+[ext_resource type="PackedScene" path="res://gameplay/foods/tatuira_world.tscn" id="2_world"]
 
 [resource]
 script = ExtResource("1_tool")
 id = &"tatuira"
-display_name = "Tatuíra"
-description = "Crustáceo miúdo da areia molhada. Recupera 12 de vida e mata a fome."
+display_name = "TatuÃ­ra"
+description = "CrustÃ¡ceo miÃºdo da areia molhada. Recupera 12 de vida e mata a fome."
 price = 0
 category = 2
 charges = 1
@@ -16,3 +17,5 @@ hunger_restore = 18.0
 dig_maps = PackedStringArray("praia")
 dig_weight = 3.0
 wriggles = true
+world_scene = ExtResource("2_world")
+
