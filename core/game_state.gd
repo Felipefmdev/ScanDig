@@ -25,6 +25,9 @@ signal secret_found(secret_id: String)
 signal creature_discovered(kind: String)
 ## Em todos os peers, quando o jogo é concluído (derrota de the_sleeper).
 signal game_completed_changed(completed: bool)
+## Vitória ao vivo: só quando the_sleeper é derrotado nesta sessão (em todos os peers presentes).
+## Carregar save, entrar no meio ou reconectar não emite: isso é estado (game_completed_changed).
+signal game_victory()
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
@@ -488,6 +491,11 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 		apply_snapshot(data)
 		if _is_online():
 			_receive_snapshot.rpc(data)
+		if boss_id == "the_sleeper":
+			# Depois do snapshot: RPCs reliable do mesmo nó chegam em ordem (contagens já novas).
+			_receive_game_victory()
+			if _is_online():
+				_receive_game_victory.rpc()
 		if boss_id == "the_sleeper" and SaveManager.instance != null and SaveManager.instance.is_progress_applied():
 			SaveManager.instance.save_game()
 
@@ -706,6 +714,11 @@ func _notify_donated(item_id: String, reward: int) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_sold(item_id: String, value: int) -> void:
 	item_sold.emit(get_item_display_name(item_id), value)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_game_victory() -> void:
+	game_victory.emit()
 
 
 @rpc("authority", "call_remote", "reliable")

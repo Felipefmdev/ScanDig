@@ -1761,7 +1761,7 @@ func _on_core_settings_changed(section: String, values: Dictionary) -> void:
 
 ## Menu de pausa aberto: sem olhar, mover, atacar nem cavar (em coop o jogo segue).
 func is_settings_open() -> bool:
-	return PauseMenu.is_open()
+	return PauseMenu.is_open() or VictoryScreen.is_open()
 
 
 func toggle_settings(open: bool) -> void:

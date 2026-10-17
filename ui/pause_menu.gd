@@ -106,9 +106,9 @@ func _on_settings_changed(section: String, values: Dictionary) -> void:
 
 # --- Abrir / fechar ------------------------------------------------------------
 
-## Carregamento, resumo do dia ou queda do host na tela: o menu não abre por cima.
+## Carregamento, resumo do dia, queda do host ou tela de vitória: o menu não abre por cima.
 func can_open() -> bool:
-	if root_control == null:
+	if root_control == null or VictoryScreen.is_open():
 		return false
 	var ui: SessionUI = SessionUI.instance
 	if ui == null:

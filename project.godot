@@ -24,6 +24,7 @@ CoreSession="*res://core/session_manager.gd"
 CoreSettings="*res://core/settings_manager.gd"
 CoreSessionUI="*res://ui/session_ui.tscn"
 CorePauseMenu="*res://ui/pause_menu.tscn"
+CoreVictoryScreen="*res://ui/victory_screen.tscn"
 DebugBridge="*res://gameplay/debug/debug_bridge.gd"
 
 [display]

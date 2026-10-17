@@ -10,7 +10,10 @@ Documentação técnica de `res://core/` e `res://ui/`. Se algo aqui divergir do
 | `CoreNetwork` | `res://core/network_manager.gd` | `NetworkManager` | `NetworkManager.instance` |
 | `CoreSave` | `res://core/save_manager.gd` | `SaveManager` | `SaveManager.instance` |
 | `CoreSession` | `res://core/session_manager.gd` | `SessionManager` | `SessionManager.instance` ou `/root/CoreSession` |
+| `CoreSettings` | `res://core/settings_manager.gd` | `SettingsManager` | `SettingsManager.instance` |
 | `CoreSessionUI` | `res://ui/session_ui.tscn` | `SessionUI` | `/root/CoreSessionUI` |
+| `CorePauseMenu` | `res://ui/pause_menu.tscn` | `PauseMenu` | `PauseMenu.instance`, `PauseMenu.is_open()` (camada 45) |
+| `CoreVictoryScreen` | `res://ui/victory_screen.tscn` | `VictoryScreen` | `VictoryScreen.instance`, `VictoryScreen.is_open()` (camada 46; a SessionUI, 50, cobre) |
 
 Existem em **todas** as cenas (lobby, mapas, sandbox). Nunca os instanciem como nós dentro de uma cena.
 
@@ -56,7 +59,9 @@ Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
 - Novos ids entram nessas constantes, no core (pedir ao Dev B).
 
 ### Sinais do `GameState`
-`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `progression_changed(unlocked_maps, defeated_bosses)`, `map_unlock_result(map_id, success, message)`, `quest_completed(quest_id, reward)`, `secret_found(secret_id)`, `state_synced()`.
+`money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `progression_changed(unlocked_maps, defeated_bosses)`, `map_unlock_result(map_id, success, message)`, `quest_completed(quest_id, reward)`, `secret_found(secret_id)`, `creature_discovered(kind)`, `game_completed_changed(completed)`, `game_victory()`, `state_synced()`.
+
+**Estado x evento (#81).** `game_completed_changed` é estado: vem de qualquer `apply_snapshot` em que `game_completed` muda, inclusive ao carregar o save, ao entrar no meio da sessão (`_request_full_state`) e ao reconectar. `game_victory` é evento: só sai quando `the_sleeper` é derrotado **nesta sessão**, uma vez, em todos os peers presentes. O host chama `_receive_game_victory()` localmente e por RPC (`authority`, `call_remote`, `reliable`), **depois** de `_receive_snapshot.rpc`. Como os RPCs reliable do mesmo nó chegam em ordem, o cliente já tem as contagens novas. Quem entra depois recebe só o estado. A tela "Jogo concluído" (`CoreVictoryScreen`) escuta `game_victory`: trava o player (`Player.is_settings_open()`) e o menu de pausa (`PauseMenu.can_open()`), e fecha em "Continuar explorando", no Esc, em `SessionManager.scene_changing` e quando o jogo deixa de estar concluído (reset ou outro save).
 
 ### Snapshot
 Após cada mudança o host envia a todos `_receive_snapshot` com:
@@ -387,6 +392,13 @@ $G --headless --path . --script res://core/tests/room_code_test.gd        # "RES
 (timeout 90 $G --headless --path . --script res://core/tests/net_room_host.gd > /tmp/rh.log 2>&1 &); sleep 4
 timeout 90 $G --headless --path . --script res://core/tests/net_room_client.gd   # punch: "CLIENT RESULT fails=0"; repita com "-- --force-relay"
 $G --headless --path . --script res://core/tests/net_room_errors_test.gd  # código inválido, noray fora (porta 8899) e sala inexistente: "RESULT fails=0"
+
+# Vitória ao vivo (#81, porta 7811): o cliente presente recebe game_victory 1x; o que entra depois, 0x
+(timeout 90 $G --headless --path . --script res://core/tests/net_victory_host.gd > /tmp/vh.log 2>&1 &); sleep 3
+(timeout 60 $G --headless --path . --script res://core/tests/net_victory_client.gd > /tmp/vc.log 2>&1 &)
+until grep -q victory_sent /tmp/vh.log; do sleep 1; done; sleep 1
+timeout 60 $G --headless --path . --script res://core/tests/net_victory_client.gd -- --late; sleep 6
+grep RESULT /tmp/vh.log /tmp/vc.log                                  # "fails=0" nos três
 
 [ -f "$SAVE.bak" ] && mv "$SAVE.bak" "$SAVE"                       # restaura o save
 ```
