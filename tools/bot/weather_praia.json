@@ -1,0 +1,17 @@
+{
+	"scene": "res://world/map_praia.tscn",
+	"steps": [
+		{"t": 1.0, "pickup": true, "radius": 8, "timeout": 10},
+		{"t": 2.0, "goto_spot": "nearest"},
+		{"t": 2.5, "look": [0, 120]},
+		{"t": 3.5, "screenshot": "01_antes"},
+		{"t": 3.6, "dump": "01_antes"},
+		{"t": 3.8, "call": "CoreWeather", "method": "force_weather"},
+		{"t": 5.0, "screenshot": "02_aviso"},
+		{"t": 11.0, "screenshot": "03_ativo"},
+		{"t": 11.2, "dump": "03_ativo"},
+		{"t": 12.0, "look": [-500, -350]},
+		{"t": 13.0, "screenshot": "04_ativo_paisagem"},
+		{"t": 13.5, "quit": true}
+	]
+}
