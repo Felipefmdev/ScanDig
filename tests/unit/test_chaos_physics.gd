@@ -183,3 +183,32 @@ func test_backpack_thief_takes_food_when_no_finds() -> void:
 	var stolen: CarriedItem = player.steal_loot()
 	assert_not_null(stolen, "sem achados, rouba a comida")
 	assert_eq(stolen.tool_data.id, &"minhoca")
+
+
+# --- AFK e cocô de gaivota -----------------------------------------------------
+
+func test_hunger_pauses_while_afk() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	player.set_hunger(50.0)
+	player._last_input_ms = Time.get_ticks_msec() - int((Player.AFK_SECONDS + 5.0) * 1000.0)
+	assert_true(player.is_afk())
+	player.tick_hunger(30.0)
+	assert_almost_eq(player.hunger, 50.0, 0.001, "ausente: a fome não cai")
+	player._last_input_ms = Time.get_ticks_msec()
+	player.tick_hunger(10.0)
+	assert_lt(player.hunger, 50.0, "de volta: cai")
+
+
+func test_seagull_poop_hits_player_below() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	var gull: Seagull = (load("res://gameplay/enemies/seagull/seagull.tscn") as PackedScene).instantiate() as Seagull
+	add_child_autofree(gull)
+	gull.global_position = player.global_position + Vector3(0, 6, 0)
+	var blob: Node3D = gull.drop_poop()
+	assert_not_null(blob)
+	for i: int in 60:
+		gull._update_poops(1.0 / 60.0)
+	assert_not_null(player._splat_layer, "manchou a vista")
+	assert_true(not is_instance_valid(blob) or blob.is_queued_for_deletion(), "o cocô sumiu ao acertar")

@@ -37,6 +37,13 @@ const GROUND_STEAL_CHANCE: float = 0.5
 const GROUND_STEAL_RADIUS: float = 8.0
 const GROUND_GRAB_DISTANCE: float = 0.7
 var _ground_target: ItemPickup = null
+## Estudo How to Fish (o albatroz faz cocô em intervalos): a circular, de vez em quando
+## larga um cocô que cai a pique; quem é acertado fica com a vista manchada. Só no host.
+const POOP_INTERVAL: Vector2 = Vector2(5.0, 9.0)
+const POOP_HIT_RADIUS: float = 0.9
+const POOP_FALL_SPEED: float = 9.0
+var _poop_left: float = 6.0
+var _poops: Array[Node3D] = []
 var _hinted: bool = false
 
 @export var circle_radius: float = 6.0
@@ -119,6 +126,7 @@ func _ready() -> void:
 
 
 func _enemy_physics(delta: float) -> void:
+	_update_poops(delta)
 	_state_time += delta
 	if _leave_timer >= 0.0:
 		_leave_timer -= delta
@@ -176,6 +184,10 @@ func _process_circle(delta: float) -> void:
 	if _ground_target != null:
 		_process_ground_steal(delta)
 		return
+	_poop_left -= delta
+	if _poop_left <= 0.0:
+		_poop_left = randf_range(POOP_INTERVAL.x, POOP_INTERVAL.y)
+		drop_poop()
 	_circle_left -= delta
 	if _circle_left <= 0.0:
 		_dives += 1
@@ -185,6 +197,71 @@ func _process_circle(delta: float) -> void:
 			_ground_target = loose
 			return
 		_enter_state(_choose_dive(target))
+
+
+## Larga um cocô por baixo da gaivota (cosmético + acerto testado a cada frame).
+func drop_poop() -> Node3D:
+	var parent: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+	if parent == null:
+		return null
+	var blob: MeshInstance3D = MeshInstance3D.new()
+	var mesh: SphereMesh = SphereMesh.new()
+	mesh.radius = 0.06
+	mesh.height = 0.1
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color(0.95, 0.95, 0.88)
+	mesh.material = mat
+	blob.mesh = mesh
+	blob.name = "SeagullPoop"
+	parent.add_child(blob)
+	blob.global_position = global_position + Vector3.DOWN * 0.3
+	_poops.append(blob)
+	return blob
+
+
+func _update_poops(delta: float) -> void:
+	var alive: Array[Node3D] = []
+	for blob: Node3D in _poops:
+		if not is_instance_valid(blob):
+			continue
+		blob.global_position += Vector3.DOWN * POOP_FALL_SPEED * delta
+		var hit: Node3D = null
+		for n: Node in get_tree().get_nodes_in_group(&"players"):
+			var pl: Node3D = n as Node3D
+			if pl == null:
+				continue
+			var head: Vector3 = pl.global_position + Vector3.UP * 1.6
+			if Vector2(head.x - blob.global_position.x, head.z - blob.global_position.z).length() <= POOP_HIT_RADIUS \
+					and absf(head.y - blob.global_position.y) <= 0.5:
+				hit = pl
+				break
+		if hit != null:
+			_splat(hit)
+			blob.queue_free()
+		elif blob.global_position.y < _ground_point(blob.global_position).y - 0.2 or blob.global_position.y < -30.0:
+			blob.queue_free()
+		else:
+			alive.append(blob)
+	_poops = alive
+
+
+func _splat(pl: Node3D) -> void:
+	if not pl.has_method("poop_splat"):
+		return
+	var owner_id: int = pl.get_multiplayer_authority()
+	if not NetVisibility.is_online(multiplayer) or owner_id == multiplayer.get_unique_id():
+		pl.call("poop_splat")
+	else:
+		pl.rpc_id(owner_id, &"poop_splat")
+
+
+func _exit_tree() -> void:
+	super._exit_tree()
+	for blob: Node3D in _poops:
+		if is_instance_valid(blob):
+			blob.queue_free()
 
 
 ## Item solto mais perto de `near` que vale a pena roubar (achados e comida; nada de

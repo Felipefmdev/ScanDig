@@ -362,6 +362,7 @@ func _ready() -> void:
 	health_changed.connect(_on_health_changed)
 	_on_health_changed(health, max_health)
 	hunger = max_hunger
+	_last_input_ms = Time.get_ticks_msec()
 	_setup_hunger_hud()
 
 	_setup_threat_hud()
@@ -459,6 +460,9 @@ func _add_mouse_if_empty(action: StringName, button: MouseButton) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion \
+			or event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		_last_input_ms = Time.get_ticks_msec()
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not is_settings_open():
 		apply_mouse_look((event as InputEventMouseMotion).relative)
 
@@ -1439,8 +1443,19 @@ func _respawn() -> void:
 	get_tree().create_timer(0.35).timeout.connect(func() -> void: SFX.play_ui(SFX.RESPAWN, -6.0))
 
 
+## Sem tocar em nada este tempo = ausente (How to Fish: a fome não cai com o jogador AFK).
+const AFK_SECONDS: float = 60.0
+var _last_input_ms: int = 0
+
+
+func is_afk() -> bool:
+	return float(Time.get_ticks_msec() - _last_input_ms) / 1000.0 >= AFK_SECONDS
+
+
 ## Fome (estilo sobrevivência leve): cai com o tempo; saciado regenera vida, faminto perde.
 func tick_hunger(delta: float) -> void:
+	if is_afk():
+		return  # ausente: nem cai a fome nem dói a falta dela
 	set_hunger(hunger - hunger_decay_per_sec * delta)
 	if hunger < max_hunger * 0.4:
 		show_hint("hunger")
@@ -1515,6 +1530,41 @@ func _refresh_hunger_hud() -> void:
 
 
 const HINTS: Script = preload("res://gameplay/player/player_hints.gd")
+
+
+## Cocô de gaivota na cara: manchas brancas por cima da vista que somem aos poucos.
+const SPLAT_TIME: float = 4.0
+var _splat_layer: CanvasLayer = null
+
+
+@rpc("any_peer", "call_local", "reliable")
+func poop_splat() -> void:
+	if not is_local() or multiplayer.get_remote_sender_id() not in [0, 1]:
+		return
+	if _splat_layer != null and is_instance_valid(_splat_layer):
+		_splat_layer.queue_free()
+	_splat_layer = CanvasLayer.new()
+	_splat_layer.layer = 4
+	add_child(_splat_layer)
+	var size: Vector2 = get_viewport().get_visible_rect().size
+	for i: int in 6:
+		var blob: Panel = Panel.new()
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = Color(0.97, 0.97, 0.9, 0.92)
+		sb.set_corner_radius_all(90)
+		blob.add_theme_stylebox_override(&"panel", sb)
+		var r: float = randf_range(70.0, 170.0)
+		blob.size = Vector2(r, r * randf_range(0.7, 1.1))
+		blob.position = Vector2(randf_range(0.15, 0.75) * size.x, randf_range(0.1, 0.6) * size.y)
+		blob.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_splat_layer.add_child(blob)
+	var t: Tween = _splat_layer.create_tween()
+	t.tween_interval(SPLAT_TIME * 0.5)
+	for blob: Node in _splat_layer.get_children():
+		t.parallel().tween_property(blob, "modulate:a", 0.0, SPLAT_TIME * 0.5)
+	t.tween_callback(_splat_layer.queue_free)
+	SFX.play_ui(SFX.SHELL_KNOCK, -4.0, 0.2)
+	_show_temporary_message("💩 Uma gaivota acertou-te em cheio!", Color(0.95, 0.95, 0.85), 2.0)
 
 
 ## Mostra a dica `id` uma única vez por jogador (só o jogador local). Verdadeiro se mostrou.
