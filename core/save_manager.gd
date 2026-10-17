@@ -211,13 +211,14 @@ func _activate_slot(n: int) -> void:
 	save_path = slot_path(n)
 
 
-## GUT (gut_cmdln), testes headless e capturas (--script / -s) e bots (--bot=).
+## GUT (gut_cmdln), testes headless e capturas (--script / -s) e bots (--bot=, só em build de
+## debug, como o DebugBridge: no .exe release o --bot= não troca o save do jogador).
 static func _running_tests() -> bool:
 	for arg: String in OS.get_cmdline_args():
 		if arg == "--script" or arg == "-s" or arg.contains("gut_cmdln"):
 			return true
 	for arg: String in OS.get_cmdline_user_args():
-		if arg.begins_with("--bot="):
+		if OS.is_debug_build() and arg.begins_with("--bot="):
 			return true
 	return false
 

@@ -53,6 +53,8 @@ func test_should_skip_decision() -> void:
 	assert_false(TitleScreen.should_skip(PackedStringArray([]), PackedStringArray([])), "jogo normal: mostra")
 	assert_false(TitleScreen.should_skip(PackedStringArray(["--path", "."]), PackedStringArray(["--prefix=A_"])))
 	assert_true(TitleScreen.should_skip(PackedStringArray([]), PackedStringArray(["--bot=C:/x/smoke.json"])), "bot pula")
+	assert_false(TitleScreen.should_skip(PackedStringArray([]), PackedStringArray(["--bot=C:/x/smoke.json"]), false), "release: --bot= é ignorado")
+	assert_true(TitleScreen.should_skip(PackedStringArray(["--script", "x.gd"]), PackedStringArray([]), false), "--script pula também no release")
 	assert_true(TitleScreen.should_skip(PackedStringArray(["--script", "res://core/tests/flow_test.gd"]), PackedStringArray([])), "--script pula")
 	assert_true(TitleScreen.should_skip(PackedStringArray(["-s", "addons/gut/gut_cmdln.gd"]), PackedStringArray([])), "GUT pula")
 	assert_true(TitleScreen.should_skip(OS.get_cmdline_args(), OS.get_cmdline_user_args()), "este GUT também")

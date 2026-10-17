@@ -51,13 +51,14 @@ var _confirm_action: Callable = Callable()
 var _pivot: Node3D = null
 
 
-## Bots (--bot=), GUT e testes/capturas (--script / -s) não passam pela tela inicial.
-static func should_skip(args: PackedStringArray, user_args: PackedStringArray) -> bool:
+## Bots (--bot=), GUT e testes/capturas (--script / -s) não passam pela tela inicial. --bot= só
+## vale em build de debug (o DebugBridge também só roda nela): no .exe release é ignorado.
+static func should_skip(args: PackedStringArray, user_args: PackedStringArray, debug_build: bool = true) -> bool:
 	for arg: String in args:
 		if arg == "--script" or arg == "-s" or arg.contains("gut_cmdln"):
 			return true
 	for arg: String in user_args:
-		if arg.begins_with("--bot="):
+		if debug_build and arg.begins_with("--bot="):
 			return true
 	return false
 
@@ -72,7 +73,7 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	if auto_skip and should_skip(OS.get_cmdline_args(), OS.get_cmdline_user_args()):
+	if auto_skip and should_skip(OS.get_cmdline_args(), OS.get_cmdline_user_args(), OS.is_debug_build()):
 		SessionManager.launch_mode = ""
 		_skip_to_lobby()
 		return
