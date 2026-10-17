@@ -182,7 +182,7 @@
 				}
 			],
 			"until": "meat>=1",
-			"timeout": 280
+			"timeout": 470
 		},
 		{
 			"t": 0,

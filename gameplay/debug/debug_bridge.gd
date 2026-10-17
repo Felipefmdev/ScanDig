@@ -1721,9 +1721,18 @@ func _on_node_added(n: Node) -> void:
 	if n is OmniLight3D and (n as OmniLight3D).light_color.is_equal_approx(Color(1.0, 0.7, 0.3)):
 		_explosions += 1
 		_log("  explosao #%d" % _explosions)
+	elif n is ItemPickup:
+		_log_meat_pickup.call_deferred(n)
 	elif n is CanvasLayer and (n as CanvasLayer).layer == 4 and n.get_parent() != null and n.get_parent() == _player():
 		_splats += 1
 		_log("  coco na cara #%d" % _splats)
+
+
+func _log_meat_pickup(n: Node) -> void:
+	var pk: ItemPickup = n as ItemPickup
+	if pk != null and is_instance_valid(pk) and pk.carried != null and String(pk.carried.tool_id) == "carne_crua":
+		_log("  carne crua no chao em %s" % [_vec(pk.global_position) if pk.is_inside_tree() else []])
+		pk.tree_exiting.connect(func() -> void: _log("  carne crua saiu do chao"), CONNECT_ONE_SHOT)
 
 
 ## Pickups no chão com a ferramenta `tool` (ex.: carne_crua largada por um inimigo).
