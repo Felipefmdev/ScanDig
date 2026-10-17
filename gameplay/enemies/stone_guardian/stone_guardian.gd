@@ -303,13 +303,23 @@ func _build_model() -> void:
 	# Runas a brilhar no peito (guardiao_pedra.jpg)
 	for k: int in 3:
 		LowPolyMesh.box(st, Vector3(-0.15 + 0.15 * float(k), 1.15, -0.545), Vector3(0.05, 0.22, 0.02), Basis(Vector3.FORWARD, 0.35 * float(k - 1)), Color(JADE.r, JADE.g, JADE.b, 0.0))
-	# Cabeça-máscara com olhos de jade
+	# Cabeça-máscara com olhos e runas de jade
 	LowPolyMesh.box(st, Vector3(0.0, 1.85, 0.0), Vector3(0.6, 0.55, 0.55), Basis.IDENTITY, STONE)
 	LowPolyMesh.box(st, Vector3(0.0, 2.15, 0.0), Vector3(0.64, 0.08, 0.58), Basis.IDENTITY, MOSS)
 	var jade: Color = Color(JADE.r, JADE.g, JADE.b, 0.0)
+	var jade_bright: Color = Color(1.0, 0.95, 0.6, 0.0)
 	for side: float in [-1.0, 1.0]:
-		LowPolyMesh.box(st, Vector3(0.14 * side, 1.9, -0.28), Vector3(0.14, 0.07, 0.04), Basis.IDENTITY, jade)
-	LowPolyMesh.box(st, Vector3(0.0, 1.7, -0.28), Vector3(0.3, 0.05, 0.04), Basis.IDENTITY, Color(0.1, 0.08, 0.08, 0.0))
+		# Cavidade escura dos olhos esculpida na pedra
+		LowPolyMesh.box(st, Vector3(0.14 * side, 1.9, -0.275), Vector3(0.17, 0.09, 0.03), Basis.IDENTITY, STONE_DARK)
+		# Fenda de jade / âmbar brilhante
+		LowPolyMesh.box(st, Vector3(0.14 * side, 1.9, -0.285), Vector3(0.13, 0.065, 0.03), Basis.IDENTITY, jade)
+		# Pupila / núcleo incandescente
+		LowPolyMesh.box(st, Vector3(0.14 * side, 1.9, -0.295), Vector3(0.05, 0.045, 0.02), Basis.IDENTITY, jade_bright)
+		# Sobrancelha de pedra angular "How to Fish"
+		LowPolyMesh.box(st, Vector3(0.14 * side, 1.97, -0.29), Vector3(0.16, 0.04, 0.04), Basis(Vector3.FORWARD, -0.18 * side), STONE_DARK)
+	# Fenda da boca com sotaque de runa
+	LowPolyMesh.box(st, Vector3(0.0, 1.7, -0.28), Vector3(0.32, 0.06, 0.04), Basis.IDENTITY, Color(0.1, 0.08, 0.08, 0.0))
+	LowPolyMesh.box(st, Vector3(0.0, 1.7, -0.29), Vector3(0.18, 0.025, 0.02), Basis.IDENTITY, jade)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Body"
 	mi.mesh = ToonKit.commit(st)

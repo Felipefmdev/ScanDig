@@ -14,6 +14,7 @@ const ICE_CRYSTAL: Color = Color("#6ab8d8")
 const ICE_BELLY: Color = Color("#d8eef6")
 const NOSE_DARK: Color = Color("#1e2630")
 const EYE_WHITE: Color = Color(0.96, 0.96, 0.96)
+const EYE_IRIS: Color = Color("#00d4ff")
 const EYE_PUPIL: Color = Color(0.10, 0.10, 0.12)
 const FANG_WHITE: Color = Color(0.92, 0.95, 0.94)
 
@@ -319,11 +320,17 @@ func _build_model() -> void:
 	LowPolyMesh.prism(st, Vector3(-0.11, 0.84, -0.65), Vector3(-0.16, 1.05, -0.68), 0.07, 0.0, 3, ICE_BODY)
 	LowPolyMesh.prism(st, Vector3(0.11, 0.84, -0.65), Vector3(0.16, 1.05, -0.68), 0.07, 0.0, 3, ICE_BODY)
 
-	# Olhos esbugalhados "How to Fish"
-	LowPolyMesh.box(st, Vector3(-0.13, 0.76, -0.78), Vector3(0.08, 0.08, 0.04), Basis.IDENTITY, EYE_WHITE)
-	LowPolyMesh.box(st, Vector3(0.13, 0.76, -0.78), Vector3(0.08, 0.08, 0.04), Basis.IDENTITY, EYE_WHITE)
-	LowPolyMesh.box(st, Vector3(-0.13, 0.76, -0.805), Vector3(0.04, 0.04, 0.02), Basis.IDENTITY, EYE_PUPIL)
-	LowPolyMesh.box(st, Vector3(0.13, 0.76, -0.805), Vector3(0.04, 0.04, 0.02), Basis.IDENTITY, EYE_PUPIL)
+	# Olhos esbugalhados "How to Fish" com íris ciano e sobrancelhas expressivas
+	for side: float in [-1.0, 1.0]:
+		var eye_x: float = 0.13 * side
+		# Esclera branca
+		LowPolyMesh.box(st, Vector3(eye_x, 0.77, -0.78), Vector3(0.11, 0.11, 0.05), Basis.IDENTITY, EYE_WHITE)
+		# Íris ciano gelo
+		LowPolyMesh.box(st, Vector3(eye_x, 0.77, -0.80), Vector3(0.07, 0.07, 0.03), Basis.IDENTITY, EYE_IRIS)
+		# Pupila escura
+		LowPolyMesh.box(st, Vector3(eye_x, 0.77, -0.815), Vector3(0.04, 0.04, 0.02), Basis.IDENTITY, EYE_PUPIL)
+		# Sobrancelha angulada expressiva
+		LowPolyMesh.box(st, Vector3(eye_x, 0.84, -0.79), Vector3(0.12, 0.035, 0.04), Basis(Vector3.FORWARD, -0.22 * side), NOSE_DARK)
 
 	_body.add_child(LowPolyMesh.commit(st, "TorsoMesh", _mat))
 
