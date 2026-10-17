@@ -348,10 +348,19 @@ func start_new_game() -> Error              # host/offline, fora de expedição;
    - `get_save_summary()` dá `valid=false` e a versão lida. As versões 1 a 3 continuam sendo convertidas.
 6. **Gravação atômica.** Grava em `scandig_save.json.tmp` e renomeia por cima do `scandig_save.json` (`DirAccess.rename_absolute`; se o sistema não renomear por cima, apaga o antigo e renomeia). Grava também `"saved_at"` (unix, opcional); a versão continua 4.
 
+### Slots (#100)
+- `SaveManager.SLOT_COUNT = 3`. `slot_path(n)` fica na pasta do caminho base (`user://` no jogo; a pasta de `use_test_save_dir`/`set_save_path` nos testes), então os testes isolam os slots sozinhos.
+- API: `get_slot_summary(n)` (mesmo formato do `get_save_summary` + `slot`), `select_slot(n)` (só host/offline e fora de expedição: `ERR_UNAUTHORIZED`/`ERR_BUSY`; não aplica, depois vem `continue_game`/`start_new_game`; slot vazio zera o `GameState`), `current_slot()` (0 = sem slot), `delete_slot(n)` (apaga o slot e o backup dele), `last_used_slot()` (maior `saved_at` entre os válidos; -1 sem nenhum) e `migrate_legacy_save()`.
+- No jogo de verdade, o `_ready` migra o save antigo (`scandig_save.json` → slot 1, com o backup; o antigo vira `scandig_save.legacy.json`; nada é apagado e não mexe se o slot 1 já existe) e ativa o último slot usado (ou o 1).
+- Com `--script`/`-s` (GUT, testes headless, capturas) ou `--bot=`, nada disso roda: o save fica no caminho base, como antes, e os testes/bots trocam com `use_test_save_dir`/`set_save_path`.
+- `scandig_settings.cfg` e `scandig_hints.cfg` continuam globais (não são por slot).
+
 ### Arquivos em `user://`
 | Arquivo | Quando |
 | :--- | :--- |
-| `scandig_save.json` | save atual |
+| `scandig_save_1.json` .. `_3.json` | os 3 slots do jogo (#100), cada um com o seu `.backup.json` e `.tmp` |
+| `scandig_save.legacy.json` | o save de antes dos slots, depois de copiado para o slot 1 (nunca apagado) |
+| `scandig_save.json` | save de antes dos slots (migrado uma vez para o slot 1); também o caminho base de testes/bots |
 | `scandig_save.json.tmp` | só durante a gravação |
 | `scandig_save.backup.json` | save anterior, a cada `start_new_game()` |
 | `scandig_save.corrupt-<unix>.json` | save ilegível, guardado ao tentar carregar |

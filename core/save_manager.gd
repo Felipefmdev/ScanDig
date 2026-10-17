@@ -1,7 +1,9 @@
 class_name SaveManager
 extends Node
 
-## Gerenciador de persistência de dados em JSON (user://scandig_save.json).
+## Gerenciador de persistência de dados em JSON. No jogo, 3 slots (#100):
+## user://scandig_save_1.json .. _3.json, cada um com o seu .backup.json e .tmp. Testes, bots e
+## --script usam um arquivo só (use_test_save_dir/set_save_path, ou o caminho base), como antes.
 ##
 ## Política (ver docs/CORE_AND_NETWORK.md, "Save"):
 ## - O save no disco só é aplicado por continue_game()/start_new_game() ou, se ninguém
@@ -20,6 +22,11 @@ signal new_game_started()
 signal save_state_changed()
 
 const SAVE_FILE_PATH: String = "user://scandig_save.json"
+## Slots do jogo (#100). Ficam na mesma pasta do caminho base (o real ou o dos testes).
+const SLOT_COUNT: int = 3
+const SLOT_FILE_FORMAT: String = "scandig_save_%d.json"
+## O save de antes dos slots, depois de copiado para o slot 1.
+const LEGACY_FILE_NAME: String = "scandig_save.legacy.json"
 const SAVE_VERSION: int = 4
 ## Pasta dos saves isolados dos testes (use_test_save_dir).
 const TEST_SAVES_DIR: String = "user://test_saves"
@@ -35,8 +42,12 @@ enum ReadStatus { MISSING, OK, CORRUPT, NEWER }
 
 static var instance: SaveManager = null
 
-## Caminho do save. Só os testes trocam (use_test_save_dir/set_save_path).
+## Caminho do save em uso: o do slot ativo, ou o base (testes/bots/--script).
 var save_path: String = SAVE_FILE_PATH
+## Caminho base: define a pasta dos slots e o save antigo a migrar.
+var _base_path: String = SAVE_FILE_PATH
+## Slot ativo (1..SLOT_COUNT); 0 = sem slot, usa o caminho base.
+var _slot: int = 0
 
 ## O progresso do disco já está no GameState (ou não há save). false para cliente em sessão.
 var _progress_applied: bool = false
@@ -55,6 +66,12 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
+	# Jogo de verdade: migra o save antigo e já entra num slot (o último usado, ou o 1). Testes,
+	# bots e --script nunca tocam nos saves do jogador (ficam no caminho base, como antes).
+	if not _running_tests():
+		migrate_legacy_save()
+		var last: int = last_used_slot()
+		_activate_slot(last if last > 0 else 1)
 	_reset_session_flags()
 	var net: NetworkManager = NetworkManager.instance
 	if net == null:
@@ -71,7 +88,10 @@ func _ready() -> void:
 ## Lê o arquivo SEM aplicar. Nunca dá erro.
 ## {exists, valid, version, day, money, museum_found, museum_total, saved_at (unix, 0 se não houver), error}
 func get_save_summary() -> Dictionary:
-	var read: Dictionary = _read_save()
+	return _summary_from(_read_save())
+
+
+func _summary_from(read: Dictionary) -> Dictionary:
 	var data: Dictionary = read["data"]
 	var state: GameState = _resolve_game_state()
 	var found: Variant = data.get("discovered_items", [])
@@ -87,6 +107,119 @@ func get_save_summary() -> Dictionary:
 		"saved_at": int(data.get("saved_at", 0)) if read["status"] == ReadStatus.OK else 0,
 		"error": str(read["error"]),
 	}
+
+
+# --- Slots (#100) ------------------------------------------------------------------
+
+## Arquivo do slot `n` (1..SLOT_COUNT), na pasta do caminho base.
+func slot_path(n: int) -> String:
+	return "%s/%s" % [_base_path.get_base_dir(), SLOT_FILE_FORMAT % n]
+
+
+static func is_valid_slot(n: int) -> bool:
+	return n >= 1 and n <= SLOT_COUNT
+
+
+## Slot ativo (0 = sem slot: testes, bots, --script).
+func current_slot() -> int:
+	return _slot
+
+
+## Resumo do slot `n` sem trocar nada (mesmo formato do get_save_summary, mais "slot").
+func get_slot_summary(n: int) -> Dictionary:
+	var summary: Dictionary = _summary_from(_read_save(slot_path(n)))
+	summary["slot"] = n
+	return summary
+
+
+## O slot válido gravado por último (maior saved_at); -1 se nenhum.
+func last_used_slot() -> int:
+	var best: int = -1
+	var best_at: int = -1
+	for n: int in range(1, SLOT_COUNT + 1):
+		var summary: Dictionary = get_slot_summary(n)
+		if bool(summary["valid"]) and int(summary["saved_at"]) > best_at:
+			best = n
+			best_at = int(summary["saved_at"])
+	return best
+
+
+## Troca o save para o slot `n` (fora de expedição; só host/offline). Não aplica: depois vem
+## continue_game() ou start_new_game(). Slot vazio começa do zero na hora.
+func select_slot(n: int) -> Error:
+	if not is_valid_slot(n):
+		return ERR_INVALID_PARAMETER
+	var check: Error = _check_can_change_progress()
+	if check != OK:
+		return check
+	_activate_slot(n)
+	_reset_session_flags()
+	if not has_save_file():
+		_resolve_game_state().reset_state()
+	save_state_changed.emit()
+	return OK
+
+
+## Apaga o slot `n` e o backup dele. A confirmação é da UI. Fora de expedição, host/offline.
+func delete_slot(n: int) -> Error:
+	if not is_valid_slot(n):
+		return ERR_INVALID_PARAMETER
+	var check: Error = _check_can_change_progress()
+	if check != OK:
+		return check
+	var path: String = slot_path(n)
+	for file_path: String in [path, "%s.backup.json" % path.get_basename()]:
+		if FileAccess.file_exists(file_path):
+			var error: Error = DirAccess.remove_absolute(file_path)
+			if error != OK:
+				push_error("SaveManager: falha ao apagar %s (erro %d)." % [file_path, error])
+				return error
+	if n == _slot:
+		_reset_session_flags()
+		_resolve_game_state().reset_state()
+	save_state_changed.emit()
+	return OK
+
+
+## Uma vez: o save de antes dos slots (scandig_save.json na pasta base) vira o slot 1, com o
+## backup, e o antigo é renomeado para scandig_save.legacy.json (nada é apagado). Não mexe se o
+## slot 1 já existe. true se migrou.
+func migrate_legacy_save() -> bool:
+	var dir: String = _base_path.get_base_dir()
+	var legacy: String = "%s/scandig_save.json" % dir
+	var slot_one: String = slot_path(1)
+	if not FileAccess.file_exists(legacy) or FileAccess.file_exists(slot_one):
+		return false
+	var error: Error = DirAccess.copy_absolute(legacy, slot_one)
+	if error != OK:
+		push_error("SaveManager: falha ao copiar %s para %s (erro %d); migração adiada." % [legacy, slot_one, error])
+		return false
+	var legacy_backup: String = "%s/scandig_save.backup.json" % dir
+	var slot_backup: String = "%s.backup.json" % slot_one.get_basename()
+	if FileAccess.file_exists(legacy_backup) and not FileAccess.file_exists(slot_backup):
+		DirAccess.copy_absolute(legacy_backup, slot_backup)
+	var kept: String = "%s/%s" % [dir, LEGACY_FILE_NAME]
+	if FileAccess.file_exists(kept):
+		kept = "%s/scandig_save.legacy-%d.json" % [dir, int(Time.get_unix_time_from_system())]
+	if DirAccess.rename_absolute(legacy, kept) != OK:
+		push_warning("SaveManager: %s copiado para o slot 1, mas não foi renomeado." % legacy)
+	return true
+
+
+func _activate_slot(n: int) -> void:
+	_slot = n
+	save_path = slot_path(n)
+
+
+## GUT (gut_cmdln), testes headless e capturas (--script / -s) e bots (--bot=).
+static func _running_tests() -> bool:
+	for arg: String in OS.get_cmdline_args():
+		if arg == "--script" or arg == "-s" or arg.contains("gut_cmdln"):
+			return true
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--bot="):
+			return true
+	return false
 
 
 ## true depois de continue_game/start_new_game, ou se não há save. Cliente em sessão: false.
@@ -295,9 +428,12 @@ func load_game(target_state: GameState = null) -> Error:
 
 # --- Testes ------------------------------------------------------------------------
 
-## Só testes: troca o caminho do save e recomeça a sessão do save (sem aplicar nada).
+## Só testes: troca o caminho do save e recomeça a sessão do save (sem aplicar nada). Sai do
+## slot: o caminho vira o base (os slots passam a ficar na pasta dele).
 func set_save_path(path: String) -> void:
 	save_path = path
+	_base_path = path
+	_slot = 0
 	_reset_session_flags()
 	save_state_changed.emit()
 
@@ -365,12 +501,15 @@ func _apply_saved_progress() -> Error:
 
 
 ## {"status": ReadStatus, "data": Dictionary, "version": int, "error": String}. Sem efeitos.
-func _read_save() -> Dictionary:
+## `path` vazio = o save em uso.
+func _read_save(path: String = "") -> Dictionary:
+	if path.is_empty():
+		path = save_path
 	var result: Dictionary = {"status": ReadStatus.MISSING, "data": {}, "version": 0, "error": ""}
-	if not FileAccess.file_exists(save_path):
+	if not FileAccess.file_exists(path):
 		return result
 	result["status"] = ReadStatus.CORRUPT
-	var file: FileAccess = FileAccess.open(save_path, FileAccess.READ)
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		result["error"] = "Não foi possível abrir o arquivo (erro %d)." % FileAccess.get_open_error()
 		return result
