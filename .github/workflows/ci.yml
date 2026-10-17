@@ -70,8 +70,9 @@ jobs:
         run: |
           curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_win64.exe.zip"
           7z x -y -bso0 godot.zip
-          mv "Godot_v${GODOT_VERSION}-stable_win64_console.exe" godot.exe
-          mv "Godot_v${GODOT_VERSION}-stable_win64.exe" godot_gui.exe
+          # O wrapper de console acha o executável GUI pelo nome sem "_console".
+          mv "Godot_v${GODOT_VERSION}-stable_win64.exe" godot.exe
+          mv "Godot_v${GODOT_VERSION}-stable_win64_console.exe" godot_console.exe
 
       # Só os templates do Windows x86_64 (o .tpz inteiro tem ~1 GB).
       - name: Cache export templates
@@ -108,13 +109,13 @@ jobs:
           cat "$APPD/Godot/editor_settings-4.3.tres"
 
       - name: Import project
-        run: ./godot.exe --headless --path . --import
+        run: ./godot_console.exe --headless --path . --import
 
       # O plugin GUT (só do editor) reclama do próprio config no export: essa linha é ignorada.
       - name: Export Windows (release)
         run: |
           mkdir -p build/windows
-          ./godot.exe --headless --path . --export-release "Windows Desktop" build/windows/ScanDig.exe 2>&1 | tee export.log
+          ./godot_console.exe --headless --path . --export-release "Windows Desktop" build/windows/ScanDig.exe 2>&1 | tee export.log
           if [ ! -f build/windows/ScanDig.exe ]; then
             echo "::error::build/windows/ScanDig.exe não foi gerado"
             exit 1
