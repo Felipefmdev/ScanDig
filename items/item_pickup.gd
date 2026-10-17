@@ -167,11 +167,157 @@ func _check_impacts() -> void:
 
 signal impacted(enemy: Node3D, damage: float)
 
+## How to Fish (WaterManager / FloatInfos): itens leves/orgânicos boiam na água e as ondas
+## trazem-nos de volta até à beira da praia (x < 19.5); metais e rochas pesadas afundam com
+## arrasto mas ficam no fundo raso visível (y >= -0.45, x <= 23.0).
+const WATER_START_X: float = 20.0
+const WATER_SHORE_EXIT_X: float = 19.5
+const WATER_SURFACE_MAX_Y: float = 0.05
+const WATER_FLOAT_MIN_Y: float = -0.02
+const WATER_FLOAT_MAX_Y: float = 0.04
+const WATER_SHALLOW_FLOOR_Y: float = -0.45
+const WATER_HEAVY_MAX_X: float = 23.0
+const WATER_DRIFT_SPEED: float = 1.6
+const WATER_HEAVY_PULL_SPEED: float = 2.0
+const WATER_BUOYANT_DAMP: float = 2.5
+const WATER_SINK_DAMP: float = 3.5
+
+var _in_water: bool = false
+var _water_time: float = 0.0
+
+
+## Devolve true se o item flutua na água (madeira, orgânico, comida, ferramentas leves,
+## garrafas, conchas, latas/alumínio); false para metais pesados (ferro/prata/ouro) e rochas grandes.
+func is_buoyant() -> bool:
+	if carried == null:
+		return true
+	if carried.tool_data != null:
+		if carried.tool_data.category == ToolData.Category.FOOD:
+			return true
+		var tid: String = String(carried.tool_data.id).to_lower()
+		if tid in ["forcado", "arpao_corda", "pulso_magnetico"]:
+			return false
+		return true
+	if carried.is_tool():
+		var raw_tid: String = String(carried.tool_id).to_lower()
+		if raw_tid in ["detector", "forcado", "arpao_corda", "pulso_magnetico"]:
+			return false
+		return true
+	if carried.item != null:
+		var item_id: String = carried.item.id.to_lower()
+		for buoyant_kw: String in ["garrafa", "concha", "madeira", "chocolate", "lata", "osso", "ambar", "olho", "bussola", "mapa"]:
+			if buoyant_kw in item_id:
+				return true
+		for heavy_kw: String in ["pedra", "rocha", "ancora", "canhao", "bigorna", "estatua", "idolo", "meteorito", "coroa", "sino", "ferradura", "chave", "lanca", "moeda", "alianca", "anel", "colher", "medalha"]:
+			if heavy_kw in item_id:
+				return false
+		match carried.item.material_type:
+			ItemData.MaterialType.ALUMINIO:
+				return int(carried.item.size_category) <= ItemData.SizeCategory.MEDIO
+			ItemData.MaterialType.DESCONHECIDO:
+				return int(carried.item.size_category) <= ItemData.SizeCategory.MEDIO
+			_:
+				return false
+	return true
+
+
+## Verifica se o ItemPickup está na água (volume do grupo water/agua ou mar da Praia).
+func is_in_water() -> bool:
+	if _is_in_water_group():
+		return true
+	if not _is_sea_active_in_scene():
+		return false
+	var x_threshold: float = WATER_SHORE_EXIT_X if _in_water else WATER_START_X
+	var y_threshold: float = WATER_SURFACE_MAX_Y + (0.04 if _in_water else 0.0)
+	return global_position.x >= x_threshold and global_position.y <= y_threshold
+
+
+func _is_in_water_group() -> bool:
+	if not is_inside_tree():
+		return false
+	for n: Node in get_tree().get_nodes_in_group(&"water") + get_tree().get_nodes_in_group(&"agua"):
+		var area: Area3D = n as Area3D
+		if area != null and is_instance_valid(area) and area.overlaps_body(self):
+			return true
+		var node3d: Node3D = n as Node3D
+		if node3d != null and is_instance_valid(node3d) and node3d.global_position.distance_to(global_position) < 2.5 and global_position.y <= WATER_SURFACE_MAX_Y:
+			return true
+	return false
+
+
+func _is_sea_active_in_scene() -> bool:
+	if not is_inside_tree():
+		return true
+	var tree: SceneTree = get_tree()
+	if tree != null and tree.current_scene != null:
+		var sname: String = tree.current_scene.name.to_lower()
+		for non_sea: String in ["campo", "ruinas", "geleira", "cratera"]:
+			if non_sea in sname:
+				return false
+	return true
+
+
+## Aplica empuxo/ondulação e deriva para a areia (itens flutuantes) ou arrasto e limite de
+## fundo raso (itens pesados). Pode ser chamado diretamente em testes unitários.
+func _apply_water_physics(delta: float) -> void:
+	if not is_in_water():
+		if _in_water:
+			_in_water = false
+			linear_damp = 0.0
+			angular_damp = 0.0
+			linear_velocity.x *= 0.35
+		return
+
+	_in_water = true
+	_water_time += delta
+	sleeping = false
+
+	if is_buoyant():
+		linear_damp = WATER_BUOYANT_DAMP
+		angular_damp = 3.0
+		var wave_y: float = 0.01 + sin(_water_time * 2.8 + global_position.x * 0.65 + global_position.z * 0.45) * 0.022
+		wave_y = clampf(wave_y, WATER_FLOAT_MIN_Y, WATER_FLOAT_MAX_Y)
+		if global_position.y < wave_y:
+			var depth: float = wave_y - global_position.y
+			linear_velocity.y = move_toward(linear_velocity.y, clampf(depth * 5.0, 0.15, 2.2), delta * 15.0)
+			global_position.y = move_toward(global_position.y, wave_y, maxf(0.8, depth * 4.5) * delta)
+		else:
+			global_position.y = move_toward(global_position.y, wave_y, 0.5 * delta)
+			linear_velocity.y = move_toward(linear_velocity.y, 0.0, delta * 8.0)
+		global_position.y = clampf(global_position.y, WATER_FLOAT_MIN_Y, WATER_FLOAT_MAX_Y)
+
+		# Deriva suave com as ondas de volta para a areia (-X) até sair em x < 19.5
+		if global_position.x >= WATER_SHORE_EXIT_X:
+			linear_velocity.x = lerpf(linear_velocity.x, -WATER_DRIFT_SPEED, clampf(delta * 4.5, 0.0, 1.0))
+			global_position.x = move_toward(global_position.x, WATER_SHORE_EXIT_X - 0.15, WATER_DRIFT_SPEED * delta)
+			if global_position.x < WATER_SHORE_EXIT_X:
+				_in_water = false
+				linear_damp = 0.0
+				angular_damp = 0.0
+				linear_velocity = Vector3(0.0, 0.0, linear_velocity.z * 0.3)
+	else:
+		linear_damp = WATER_SINK_DAMP
+		angular_damp = 3.5
+		# Afunda com drag de água mas pousa no fundo raso visível (y >= -0.45, x <= 23.0)
+		if global_position.y > -0.32:
+			linear_velocity.y = minf(linear_velocity.y, -0.6)
+			global_position.y = move_toward(global_position.y, -0.35, 0.9 * delta)
+		if global_position.y < WATER_SHALLOW_FLOOR_Y:
+			global_position.y = WATER_SHALLOW_FLOOR_Y
+			if linear_velocity.y < 0.0:
+				linear_velocity.y = 0.0
+		if global_position.x > WATER_HEAVY_MAX_X:
+			linear_velocity.x = minf(linear_velocity.x, -WATER_HEAVY_PULL_SPEED)
+			global_position.x = move_toward(global_position.x, WATER_HEAVY_MAX_X - 0.2, WATER_HEAVY_PULL_SPEED * delta)
+		else:
+			linear_velocity.x = move_toward(linear_velocity.x, 0.0, delta * 5.0)
+
 
 func _physics_process(delta: float) -> void:
 	var authority: bool = not networked or multiplayer.is_server()
 	if authority:
 		_check_impacts()
+		_apply_water_physics(delta)
 	if is_wriggling_food() and authority:
 		_wriggle(delta)
 	if authority and carried != null and carried.tool_data != null and carried.tool_data.spoil_seconds > 0.0:
@@ -190,6 +336,7 @@ func _physics_process(delta: float) -> void:
 		var t: float = 1.0 - exp(-NET_SMOOTHING * delta)
 		position = position.lerp(net_position, t)
 		basis = basis.orthonormalized().slerp(Basis.from_euler(net_rotation), t)
+
 
 
 func _ready() -> void:
