@@ -162,6 +162,18 @@ const HARPOON_MODEL: Script = preload("res://gameplay/weapons/harpoon/harpoon_mo
 const NET_TRAP_MODEL: Script = preload("res://gameplay/weapons/net_trap/net_trap_model.gd")
 const LANTERN_MODEL: Script = preload("res://gameplay/weapons/lantern/lantern_model.gd")
 const PULSE_MODEL: Script = preload("res://gameplay/weapons/magnetic_pulse/magnetic_pulse_model.gd")
+const DYNAMITE_MODEL: Script = preload("res://gameplay/weapons/dynamite/dynamite_model.gd")
+const RAW_MEAT_MODEL: Script = preload("res://gameplay/weapons/dynamite/raw_meat_model.gd")
+const FOOD_MODEL: Script = preload("res://gameplay/foods/food_model.gd")
+const DUG_FOOD_IDS: Array[String] = [
+	"minhoca",
+	"tatuira",
+	"marisco",
+	"batata_esquecida",
+	"cogumelo_cripta",
+	"liquen_gelado",
+	"larva_termica",
+]
 ## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
 const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
 const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
@@ -270,6 +282,8 @@ var _use_cooldown: float = 0.0
 var _tool_view_rest: Vector3 = Vector3.ZERO
 ## tool_id -> modelo no ToolView (só um visível: o da ferramenta selecionada).
 var _held_models: Dictionary = {}
+var _held_museum_item: Node3D = null
+var _held_museum_key: String = ""
 ## Distância percorrida desde o último passo (sons de passos na areia).
 var _step_distance: float = 0.0
 const STEP_LENGTH: float = 1.15
@@ -1662,7 +1676,10 @@ func _handle_attack_action() -> void:
 		_attack_buffer_left = ATTACK_BUFFER
 	elif _attack_buffer_left > 0.0:
 		_attack_buffer_left = maxf(_attack_buffer_left - get_physics_process_delta_time(), 0.0)
-	if _attack_cooldown > 0.0 or dig_animator.is_playing() or _disarm_time > 0.0:
+	if _disarm_time > 0.0:
+		return
+	var chaining_swing: bool = dig_animator.is_playing() and dig_animator.can_chain_swing()
+	if not chaining_swing and (_attack_cooldown > 0.0 or not dig_animator.can_chain_swing()):
 		return
 	if _attack_buffer_left > 0.0:
 		_attack_buffer_left = 0.0
@@ -2196,9 +2213,34 @@ func _update_tool_in_hand() -> void:
 		detector.visible = active
 	if tool_view != null:
 		var tool_id: StringName = c.tool_id if c != null else &""
-		tool_view.visible = _held_models.has(tool_id)
 		for id: StringName in _held_models:
 			(_held_models[id] as Node3D).visible = id == tool_id
+		var show_museum: bool = _update_held_museum_item(c)
+		tool_view.visible = _held_models.has(tool_id) or show_museum
+
+
+func _update_held_museum_item(c: CarriedItem) -> bool:
+	if _held_museum_item == null:
+		return false
+	if c == null or c.item == null:
+		if _held_museum_key != "" or _held_museum_item.get_child_count() > 0:
+			for child: Node in _held_museum_item.get_children():
+				_held_museum_item.remove_child(child)
+				child.free()
+			_held_museum_key = ""
+		_held_museum_item.visible = false
+		return false
+	var key: String = "%s:%s" % [c.item.id, "1" if c.is_rare_variant else "0"]
+	if key != _held_museum_key:
+		for child: Node in _held_museum_item.get_children():
+			_held_museum_item.remove_child(child)
+			child.free()
+		_held_museum_key = key
+		var mesh: Node3D = ItemModels.build(c.item.id, c.is_rare_variant)
+		if mesh != null:
+			_held_museum_item.add_child(mesh)
+	_held_museum_item.visible = _held_museum_item.get_child_count() > 0
+	return _held_museum_item.visible
 
 
 ## O estilingue já está no player.tscn; o kit e o repelente são criados aqui, sem owner (o
@@ -2236,6 +2278,20 @@ func _setup_held_models() -> void:
 		Transform3D(Basis(Vector3.UP, deg_to_rad(20.0)).scaled(Vector3.ONE * 0.45), Vector3(-0.02, -0.1, -0.06)))
 	_held_models[TOOL_LANTERN] = _add_held_model(LANTERN_MODEL,
 		Transform3D(Basis(Vector3.UP, deg_to_rad(-10.0)).scaled(Vector3.ONE * 0.7), Vector3(0.0, -0.16, -0.06)))
+	# Dinamite, Carne Crua e as 7 comidas escavadas em 1.ª pessoa.
+	_held_models[TOOL_DYNAMITE] = _add_held_model(DYNAMITE_MODEL,
+		Transform3D(Basis(Vector3.FORWARD, deg_to_rad(75.0)).rotated(Vector3.UP, deg_to_rad(-20.0)).scaled(Vector3.ONE * 0.85), Vector3(0.0, -0.02, -0.04)))
+	_held_models[&"carne_crua"] = _add_held_model(RAW_MEAT_MODEL,
+		Transform3D(Basis(Vector3.UP, deg_to_rad(-25.0)).rotated(Vector3.RIGHT, deg_to_rad(15.0)).scaled(Vector3.ONE * 0.85), Vector3(-0.01, -0.02, -0.04)))
+	var food_pose: Transform3D = Transform3D(Basis(Vector3.UP, deg_to_rad(-20.0)).rotated(Vector3.RIGHT, deg_to_rad(12.0)).scaled(Vector3.ONE * 0.9), Vector3(-0.01, -0.02, -0.04))
+	for fid: String in DUG_FOOD_IDS:
+		_held_models[StringName(fid)] = _add_held_food_model(fid, food_pose)
+	# Contentor para achados do museu segurados na mão (visíveis ao segurar e carregar arremesso [Q]).
+	_held_museum_item = Node3D.new()
+	_held_museum_item.name = "HeldMuseumItem"
+	_held_museum_item.transform = Transform3D(Basis(Vector3.UP, deg_to_rad(-25.0)).scaled(Vector3.ONE * 0.65), Vector3(-0.02, -0.02, -0.05))
+	_held_museum_item.visible = false
+	tool_view.add_child(_held_museum_item)
 	_update_tool_in_hand()
 
 
@@ -2243,6 +2299,17 @@ func _add_held_model(model_script: Script, pose: Transform3D) -> Node3D:
 	var model: Node3D = Node3D.new()
 	model.set_script(model_script)
 	model.name = "Held" + model_script.resource_path.get_file().get_basename().to_pascal_case()
+	model.transform = pose
+	model.visible = false
+	tool_view.add_child(model)
+	return model
+
+
+func _add_held_food_model(p_food_id: String, pose: Transform3D) -> Node3D:
+	var model: Node3D = Node3D.new()
+	model.set_script(FOOD_MODEL)
+	model.set("food_id", p_food_id)
+	model.name = "HeldFood" + p_food_id.to_pascal_case()
 	model.transform = pose
 	model.visible = false
 	tool_view.add_child(model)

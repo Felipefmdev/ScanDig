@@ -245,3 +245,107 @@ func test_nearby_items_ui_tracks_close_pickups() -> void:
 	assert_eq(player.nearby_items_ui.call("get_target_count"), 1, "só o perto entra")
 	near.queue_free()
 	far.queue_free()
+
+
+func test_held_models_for_food_dynamite_and_museum_item() -> void:
+	var player: Player = _spawn_player()
+	for i: int in player.inventory.slots.size():
+		if player.inventory.slots[i] != null:
+			player.inventory.remove_at(i)
+
+	# 1. Dinamite na mão
+	var dyn_data: ToolData = load("res://items/tools/dinamite.tres") as ToolData
+	player.inventory.add_item(CarriedItem.create_from_tool_data(dyn_data))
+	player.inventory.select(0)
+	assert_true(player.tool_view.visible, "ToolView visível com dinamite")
+	var dyn_model: Node3D = player._held_models.get(&"dinamite") as Node3D
+	assert_not_null(dyn_model, "modelo da dinamite registado")
+	assert_true(dyn_model.visible, "modelo da dinamite visível")
+
+	# 2. Comida escavada na mão e subida à boca ao comer
+	var worm_data: ToolData = load("res://items/tools/minhoca.tres") as ToolData
+	var worm_carried: CarriedItem = CarriedItem.create_from_tool_data(worm_data)
+	player.inventory.add_item(worm_carried)
+	player.inventory.select(1)
+	assert_true(player.tool_view.visible, "ToolView visível com minhoca")
+	var worm_model: Node3D = player._held_models.get(&"minhoca") as Node3D
+	assert_not_null(worm_model, "modelo da minhoca registado")
+	assert_true(worm_model.visible, "modelo da minhoca visível")
+	assert_false(dyn_model.visible, "modelo da dinamite escondido ao trocar")
+	assert_not_null(worm_model.get_node_or_null(^"FoodMesh"), "FoodModel gerou malha")
+	player._equip_left = 0.0
+	player.health = 50.0
+	player.start_eating(worm_carried)
+	player.update_eating(0.5, true)
+	player.update_tool_sway(0.01)
+	assert_gt(player.tool_sway.position.y, 0.03, "comida sobe em direção à boca ao comer")
+	player.cancel_eating()
+
+	# 3. Achado do museu no HeldMuseumItem e recuo ao carregar arremesso [Q]
+	var coin_data: ItemData = load("res://items/catalog/moeda_antiga.tres") as ItemData
+	var coin_carried: CarriedItem = CarriedItem.create(coin_data, 50, 1.0, false)
+	player.inventory.add_item(coin_carried)
+	player.inventory.select(2)
+	var held_museum: Node3D = player.tool_view.get_node_or_null(^"HeldMuseumItem") as Node3D
+	assert_not_null(held_museum, "contentor HeldMuseumItem existe no ToolView")
+	assert_true(player.tool_view.visible, "ToolView visível com achado do museu")
+	assert_true(held_museum.visible, "HeldMuseumItem visível com moeda_antiga")
+	assert_eq(held_museum.get_child_count(), 1, "malha do achado instanciada dentro de HeldMuseumItem")
+	assert_false(worm_model.visible, "modelo da comida escondido ao selecionar achado")
+
+	# Trocar de volta para ferramenta limpa HeldMuseumItem
+	player.inventory.select(0)
+	assert_false(held_museum.visible, "HeldMuseumItem escondido ao voltar para ferramenta")
+	assert_eq(held_museum.get_child_count(), 0, "HeldMuseumItem limpo ao sair do achado")
+
+
+func test_shovel_swing_alternates_sides() -> void:
+	var player: Player = _spawn_player()
+	var anim: ShovelDigAnimator = player.dig_animator
+	var side_before: float = anim._swing_side
+
+	anim.play_swing()
+	var side_first: float = anim._swing_side
+	assert_eq(side_first, -side_before, "1.º golpe inverte _swing_side")
+	var back_first_dx: float = (anim.camera.global_transform.affine_inverse() * anim._pose(ShovelDigAnimator.Target.SWING_BACK)).origin.x - anim.rest_pose.origin.x
+	var hit_first_dx: float = (anim.camera.global_transform.affine_inverse() * anim._pose(ShovelDigAnimator.Target.SWING_HIT)).origin.x - anim.rest_pose.origin.x
+
+	anim.play_swing()
+	var side_second: float = anim._swing_side
+	assert_eq(side_second, -side_first, "2.º golpe volta a inverter _swing_side")
+	var back_second_dx: float = (anim.camera.global_transform.affine_inverse() * anim._pose(ShovelDigAnimator.Target.SWING_BACK)).origin.x - anim.rest_pose.origin.x
+	var hit_second_dx: float = (anim.camera.global_transform.affine_inverse() * anim._pose(ShovelDigAnimator.Target.SWING_HIT)).origin.x - anim.rest_pose.origin.x
+
+	assert_lt(back_first_dx * back_second_dx, 0.0, "SWING_BACK espelha o deslocamento X entre golpes")
+	assert_lt(hit_first_dx * hit_second_dx, 0.0, "SWING_HIT espelha o deslocamento X entre golpes")
+
+
+func test_shovel_swing_chains_at_sixty_percent_of_return() -> void:
+	var player: Player = _spawn_player()
+	var anim: ShovelDigAnimator = player.dig_animator
+	assert_true(anim.can_chain_swing(), "pode iniciar golpe quando parado")
+
+	# Pré-saca a pá para a sequência do swing ser apenas [SWING_BACK(0.08), SWING_HIT(0.10), REST(0.18)]
+	anim._drawn = true
+	anim.rig.visible = true
+	anim.play_swing()
+	var first_side: float = anim._swing_side
+	assert_false(anim.can_chain_swing(), "não encadeia no início do golpe (SWING_BACK)")
+
+	# Avança até metade do passo final Target.REST (0.08 + 0.10 + 0.18 * 0.5 = 0.27s < 60% do regresso)
+	anim._process(0.08 + 0.10 + 0.18 * 0.5)
+	assert_true(anim.is_playing(), "ainda a regressar ao repouso")
+	assert_false(anim.can_chain_swing(), "ainda não encadeia aos 50% da volta")
+
+	# Avança até >= 60% do passo final Target.REST (+0.03s -> ~66% da volta)
+	anim._process(0.03)
+	assert_true(anim.is_playing(), "ainda no passo final REST")
+	assert_true(anim.can_chain_swing(), "permite encadear aos >= 60% da volta")
+
+	# _handle_attack_action permite iniciar novo ataque emendado mesmo durante o fim do swing
+	Input.action_press("attack")
+	player._handle_attack_action()
+	Input.action_release("attack")
+	assert_eq(anim._swing_side, -first_side, "novo golpe emendado inverteu o lado")
+	assert_eq(anim._step, 0, "reiniciou a sequência de swing no passo 0")
+

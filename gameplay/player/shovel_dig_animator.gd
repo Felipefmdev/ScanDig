@@ -52,6 +52,7 @@ var _from: Transform3D = Transform3D.IDENTITY
 var _ground: Vector3 = Vector3.ZERO
 var _toward: Vector3 = Vector3.BACK
 var _side: Vector3 = Vector3.LEFT
+var _swing_side: float = 1.0
 
 
 func setup(p_rig: Node3D, p_camera: Camera3D, p_body: Node3D) -> void:
@@ -69,6 +70,16 @@ func is_playing() -> bool:
 
 func is_drawn() -> bool:
 	return _drawn
+
+
+## Verdadeiro quando não está a tocar ou quando já está no último passo (Target.REST)
+## do swing com >= 60% do passo concluído, permitindo emendar o próximo golpe.
+func can_chain_swing() -> bool:
+	if _step < 0:
+		return true
+	if _step == _sequence.size() - 1 and _sequence[_step] == Target.REST and _sequence.has(Target.SWING_HIT):
+		return _durations[_step] > 0.0 and (_time / _durations[_step]) >= 0.6
+	return false
 
 
 ## Inicia a animação de cavar. speed_factor > 1 acelera (pás melhores). Devolve a duração total.
@@ -92,11 +103,12 @@ func play(ground_point: Vector3, is_careful: bool, speed_factor: float = 1.0) ->
 	return _start(seq, durs)
 
 
-## Golpe com a pá (F): saca se preciso, recua e bate à frente.
+## Golpe com a pá (F): saca se preciso, recua e bate à frente em curva alternando o lado.
 func play_swing() -> float:
 	if not _can_animate():
 		return 0.0
 	_careful = false
+	_swing_side = -_swing_side
 	var seq: Array[Target] = [Target.SWING_BACK, Target.SWING_HIT, Target.REST]
 	return _start(seq, SWING_DURATIONS.duplicate())
 
@@ -165,7 +177,11 @@ func _process(delta: float) -> void:
 			rig.global_transform = _pose(Target.REST)
 		return
 	var t: float = clampf(_time / _durations[_step], 0.0, 1.0)
-	rig.global_transform = _from.interpolate_with(_pose(_sequence[_step]), _ease(_sequence[_step], t))
+	var pose: Transform3D = _from.interpolate_with(_pose(_sequence[_step]), _ease(_sequence[_step], t))
+	if _sequence[_step] == Target.SWING_HIT and camera != null:
+		var arc: float = sin(t * PI)
+		pose.origin += camera.global_basis * Vector3(-0.08 * _swing_side * arc, 0.06 * arc, -0.12 * arc)
+	rig.global_transform = pose
 
 
 func _on_step_finished(target: Target) -> void:
@@ -202,9 +218,11 @@ func _pose(target: Target) -> Transform3D:
 			# Sobe e inclina para trás, a preparar a pazada.
 			return cam * Transform3D(Basis(Vector3.RIGHT, -0.55) * rest_pose.basis, rest_pose.origin + Vector3(0.08, 0.2, 0.06))
 		Target.SWING_BACK:
-			return cam * Transform3D(Basis(Vector3.FORWARD, -0.5) * Basis(Vector3.RIGHT, -0.7) * rest_pose.basis, rest_pose.origin + Vector3(-0.1, 0.25, 0.1))
+			var back_rot: Basis = Basis(Vector3.UP, 0.35 * _swing_side) * Basis(Vector3.FORWARD, -0.5 * _swing_side) * Basis(Vector3.RIGHT, -0.7)
+			return cam * Transform3D(back_rot * rest_pose.basis, rest_pose.origin + Vector3(-0.14 * _swing_side, 0.25, 0.1))
 		Target.SWING_HIT:
-			return cam * Transform3D(Basis(Vector3.FORWARD, 0.6) * Basis(Vector3.RIGHT, 0.9) * rest_pose.basis, rest_pose.origin + Vector3(0.3, 0.05, -0.35))
+			var hit_rot: Basis = Basis(Vector3.UP, -0.45 * _swing_side) * Basis(Vector3.FORWARD, 0.6 * _swing_side) * Basis(Vector3.RIGHT, 0.9)
+			return cam * Transform3D(hit_rot * rest_pose.basis, rest_pose.origin + Vector3(0.3 * _swing_side, 0.05, -0.35))
 		Target.PLANT:
 			# O cabo inclina para o lado da pá: visto da câmara não fica "de topo".
 			var shaft: Vector3 = (Vector3.UP * 0.85 + _toward * 0.35 + _side * 0.45).normalized()
