@@ -50,6 +50,23 @@
 			"timeout": 60
 		},
 		{
+			"t": 0,
+			"call": "MeteorShower",
+			"method": "trigger"
+		},
+		{
+			"wait_until": "explosions>=1",
+			"timeout": 10
+		},
+		{
+			"t": 0,
+			"call": "GeyserNorte",
+			"method": "trigger"
+		},
+		{
+			"sleep": 1.0
+		},
+		{
 			"sleep": 1.0
 		},
 		{

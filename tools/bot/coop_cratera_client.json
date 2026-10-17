@@ -13,6 +13,14 @@
 			"timeout": 60
 		},
 		{
+			"wait_until": "explosions>=1",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"dump": "c_meteoro"
+		},
+		{
 			"sleep": 1.0
 		},
 		{
