@@ -5,6 +5,8 @@
 ## Etapa 3: Esc (ação "pause") abre e fecha; aba Jogabilidade; em coop o player fica parado com o
 ## menu aberto e anda ao fechar; inverter Y. Acabamento: aviso "Configurações salvas" na frente do
 ## menu, "Descartar alterações?" ao voltar com mudanças, caixas Ligado/Desligado.
+## #100: "Sair para o menu principal" (confirmação por caso; na base salva, em expedição não,
+## em coop sai da sessão) leva à tela inicial, que no --script é pulada para a base.
 extends SceneTree
 
 const SETTINGS_PATH: String = "user://test_saves/pause_menu_test.cfg"
@@ -62,6 +64,7 @@ func _run() -> void:
 	_check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "solo: mouse visível")
 	_check(not menu.return_button.visible and not menu.leave_button.visible, "lobby offline: sem voltar à base nem sair da sessão")
 	_check(menu.continue_button.visible and menu.settings_button.visible and menu.quit_button.visible, "continuar, configurações e sair do jogo visíveis")
+	_check(menu.main_menu_button.visible and menu.main_menu_button.get_index() == menu.quit_button.get_index() - 1, "sair para o menu principal logo antes de sair do jogo")
 	menu.continue_button.pressed.emit()
 	_check(not PauseMenu.is_open() and not paused, "continuar fecha e despausa")
 	_check(_open_signals == [true, false], "open_changed: %s" % str(_open_signals))
@@ -92,6 +95,9 @@ func _run() -> void:
 	menu.open()
 	_check(menu.return_button.visible, "host em expedição: voltar à base visível")
 	_check(not ui.expedition_bar.visible, "cartão da expedição escondido com o menu aberto")
+	menu.main_menu_button.pressed.emit()
+	_check(menu.quit_panel.visible and menu.quit_label.text == PauseMenu.MAIN_MENU_EXPEDITION_TEXT, "menu principal em expedição avisa que não salva")
+	menu.quit_no_button.pressed.emit()
 	menu.close()
 	_check(ui.expedition_bar.visible, "cartão da expedição volta ao fechar")
 	session.set("_current_map", null)
@@ -128,6 +134,12 @@ func _run() -> void:
 	_check(menu.quit_panel.visible and not menu.card.visible, "sair do jogo pede confirmação")
 	menu.quit_no_button.pressed.emit()
 	_check(menu.card.visible and not menu.quit_panel.visible, "cancelar volta ao cartão")
+	menu.main_menu_button.pressed.emit()
+	_check(menu.quit_panel.visible and menu.quit_label.text == PauseMenu.MAIN_MENU_BASE_TEXT and menu.quit_yes_button.text == "Ir para o menu", "menu principal na base: salva agora")
+	menu.quit_no_button.pressed.emit()
+	menu.quit_button.pressed.emit()
+	_check(menu.quit_label.text == PauseMenu.QUIT_TEXT and menu.quit_yes_button.text == "Sair", "sair do jogo volta ao próprio texto")
+	menu.quit_no_button.pressed.emit()
 	menu.close()
 
 	# 6. Coop (host online): não pausa; sair da sessão aparece.
@@ -136,13 +148,42 @@ func _run() -> void:
 	await _wait(3)
 	_check(menu.open() and not paused, "coop: abre sem pausar")
 	_check(menu.leave_button.visible, "coop: sair da sessão visível")
+	menu.main_menu_button.pressed.emit()
+	_check(menu.quit_label.text == PauseMenu.MAIN_MENU_COOP_TEXT, "coop: menu principal sai da sessão")
+	menu.quit_no_button.pressed.emit()
 	menu.close()
 	_check(not PauseMenu.is_open() and not paused, "coop: fecha")
 	await _check_player(menu, sm)
 	net.disconnect_game()
 	await _wait(3)
+	await _check_main_menu(menu)
 
 	_finish()
+
+
+## #100: confirmar "Sair para o menu principal". A tela inicial é pulada no --script, então
+## volta-se à base: sem expedição, despausado, launch_mode limpo; na base o save é gravado.
+func _check_main_menu(menu: PauseMenu) -> void:
+	var save: SaveManager = SaveManager.instance
+	var session: SessionManager = SessionManager.instance
+	if save.has_save_file():
+		save.delete_save_file()
+	session.set("_current_map", load("res://items/maps/praia.tres"))
+	SessionManager.launch_mode = SessionManager.LAUNCH_SOLO
+	menu.open()
+	menu.main_menu_button.pressed.emit()
+	menu.quit_yes_button.pressed.emit()
+	await _wait(10)
+	_check(not PauseMenu.is_open() and not paused, "menu principal: pausa fechada e despausada")
+	_check(not session.is_in_expedition() and SessionManager.launch_mode == "", "expedição e launch_mode limpos")
+	_check(current_scene != null and current_scene.name == "LobbyBase", "título pulado no --script: base (%s)" % (current_scene.name if current_scene != null else "null"))
+	_check(not save.has_save_file(), "em expedição não salva")
+	menu.open()
+	menu.main_menu_button.pressed.emit()
+	menu.quit_yes_button.pressed.emit()
+	await _wait(10)
+	_check(save.has_save_file(), "na base salva antes de ir ao menu")
+	_check(current_scene != null and current_scene.name == "LobbyBase", "de novo na base")
 
 
 func _press(code: Key) -> void:

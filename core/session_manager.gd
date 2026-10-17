@@ -410,3 +410,20 @@ func _find_map(map_id: String) -> MapData:
 
 func _is_online() -> bool:
 	return multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer)
+
+
+## Pausa → "Sair para o menu principal" (#100). Na base (host/offline) salva antes, como ao fim
+## de uma expedição; dentro da expedição não salva (regra de sempre). Em coop sai da sessão pela
+## rotina do "Sair da sessão" (disconnect_game). Depois limpa a expedição e abre a tela inicial.
+func return_to_title() -> void:
+	var save: SaveManager = SaveManager.instance
+	var state: GameState = GameState.instance
+	if _current_map == null and save != null and state != null and state.is_authority() and save.is_progress_applied():
+		save.save_game()
+	if _is_online() and NetworkManager.instance != null:
+		NetworkManager.instance.disconnect_game()
+	_current_map = null
+	_pending_summary = {}
+	_ending = false
+	launch_mode = ""
+	_change_scene(TITLE_SCENE)

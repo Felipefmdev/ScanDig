@@ -73,15 +73,22 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	if auto_skip and should_skip(OS.get_cmdline_args(), OS.get_cmdline_user_args()):
-		# Na hora (não deferred): se o bot também trocar de cena neste frame, vale a dele.
 		SessionManager.launch_mode = ""
-		get_tree().change_scene_to_file(SessionManager.LOBBY_SCENE)
+		_skip_to_lobby()
 		return
 	SessionManager.launch_mode = ""
 	_pivot = get_node_or_null(^"CameraPivot") as Node3D
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_build()
 	show_main()
+
+
+## Um frame depois: se o bot (ou quem abriu o título) já trocou de cena, o título saiu e não faz
+## nada; senão abre a base. Trocar dentro do _ready se perde quando o título veio de uma troca.
+func _skip_to_lobby() -> void:
+	await get_tree().process_frame
+	if is_inside_tree() and get_tree().current_scene == self:
+		get_tree().change_scene_to_file(SessionManager.LOBBY_SCENE)
 
 
 func _process(delta: float) -> void:

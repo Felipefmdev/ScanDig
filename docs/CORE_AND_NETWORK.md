@@ -358,7 +358,8 @@ func start_new_game() -> Error              # host/offline, fora de expedição;
 ### Tela inicial (#100)
 - `run/main_scene` = `res://world/title_screen.tscn` (`TitleScreen`, `ui/title_screen.gd`): Continuar (último slot; some sem save), Novo jogo, Carregar, Coop, Configurações (a SettingsMenu do #77) e Sair, navegáveis por teclado/controle. O fundo 3D é só enfeite: sem jogador, rede nem spawners.
 - Solo: `select_slot` + `continue_game`/`start_new_game`, `SessionManager.launch_mode = "solo"` e a base abre com o MultiplayerMenu oculto. Coop: o slot escolhido é o do host, `launch_mode = "coop"` e o MultiplayerMenu fica aberto, como antes. `launch_mode == ""` (bots, testes, lobby aberto direto) = comportamento de sempre.
-- **Pulada** (`TitleScreen.should_skip(args, user_args)`) com `--script`/`-s` (GUT, testes headless, capturas) ou `--bot=`: troca na hora para o lobby, no slot/caminho de teste. Se o roteiro do bot também trocar de cena no mesmo frame, vale a troca do bot.
+- **Pulada** (`TitleScreen.should_skip(args, user_args)`) com `--script`/`-s` (GUT, testes headless, capturas) ou `--bot=`: um frame depois abre o lobby, no slot/caminho de teste, se o título ainda for a cena atual. Se o roteiro do bot trocou de cena (ex.: `"scene": "res://world/map_praia.tscn"`), vale a do bot.
+- Pausa → "Sair para o menu principal" (com confirmação) chama `SessionManager.return_to_title()`. Na base (host/offline), salva antes; dentro da expedição não salva. Em coop, sai da sessão pelo `disconnect_game()` (a mesma rotina do "Sair da sessão"). Depois limpa a expedição e o `launch_mode` e abre a tela inicial.
 
 ### Arquivos em `user://`
 | Arquivo | Quando |

@@ -1,7 +1,8 @@
 class_name PauseMenu
 extends CanvasLayer
 
-## Menu de pausa (#77): Continuar, Configurações, Voltar à base, Sair da sessão, Sair do jogo.
+## Menu de pausa (#77): Continuar, Configurações, Voltar à base, Sair da sessão, Sair para o menu
+## principal (#100) e Sair do jogo.
 ## Em solo pausa a árvore; em coop não pausa (o player consulta is_open() e para o input local).
 ## Não abre com o carregamento, o resumo do dia ou o aviso de queda do host na tela.
 ## Autoload CorePauseMenu. Abre e fecha pela ação "pause" (Esc); dentro das Configurações ou da
@@ -10,6 +11,9 @@ extends CanvasLayer
 signal open_changed(open: bool)
 
 const QUIT_TEXT: String = "Sair do jogo?\nO progresso da base é salvo ao fim de cada expedição."
+const MAIN_MENU_BASE_TEXT: String = "Voltar ao menu principal?\nO progresso da base é salvo agora."
+const MAIN_MENU_EXPEDITION_TEXT: String = "Voltar ao menu principal?\nA expedição em andamento não é salva."
+const MAIN_MENU_COOP_TEXT: String = "Sair da sessão e voltar ao menu principal?"
 
 static var instance: PauseMenu = null
 
@@ -19,7 +23,9 @@ var continue_button: Button = null
 var settings_button: Button = null
 var return_button: Button = null
 var leave_button: Button = null
+var main_menu_button: Button = null
 var quit_button: Button = null
+var quit_label: Label = null
 var quit_panel: PanelContainer = null
 var quit_yes_button: Button = null
 var quit_no_button: Button = null
@@ -30,6 +36,8 @@ var _open: bool = false
 var _paused_by_me: bool = false
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _fps_refresh: float = 0.0
+## O que o "Sim" da confirmação faz: "quit" (Sair do jogo) ou "title" (menu principal).
+var _confirm_target: String = "quit"
 
 
 static func is_open() -> bool:
@@ -206,15 +214,16 @@ func _build() -> void:
 	settings_button = _button("Configurações")
 	return_button = _button("Voltar à base")
 	leave_button = _button("Sair da sessão", &"DangerButton")
+	main_menu_button = _button("Sair para o menu principal")
 	quit_button = _button("Sair do jogo", &"DangerButton")
-	for button: Button in [continue_button, settings_button, return_button, leave_button, quit_button]:
+	for button: Button in [continue_button, settings_button, return_button, leave_button, main_menu_button, quit_button]:
 		box.add_child(button)
 	card = _card(box)
 	stack.add_child(card)
 
 	var quit_box: VBoxContainer = VBoxContainer.new()
 	quit_box.add_theme_constant_override("separation", 12)
-	var quit_label: Label = Label.new()
+	quit_label = Label.new()
 	quit_label.text = QUIT_TEXT
 	quit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	quit_box.add_child(quit_label)
@@ -234,9 +243,10 @@ func _build() -> void:
 	settings_button.pressed.connect(_on_settings_pressed)
 	return_button.pressed.connect(_on_return_pressed)
 	leave_button.pressed.connect(_on_leave_pressed)
+	main_menu_button.pressed.connect(_on_main_menu_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	quit_no_button.pressed.connect(_show_card)
-	quit_yes_button.pressed.connect(func() -> void: get_tree().quit())
+	quit_yes_button.pressed.connect(_on_confirm_yes)
 	settings_menu.closed.connect(_show_card)
 
 
@@ -291,5 +301,31 @@ func _on_leave_pressed() -> void:
 
 
 func _on_quit_pressed() -> void:
+	_confirm_target = "quit"
+	quit_label.text = QUIT_TEXT
+	quit_yes_button.text = "Sair"
 	card.visible = false
 	quit_panel.visible = true
+
+
+## Mesma confirmação do Sair do jogo, com o texto do caso (base, expedição ou coop).
+func _on_main_menu_pressed() -> void:
+	_confirm_target = "title"
+	var session: Node = _session()
+	var in_expedition: bool = session != null and bool(session.call(&"is_in_expedition"))
+	if _is_online():
+		quit_label.text = MAIN_MENU_COOP_TEXT
+	else:
+		quit_label.text = MAIN_MENU_EXPEDITION_TEXT if in_expedition else MAIN_MENU_BASE_TEXT
+	quit_yes_button.text = "Ir para o menu"
+	card.visible = false
+	quit_panel.visible = true
+
+
+func _on_confirm_yes() -> void:
+	if _confirm_target != "title":
+		get_tree().quit()
+		return
+	close()
+	if SessionManager.instance != null:
+		SessionManager.instance.return_to_title()
