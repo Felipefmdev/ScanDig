@@ -19,6 +19,7 @@ extends Node3D
 @export var open_sides: PackedInt32Array = PackedInt32Array()
 
 const GROUND_MASK: int = 1
+const BACKDROP: Script = preload("res://gameplay/environment/backdrop.gd")
 const AMBIENT_LIFE: Script = preload("res://gameplay/environment/ambient_life.gd")
 const DEFAULT_HALF: float = 28.0
 
@@ -36,6 +37,12 @@ func _ready() -> void:
 	life.name = "AmbientLife"
 	life.set("theme", theme)
 	add_child(life)
+	# Horizonte (Dev_Player, b821829): silhuetas distantes e o mar da Praia.
+	var back: Node3D = BACKDROP.new()
+	back.name = "Backdrop"
+	back.set("theme", theme)
+	back.set("seed_value", seed_value)
+	add_child(back)
 
 
 func build() -> int:
