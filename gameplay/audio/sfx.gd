@@ -21,6 +21,16 @@ const DIG_FAST: Array[String] = [_GEN + "sand_dig_fast_0.wav", _GEN + "sand_dig_
 const DIG_CAREFUL: Array[String] = [_GEN + "sand_dig_careful_0.wav", _GEN + "sand_dig_careful_1.wav"]
 const DIRT_FALL: Array[String] = [_GEN + "sand_throw_0.wav", _GEN + "sand_throw_1.wav"]
 const FOOTSTEP_SAND: Array[String] = [_GEN + "sand_step_0.wav", _GEN + "sand_step_1.wav", _GEN + "sand_step_2.wav", _GEN + "sand_step_3.wav", _GEN + "sand_step_4.wav"]
+const FOOTSTEP_SNOW: Array[String] = [_IMPACT + "footstep_snow_004.ogg"]
+const FOOTSTEP_GRASS: Array[String] = [_IMPACT + "impactSoft_medium_002.ogg"]
+const FOOTSTEP_STONE: Array[String] = [_IMPACT + "impactGeneric_light_000.ogg", _IMPACT + "impactGeneric_light_001.ogg"]
+const FOOTSTEP_CRYSTAL: Array[String] = [_IMPACT + "impactPlate_light_000.ogg", _IMPACT + "impactPlate_light_001.ogg"]
+const FOOTSTEP_WATER: Array[String] = [_GEN + "sand_throw_0.wav", _GEN + "sand_throw_1.wav"]
+const FOOTSTEP_WOOD: Array[String] = [_IMPACT + "impactSoft_medium_002.ogg", _RPG + "dropLeather.ogg"]
+
+const ITEM_IMPACT_METAL: Array[String] = [_IMPACT + "impactPlate_light_000.ogg", _IMPACT + "impactPlate_light_001.ogg", _RPG + "metalClick.ogg"]
+const ITEM_IMPACT_STONE: Array[String] = [_IMPACT + "impactGeneric_light_000.ogg", _IMPACT + "impactGeneric_light_001.ogg"]
+const ITEM_IMPACT_WOOD: Array[String] = [_IMPACT + "impactSoft_medium_002.ogg", _RPG + "dropLeather.ogg"]
 const PICKUP: Array[String] = [_RPG + "handleSmallLeather.ogg"]
 const DROP: Array[String] = [_RPG + "dropLeather.ogg"]
 const DELIVER_COINS: Array[String] = [_RPG + "handleCoins.ogg", _RPG + "handleCoins2.ogg"]
@@ -82,6 +92,51 @@ static func play_ui(sound: Variant, volume_db: float = 0.0, pitch_var: float = 0
 	p.finished.connect(p.queue_free)
 	p.play()
 	return p
+
+
+## Devolve a lista de sons de passos para a superfície `surface` (How to Fish SurfaceManager).
+static func footstep_sound_for_surface(surface: StringName) -> Array[String]:
+	match surface:
+		&"snow", &"neve", &"gelo", &"ice":
+			return FOOTSTEP_SNOW
+		&"grass", &"relva", &"terra", &"dirt":
+			return FOOTSTEP_GRASS
+		&"stone", &"pedra", &"ruinas", &"laje":
+			return FOOTSTEP_STONE
+		&"crystal", &"cristal", &"rocha", &"cratera":
+			return FOOTSTEP_CRYSTAL
+		&"water", &"agua", &"mar":
+			return FOOTSTEP_WATER
+		&"wood", &"madeira":
+			return FOOTSTEP_WOOD
+		_:
+			return FOOTSTEP_SAND
+
+
+## Offset de volume em dB para equalizar o nível aparente do passo de cada material.
+static func footstep_volume_offset(surface: StringName) -> float:
+	match surface:
+		&"stone", &"pedra", &"ruinas", &"laje":
+			return -4.0
+		&"crystal", &"cristal", &"rocha", &"cratera":
+			return -5.0
+		&"water", &"agua", &"mar":
+			return -2.5
+		&"grass", &"relva", &"terra", &"dirt":
+			return -2.0
+		&"wood", &"madeira":
+			return -2.0
+		_:
+			return 0.0
+
+
+## Devolve o som de impacto para o tipo de material de um item.
+static func item_impact_sound(material_type: int) -> Array[String]:
+	match material_type:
+		0, 1, 2, 3:  # FERRO, ALUMINIO, PRATA, OURO
+			return ITEM_IMPACT_METAL
+		_:
+			return ITEM_IMPACT_STONE
 
 
 static func _resolve(sound: Variant) -> AudioStream:

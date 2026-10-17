@@ -205,6 +205,9 @@ func _ready() -> void:
 	collision_layer = 1 << 4  # layer 5: objetos apanháveis (layer 4 = inimigos)
 	collision_mask = 1        # colide com o chão/mundo
 	continuous_cd = true
+	max_contacts_reported = 3
+	contact_monitor = true
+	body_entered.connect(_on_body_entered)
 
 	var shape: CollisionShape3D = CollisionShape3D.new()
 	var box: BoxShape3D = BoxShape3D.new()
@@ -244,6 +247,34 @@ func _ready() -> void:
 func set_highlighted(on: bool) -> void:
 	if _label != null:
 		_label.visible = on
+
+
+var _last_impact_time: float = -1.0
+
+
+func _on_body_entered(_body: Node) -> void:
+	var speed: float = linear_velocity.length()
+	if speed < 0.9:
+		return
+	var now: float = float(Time.get_ticks_msec()) / 1000.0
+	if _last_impact_time > 0.0 and (now - _last_impact_time) < 0.12:
+		return
+	_last_impact_time = now
+
+	var sound: Array[String] = SFX.ITEM_IMPACT_STONE
+	if carried != null:
+		if carried.item != null:
+			sound = SFX.item_impact_sound(carried.item.material_type)
+		elif carried.tool_data != null:
+			if carried.tool_data.category == ToolData.Category.FOOD:
+				sound = SFX.ITEM_IMPACT_WOOD
+			elif carried.tool_data.id in ["estilingue", "vara_pesca"]:
+				sound = SFX.ITEM_IMPACT_WOOD
+			else:
+				sound = SFX.ITEM_IMPACT_METAL
+
+	var vol_db: float = clampf(-12.0 + (speed - 1.0) * 1.5, -14.0, 2.0)
+	SFX.play_at(sound, global_position, vol_db, 0.1)
 
 
 ## Retira o item do mundo e devolve-o para a mochila.

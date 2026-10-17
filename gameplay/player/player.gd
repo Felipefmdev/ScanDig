@@ -3025,6 +3025,7 @@ func _apply_horizontal_movement(direction: Vector3, input_dir: Vector2, on_floor
 
 ## Passos e balanço da câmera na mesma fase: um passo a cada STEP_LENGTH metros,
 ## e o som sai quando a câmera chega ao ponto mais baixo (pé tocando o chão).
+## How to Fish SurfaceManager: o som do passo depende do mapa e do chão pisado.
 func _update_footsteps(delta: float) -> void:
 	var horizontal: float = Vector2(velocity.x, velocity.z).length()
 	var walking: bool = is_on_floor() and horizontal >= 0.5
@@ -3033,11 +3034,109 @@ func _update_footsteps(delta: float) -> void:
 		var prev_step: int = int(floor(_bob_phase / PI))
 		_bob_phase += horizontal * delta * PI / STEP_LENGTH
 		if int(floor(_bob_phase / PI)) != prev_step and footsteps_enabled:
-			SFX.play_at(SFX.FOOTSTEP_SAND, global_position, footsteps_volume_db + randf_range(-1.5, 1.5), 0.05)
+			var surface: StringName = _detect_surface_type()
+			var sfx_list: Array[String] = SFX.footstep_sound_for_surface(surface)
+			var vol_offset: float = SFX.footstep_volume_offset(surface)
+			SFX.play_at(sfx_list, global_position, footsteps_volume_db + vol_offset + randf_range(-1.5, 1.5), 0.06)
 	else:
 		# O 1.o passo sai pouco depois de arrancar.
 		_bob_phase = PI * 0.4
 	_apply_head_bob(horizontal)
+
+
+## Deteta a superfície por baixo do jogador (How to Fish SurfaceManager).
+func _detect_surface_type() -> StringName:
+	var map_id: String = _current_map_id()
+	# 1. Água rasa na praia (cota próxima ou abaixo da linha da água)
+	if map_id == "praia" and global_position.y <= 0.08:
+		return &"water"
+
+	# 2. Inspecionar o collider físico do chão pisado
+	var floor_obj: Object = _get_floor_collider()
+	if floor_obj != null:
+		var s: StringName = _surface_type_from_node(floor_obj)
+		if s != &"":
+			return s
+
+	# 3. Fallback por mapa
+	match map_id:
+		"praia":
+			return &"sand"
+		"campo":
+			return &"grass"
+		"ruinas":
+			return &"stone"
+		"geleira":
+			return &"snow"
+		"cratera":
+			return &"crystal"
+		_:
+			return &"sand"
+
+
+func _get_floor_collider() -> Object:
+	for i: int in get_slide_collision_count():
+		var col: KinematicCollision3D = get_slide_collision(i)
+		if col != null and col.get_normal().y > 0.5:
+			return col.get_collider()
+	var world3d: World3D = get_world_3d()
+	if world3d != null and is_inside_tree():
+		var space_state: PhysicsDirectSpaceState3D = world3d.direct_space_state
+		if space_state != null:
+			var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+				global_position + Vector3.UP * 0.2,
+				global_position + Vector3.DOWN * 0.6
+			)
+			query.exclude = [get_rid()]
+			var res: Dictionary = space_state.intersect_ray(query)
+			if not res.is_empty() and res.has("collider"):
+				return res["collider"]
+	return null
+
+
+func _surface_type_from_node(node: Object) -> StringName:
+	var target_node: Node = node as Node
+	if target_node == null:
+		return &""
+
+	var curr: Node = target_node
+	var depth: int = 0
+	while curr != null and depth < 3:
+		if curr.is_in_group(&"water") or curr.is_in_group(&"agua"):
+			return &"water"
+		if curr.is_in_group(&"stone") or curr.is_in_group(&"pedra") or curr.is_in_group(&"laje"):
+			return &"stone"
+		if curr.is_in_group(&"wood") or curr.is_in_group(&"madeira"):
+			return &"wood"
+		if curr.is_in_group(&"snow") or curr.is_in_group(&"neve") or curr.is_in_group(&"ice") or curr.is_in_group(&"gelo"):
+			return &"snow"
+		if curr.is_in_group(&"crystal") or curr.is_in_group(&"cristal") or curr.is_in_group(&"cratera"):
+			return &"crystal"
+		if curr.is_in_group(&"grass") or curr.is_in_group(&"relva") or curr.is_in_group(&"terra"):
+			return &"grass"
+		if curr.is_in_group(&"sand") or curr.is_in_group(&"areia"):
+			return &"sand"
+
+		var n_name: String = curr.name.to_lower()
+		if "water" in n_name or "sea" in n_name or "mar" in n_name or "agua" in n_name:
+			return &"water"
+		if "wood" in n_name or "madeira" in n_name or "plank" in n_name or "pier" in n_name or "deck" in n_name:
+			return &"wood"
+		if "slab" in n_name or "laje" in n_name or "stone" in n_name or "pedra" in n_name or "altar" in n_name or "pilar" in n_name:
+			return &"stone"
+		if "snow" in n_name or "neve" in n_name or "ice" in n_name or "gelo" in n_name:
+			return &"snow"
+		if "crystal" in n_name or "cristal" in n_name or "basalt" in n_name:
+			return &"crystal"
+		if "grass" in n_name or "relva" in n_name or "dirt" in n_name:
+			return &"grass"
+		if "sand" in n_name or "areia" in n_name:
+			return &"sand"
+
+		curr = curr.get_parent()
+		depth += 1
+
+	return &""
 
 
 func _apply_head_bob(horizontal: float) -> void:
