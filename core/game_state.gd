@@ -532,9 +532,21 @@ func _host_report_secret(secret_id: String) -> void:
 
 
 ## Uma criatura morreu (no host). Primeira vez de cada tipo entra no diário.
+## Golpe de um convidado (EnemyBase._rpc_request_hit → _die): ainda estamos dentro da RPC dele,
+## get_remote_sender_id() é o convidado e o _is_host_sender recusaria. Adiado, roda fora da RPC
+## (sender 0), como o QuestRewards faz com missões e segredos (#83). Fora de RPC segue síncrono.
 func report_creature(kind: String) -> void:
-	if is_authority():
+	if not is_authority():
+		return
+	if _inside_remote_rpc(multiplayer.get_remote_sender_id()):
+		_host_report_creature.call_deferred(kind)
+	else:
 		_host_report_creature(kind)
+
+
+## Dentro de uma RPC vinda de outro peer (nem chamada local nem do host).
+static func _inside_remote_rpc(sender_id: int) -> bool:
+	return sender_id != 0 and sender_id != HOST_PEER_ID
 
 
 @rpc("any_peer", "call_remote", "reliable")
