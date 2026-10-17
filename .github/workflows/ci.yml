@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   tests:
@@ -47,3 +48,70 @@ jobs:
       # Testes headless do Dev B (core/tests e ui/tests, "RESULT fails=N") e pares de rede local.
       - name: Headless tests (core/tests, ui/tests)
         run: bash tools/run_headless_tests.sh ./godot
+
+  # Build do Windows (#101): só no main (push) ou à mão (workflow_dispatch), depois dos testes.
+  # PR não exporta. Preset "Windows Desktop" em export_presets.cfg (x86_64, PCK embutido).
+  export-windows:
+    needs: tests
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.3"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+          chmod +x godot
+
+      # Só os templates do Windows x86_64 (o .tpz inteiro tem ~1 GB).
+      - name: Cache export templates
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/4.3.stable
+          key: godot-export-templates-4.3-stable-windows-x86_64
+
+      - name: Download export templates (cache miss)
+        if: steps.templates.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
+          curl -sSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -o -j -q templates.tpz templates/version.txt             templates/windows_release_x86_64.exe templates/windows_release_x86_64_console.exe             templates/windows_debug_x86_64.exe templates/windows_debug_x86_64_console.exe             -d ~/.local/share/godot/export_templates/4.3.stable
+          rm templates.tpz
+          ls -la ~/.local/share/godot/export_templates/4.3.stable
+
+      - name: Import project
+        run: ./godot --headless --path . --import
+
+      # O plugin GUT (só do editor) reclama do próprio config no export: essa linha é ignorada.
+      - name: Export Windows (release)
+        run: |
+          mkdir -p build/windows
+          ./godot --headless --path . --export-release "Windows Desktop" build/windows/ScanDig.exe 2>&1 | tee export.log
+          if [ ! -f build/windows/ScanDig.exe ]; then
+            echo "::error::build/windows/ScanDig.exe não foi gerado"
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|ERROR: " export.log | grep -v "gut_editor_config.json"; then
+            echo "::error::erro no export (ver acima)"
+            exit 1
+          fi
+          ls -la build/windows
+
+      - name: Zip
+        run: |
+          cd build/windows
+          zip -q -9 ../../ScanDig-windows.zip ScanDig.exe
+          cd ../..
+          ls -la ScanDig-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScanDig-windows
+          path: ScanDig-windows.zip
+          retention-days: 14
+          if-no-files-found: error
