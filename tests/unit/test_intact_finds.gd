@@ -44,3 +44,21 @@ func test_museum_line_shows_seal() -> void:
 	var item: ItemData = load("res://items/catalog/moeda_antiga.tres") as ItemData
 	assert_string_contains(BaseStationUI.museum_line(item, true, true), "intacto")
 	assert_false(BaseStationUI.museum_line(item, true, false).contains("intacto"))
+
+
+func test_hard_impact_and_explosion_crack_loose_find() -> void:
+	var item: ItemData = load("res://items/catalog/moeda_antiga.tres") as ItemData
+	item = item.duplicate() as ItemData
+	item.fragility = 0.8
+	var c: CarriedItem = CarriedItem.create(item, item.base_value, 1.0, false, true)
+	var pickup: ItemPickup = ItemPickup.spawn(self, c, Vector3.ZERO, Vector3.ZERO)
+	pickup.crack(ItemPickup.EXPLOSION_CRACK)
+	assert_false(c.is_clean, "explosão perto: perdeu o selo")
+	assert_lt(c.integrity, 1.0)
+	pickup.queue_free()
+
+
+func test_style_bonuses_are_gone() -> void:
+	var gs: GameState = GameState.instance
+	assert_false(gs.has_method("style_bonus_amount"))
+	assert_false(gs.has_method("request_style_bonus"))

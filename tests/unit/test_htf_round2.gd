@@ -202,42 +202,6 @@ func test_wear_survives_network_roundtrip_and_is_validated() -> void:
 	assert_string_contains(back.get_display_name(), "%", "mostra o estado")
 
 
-# --- 7. Bónus de estilo ------------------------------------------------------
-
-func test_style_bonus_scales_with_map_income() -> void:
-	var praia: int = GameState.style_bonus_amount("multi", "praia")
-	var geleira: int = GameState.style_bonus_amount("multi", "geleira")
-	assert_gt(praia, 0)
-	assert_gt(geleira, praia * 20, "mapas ricos pagam proporcionalmente")
-	assert_eq(GameState.style_bonus_amount("inventado", "praia"), 0, "tipo desconhecido não paga")
-
-
-func test_host_pays_once_per_cooldown() -> void:
-	var gs: GameState = GameState.instance
-	var money0: int = gs.team_money
-	gs._style_last_ms.clear()
-	gs._host_style_bonus("multi")
-	var paid: int = gs.team_money - money0
-	assert_gt(paid, 0, "pagou")
-	gs._host_style_bonus("multi")
-	assert_eq(gs.team_money - money0, paid, "spam ignorado dentro do cooldown")
-	gs._host_style_bonus("hack")
-	assert_eq(gs.team_money - money0, paid, "tipo desconhecido ignorado")
-	gs.team_money = money0
-
-
-func test_player_detects_style_kills() -> void:
-	var player: Player = PLAYER_SCENE.instantiate() as Player
-	add_child_autofree(player)
-	assert_eq(player.on_style_kill("", player.global_position + Vector3(2, 0, 0)), [], "abate normal: nada")
-	var second: Array[String] = player.on_style_kill("", player.global_position + Vector3(2, 0, 0))
-	assert_true(second.has("multi"), "dois seguidos: multi")
-	player._style_kill_times.clear()
-	assert_true(player.on_style_kill("", player.global_position + Vector3(20, 0, 0)).has("longe"), "de longe")
-	player._style_kill_times.clear()
-	assert_true(player.on_style_kill("arremesso", player.global_position).has("arremesso"))
-
-
 # --- HUD dos sistemas novos --------------------------------------------------
 
 func test_extra_hud_shows_throw_charge_and_weight() -> void:

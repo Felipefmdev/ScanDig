@@ -1052,6 +1052,7 @@ func take_damage(amount: float) -> void:
 		_show_temporary_message("Engasgou com o golpe: parou de comer!", UiPalette.ORANGE, 1.2)
 	health = clampf(health - amount, 0.0, max_health)
 	health_changed.emit(health, max_health)
+	_jostle_fragile_finds(amount)
 	_shake_camera(0.03, 0.25)
 	if health > 0.0:
 		SFX.play_ui(SFX.PLAYER_HURT, -2.0)
@@ -2053,39 +2054,21 @@ func update_tool_sway(delta: float) -> void:
 	tool_sway.rotation = Vector3(-_sway_offset.y * k + equip * 0.5, _sway_offset.x * k, -_sway_offset.x * k * 0.6)
 
 
-## Bónus de estilo: abates seguidos, de longe, por arremesso ou explosão.
-const STYLE_MULTI_WINDOW_MS: int = 3000
-const STYLE_LONG_DISTANCE: float = 12.0
-var _style_kill_times: Array[int] = []
-## Tipo do golpe a ser registado por _register_hit ("" = corpo a corpo/tiro normal).
-var _hit_kind: String = ""
+## Achados intactos (#93): um golpe sacode a mochila; achados frágeis racham (fragility × golpe).
+const JOSTLE_DAMAGE_PER_HP: float = 0.006
 
 
-## Regista um abate deste jogador; devolve os tipos de bónus pedidos ao host.
-func on_style_kill(kind: String, target_pos: Vector3) -> Array[String]:
-	var bonuses: Array[String] = []
-	var now: int = Time.get_ticks_msec()
-	_style_kill_times.append(now)
-	while not _style_kill_times.is_empty() and now - _style_kill_times[0] > STYLE_MULTI_WINDOW_MS:
-		_style_kill_times.pop_front()
-	if _style_kill_times.size() >= 2:
-		bonuses.append("multi")
-	if kind == "arremesso" or kind == "explosao":
-		bonuses.append(kind)
-	elif global_position.distance_to(target_pos) >= STYLE_LONG_DISTANCE:
-		bonuses.append("longe")
-	if bonuses.is_empty():
-		return bonuses
-	var map_id: String = _current_map_id()
-	var names: PackedStringArray = []
-	var total: int = 0
-	for b: String in bonuses:
-		names.append(str(GameState.STYLE_BONUSES[b]["name"]))
-		total += GameState.style_bonus_amount(b, map_id)
-		if GameState.instance != null:
-			GameState.instance.request_style_bonus(b)
-	_show_temporary_message("✨ %s! +%s" % [" + ".join(names), MoneyFormat.money(total)], UiPalette.GOLD, 1.6)
-	return bonuses
+func _jostle_fragile_finds(amount: float) -> void:
+	var lost: PackedStringArray = []
+	for c: CarriedItem in inventory.slots:
+		if c == null or c.item == null or c.item.fragility <= 0.0:
+			continue
+		if c.damage_integrity(c.item.fragility * amount * JOSTLE_DAMAGE_PER_HP):
+			lost.append(c.item.display_name)
+	if not lost.is_empty() or inventory.slots.any(func(c: CarriedItem) -> bool: return c != null and c.item != null and c.item.fragility > 0.0):
+		inventory.notify_changed()
+	if not lost.is_empty():
+		_show_temporary_message("💔 %s rachou com o golpe: já não está intacto." % ", ".join(lost), UiPalette.ORANGE, 1.8)
 
 
 ## Hitmarker na mira + número de dano no alvo (só no jogador local).
@@ -2096,7 +2079,6 @@ func _register_hit(target: Node3D, damage: float) -> void:
 	_hit_feedback.show_hit(target.global_position + Vector3.UP * 0.6, damage, killed)
 	if killed:
 		_shake_camera(0.06, 0.25)  # matar pesa mais que acertar
-		on_style_kill(_hit_kind, target.global_position)
 
 
 # ---------------------------------------------------------------------------
@@ -2253,10 +2235,7 @@ func _drop_selected(charge: float = 0.0) -> void:
 	var pos: Vector3 = camera.global_position + fwd * 0.7 + Vector3.DOWN * 0.3
 	var thrown: ItemPickup = ItemPickup.spawn(get_parent(), c, pos, get_throw_impulse(charge))
 	if thrown != null and charge > 0.0:
-		thrown.impacted.connect(func(e: Node3D, dmg: float) -> void:
-			_hit_kind = "arremesso"
-			_register_hit(e, dmg)
-			_hit_kind = "")
+		thrown.impacted.connect(func(e: Node3D, dmg: float) -> void: _register_hit(e, dmg))
 	SFX.play_at(SFX.DROP if charge < 0.3 else SFX.SLINGSHOT_FIRE, pos, -3.0)
 
 

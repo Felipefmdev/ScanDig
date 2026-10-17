@@ -407,6 +407,8 @@ func _on_body_entered(_body: Node) -> void:
 	if _last_impact_time > 0.0 and (now - _last_impact_time) < 0.12:
 		return
 	_last_impact_time = now
+	if speed >= CRACK_SPEED and (multiplayer.multiplayer_peer == null or is_multiplayer_authority()):
+		crack((speed - CRACK_SPEED + 1.0) * CRACK_PER_SPEED)
 
 	var sound: Array[String] = SFX.ITEM_IMPACT_STONE
 	if carried != null:
@@ -422,6 +424,18 @@ func _on_body_entered(_body: Node) -> void:
 
 	var vol_db: float = clampf(-12.0 + (speed - 1.0) * 1.5, -14.0, 2.0)
 	SFX.play_at(sound, global_position, vol_db, 0.1)
+
+
+## Achados intactos (#93): impactos fortes e explosões racham achados frágeis no chão.
+const CRACK_SPEED: float = 7.0
+const CRACK_PER_SPEED: float = 0.04
+const EXPLOSION_CRACK: float = 0.35
+
+
+func crack(amount: float) -> void:
+	if carried == null or carried.item == null or carried.item.fragility <= 0.0:
+		return
+	carried.damage_integrity(carried.item.fragility * amount)
 
 
 ## Retira o item do mundo e devolve-o para a mochila.
