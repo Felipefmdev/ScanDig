@@ -25,6 +25,8 @@ enum QuestState { OFFER, ACTIVE, READY, EVENT, DONE }
 ## Item do catálogo largado ao concluir (ex. concha_dourada).
 @export var reward_item_id: String = ""
 @export var reward_drop_offset: Vector3 = Vector3(0.0, 1.2, -1.5)
+## Item/criatura que faz o NPC reagir ao ver na mão do jogador a <= 4 m (How to Fish QuestLineType.HoldingItem, #87).
+@export var holding_item_id: String = ""
 
 @export_group("Falas")
 @export_multiline var line_offer: String = ""
@@ -35,6 +37,18 @@ enum QuestState { OFFER, ACTIVE, READY, EVENT, DONE }
 @export_multiline var line_failed: String = ""
 @export_multiline var line_win: String = ""
 @export_multiline var line_done: String = ""
+@export_multiline var line_holding: String = ""
+
+const HOLDING_DETECT_RANGE: float = 4.0
+const HOLDING_REACT_COOLDOWN: float = 10.0
+const DEFAULT_HOLDING_LINE: String = "É isso! Traz cá!"
+const QUEST_HOLDING_ITEMS: Dictionary = {
+	"ze_anzol": ["concha_dourada", "alianca_ouro", "bussola_naufragio", "medalhao_sereia", "mapa_na_garrafa", "tatuira", "marisco"],
+	"lurdes_chaves": ["chave_enferrujada", "sino_bronze", "anel_do_poco", "ferradura_velha"],
+	"ines_camara": ["idolo_jade", "idolo_ouro", "escaravelho_jade", "adaga_cerimonial", "mascara_ouro"],
+	"bjorn_expedicao": ["bussola_antiga", "bussola_congelada", "cronometro_explorador", "lanterna_expedicao", "crampon_enferrujado", "medalha_polar"],
+	"vega_sinal": ["cristal_eco", "orbe_vibrante", "geodo_estrelar", "engrenagem_alienigena", "fragmento_meteorito", "nucleo_adormecido"],
+}
 
 var _marker: Label3D = null
 var _model: Node3D = null
@@ -47,6 +61,9 @@ var _mouth_node: Node3D = null
 var _look_yaw: float = 0.0
 var _look_pitch: float = 0.0
 var _talk_time: float = 0.0
+var _holding_cooldown_left: float = 0.0
+var _was_holding_in_range: bool = false
+var _last_held_item_id: String = ""
 
 
 func _ready() -> void:
@@ -93,16 +110,95 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	_bob_time += delta
 	if _marker.visible:
-		_marker.position.y = focus_offset.y + 1.25 + sin(_bob_time * 3.0) * 0.06
+		var marker_lift: float = 1.62 if _say_left > 0.0 else 1.25
+		_marker.position.y = focus_offset.y + marker_lift + sin(_bob_time * 3.0) * 0.06
+
+	var local_player: Node3D = get_tree().get_first_node_in_group(&"player") as Node3D if is_inside_tree() else null
+	_check_holding_reaction(delta, local_player)
 
 	# Estudo How to Fish (NPC.cs): respiração/balanço, olhar que segue e boca ao falar
 	if _model != null:
 		if _head_node == null:
 			_cache_face_parts()
-		_process_npc_life(delta)
+		_process_npc_life(delta, local_player)
 
 
-func _process_npc_life(delta: float) -> void:
+## Devolve o id do item/ferramenta/comida atualmente selecionado na mão do jogador (ou "").
+static func get_player_held_item_id(player: Node) -> String:
+	if player == null:
+		return ""
+	if player.has_method(&"get_held_item_id"):
+		var id_val: String = str(player.call(&"get_held_item_id"))
+		if not id_val.is_empty():
+			return id_val
+	if "held_item_id" in player and not str(player.get("held_item_id")).is_empty():
+		return str(player.get("held_item_id"))
+	if "inventory" in player and player.inventory != null and player.inventory.has_method(&"get_selected"):
+		var sel: Variant = player.inventory.call(&"get_selected")
+		if sel != null:
+			if "item" in sel and sel.item != null and "id" in sel.item:
+				return str(sel.item.id)
+			if "tool_id" in sel and not String(sel.tool_id).is_empty():
+				return String(sel.tool_id)
+			if "tool_data" in sel and sel.tool_data != null and "id" in sel.tool_data:
+				return str(sel.tool_data.id)
+	if "held_tool_id" in player and not String(player.get("held_tool_id")).is_empty():
+		return String(player.get("held_tool_id"))
+	if player.has_method(&"get_selected_item"):
+		var sel_item: Variant = player.call(&"get_selected_item")
+		if sel_item is Dictionary and sel_item.has("id"):
+			return str(sel_item["id"])
+		if sel_item != null and "id" in sel_item:
+			return str(sel_item.get("id"))
+	return ""
+
+
+## Verdadeiro se `item_id` for o item pedido/associado a este NPC (#87).
+func is_matching_holding_item(item_id: String) -> bool:
+	if item_id.is_empty():
+		return false
+	if not holding_item_id.is_empty():
+		for part: String in holding_item_id.split(","):
+			if part.strip_edges() == item_id:
+				return true
+	if not reward_item_id.is_empty() and item_id == reward_item_id:
+		return true
+	if QUEST_HOLDING_ITEMS.has(quest_id):
+		var list: Array = QUEST_HOLDING_ITEMS[quest_id]
+		if list.has(item_id):
+			return true
+	return false
+
+
+func _check_holding_reaction(delta: float = 0.0, local_player: Node3D = null) -> void:
+	if _holding_cooldown_left > 0.0:
+		_holding_cooldown_left = maxf(_holding_cooldown_left - delta, 0.0)
+	if local_player == null and is_inside_tree():
+		local_player = get_tree().get_first_node_in_group(&"player") as Node3D
+	if state == QuestState.EVENT or local_player == null:
+		_was_holding_in_range = false
+		_last_held_item_id = ""
+		return
+	var dist: float = global_position.distance_to(local_player.global_position)
+	if dist > HOLDING_DETECT_RANGE:
+		_was_holding_in_range = false
+		_last_held_item_id = ""
+		return
+	var held_id: String = get_player_held_item_id(local_player)
+	if not is_matching_holding_item(held_id):
+		_was_holding_in_range = false
+		_last_held_item_id = ""
+		return
+	var should_trigger: bool = (not _was_holding_in_range) or (held_id != _last_held_item_id) or (_holding_cooldown_left <= 0.0)
+	if should_trigger and _say_left <= 0.0:
+		var text: String = line_holding if not line_holding.is_empty() else DEFAULT_HOLDING_LINE
+		show_say(text, 4.0)
+		_holding_cooldown_left = HOLDING_REACT_COOLDOWN
+		_was_holding_in_range = true
+		_last_held_item_id = held_id
+
+
+func _process_npc_life(delta: float, p_local_player: Node3D = null) -> void:
 	# 1. Respiração e balanço suave (idle breathing)
 	var breath: float = sin(_bob_time * 2.2)
 	_model.position.y = _model_base_pos.y + breath * 0.015
@@ -112,14 +208,16 @@ func _process_npc_life(delta: float) -> void:
 	# 2. Olhos e cabeça que seguem o jogador mais próximo
 	var player_pos: Vector3 = Vector3.ZERO
 	var has_player: bool = false
-	var cam: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
-	if cam != null and global_position.distance_to(cam.global_position) <= 7.0:
-		player_pos = cam.global_position
+	var p: Node3D = p_local_player
+	if p == null and is_inside_tree():
+		p = get_tree().get_first_node_in_group(&"player") as Node3D
+	if p != null and global_position.distance_to(p.global_position) <= 7.0:
+		player_pos = p.global_position + Vector3(0, 1.4, 0)
 		has_player = true
-	elif is_inside_tree():
-		var p: Node3D = get_tree().get_first_node_in_group(&"player") as Node3D
-		if p != null and global_position.distance_to(p.global_position) <= 7.0:
-			player_pos = p.global_position + Vector3(0, 1.4, 0)
+	else:
+		var cam: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
+		if cam != null and global_position.distance_to(cam.global_position) <= 7.0:
+			player_pos = cam.global_position
 			has_player = true
 
 	if has_player:
