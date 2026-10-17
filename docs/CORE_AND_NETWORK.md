@@ -11,6 +11,7 @@ Documentação técnica de `res://core/` e `res://ui/`. Se algo aqui divergir do
 | `CoreSave` | `res://core/save_manager.gd` | `SaveManager` | `SaveManager.instance` |
 | `CoreSession` | `res://core/session_manager.gd` | `SessionManager` | `SessionManager.instance` ou `/root/CoreSession` |
 | `CoreSettings` | `res://core/settings_manager.gd` | `SettingsManager` | `SettingsManager.instance` |
+| `CoreWeather` | `res://core/weather_manager.gd` | `WeatherManager` | `WeatherManager.instance`; no gameplay, `WeatherManager.now_*()` (neutros sem o autoload) |
 | `CoreSessionUI` | `res://ui/session_ui.tscn` | `SessionUI` | `/root/CoreSessionUI` |
 | `CorePauseMenu` | `res://ui/pause_menu.tscn` | `PauseMenu` | `PauseMenu.instance`, `PauseMenu.is_open()` (camada 45) |
 | `CoreVictoryScreen` | `res://ui/victory_screen.tscn` | `VictoryScreen` | `VictoryScreen.instance`, `VictoryScreen.is_open()` (camada 46; a SessionUI, 50, cobre) |
@@ -281,6 +282,13 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 - Os outros peers não mudam: se um cliente sai, o host recebe `peer_disconnected`; se o host sai, os clientes recebem `server_disconnected` → `host_lost`.
 - O botão "Sair da sessão" da UI deve chamar `disconnect_game()`.
 
+### Clima por mapa (`CoreWeather`, #99)
+- Eventos por mapa em `WeatherManager.WEATHER_BY_MAP`: chuva (`rain`) na Praia e no Campo, nevasca (`blizzard`) na Geleira e tempestade de cinzas (`ashstorm`) na Cratera. Ruínas não tem evento. Cada mapa define `warning_s`, `duration_min/max`, `interval_min/max` e `intensity`. Os efeitos no auge ficam em `EFFECTS_BY_KIND`. **Tempos e intensidades se ajustam só nessas duas constantes.**
+- Fases: `none` → `warning` (aviso, ainda neutro) → `active` (modificadores valem) → `none`. `signal weather_changed(kind, phase)`; no fim do evento sai com o tipo que acabou e `phase == "none"`.
+- Autoridade: o host agenda (RNG próprio) a partir do `expedition_started` e para em `expedition_ending`/`scene_changing`. A cada fase aplica localmente e faz `HostSync.broadcast(self, &"_rpc_sync", [get_state()])`. Quem entra no meio recebe o estado pelo `HostSync.on_peer_ready` → `send_to`. Os clientes só aplicam (`_rpc_sync`), nunca agendam; cada peer volta sozinho ao neutro na troca de cena.
+- API (neutra sem evento ativo): `dig_speed_mult()`, `detector_noise()` (0..1), `radar_scale()`, `hunger_mult()`, `current_kind()`, `phase()`, `is_active()`. Testes e bots usam `force_weather()` (host, evento do mapa atual com aviso de 3 s), `force_event(kind, duration)`, `tick(delta)` e `set_seed(n)`. No bot: `{"call": "CoreWeather", "method": "force_weather"}`.
+- Visual e aviso (`CoreWeatherUI`, `ui/weather_hud.gd`): só para o jogador local. O `Environment` do mapa é trocado por uma cópia durante o evento e o original volta no fim (nada gravado nos `.tres`). A opção `[video] strong_weather_fx` só reduz partículas e névoa; os modificadores de jogo não mudam.
+
 ## 3. Save (`user://scandig_save.json`, versão 4)
 
 ```json
@@ -399,6 +407,13 @@ $G --headless --path . --script res://core/tests/net_room_errors_test.gd  # cód
 until grep -q victory_sent /tmp/vh.log; do sleep 1; done; sleep 1
 timeout 60 $G --headless --path . --script res://core/tests/net_victory_client.gd -- --late; sleep 6
 grep RESULT /tmp/vh.log /tmp/vc.log                                  # "fails=0" nos três
+
+# Clima (#99, porta 7813): cliente na Praia recebe aviso → ativo; o que entra no meio recebe o ativo
+(timeout 100 $G --headless --path . --script res://core/tests/weather_net_host.gd > /tmp/wh.log 2>&1 &); sleep 3
+(timeout 80 $G --headless --path . --script res://core/tests/weather_net_client.gd > /tmp/wc.log 2>&1 &)
+until grep -q weather_active /tmp/wh.log; do sleep 1; done; sleep 1
+timeout 80 $G --headless --path . --script res://core/tests/weather_net_client.gd -- --late; sleep 8
+grep RESULT /tmp/wh.log /tmp/wc.log                                  # "fails=0" nos três
 
 [ -f "$SAVE.bak" ] && mv "$SAVE.bak" "$SAVE"                       # restaura o save
 ```
