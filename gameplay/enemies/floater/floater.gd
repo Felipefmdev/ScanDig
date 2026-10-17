@@ -240,15 +240,24 @@ func _build_model() -> void:
 		var side_pos: Vector3 = Vector3(cos(ang) * 0.55, 0.55, sin(ang) * 0.55)
 		LowPolyMesh.prism(st, side_pos, side_pos * 1.45 + Vector3.UP * 0.15, 0.09, 0.0, 4, CYAN_CRYSTAL)
 
-	# 3 Olhos cómicos agrupados na face (referência: criatura_flutuante.jpg)
-	var eye_positions: Array[Vector3] = [
-		Vector3(-0.16, 0.54, -0.52),
-		Vector3(0.0, 0.68, -0.48),
-		Vector3(0.18, 0.56, -0.50)
-	]
-	for ep: Vector3 in eye_positions:
-		LowPolyMesh.box(st, ep, Vector3(0.14, 0.14, 0.08), Basis.IDENTITY, EYE_WHITE)
-		LowPolyMesh.box(st, ep + Vector3(0.0, 0.0, -0.05), Vector3(0.06, 0.06, 0.02), Basis.IDENTITY, EYE_PUPIL)
+	# 3 Olhos cómicos esbugalhados salientes na face frontal (referência: criatura_flutuante.jpg)
+	# Olho central (maior e ligeiramente superior)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.64, -0.50), Vector3(0.0, 0.65, -0.70), 0.16, 0.14, 8, ROCK_DARK)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.65, -0.68), Vector3(0.0, 0.65, -0.82), 0.16, 0.15, 8, EYE_WHITE)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.65, -0.80), Vector3(0.0, 0.65, -0.835), 0.08, 0.07, 8, EYE_PUPIL)
+	LowPolyMesh.prism(st, Vector3(0.03, 0.68, -0.82), Vector3(0.03, 0.68, -0.84), 0.03, 0.02, 6, EYE_WHITE)
+
+	# Olho esquerdo
+	LowPolyMesh.prism(st, Vector3(-0.24, 0.55, -0.48), Vector3(-0.28, 0.55, -0.66), 0.14, 0.12, 8, ROCK_DARK)
+	LowPolyMesh.prism(st, Vector3(-0.28, 0.55, -0.64), Vector3(-0.31, 0.55, -0.77), 0.14, 0.13, 8, EYE_WHITE)
+	LowPolyMesh.prism(st, Vector3(-0.30, 0.55, -0.75), Vector3(-0.31, 0.55, -0.785), 0.07, 0.06, 8, EYE_PUPIL)
+	LowPolyMesh.prism(st, Vector3(-0.28, 0.58, -0.77), Vector3(-0.28, 0.58, -0.79), 0.025, 0.018, 6, EYE_WHITE)
+
+	# Olho direito
+	LowPolyMesh.prism(st, Vector3(0.24, 0.55, -0.48), Vector3(0.28, 0.55, -0.66), 0.14, 0.12, 8, ROCK_DARK)
+	LowPolyMesh.prism(st, Vector3(0.28, 0.55, -0.64), Vector3(0.31, 0.55, -0.77), 0.14, 0.13, 8, EYE_WHITE)
+	LowPolyMesh.prism(st, Vector3(0.30, 0.55, -0.75), Vector3(0.31, 0.55, -0.785), 0.07, 0.06, 8, EYE_PUPIL)
+	LowPolyMesh.prism(st, Vector3(0.32, 0.58, -0.77), Vector3(0.32, 0.58, -0.79), 0.025, 0.018, 6, EYE_WHITE)
 
 	_body.add_child(LowPolyMesh.commit(st, "StoneCanopy", _mat))
 

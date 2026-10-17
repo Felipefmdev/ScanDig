@@ -290,13 +290,15 @@ func _build_model() -> void:
 	# Fendas rochosas com brilho
 	LowPolyMesh.box(st, Vector3(0.0, 0.48, 0.0), Vector3(0.68, 0.16, 0.42), Basis.IDENTITY, STONE_DARK)
 
-	# Olho ciclópico frontal saliente (referência: criatura_rastejante.jpg)
-	# Aro de pedra do olho
-	LowPolyMesh.prism(st, Vector3(0.0, 0.65, -0.22), Vector3(0.0, 0.72, -0.42), 0.22, 0.20, 6, EYE_RIM)
-	# Globo ocular branco esbugalhado
-	LowPolyMesh.box(st, Vector3(0.0, 0.72, -0.42), Vector3(0.24, 0.24, 0.12), Basis.IDENTITY, EYE_WHITE)
-	# Pupila preta
-	LowPolyMesh.box(st, Vector3(0.0, 0.72, -0.485), Vector3(0.12, 0.12, 0.03), Basis.IDENTITY, EYE_PUPIL)
+	# Olho ciclópico frontal saliente enorme e redondo (~40% da frente, criatura_rastejante.jpg)
+	# Aro de pedra circular do olho
+	LowPolyMesh.prism(st, Vector3(0.0, 0.65, -0.22), Vector3(0.0, 0.68, -0.42), 0.32, 0.30, 9, EYE_RIM)
+	# Globo ocular redondo branco esbugalhado enorme
+	LowPolyMesh.prism(st, Vector3(0.0, 0.68, -0.40), Vector3(0.0, 0.68, -0.56), 0.28, 0.26, 9, EYE_WHITE)
+	# Pupila preta redonda grande
+	LowPolyMesh.prism(st, Vector3(0.0, 0.68, -0.54), Vector3(0.0, 0.68, -0.58), 0.14, 0.13, 9, EYE_PUPIL)
+	# Ponto de brilho branco How to Fish
+	LowPolyMesh.prism(st, Vector3(0.05, 0.72, -0.57), Vector3(0.05, 0.72, -0.59), 0.045, 0.035, 6, EYE_WHITE)
 
 	_body.add_child(LowPolyMesh.commit(st, "StoneShell", _mat))
 
