@@ -27,6 +27,12 @@ extends Control
 @onready var map_status_label: Label = _resolve_node("MapStatusLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapStatusLabel") as Label
 @onready var expedition_feedback_label: Label = _resolve_node("ExpeditionFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/ExpeditionFeedbackLabel") as Label
 
+# Diário de Campo (#86)
+@onready var journal_info_label: Label = _resolve_node("JournalInfoLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Diário/JournalInfoLabel") as Label
+@onready var journal_grid: GridContainer = _resolve_node("JournalGrid", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Diário/JournalScroll/JournalContent/JournalGrid") as GridContainer
+@onready var bosses_header_label: Label = _resolve_node("BossesHeaderLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Diário/JournalScroll/JournalContent/BossesHeaderLabel") as Label
+@onready var bosses_grid: GridContainer = _resolve_node("BossesGrid", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Diário/JournalScroll/JournalContent/BossesGrid") as GridContainer
+
 const SESSION_PATH: NodePath = ^"/root/CoreSession"
 
 var _session: Node = null
@@ -306,6 +312,7 @@ func _on_progression_changed(_unlocked_maps: Array, _defeated_bosses: Array) -> 
 	_refresh_map_list()
 	# Mapa desbloqueado libera níveis da loja travados por ele.
 	_refresh_shop_buttons()
+	_refresh_journal_display()
 
 
 func _refresh_depart_button() -> void:
@@ -357,12 +364,14 @@ func _resolve_game_state() -> void:
 		_connect_game_state_signal(&"map_unlock_result", _on_map_unlock_result)
 		_connect_game_state_signal(&"progression_changed", _on_progression_changed)
 		_connect_game_state_signal(&"secret_found", _on_secret_found)
-		_connect_game_state_signal(&"state_synced", _refresh_secrets_label)
+		_connect_game_state_signal(&"creature_discovered", _on_creature_discovered)
+		_connect_game_state_signal(&"state_synced", _on_state_synced)
 		_connect_game_state_signal(&"game_completed_changed", _on_game_completed_changed)
 	
 	_refresh_museum_display()
 	_refresh_secrets_label()
 	_refresh_shop_buttons()
+	_refresh_journal_display()
 
 
 func _connect_game_state_signal(signal_name: StringName, callable: Callable) -> void:
@@ -652,10 +661,21 @@ func _refresh_secrets_label() -> void:
 func _on_game_completed_changed(_completed: bool) -> void:
 	_refresh_secrets_label()
 	_refresh_museum_display()
+	_refresh_journal_display()
 
 
 func _on_secret_found(_secret_id: String) -> void:
 	_refresh_secrets_label()
+
+
+func _on_creature_discovered(_kind: String) -> void:
+	_refresh_secrets_label()
+	_refresh_journal_display()
+
+
+func _on_state_synced() -> void:
+	_refresh_secrets_label()
+	_refresh_journal_display()
 
 
 func _on_state_updated(_amount: int) -> void:
@@ -684,3 +704,218 @@ func _set_shop_feedback(msg: String) -> void:
 func _set_museum_feedback(msg: String) -> void:
 	if museum_feedback_label != null:
 		museum_feedback_label.text = UiFormat.fix_money_spaces(msg)
+
+
+# --- Diário de Campo (#86) ----------------------------------------------------
+
+const CREATURE_ORDER: Array[String] = [
+	"crab", "hermit_crab", "seagull",
+	"snake", "mole", "crow",
+	"stone_guardian", "bat",
+	"ice_wolf", "penguin", "walrus",
+	"crawler", "floater",
+]
+
+const CREATURE_FIELD_META: Dictionary = {
+	"crab": {"region": "Praia", "color": Color(0.86, 0.34, 0.22)},
+	"hermit_crab": {"region": "Praia", "color": Color(0.78, 0.52, 0.26)},
+	"seagull": {"region": "Praia", "color": Color(0.88, 0.90, 0.94)},
+	"snake": {"region": "Campo", "color": Color(0.42, 0.68, 0.28)},
+	"mole": {"region": "Campo", "color": Color(0.52, 0.36, 0.24)},
+	"crow": {"region": "Campo", "color": Color(0.26, 0.28, 0.36)},
+	"stone_guardian": {"region": "Ruínas", "color": Color(0.64, 0.60, 0.52)},
+	"bat": {"region": "Ruínas", "color": Color(0.48, 0.34, 0.58)},
+	"ice_wolf": {"region": "Geleira", "color": Color(0.56, 0.78, 0.92)},
+	"penguin": {"region": "Geleira", "color": Color(0.24, 0.42, 0.68)},
+	"walrus": {"region": "Geleira", "color": Color(0.62, 0.46, 0.38)},
+	"crawler": {"region": "Cratera", "color": Color(0.76, 0.28, 0.48)},
+	"floater": {"region": "Cratera", "color": Color(0.42, 0.86, 0.74)},
+}
+
+const BOSS_ORDER: Array[String] = [
+	"king_crab", "giant_mole", "ancient_guardian", "frozen_mammoth",
+	"octopus", "crow_king", "scarecrow", "idol_mummy",
+	"cave_yeti", "ancient_walrus", "the_sleeper", "the_echo",
+]
+
+const BOSS_FIELD_META: Dictionary = {
+	"king_crab": {"name": "Caranguejo-Rei", "region": "Praia", "color": Color(0.92, 0.28, 0.18)},
+	"giant_mole": {"name": "Toupeira Gigante", "region": "Campo", "color": Color(0.62, 0.40, 0.22)},
+	"ancient_guardian": {"name": "Guardião Ancestral", "region": "Ruínas", "color": Color(0.78, 0.68, 0.36)},
+	"frozen_mammoth": {"name": "Mamute Congelado", "region": "Geleira", "color": Color(0.48, 0.74, 0.92)},
+	"octopus": {"name": "Polvo do Abismo", "region": "Praia", "color": Color(0.68, 0.30, 0.56)},
+	"crow_king": {"name": "Corvo-Rei", "region": "Campo", "color": Color(0.32, 0.28, 0.46)},
+	"scarecrow": {"name": "Espantalho Vivo", "region": "Campo", "color": Color(0.82, 0.58, 0.24)},
+	"idol_mummy": {"name": "Múmia do Ídolo", "region": "Ruínas", "color": Color(0.84, 0.74, 0.44)},
+	"cave_yeti": {"name": "Yeti da Caverna", "region": "Geleira", "color": Color(0.78, 0.88, 0.96)},
+	"ancient_walrus": {"name": "Morsa Anciã", "region": "Geleira", "color": Color(0.58, 0.44, 0.36)},
+	"the_sleeper": {"name": "O Adormecido", "region": "Cratera", "color": Color(0.88, 0.32, 0.52)},
+	"the_echo": {"name": "O Eco", "region": "Cratera", "color": Color(0.38, 0.90, 0.78)},
+}
+
+var _journal_slot_labels: Dictionary = {}
+var _boss_slot_labels: Dictionary = {}
+
+
+func _refresh_journal_display() -> void:
+	if journal_grid == null:
+		return
+
+	for child: Node in journal_grid.get_children():
+		journal_grid.remove_child(child)
+		child.queue_free()
+	_journal_slot_labels.clear()
+
+	var seen_list: Array = Array(_game_state.seen_creatures) if _game_state != null and "seen_creatures" in _game_state else []
+	var defeated_list: Array = Array(_game_state.defeated_bosses) if _game_state != null and "defeated_bosses" in _game_state else []
+
+	var seen_count: int = 0
+	for kind: String in CREATURE_ORDER:
+		if not GameState.CREATURES.has(kind):
+			continue
+		var is_seen: bool = seen_list.has(kind)
+		if is_seen:
+			seen_count += 1
+		var creature_name: String = str(GameState.CREATURES[kind])
+		var meta: Dictionary = CREATURE_FIELD_META.get(kind, {"region": "Sítio", "color": Color(0.7, 0.6, 0.4)})
+		var region: String = str(meta.get("region", "Sítio"))
+		var accent: Color = meta.get("color", Color(0.7, 0.6, 0.4))
+		var title_line: String = creature_name if is_seen else "???"
+		var sub_line: String = "%s • Catalogado" % region if is_seen else "%s • Por avistar" % region
+		var slot: PanelContainer = _build_journal_slot(kind, title_line, sub_line, is_seen, accent, false)
+		journal_grid.add_child(slot)
+
+	if journal_info_label != null:
+		journal_info_label.text = "Caderno de Campo — Fauna dos Sítios (%d/%d) e Guardiões Abatidos:" % [seen_count, GameState.CREATURES.size()]
+
+	if bosses_grid != null:
+		for child: Node in bosses_grid.get_children():
+			bosses_grid.remove_child(child)
+			child.queue_free()
+		_boss_slot_labels.clear()
+
+		var defeated_count: int = 0
+		for boss_id: String in BOSS_ORDER:
+			var is_defeated: bool = defeated_list.has(boss_id)
+			if is_defeated:
+				defeated_count += 1
+			var bmeta: Dictionary = BOSS_FIELD_META.get(boss_id, {"name": boss_id, "region": "Sítio", "color": Color(0.8, 0.4, 0.2)})
+			var bname: String = str(bmeta.get("name", boss_id))
+			var bregion: String = str(bmeta.get("region", "Sítio"))
+			var bcolor: Color = bmeta.get("color", Color(0.8, 0.4, 0.2))
+			var btitle: String = "✔ %s" % bname if is_defeated else "???"
+			var bsub: String = "%s • Vencido" % bregion if is_defeated else "%s • Guardião" % bregion
+			var bslot: PanelContainer = _build_journal_slot(boss_id, btitle, bsub, is_defeated, bcolor, true)
+			bosses_grid.add_child(bslot)
+
+		if bosses_header_label != null:
+			bosses_header_label.text = "Guardiões e Chefes de Sítio (%d/%d):" % [defeated_count, BOSS_ORDER.size()]
+
+
+func _build_journal_slot(id: String, title_text: String, sub_text: String, discovered: bool, accent: Color, is_boss: bool) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.name = ("BossSlot_" if is_boss else "JournalSlot_") + id
+	card.theme_type_variation = &"WornPanel"
+	card. size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size = Vector2(150, 44)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 6)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_right", 6)
+	margin.add_theme_constant_override("margin_bottom", 4)
+	card.add_child(margin)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	margin.add_child(row)
+
+	var icon_rect := TextureRect.new()
+	icon_rect.name = "MiniIcon"
+	icon_rect.custom_minimum_size = Vector2(28, 28)
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.texture = _build_journal_mini_texture(id, discovered, accent, is_boss)
+	row.add_child(icon_rect)
+
+	var lbl := Label.new()
+	lbl.name = "SlotLabel"
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.text = "%s\n%s" % [title_text, sub_text]
+	lbl.clip_text = true
+	lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if not discovered:
+		lbl.modulate = Color(0.68, 0.64, 0.58, 0.92)
+	row.add_child(lbl)
+
+	if is_boss:
+		_boss_slot_labels[id] = lbl
+	else:
+		_journal_slot_labels[id] = lbl
+	return card
+
+
+static func _build_journal_mini_texture(id: String, discovered: bool, accent: Color, is_boss: bool) -> ImageTexture:
+	var size: int = 28
+	var img: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var bg: Color = Color(0.20, 0.16, 0.12, 0.95) if discovered else Color(0.11, 0.09, 0.08, 0.95)
+	var border: Color = accent.lightened(0.18) if discovered else Color(0.28, 0.24, 0.20, 0.85)
+	var body_col: Color = accent if discovered else Color(0.04, 0.04, 0.05, 0.96)
+	img.fill(bg)
+
+	# Moldura tipo ficha de campo
+	for i in range(size):
+		img.set_pixel(i, 0, border)
+		img.set_pixel(i, size - 1, border)
+		img.set_pixel(0, i, border)
+		img.set_pixel(size - 1, i, border)
+
+	# Silhueta / miniatura estilizada (variada por hash do id para dar forma própria a cada espécie)
+	var h: int = absi(id.hash())
+	var rx: float = 7.0 + float(h % 3)
+	var ry: float = 6.0 + float((h / 3) % 3)
+	var cx: float = 13.5
+	var cy: float = 14.5
+	for y in range(4, size - 4):
+		for x in range(4, size - 4):
+			var dx: float = (float(x) - cx) / rx
+			var dy: float = (float(y) - cy) / ry
+			var d2: float = dx * dx + dy * dy
+			if d2 <= 1.0:
+				img.set_pixel(x, y, body_col)
+			elif is_boss and y <= 8 and absf(float(x) - cx) <= 6.0 and ((x + y) % 2 == 0):
+				# Coroa/crista de guardião
+				img.set_pixel(x, y, border if discovered else body_col)
+
+	if discovered:
+		var eye_col := Color(0.98, 0.96, 0.88, 1.0)
+		img.set_pixel(11, 13, eye_col)
+		img.set_pixel(16, 13, eye_col)
+	else:
+		# Ponto de interrogação central na silhueta escura
+		var q_col := Color(0.56, 0.50, 0.42, 0.9)
+		for px in range(12, 16):
+			img.set_pixel(px, 10, q_col)
+		img.set_pixel(15, 11, q_col)
+		img.set_pixel(14, 12, q_col)
+		img.set_pixel(13, 13, q_col)
+		img.set_pixel(13, 14, q_col)
+		img.set_pixel(13, 17, q_col)
+
+	return ImageTexture.create_from_image(img)
+
+
+func get_journal_creature_count() -> int:
+	return journal_grid.get_child_count() if journal_grid != null else 0
+
+
+func get_journal_slot_text(kind: String) -> String:
+	var lbl: Label = _journal_slot_labels.get(kind, null) as Label
+	return lbl.text if lbl != null else ""
+
+
+func get_boss_slot_text(boss_id: String) -> String:
+	var lbl: Label = _boss_slot_labels.get(boss_id, null) as Label
+	return lbl.text if lbl != null else ""
+
