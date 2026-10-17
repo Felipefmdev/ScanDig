@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://items/map_data.gd" id="1_map"]
+[ext_resource type="Script" path="res://items/item_data.gd" id="2_item"]
+[ext_resource type="Resource" path="res://items/catalog/alianca_ouro.tres" id="3_alianca"]
+[ext_resource type="Resource" path="res://items/catalog/anel_sinete.tres" id="4_anel"]
+[ext_resource type="Resource" path="res://items/catalog/idolo_ouro.tres" id="5_idolo_ouro"]
+[ext_resource type="Resource" path="res://items/catalog/calice_prata.tres" id="6_calice"]
+[ext_resource type="Resource" path="res://items/catalog/escaravelho_jade.tres" id="7_escaravelho"]
+[ext_resource type="Resource" path="res://items/catalog/mascara_ouro.tres" id="8_mascara"]
+[ext_resource type="Resource" path="res://items/catalog/relogio_ouro.tres" id="9_relogio"]
+[ext_resource type="Resource" path="res://items/catalog/idolo_jade.tres" id="10_idolo_jade"]
+
+[resource]
+script = ExtResource("1_map")
+id = "ilha_tesouro"
+display_name = "Ilha do Tesouro"
+unlock_cost = 999999999
+required_detector_level = 1
+item_pool = Array[ExtResource("2_item")]([ExtResource("3_alianca"), ExtResource("3_alianca"), ExtResource("3_alianca"), ExtResource("3_alianca"), ExtResource("4_anel"), ExtResource("4_anel"), ExtResource("4_anel"), ExtResource("4_anel"), ExtResource("5_idolo_ouro"), ExtResource("5_idolo_ouro"), ExtResource("5_idolo_ouro"), ExtResource("6_calice"), ExtResource("6_calice"), ExtResource("6_calice"), ExtResource("7_escaravelho"), ExtResource("7_escaravelho"), ExtResource("8_mascara"), ExtResource("8_mascara"), ExtResource("9_relogio"), ExtResource("10_idolo_jade")])
+rare_variant_chance = 0.12
+noise_multiplier = 1.6
+noise_decay_per_second = 2.0
+spot_count = 9
+enemy_damage_multiplier = 1.0
+requires_map_fragments = true

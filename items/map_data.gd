@@ -18,3 +18,6 @@ extends Resource
 ## Multiplica o dano dos inimigos neste mapa (#82: mortes demais nos mapas 3-5 no bot).
 ## Soma-se ao ajuste por nº de jogadores do DifficultyProfile.
 @export_range(0.1, 2.0, 0.05) var enemy_damage_multiplier: float = 1.0
+## #103/#113: só se desbloqueia com o mapa do tesouro completo (GameState.has_all_map_fragments),
+## nunca por dinheiro. Ilha do Tesouro.
+@export var requires_map_fragments: bool = false

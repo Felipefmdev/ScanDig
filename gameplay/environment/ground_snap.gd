@@ -14,8 +14,8 @@ const GlacierTerrain = preload("res://gameplay/environment/glacier_terrain.gd")
 const CraterTerrain = preload("res://gameplay/environment/crater_terrain.gd")
 
 @export var sink: float = 0.05
-## Que chão usar: Praia (BeachTerrain), Campo (FieldTerrain), Ruinas, Geleira ou Cratera.
-@export_enum("Praia", "Campo", "Ruinas", "Geleira", "Cratera") var terrain: int = 0
+## Que chão usar: Praia (BeachTerrain), Campo (FieldTerrain), Ruinas, Geleira, Cratera ou Ilha.
+@export_enum("Praia", "Campo", "Ruinas", "Geleira", "Cratera", "Ilha") var terrain: int = 0
 
 
 func _ready() -> void:
@@ -46,4 +46,6 @@ func _height(x: float, z: float) -> float:
 			return GlacierTerrain.height_at(x, z)
 		4:
 			return CraterTerrain.height_at(x, z)
+		5:
+			return IslandTerrain.height_at(x, z)
 	return BeachTerrain.height_at(x, z)

@@ -8,7 +8,7 @@ extends Node3D
 ## lado +X é mar aberto até ao horizonte (plano "Sea") e as colinas só ficam do lado de terra.
 ## Cores alinhadas com world/environment_<mapa>.tres (o nevoeiro funde-as no céu).
 
-const THEMES: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera"]
+const THEMES: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera", "ilha"]
 const MIN_RADIUS: float = 60.0
 const MAX_RADIUS: float = 140.0
 const SEA_COLOR: Color = Color(0.2, 0.5, 0.66)
@@ -21,10 +21,11 @@ const PALETTE: Dictionary = {
 	"campo": [Color(0.32, 0.52, 0.24), Color(0.5, 0.66, 0.32), 9.0, 20.0, 20.0, 34.0],
 	"ruinas": [Color(0.7, 0.5, 0.32), Color(0.84, 0.66, 0.44), 12.0, 24.0, 16.0, 28.0],
 	"geleira": [Color(0.42, 0.5, 0.6), Color(0.95, 0.97, 1.0), 26.0, 48.0, 16.0, 26.0],
+	"ilha": [Color(0.32, 0.52, 0.3), Color(0.5, 0.62, 0.4), 5.0, 12.0, 10.0, 18.0],
 	"cratera": [Color(0.16, 0.12, 0.18), Color(0.3, 0.22, 0.34), 22.0, 40.0, 22.0, 34.0],
 }
 
-@export_enum("praia", "campo", "ruinas", "geleira", "cratera") var theme: String = "campo":
+@export_enum("praia", "campo", "ruinas", "geleira", "cratera", "ilha") var theme: String = "campo":
 	set(v):
 		theme = v
 		_queue()
@@ -72,6 +73,9 @@ func build() -> int:
 		# Praia: o lado +X é mar aberto.
 		if theme == "praia" and dir.x > -0.15:
 			continue
+		# Ilha: mar aberto a toda a volta, só uns ilhéus raros e longe no horizonte.
+		if theme == "ilha" and i % 4 != 0:
+			continue
 		var r: float = rng.randf_range(MIN_RADIUS + 15.0, MAX_RADIUS - 15.0)
 		var center: Vector3 = dir * r
 		var h: float = rng.randf_range(pal[2], pal[3])
@@ -90,8 +94,8 @@ func build() -> int:
 	hills.material_override = ToonKit.vertex_material(true, true)
 	_far(hills)
 	add_child(hills)
-	if theme == "praia":
-		add_child(_sea())
+	if theme == "praia" or theme == "ilha":
+		add_child(_sea(SEA_START_X if theme == "praia" else -SEA_EXTENT))
 	return placed
 
 
@@ -161,15 +165,15 @@ func _wall(st: SurfaceTool, c: Vector3, dir: Vector3, h: float, w: float, base: 
 		LowPolyMesh.prism(st, p + Vector3.DOWN * 6.0, p + Vector3.UP * hs, (t1 - t0) * 0.75 + depth * 0.3, (t1 - t0) * 0.25, 5, base.lerp(top, rng.randf()))
 
 
-func _sea() -> MeshInstance3D:
+func _sea(start_x: float = SEA_START_X) -> MeshInstance3D:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var y: float = sea_level
-	var a: Vector3 = Vector3(SEA_START_X, y, -SEA_EXTENT)
+	var a: Vector3 = Vector3(start_x, y, -SEA_EXTENT)
 	var b: Vector3 = Vector3(SEA_EXTENT, y, -SEA_EXTENT)
 	var c: Vector3 = Vector3(SEA_EXTENT, y, SEA_EXTENT)
-	var d: Vector3 = Vector3(SEA_START_X, y, SEA_EXTENT)
-	LowPolyMesh.quad(st, a, b, c, d, Vector3(SEA_START_X + 1.0, y - 1.0, 0.0), SEA_COLOR)
+	var d: Vector3 = Vector3(start_x, y, SEA_EXTENT)
+	LowPolyMesh.quad(st, a, b, c, d, Vector3(start_x + 1.0, y - 1.0, 0.0), SEA_COLOR)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Sea"
 	mi.mesh = ToonKit.commit(st)

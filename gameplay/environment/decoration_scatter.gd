@@ -5,7 +5,7 @@ extends Node3D
 ## veem o mesmo chão. Perto das paredes (Bounds) põe rochas maiores que escondem a borda reta.
 ## Tudo é criado em runtime sem owner (#47): o editor nunca grava estas malhas no .tscn.
 
-## Conjunto de props: praia, campo, ruinas, geleira, cratera.
+## Conjunto de props: praia, campo, ruinas, geleira, cratera, ilha.
 @export var theme: String = "praia"
 @export var count: int = 700
 ## Os props foram modelados a ~10 cm; no chão, a 1,7 m de altura, isso some. Aumenta tudo.
@@ -64,6 +64,9 @@ func build() -> int:
 			continue
 		var hit: Variant = _ground_at(p)
 		if hit == null:
+			continue
+		# Ilha: nada no fundo do mar (fica tudo em terra firme).
+		if theme == "ilha" and (hit as Vector3).y < -0.15:
 			continue
 		var s: float = rng.randf_range(spec[2], spec[3]) * size_boost
 		_add(spec[0], spec[1], Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * s), hit))
@@ -190,12 +193,20 @@ func _palette() -> Array:
 				["basalt", _pebble.bind(Color("#3a3444")), 1.0, 2.4],
 				["tiny_pebble", _pebble.bind(Color("#5a5068")), 0.6, 1.2],
 				["fungus", _mushroom.bind(Color("#60e0b0")), 0.6, 1.0]]
+		"ilha":
+			# Moedas perdidas na areia: a ilha deixa adivinhar o que esconde.
+			return [["tiny_coin", _shell.bind(Color("#f0c040"), Color("#c89020")), 0.7, 1.1],
+				["tiny_shell", _shell.bind(Color("#f4e0d0"), Color("#f0a0a0")), 0.8, 1.4],
+				["tiny_pebble", _pebble.bind(Color("#d0c4a8")), 0.6, 1.3],
+				["fern", _tuft.bind(Color("#3a8a3a"), 6, 0.24), 0.9, 1.6],
+				["plank", _stick.bind(Color("#8a6440")), 0.9, 1.6],
+				["flower_red", _flower.bind(Color("#e04a5a")), 0.8, 1.3]]
 	return []
 
 
 func _border_builder(shade: float) -> Callable:
 	var c: Color = {"praia": Color("#e0c890"), "campo": Color("#7a7468"), "ruinas": Color("#c0b090"),
-		"geleira": Color("#dce8f0"), "cratera": Color("#3a3444")}.get(theme, Color("#808080"))
+		"geleira": Color("#dce8f0"), "cratera": Color("#3a3444"), "ilha": Color("#d8c49a")}.get(theme, Color("#808080"))
 	return _boulder.bind(Color(c.r * shade, c.g * shade, c.b * shade))
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Executa um ou todos os roteiros de pacing em headless com --fixed-fps 60 (15 min de jogo em ~45s reais).
 # Uso:
-#   tools/bot/run_pacing.sh ["<godot_console_exe>"] [praia|campo|ruinas|geleira|cratera|all]
+#   tools/bot/run_pacing.sh ["<godot_console_exe>"] [praia|campo|ruinas|geleira|cratera|ilha_tesouro|all]
 set -euo pipefail
 GODOT="${1:-C:/Users/felip/Downloads/Godot_v4.3-stable_win64.exe/Godot_v4.3-stable_win64_console.exe}"
 MAP="${2:-praia}"
@@ -14,7 +14,7 @@ run_one() {
 }
 
 if [ "$MAP" = "all" ]; then
-	for m in praia campo ruinas geleira cratera; do
+	for m in praia campo ruinas geleira cratera ilha_tesouro; do
 		run_one "$m"
 	done
 else
