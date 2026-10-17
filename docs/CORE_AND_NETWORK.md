@@ -12,6 +12,8 @@ Documentação técnica de `res://core/` e `res://ui/`. Se algo aqui divergir do
 | `CoreSession` | `res://core/session_manager.gd` | `SessionManager` | `SessionManager.instance` ou `/root/CoreSession` |
 | `CoreSettings` | `res://core/settings_manager.gd` | `SettingsManager` | `SettingsManager.instance` |
 | `CoreWeather` | `res://core/weather_manager.gd` | `WeatherManager` | `WeatherManager.instance`; no gameplay, `WeatherManager.now_*()` (neutros sem o autoload) |
+| `CoreWeatherFx` | `res://ui/weather_fx.gd` | `WeatherFx` | `WeatherFx.instance` (partículas e névoa do clima, só local) |
+| `CoreWeatherUI` | `res://ui/weather_hud.gd` | `WeatherHud` | `WeatherHud.instance` (aviso e ícone do clima, camada 6) |
 | `CoreSessionUI` | `res://ui/session_ui.tscn` | `SessionUI` | `/root/CoreSessionUI` |
 | `CorePauseMenu` | `res://ui/pause_menu.tscn` | `PauseMenu` | `PauseMenu.instance`, `PauseMenu.is_open()` (camada 45) |
 | `CoreVictoryScreen` | `res://ui/victory_screen.tscn` | `VictoryScreen` | `VictoryScreen.instance`, `VictoryScreen.is_open()` (camada 46; a SessionUI, 50, cobre) |
@@ -287,7 +289,8 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 - Fases: `none` → `warning` (aviso, ainda neutro) → `active` (modificadores valem) → `none`. `signal weather_changed(kind, phase)`; no fim do evento sai com o tipo que acabou e `phase == "none"`.
 - Autoridade: o host agenda (RNG próprio) a partir do `expedition_started` e para em `expedition_ending`/`scene_changing`. A cada fase aplica localmente e faz `HostSync.broadcast(self, &"_rpc_sync", [get_state()])`. Quem entra no meio recebe o estado pelo `HostSync.on_peer_ready` → `send_to`. Os clientes só aplicam (`_rpc_sync`), nunca agendam; cada peer volta sozinho ao neutro na troca de cena.
 - API (neutra sem evento ativo): `dig_speed_mult()`, `detector_noise()` (0..1), `radar_scale()`, `hunger_mult()`, `current_kind()`, `phase()`, `is_active()`. Testes e bots usam `force_weather()` (host, evento do mapa atual com aviso de 3 s), `force_event(kind, duration)`, `tick(delta)` e `set_seed(n)`. No bot: `{"call": "CoreWeather", "method": "force_weather"}`.
-- Visual e aviso (`CoreWeatherUI`, `ui/weather_hud.gd`): só para o jogador local. O `Environment` do mapa é trocado por uma cópia durante o evento e o original volta no fim (nada gravado nos `.tres`). A opção `[video] strong_weather_fx` só reduz partículas e névoa; os modificadores de jogo não mudam.
+- Visual (`CoreWeatherFx`, `ui/weather_fx.gd`) e aviso/ícone (`CoreWeatherUI`, `ui/weather_hud.gd`): só para o jogador local. As partículas (CPUParticles3D, até 400) seguem a câmera ativa. O `Environment` do mapa é trocado por uma cópia durante o evento (tween de 3 s, valores somados aos do mapa em `WeatherFx.ENV_TARGETS`), e o MESMO recurso original volta no fim; nada é gravado nos `.tres`. A opção `[video] strong_weather_fx` (aba Vídeo) só reduz partículas (metade) e névoa (35 %); os modificadores de jogo não mudam.
+- Bots: `tools/run_bot.sh "<godot>" tools/bot/weather_praia.json` (também `weather_geleira.json` e `weather_cratera.json`) pega o detector, força o evento e captura antes, aviso e ativo.
 
 ## 3. Save (`user://scandig_save.json`, versão 4)
 

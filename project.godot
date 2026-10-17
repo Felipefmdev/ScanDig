@@ -27,6 +27,7 @@ CoreSessionUI="*res://ui/session_ui.tscn"
 CorePauseMenu="*res://ui/pause_menu.tscn"
 CoreVictoryScreen="*res://ui/victory_screen.tscn"
 CoreWeatherFx="*res://ui/weather_fx.gd"
+CoreWeatherUI="*res://ui/weather_hud.gd"
 DebugBridge="*res://gameplay/debug/debug_bridge.gd"
 
 [display]

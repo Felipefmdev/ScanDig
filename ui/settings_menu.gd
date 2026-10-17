@@ -32,6 +32,7 @@ var fps_option: OptionButton = null
 var ui_scale_slider: HSlider = null
 var ui_scale_value: Label = null
 var quality_option: OptionButton = null
+var strong_weather_check: CheckBox = null
 var audio_sliders: Dictionary = {}
 var audio_values: Dictionary = {}
 var apply_button: Button = null
@@ -202,9 +203,18 @@ func _build() -> void:
 	ui_scale_slider.value_changed.connect(func(v: float) -> void: ui_scale_value.text = "%d %%" % int(v))
 	quality_option = _option(QUALITY_LABELS.values())
 	_row(video, "Qualidade gráfica", quality_option)
+	strong_weather_check = _checkbox()
+	_row(video, "Efeitos de clima fortes", strong_weather_check)
+	# Com rolagem, como Controles e Jogabilidade: a aba não aumenta o painel (960x540 a 130 %).
+	var video_scroll: ScrollContainer = ScrollContainer.new()
+	video_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	video_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	video.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var video_page: MarginContainer = _margin(video, 14)
-	video_page.name = "Vídeo"
-	tabs.add_child(video_page)
+	video_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	video_scroll.add_child(video_page)
+	video_scroll.name = "Vídeo"
+	tabs.add_child(video_scroll)
 
 	# Áudio
 	var audio: GridContainer = _grid()
@@ -419,6 +429,7 @@ func refresh() -> void:
 	ui_scale_slider.value = roundf(float(video["ui_scale"]) * 100.0)
 	ui_scale_value.text = "%d %%" % int(ui_scale_slider.value)
 	quality_option.select(maxi(QUALITY_LABELS.keys().find(video["quality"]), 0))
+	strong_weather_check.button_pressed = bool(video["strong_weather_fx"])
 	_update_resolution_enabled()
 	_refresh_controls()
 	var audio: Dictionary = sm.get_section(SettingsManager.AUDIO)
@@ -472,6 +483,7 @@ func pending_video() -> Dictionary:
 		"max_fps": SettingsManager.FPS_LIMITS[maxi(fps_option.selected, 0)],
 		"ui_scale": ui_scale_slider.value / 100.0,
 		"quality": QUALITY_LABELS.keys()[maxi(quality_option.selected, 0)],
+		"strong_weather_fx": strong_weather_check.button_pressed,
 	}
 	if resolution_option.selected >= 0 and resolution_option.selected < _resolutions.size():
 		values["resolution"] = _resolutions[resolution_option.selected]

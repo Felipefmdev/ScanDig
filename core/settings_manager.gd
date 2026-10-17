@@ -47,6 +47,8 @@ const DEFAULTS: Dictionary = {
 		"max_fps": 0,
 		"ui_scale": 1.0,
 		"quality": "high",
+		# Clima (#99): partículas e névoa cheias; desligado, no mínimo (o jogo não muda).
+		"strong_weather_fx": true,
 	},
 	AUDIO: {
 		"master": 1.0,
@@ -162,6 +164,8 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 			var quality: Variant = values.get("quality")
 			if quality is String and QUALITIES.has(quality):
 				out["quality"] = quality
+			if values.get("strong_weather_fx") is bool:
+				out["strong_weather_fx"] = values["strong_weather_fx"]
 		AUDIO:
 			for key: String in AUDIO_BUSES.keys():
 				var v: Variant = values.get(key)
