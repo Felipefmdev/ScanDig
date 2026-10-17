@@ -1620,6 +1620,10 @@ func _bot_auto_eat(delta: float) -> void:
 	var p: Node = _player()
 	if p == null or not ("hunger" in p) or not p.has_method("eat_any_food"):
 		return
+	# O bot carrega em teclas por Input.action_press (sem InputEvent): sem isto o jogador
+	# ficava "ausente" ao fim de 60 s e a fome deixava de correr nos roteiros de pacing.
+	if "_last_input_ms" in p:
+		p.set("_last_input_ms", Time.get_ticks_msec())
 	if float(p.get("hunger")) < float(p.get("max_hunger")) * 0.4:
 		p.call("eat_any_food")
 
