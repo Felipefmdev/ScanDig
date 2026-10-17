@@ -201,3 +201,20 @@ func test_pause_action_in_credits_goes_back() -> void:
 	assert_true(screen.summary_view.visible, "volta às contagens")
 	screen._unhandled_input(ev)
 	assert_false(VictoryScreen.is_open(), "Esc nas contagens fecha")
+
+
+# --- Peças intactas (#93) --------------------------------------------------------
+
+func test_intact_items_row() -> void:
+	var gs: GameState = GameState.instance
+	var screen: VictoryScreen = _screen()
+	var before: Array[String] = gs.intact_items.duplicate()
+	var intact: Array[String] = ["alianca_ouro", "moeda_antiga", "bussola"]
+	gs.intact_items = intact
+	gs._host_report_boss_defeated("the_sleeper")
+	assert_true(VictoryScreen.is_open())
+	assert_eq(screen.intact_value.text, "3 / %d" % gs.get_total_catalog_items(), "linha Peças intactas")
+	var grid: GridContainer = screen.intact_value.get_parent() as GridContainer
+	assert_eq(screen.intact_value.get_index(), screen.items_value.get_index() + 2, "logo depois de Peças do museu")
+	assert_eq(grid.get_child(screen.intact_value.get_index() - 1).get("text"), "Peças intactas")
+	gs.intact_items = before

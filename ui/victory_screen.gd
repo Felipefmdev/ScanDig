@@ -3,7 +3,7 @@ extends CanvasLayer
 
 ## Tela "Jogo concluído" (#81). Abre só na vitória ao vivo (GameState.game_victory: the_sleeper
 ## vencido nesta sessão). Carregar um save concluído, entrar no meio ou reconectar não abre.
-## Mostra Peças, Segredos e Diário e tem os botões "Continuar explorando" e "Créditos" (o mesmo
+## Mostra Peças do museu, Peças intactas (#93), Segredos e Diário e tem os botões "Continuar explorando" e "Créditos" (o mesmo
 ## cartão troca para os créditos; "Voltar" ou Esc volta às contagens). Enquanto está aberta,
 ## o player não se mexe (is_settings_open) e o menu de pausa não abre. Fecha na troca de cena.
 ## Autoload CoreVictoryScreen, camada 46: acima da pausa (45), abaixo da SessionUI (50) para o
@@ -22,6 +22,7 @@ static var instance: VictoryScreen = null
 var root_control: Control = null
 var card: PanelContainer = null
 var items_value: Label = null
+var intact_value: Label = null
 var secrets_value: Label = null
 var creatures_value: Label = null
 var continue_button: Button = null
@@ -144,6 +145,8 @@ func refresh() -> void:
 	if gs == null:
 		return
 	items_value.text = "%d / %d" % [gs.discovered_items.size(), gs.get_total_catalog_items()]
+	var intact: Variant = gs.get(&"intact_items")
+	intact_value.text = "%d / %d" % [(intact as Array).size() if intact is Array else 0, gs.get_total_catalog_items()]
 	secrets_value.text = "%d / %d" % [gs.found_secrets.size(), GameState.SECRETS.size()]
 	creatures_value.text = "%d / %d" % [gs.seen_creatures.size(), GameState.CREATURES.size()]
 
@@ -200,6 +203,7 @@ func _build() -> void:
 	grid.add_theme_constant_override("v_separation", 10)
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	items_value = _count_row(grid, "Peças do museu")
+	intact_value = _count_row(grid, "Peças intactas")
 	secrets_value = _count_row(grid, "Segredos")
 	creatures_value = _count_row(grid, "Diário de campo")
 	box.add_child(grid)
