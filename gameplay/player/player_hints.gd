@@ -46,7 +46,11 @@ static func has_seen(id: String) -> bool:
 
 
 ## Marca como vista e devolve o texto, ou "" se já tinha sido mostrada (ou id desconhecido).
+## Com "Mostrar dicas" desligado devolve "" sem marcar: a dica aparece quando religar.
 static func take(id: String) -> String:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm != null and sm.get_value(SettingsManager.GAMEPLAY, "show_hints") == false:
+		return ""
 	if not TEXTS.has(id) or has_seen(id):
 		return ""
 	var cfg: ConfigFile = ConfigFile.new()
@@ -54,6 +58,12 @@ static func take(id: String) -> String:
 	cfg.set_value(SECTION, id, true)
 	cfg.save(hints_path())
 	return str(TEXTS[id]).replace("{drop}", _drop_label())
+
+
+## "Rever dicas" (Configurações > Jogabilidade): todas voltam a aparecer uma vez.
+static func reset_all() -> void:
+	if FileAccess.file_exists(hints_path()):
+		DirAccess.remove_absolute(hints_path())
 
 
 ## Tecla atual de soltar/arremessar (Configurações > Controles); "Q" sem o CoreSettings.

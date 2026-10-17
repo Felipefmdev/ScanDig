@@ -61,6 +61,7 @@ const DEFAULTS: Dictionary = {
 		"view_bobbing": true,
 		"invert_y": false,
 		"show_fps": false,
+		"show_hints": true,
 		"hud_text_scale": 1.0,
 	},
 }
@@ -93,14 +94,21 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	# Testes e capturas (--script) usam os padrões: as escolhas do jogador (escala da UI,
+	# Testes e capturas (--script, GUT) usam os padrões: as escolhas do jogador (escala da UI,
 	# janela) mudariam layouts e PNGs. Os testes trocam settings_path e chamam load_settings().
-	if OS.get_cmdline_args().has("--script"):
+	if _running_tests():
 		_values = DEFAULTS.duplicate(true)
 	else:
 		load_settings()
 	apply_all()
 	get_tree().node_added.connect(_on_node_added)
+
+
+static func _running_tests() -> bool:
+	for arg: String in OS.get_cmdline_args():
+		if arg == "--script" or arg.contains("gut_cmdln"):
+			return true
+	return false
 
 
 # --- Leitura -------------------------------------------------------------------
@@ -170,7 +178,7 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 			var fov: Variant = values.get("fov")
 			if fov is float or fov is int:
 				out["fov"] = clampf(float(fov), FOV_RANGE.x, FOV_RANGE.y)
-			for key: String in ["view_bobbing", "invert_y", "show_fps"]:
+			for key: String in ["view_bobbing", "invert_y", "show_fps", "show_hints"]:
 				if values.get(key) is bool:
 					out[key] = values[key]
 			var hud: Variant = values.get("hud_text_scale")

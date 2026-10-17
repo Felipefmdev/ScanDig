@@ -19,6 +19,8 @@ const TAB_GAMEPLAY: int = 3
 const SENSITIVITY_UNIT: float = 0.0025
 const CAPTURE_TEXT: String = "Pressione uma tecla…"
 const SAVED_TEXT: String = "Configurações salvas"
+const HINTS_RESET_TEXT: String = "Dicas reativadas"
+const HINTS: Script = preload("res://gameplay/player/player_hints.gd")
 const SAVED_SECONDS: float = 2.0
 const DISCARD_TEXT: String = "Descartar alterações?\nAs mudanças que não foram aplicadas serão perdidas."
 
@@ -54,11 +56,14 @@ var fov_slider: HSlider = null
 var fov_value: Label = null
 var bobbing_check: CheckBox = null
 var show_fps_check: CheckBox = null
+var show_hints_check: CheckBox = null
+var review_hints_button: Button = null
 var hud_text_slider: HSlider = null
 var hud_text_value: Label = null
 var language_option: OptionButton = null
 var buttons_row: HBoxContainer = null
 var saved_notice: PanelContainer = null
+var saved_notice_label: Label = null
 var discard_panel: PanelContainer = null
 var discard_button: Button = null
 var discard_cancel_button: Button = null
@@ -246,6 +251,15 @@ func _build() -> void:
 	_row(gameplay, "Balanço da câmera ao andar", bobbing_check)
 	show_fps_check = _checkbox()
 	_row(gameplay, "Mostrar FPS", show_fps_check)
+	show_hints_check = _checkbox()
+	_row(gameplay, "Mostrar dicas", show_hints_check)
+	# Imediato (não passa pelo Aplicar): as dicas já vistas voltam a aparecer uma vez.
+	review_hints_button = Button.new()
+	review_hints_button.text = "Rever dicas"
+	review_hints_button.custom_minimum_size = Vector2(0, 36)
+	review_hints_button.focus_mode = Control.FOCUS_NONE
+	review_hints_button.pressed.connect(_on_review_hints_pressed)
+	_row(gameplay, "Dicas já vistas", review_hints_button)
 	var hud_row: Array = _slider_row(gameplay, "Tamanho do texto do HUD",
 		SettingsManager.HUD_TEXT_SCALE_RANGE.x * 100.0, SettingsManager.HUD_TEXT_SCALE_RANGE.y * 100.0, 10.0)
 	hud_text_slider = hud_row[0]
@@ -369,10 +383,10 @@ func _build() -> void:
 	saved_notice.top_level = true
 	saved_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	saved_notice.visible = false
-	var saved_label: Label = Label.new()
-	saved_label.text = SAVED_TEXT
-	saved_label.theme_type_variation = &"ToastLabel"
-	saved_notice.add_child(saved_label)
+	saved_notice_label = Label.new()
+	saved_notice_label.text = SAVED_TEXT
+	saved_notice_label.theme_type_variation = &"ToastLabel"
+	saved_notice.add_child(saved_notice_label)
 	add_child(saved_notice)
 
 	swap_button.pressed.connect(_on_swap_pressed)
@@ -415,6 +429,7 @@ func refresh() -> void:
 	fov_value.text = "%d°" % int(fov_slider.value)
 	bobbing_check.button_pressed = bool(gameplay["view_bobbing"])
 	show_fps_check.button_pressed = bool(gameplay["show_fps"])
+	show_hints_check.button_pressed = bool(gameplay["show_hints"])
 	hud_text_slider.value = roundf(float(gameplay["hud_text_scale"]) * 100.0)
 	hud_text_value.text = "%d %%" % int(hud_text_slider.value)
 	_mark_clean()
@@ -427,6 +442,7 @@ func pending_gameplay() -> Dictionary:
 		"fov": fov_slider.value,
 		"view_bobbing": bobbing_check.button_pressed,
 		"show_fps": show_fps_check.button_pressed,
+		"show_hints": show_hints_check.button_pressed,
 		"hud_text_scale": hud_text_slider.value / 100.0,
 	}
 
@@ -547,9 +563,11 @@ func _hide_discard() -> void:
 	tabs.visible = not confirm_panel.visible and not conflict_panel.visible
 
 
-func show_saved_notice() -> void:
+## Aviso curto por cima do painel ("Configurações salvas", "Dicas reativadas"); some sozinho.
+func show_saved_notice(text: String = SAVED_TEXT) -> void:
 	_saved_token += 1
 	var token: int = _saved_token
+	saved_notice_label.text = text
 	saved_notice.modulate.a = 1.0
 	saved_notice.visible = true
 	_place_saved_notice()
@@ -573,6 +591,11 @@ func _place_saved_notice() -> void:
 	saved_notice.reset_size()
 	var anchor_y: float = buttons_row.global_position.y if buttons_row.is_visible_in_tree() else global_position.y + size.y
 	saved_notice.global_position = Vector2(global_position.x + (size.x - saved_notice.size.x) * 0.5, anchor_y - saved_notice.size.y - 10.0)
+
+
+func _on_review_hints_pressed() -> void:
+	HINTS.reset_all()
+	show_saved_notice(HINTS_RESET_TEXT)
 
 
 func _on_video_trial_finished(kept: bool) -> void:
