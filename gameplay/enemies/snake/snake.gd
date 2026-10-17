@@ -432,9 +432,13 @@ func _build_model() -> void:
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
 		var r: float = 0.095 * (1.0 - float(i) / float(SEGMENTS) * 0.55)
 		if i == 0:
-			# Cabeça triangular/diamante de víbora (cobra.jpg)
+			# Cabeça triangular/diamante de víbora com capelo (cobra.jpg)
 			LowPolyMesh.prism(st, Vector3(0.0, 0.02, 0.06), Vector3(0.0, 0.02, -0.16), 0.13, 0.08, 6, SCALE_GREEN)
 			LowPolyMesh.prism(st, Vector3(0.0, 0.01, -0.12), Vector3(0.0, -0.01, -0.25), 0.08, 0.04, 5, SCALE_GREEN)
+			# Capelo / abas laterais da naja (cobra.jpg)
+			for side: float in [-1.0, 1.0]:
+				LowPolyMesh.box(st, Vector3(0.14 * side, 0.01, -0.04), Vector3(0.11, 0.018, 0.18), Basis(Vector3.FORWARD, 0.2 * side), SCALE_GREEN)
+				LowPolyMesh.box(st, Vector3(0.14 * side, 0.02, -0.04), Vector3(0.065, 0.01, 0.12), Basis.IDENTITY, SCALE_DARK)
 			# Padrão escuro no topo da cabeça
 			LowPolyMesh.box(st, Vector3(0.0, 0.045, -0.05), Vector3(0.08, 0.015, 0.08), Basis(Vector3.UP, PI * 0.25), SCALE_DARK)
 			# Mandíbula inferior e ventre creme
@@ -442,16 +446,23 @@ func _build_model() -> void:
 			LowPolyMesh.box(st, Vector3(0.0, -0.01, -0.10), Vector3(0.10, 0.02, 0.14), Basis.IDENTITY, Color(0.52, 0.12, 0.16)) # interior da boca
 			# Presas brancas afiadas (cobra.jpg)
 			for side: float in [-1.0, 1.0]:
-				LowPolyMesh.prism(st, Vector3(0.05 * side, -0.005, -0.16), Vector3(0.05 * side, -0.055, -0.16), 0.015, 0.0, 3, Color(0.98, 0.98, 0.98))
+				LowPolyMesh.prism(st, Vector3(0.05 * side, -0.005, -0.16), Vector3(0.05 * side, -0.065, -0.16), 0.018, 0.0, 3, Color(0.98, 0.98, 0.98))
 			# Língua bifurcada vermelha longa curvada (cobra.jpg)
 			LowPolyMesh.box(st, Vector3(0.0, -0.02, -0.22), Vector3(0.025, 0.008, 0.10), Basis(Vector3.RIGHT, -0.2), TONGUE)
-			LowPolyMesh.box(st, Vector3(-0.02, -0.045, -0.28), Vector3(0.012, 0.006, 0.06), Basis(Vector3.UP, 0.4), TONGUE)
-			LowPolyMesh.box(st, Vector3(0.02, -0.045, -0.28), Vector3(0.012, 0.006, 0.06), Basis(Vector3.UP, -0.4), TONGUE)
-			# Olhos arregalados cómicos (cobra.jpg)
+			LowPolyMesh.box(st, Vector3(-0.025, -0.045, -0.29), Vector3(0.014, 0.006, 0.07), Basis(Vector3.UP, 0.45), TONGUE)
+			LowPolyMesh.box(st, Vector3(0.025, -0.045, -0.29), Vector3(0.014, 0.006, 0.07), Basis(Vector3.UP, -0.45), TONGUE)
+			# Olhos arregalados cómicos bem cartoon (cobra.jpg)
 			for side: float in [-1.0, 1.0]:
-				LowPolyMesh.box(st, Vector3(0.09 * side, 0.065, -0.10), Vector3(0.065, 0.065, 0.065), Basis.IDENTITY, Color(0.98, 0.98, 0.98))
-				LowPolyMesh.box(st, Vector3(0.115 * side, 0.065, -0.11), Vector3(0.025, 0.035, 0.035), Basis.IDENTITY, Color(0.08, 0.08, 0.10))
-				LowPolyMesh.box(st, Vector3(0.085 * side, 0.10, -0.10), Vector3(0.055, 0.015, 0.06), Basis(Vector3.FORWARD, 0.25 * side), SCALE_DARK)
+				LowPolyMesh.box(st, Vector3(0.095 * side, 0.07, -0.10), Vector3(0.075, 0.075, 0.075), Basis.IDENTITY, Color(0.98, 0.98, 0.98))
+				LowPolyMesh.box(st, Vector3(0.125 * side, 0.07, -0.11), Vector3(0.03, 0.04, 0.04), Basis.IDENTITY, Color(0.08, 0.08, 0.10))
+				LowPolyMesh.box(st, Vector3(0.09 * side, 0.11, -0.10), Vector3(0.06, 0.015, 0.06), Basis(Vector3.FORWARD, 0.25 * side), SCALE_DARK)
+		elif i == 1:
+			# Pescoço com capelo alargado
+			LowPolyMesh.prism(st, Vector3(0, 0, -SEGMENT_SPACING * 0.55), Vector3(0, 0, SEGMENT_SPACING * 0.55), r * 1.25, r * 1.1, 6, SCALE_GREEN)
+			for side: float in [-1.0, 1.0]:
+				LowPolyMesh.box(st, Vector3(side * 0.11, 0.0, 0.0), Vector3(0.08, 0.015, SEGMENT_SPACING * 0.9), Basis(Vector3.FORWARD, 0.15 * side), SCALE_GREEN)
+			LowPolyMesh.box(st, Vector3(0.0, -r * 0.72, 0.0), Vector3(r * 1.5, r * 0.4, SEGMENT_SPACING * 0.95), Basis.IDENTITY, BELLY)
+			LowPolyMesh.box(st, Vector3(0.0, r * 0.85, 0.0), Vector3(r * 0.95, r * 0.22, r * 0.95), Basis(Vector3.UP, PI * 0.25), SCALE_DARK)
 		else:
 			# Segmentos com dorso verde, ventre creme e losangos escuros (cobra.jpg)
 			LowPolyMesh.prism(st, Vector3(0, 0, -SEGMENT_SPACING * 0.55), Vector3(0, 0, SEGMENT_SPACING * 0.55), r, r * 0.92, 6, SCALE_GREEN)

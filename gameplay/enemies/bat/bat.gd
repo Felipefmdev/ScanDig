@@ -35,12 +35,16 @@ func _build_model() -> void:
 		# Orelhas enormes (referência morcego.jpg): exterior de pelo, interior laranja
 		LowPolyMesh.prism(st, Vector3(0.05 * side, 0.1, -0.14), Vector3(0.13 * side, 0.32, -0.13), 0.06, 0.0, 4, FUR)
 		LowPolyMesh.prism(st, Vector3(0.05 * side, 0.11, -0.155), Vector3(0.125 * side, 0.29, -0.145), 0.042, 0.0, 4, EAR_PINK)
-		# Olhos esbugalhados, brancos com pupila
-		LowPolyMesh.prism(st, Vector3(0.042 * side, 0.09, -0.205), Vector3(0.042 * side, 0.09, -0.235), 0.034, 0.034, 8, BAT_EYE)
-		LowPolyMesh.box(st, Vector3(0.042 * side, 0.095, -0.237), Vector3(0.018, 0.018, 0.006), Basis.IDENTITY, PUPIL)
-		LowPolyMesh.prism(st, Vector3(0.02 * side, 0.02, -0.21), Vector3(0.02 * side, -0.02, -0.21), 0.01, 0.0, 3, Color(FANG.r, FANG.g, FANG.b, 0.0))
+		# Olhos esbugalhados cartoon e sobrancelhas (morcego.jpg)
+		LowPolyMesh.prism(st, Vector3(0.045 * side, 0.09, -0.205), Vector3(0.045 * side, 0.09, -0.245), 0.046, 0.046, 8, BAT_EYE)
+		LowPolyMesh.box(st, Vector3(0.045 * side, 0.092, -0.248), Vector3(0.024, 0.026, 0.008), Basis.IDENTITY, PUPIL)
+		LowPolyMesh.box(st, Vector3(0.045 * side, 0.14, -0.21), Vector3(0.04, 0.01, 0.03), Basis(Vector3.FORWARD, 0.2 * side), FUR)
+		# Presas brancas afiadas
+		LowPolyMesh.prism(st, Vector3(0.025 * side, 0.03, -0.21), Vector3(0.025 * side, -0.025, -0.21), 0.012, 0.0, 3, Color(FANG.r, FANG.g, FANG.b, 0.0))
+	# Focinho arrebitado
+	LowPolyMesh.prism(st, Vector3(0.0, 0.04, -0.21), Vector3(0.0, 0.07, -0.24), 0.02, 0.01, 4, EAR_PINK)
 	# Pedra segura por cima da cabeça, como na referência
-	LowPolyMesh.prism(st, Vector3(0.0, 0.13, 0.0), Vector3(0.0, 0.23, 0.0), 0.06, 0.05, 6, ROCK)
+	LowPolyMesh.prism(st, Vector3(0.0, 0.13, 0.0), Vector3(0.0, 0.25, 0.0), 0.075, 0.065, 6, ROCK)
 	add_child(LowPolyMesh.commit(st, "Body", mat))
 	_wing_left = _build_bat_wing(-1.0, mat)
 	_wing_right = _build_bat_wing(1.0, mat)
