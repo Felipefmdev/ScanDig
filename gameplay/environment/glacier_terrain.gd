@@ -35,13 +35,22 @@ const BJORN_CAMP: Vector3 = Vector3(-14.0, 8.0, 6.0)
 const FLAT_ZONES: Array[Vector3] = [
 	Vector3(0.0, 0.0, 3.5),
 	Vector3(3.5, 3.5, 4.0),
-	Vector3(-14.0, 8.0, 5.0)
+	Vector3(-14.0, 8.0, 5.0),
+	# Banca (balcão e ofertas a y fixo) e altar do chefe com a arena à volta
+	Vector3(8.5, 6.0, 8.0),
+	Vector3(18.0, 18.0, 8.0)
 ]
 
 const NOISE_AMP: float = 0.28
+## Relevo (estudo How to Fish): amplitude da ondulação larga (m), raio de acalmia à volta das
+## zonas planas (m) e semente do ruído.
+const RELIEF_AMP: float = 1.6
+const RELIEF_CALM: float = 6.0
+const RELIEF_SEED: int = 4343
 
 static var _noise: FastNoiseLite = null
 static var _broad: FastNoiseLite = null
+static var _relief: FastNoiseLite = null
 
 @export var rebuild_now: bool = false:
 	set(value):
@@ -78,10 +87,32 @@ static func lake_weight(x: float, z: float) -> float:
 
 
 ## Altura do solo na posição (x, z) — determinística para colisão e assentamento.
+## Ondulação larga do chão (estudo How to Fish: ilhas com colinas), ±~1 m. Acalma-se até zero
+## nas FLAT_ZONES e RELIEF_CALM m à volta delas (spawn, base, Banca, acampamentos, altares),
+## para nada do que lá está assente ficar a flutuar ou enterrado.
+static func relief_at(x: float, z: float) -> float:
+	var r: float = _get_relief().get_noise_2d(x, z) * RELIEF_AMP
+	for f: Vector3 in FLAT_ZONES:
+		var dist: float = Vector2(x - f.x, z - f.y).length()
+		r *= smoothstep(f.z, f.z + RELIEF_CALM, dist)
+	return r
+
+
+static func _get_relief() -> FastNoiseLite:
+	if _relief == null:
+		_relief = FastNoiseLite.new()
+		_relief.seed = RELIEF_SEED
+		_relief.frequency = 0.035
+		_relief.fractal_octaves = 2
+	return _relief
+
+
 static func height_at(x: float, z: float) -> float:
 	var lw: float = lake_weight(x, z)
 	var h: float = _get_noise().get_noise_2d(x, z) * NOISE_AMP * (1.0 - lw * 0.9)
 	h += (_get_broad().get_noise_2d(x, z) + 0.15) * 0.7 * (1.0 - lw * 0.8)
+	# vai a zero até à margem do lago (sem degrau à volta do gelo)
+	h += relief_at(x, z) * smoothstep(LAKE_RADIUS, LAKE_RADIUS + RELIEF_CALM, Vector2(x, z).distance_to(LAKE_CENTER))
 
 	# Bacia do lago congelado (superfície plana e ligeiramente côncava)
 	if lw > 0.0:

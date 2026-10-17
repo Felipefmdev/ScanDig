@@ -1,30 +1,31 @@
 extends GutTest
 
-## Chão variado das Ruínas e da Cratera (estudo How to Fish): a cor deixa de ser uniforme,
-## mas a altura (e por isso a colisão, buracos, chefes e limites) fica exatamente igual.
+## Chão variado das Ruínas e da Cratera (estudo How to Fish): cor variada e relevo com colinas.
+## As alturas fixadas abaixo apanham qualquer mudança não intencional do chão (colisão, buracos,
+## chefes e limites dependem dele); o templo, a cripta e as zonas planas não podem mudar.
 
 const POINTS: Array = [
 	[0.0, 0.0], [0.0, 11.0], [5.5, -20.0], [-22.0, -6.0], [-19.0, -6.0], [0.0, -15.0],
 	[12.3, 7.7], [-30.0, 25.0], [35.0, -40.0], [16.0, -14.0], [-14.0, 10.0], [3.3, -4.1],
 ]
-## height_at() de antes da mudança de cor (commit 2b4894e), nos mesmos pontos.
+## height_at() com o relevo (ondulação larga + zonas planas da Banca e dos altares).
 const RUINS_HEIGHTS: Array[float] = [
-	0.0, 0.460529, 0.9, -1.01478, -1.033869, 0.9, 0.144436, -0.087054, 2.255981, -0.035115,
-	0.50803, -0.001277,
+	0.0, 0.459023, 0.9, -1.01478, -1.033869, 0.9, 0.0, 0.607893, 2.845362, 0.0,
+	1.204629, -0.001277,
 ]
 const CRATER_HEIGHTS: Array[float] = [
-	0.0, -0.46232, -0.36393, -0.427438, -0.364478, -0.244139, 0.282836, 0.268992, 6.742212,
+	0.0, -0.490452, -0.318556, -0.026848, 0.246876, 0.372145, 0.012704, 0.112253, 6.662837,
 	0.0, 0.0, -1.182208,
 ]
 
 
-func test_ruins_height_unchanged() -> void:
+func test_ruins_height_pinned() -> void:
 	for i: int in POINTS.size():
 		var p: Array = POINTS[i]
 		assert_almost_eq(RuinsTerrain.height_at(p[0], p[1]), RUINS_HEIGHTS[i], 0.0001, "Ruínas %s" % [p])
 
 
-func test_crater_height_unchanged() -> void:
+func test_crater_height_pinned() -> void:
 	for i: int in POINTS.size():
 		var p: Array = POINTS[i]
 		assert_almost_eq(CraterTerrain.height_at(p[0], p[1]), CRATER_HEIGHTS[i], 0.0001, "Cratera %s" % [p])

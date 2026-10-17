@@ -39,8 +39,13 @@ const CRYPT_CENTER: Vector2 = Vector2(-22.0, -6.0)
 const CRYPT_RADIUS: float = 5.0
 const CRYPT_DEPTH: float = 1.3
 ## Zonas planas (x, z, raio): spawn e base de entrega.
-const FLAT_ZONES: Array[Vector3] = [Vector3(0.0, 0.0, 3.5), Vector3(3.5, 3.5, 4.0)]
+const FLAT_ZONES: Array[Vector3] = [Vector3(0.0, 0.0, 3.5), Vector3(3.5, 3.5, 4.0), Vector3(8.5, 6.0, 8.0), Vector3(20.0, -15.0, 8.0)]
 const NOISE_AMP: float = 0.16
+## Relevo (estudo How to Fish): amplitude da ondulação larga (m), raio de acalmia à volta das
+## zonas planas (m) e semente do ruído.
+const RELIEF_AMP: float = 1.6
+const RELIEF_CALM: float = 6.0
+const RELIEF_SEED: int = 3131
 const TILE: float = 2.0
 ## Fração de lajes em falta e de lajes partidas (por laje, estável).
 const MISSING_SLABS: float = 0.07
@@ -50,6 +55,7 @@ const OPEN_JOINTS: float = 0.1
 
 static var _noise: FastNoiseLite = null
 static var _broad: FastNoiseLite = null
+static var _relief: FastNoiseLite = null
 
 @export var rebuild_now: bool = false:
 	set(value):
@@ -106,10 +112,43 @@ static func _crypt_weight(x: float, z: float) -> float:
 
 
 ## Altura do chão em (x, z) — determinística.
+## Ondulação larga do chão (estudo How to Fish: ilhas com colinas), ±~1 m. Acalma-se até zero
+## nas FLAT_ZONES e RELIEF_CALM m à volta delas (spawn, base, Banca, acampamentos, altares),
+## para nada do que lá está assente ficar a flutuar ou enterrado.
+static func relief_at(x: float, z: float) -> float:
+	var r: float = _get_relief().get_noise_2d(x, z) * RELIEF_AMP
+	for f: Vector3 in FLAT_ZONES:
+		var dist: float = Vector2(x - f.x, z - f.y).length()
+		r *= smoothstep(f.z, f.z + RELIEF_CALM, dist)
+	return r
+
+
+## Distância (m) às formas do mapa que têm altura própria: pátio, corredor, templo e cripta.
+## O relevo vai a zero até lá (sem degraus na orla das lajes, da plataforma ou da cripta).
+static func _feature_distance(x: float, z: float) -> float:
+	var d: float = Vector2(x - PLAZA.x, z - PLAZA.y).length() - PLAZA.z
+	var corridor: float = maxf(absf(x) - 3.5, maxf(z, TEMPLE.position.y - z))
+	var temple: float = maxf(maxf(TEMPLE.position.x - x, x - TEMPLE.end.x), maxf(TEMPLE.position.y - z, z - TEMPLE.end.y - RAMP_LEN))
+	var crypt: float = Vector2(x, z).distance_to(CRYPT_CENTER) - CRYPT_RADIUS
+	if z > CRYPT_CENTER.y - 1.2 and z < CRYPT_CENTER.y + 1.2 and x > CRYPT_CENTER.x:
+		crypt = minf(crypt, x - (CRYPT_CENTER.x + CRYPT_RADIUS + 3.0))
+	return maxf(minf(minf(d, corridor), minf(temple, crypt)), 0.0)
+
+
+static func _get_relief() -> FastNoiseLite:
+	if _relief == null:
+		_relief = FastNoiseLite.new()
+		_relief.seed = RELIEF_SEED
+		_relief.frequency = 0.035
+		_relief.fractal_octaves = 2
+	return _relief
+
+
 static func height_at(x: float, z: float) -> float:
 	var paved: float = paved_weight(x, z)
 	var h: float = _get_noise().get_noise_2d(x, z) * NOISE_AMP * (1.0 - paved * 0.85)
 	h += (_get_broad().get_noise_2d(x, z) + 0.2) * 0.5 * (1.0 - paved)
+	h += relief_at(x, z) * smoothstep(0.0, RELIEF_CALM, _feature_distance(x, z))
 	# plataforma do templo (com rampa de RAMP_LEN m a sul)
 	var tw: float = _temple_weight(x, z)
 	if tw > 0.0:
