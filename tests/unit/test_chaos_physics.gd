@@ -212,3 +212,37 @@ func test_seagull_poop_hits_player_below() -> void:
 		gull._update_poops(1.0 / 60.0)
 	assert_not_null(player._splat_layer, "manchou a vista")
 	assert_true(not is_instance_valid(blob) or blob.is_queued_for_deletion(), "o cocô sumiu ao acertar")
+
+
+func test_eating_takes_time_and_damage_interrupts() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	var worm: ToolData = load("res://items/tools/minhoca.tres") as ToolData
+	var c: CarriedItem = CarriedItem.create_from_tool_data(worm)
+	player.inventory.add_item(c)
+	player.inventory.select(player.inventory.slots.find(c))
+	player.health = 50.0
+	player.start_eating(c)
+	player.update_eating(0.5, true)
+	assert_almost_eq(player.health, 50.0, 0.001, "ainda a mastigar")
+	player._invulnerable_until_ms = 0
+	player.take_damage(5.0)
+	assert_false(player.is_eating(), "o golpe interrompe")
+	player.start_eating(c)
+	player.update_eating(0.6, true)
+	player.update_eating(0.6, true)
+	assert_gt(player.health, 45.0, "segurou o tempo todo: comeu")
+	assert_eq(player.inventory.slots.find(c), -1)
+
+
+func test_releasing_cancels_eating() -> void:
+	var player: Player = PLAYER_SCENE.instantiate() as Player
+	add_child_autofree(player)
+	var worm: ToolData = load("res://items/tools/minhoca.tres") as ToolData
+	var c: CarriedItem = CarriedItem.create_from_tool_data(worm)
+	player.inventory.add_item(c)
+	player.inventory.select(player.inventory.slots.find(c))
+	player.health = 50.0
+	player.start_eating(c)
+	player.update_eating(0.3, false)
+	assert_false(player.is_eating(), "largou o clique")

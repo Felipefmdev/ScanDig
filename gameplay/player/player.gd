@@ -554,6 +554,7 @@ func _physics_process(delta: float) -> void:
 
 	if is_settings_open():
 		return
+	update_eating(delta, InputMap.has_action("use_tool") and Input.is_action_pressed("use_tool"))
 	_handle_dig_actions()
 	_handle_attack_action()
 	_handle_inventory_actions()
@@ -1012,6 +1013,9 @@ func take_damage(amount: float) -> void:
 		return
 	_invulnerable_until_ms = now + int(invulnerability_after_damage * 1000.0)
 	_last_damage_ms = now
+	if is_eating():
+		cancel_eating()
+		_show_temporary_message("Engasgou com o golpe: parou de comer!", UiPalette.ORANGE, 1.2)
 	health = clampf(health - amount, 0.0, max_health)
 	health_changed.emit(health, max_health)
 	_shake_camera(0.03, 0.25)
@@ -1618,7 +1622,7 @@ func _setup_extra_hud() -> void:
 
 func _update_extra_hud() -> void:
 	if throw_charge_bar != null:
-		var charge: float = get_throw_charge()
+		var charge: float = maxf(get_throw_charge(), eat_progress_ratio())
 		throw_charge_bar.visible = charge > 0.0
 		throw_charge_bar.value = charge
 	if boss_timer_label != null:
@@ -1831,6 +1835,10 @@ func update_tool_sway(delta: float) -> void:
 		var t: float = _equip_left / maxf(tool_equip_time, 0.001)
 		equip = t * t  # sai de baixo e assenta com ease-out
 	var charge: float = get_throw_charge()
+	var eating: float = eat_progress_ratio()
+	if eating > 0.0:
+		# Leva a comida à boca: sobe e aproxima-se da câmara.
+		bob += Vector3(0.0, eating * 0.12, eating * 0.18)
 	tool_sway.position = Vector3(_sway_offset.x, _sway_offset.y + breathe - equip * 0.12 + charge * 0.03, charge * 0.12) + bob
 	var k: float = deg_to_rad(tool_sway_rot_deg) / maxf(tool_sway_max, 0.0001)
 	tool_sway.rotation = Vector3(-_sway_offset.y * k + equip * 0.5, _sway_offset.x * k, -_sway_offset.x * k * 0.6)
@@ -2338,7 +2346,7 @@ func _handle_use_tool_action() -> void:
 	if c == null or c.tool_data == null:
 		return
 	if c.tool_data.category == ToolData.Category.FOOD:
-		eat(c)
+		start_eating(c)
 		return
 	var cooldown_before: float = _use_cooldown
 	_dispatch_tool_use(c)
@@ -2471,6 +2479,48 @@ func show_explosion(center: Vector3) -> void:
 				local.call("_shake_camera", lerpf(0.12, 0.02, d / 14.0), 0.45)
 
 
+## How to Fish (PlayerEating): comer leva EAT_TIME a segurar o clique; largar, trocar de
+## slot ou levar dano interrompe. Comer no meio da luta é um risco.
+const EAT_TIME: float = 1.0
+var _eating: CarriedItem = null
+var _eat_progress: float = 0.0
+
+
+func start_eating(c: CarriedItem) -> void:
+	if health >= max_health and hunger >= max_hunger - 0.5:
+		_show_temporary_message("Sem fome agora.", Color(0.9, 0.9, 0.9), 1.0)
+		return
+	_eating = c
+	_eat_progress = 0.0
+
+
+func is_eating() -> bool:
+	return _eating != null
+
+
+func cancel_eating() -> void:
+	_eating = null
+	_eat_progress = 0.0
+
+
+## Chamado por frame de física com o estado do botão; come quando chega a EAT_TIME.
+func update_eating(delta: float, holding: bool) -> void:
+	if _eating == null:
+		return
+	if not holding or inventory.get_selected() != _eating:
+		cancel_eating()
+		return
+	_eat_progress += delta
+	if _eat_progress >= EAT_TIME:
+		var c: CarriedItem = _eating
+		cancel_eating()
+		eat(c)
+
+
+func eat_progress_ratio() -> float:
+	return clampf(_eat_progress / EAT_TIME, 0.0, 1.0) if _eating != null else 0.0
+
+
 ## Come a comida do slot: cura heal_amount e gasta a unidade. Falso se não comeu.
 func eat(c: CarriedItem) -> bool:
 	if c == null or c.tool_data == null or c.tool_data.category != ToolData.Category.FOOD:
@@ -2565,7 +2615,7 @@ func _give_dug_food(food: ToolData) -> void:
 		return
 	inventory.add_item(CarriedItem.create_from_tool_data(food))
 	SFX.play_ui(SFX.PICKUP, -4.0)
-	_show_temporary_message("🪱 Achou: %s! (clique para comer)" % food.display_name, Color(0.75, 0.95, 0.55), 1.8)
+	_show_temporary_message("🪱 Achou: %s! (segure o clique para comer)" % food.display_name, Color(0.75, 0.95, 0.55), 1.8)
 
 
 ## Gasta uma carga do item selecionado; remove-o do slot quando acaba.

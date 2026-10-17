@@ -9,7 +9,7 @@ const SECTION: String = "seen"
 const PATH_META: StringName = &"scandig_hints_path"
 
 const TEXTS: Dictionary = {
-	"hunger": "💡 Com fome? Cave fora dos sinais: às vezes sai comida. Clique com ela na mão para comer.",
+	"hunger": "💡 Com fome? Cave fora dos sinais: às vezes sai comida. Segure o clique com ela na mão para comer (um golpe interrompe).",
 	"throw": "💡 Segure [Q] para arremessar o item: rápido, ele machuca os bichos.",
 	"dynamite": "💡 Dinamite: clique para lançar. A explosão também te acerta: afaste-se!",
 	"seagull": "💡 Gaivotas roubam itens do chão e da mochila. Derrube-a para recuperar.",
