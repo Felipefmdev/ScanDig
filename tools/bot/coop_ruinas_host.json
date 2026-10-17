@@ -43,6 +43,28 @@
 			"timeout": 60
 		},
 		{
+			"t": 0,
+			"call": "ColunaLeste",
+			"method": "trigger"
+		},
+		{
+			"t": 0,
+			"call": "PlacaPedra",
+			"method": "trigger"
+		},
+		{
+			"t": 0,
+			"call": "PlacaDardos",
+			"method": "trigger"
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"dump": "h_armadilhas"
+		},
+		{
 			"sleep": 1.0
 		},
 		{

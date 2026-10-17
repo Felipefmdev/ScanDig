@@ -134,34 +134,7 @@ func _impact(p: Vector3, rock: Node3D, shadow: Node3D) -> void:
 
 ## Host: ponto de escavação novo no fundo da cratera, pelo SpotSpawner (replica sozinho).
 func _spawn_fresh_spot(p: Vector3) -> void:
-	var spawner: Node = _find_spot_spawner()
-	if spawner == null:
-		return
-	var net: MultiplayerSpawner = spawner.get("_net_spawner") as MultiplayerSpawner
-	var item: ItemData = spawner.call("_pick_item") as ItemData if spawner.has_method("_pick_item") else null
-	if net == null or item == null:
-		return
-	var map_data: MapData = spawner.get("map_data") as MapData
-	var spot: Node = net.spawn({
-		"n": 9000 + _count,
-		"item_id": item.id,
-		"rare": map_data != null and randf() < map_data.rare_variant_chance,
-		"pos": (spawner as Node3D).to_local(p),
-	})
-	if spot != null:
-		spot.add_to_group(&"meteor_spots")
-		print("[MeteorShower] ponto fresco %s (%s) em %s" % [spot.name, item.id, p])
-
-
-## O SpotSpawner é irmão do CrateraSecrets no mapa: sobe até um antepassado que o tenha.
-func _find_spot_spawner() -> Node:
-	var n: Node = get_parent()
-	while n != null:
-		var s: Node = n.get_node_or_null(^"SpotSpawner")
-		if s != null:
-			return s
-		n = n.get_parent()
-	return null
+	FreshSpot.spawn(self, p, 9000 + _count, &"meteor_spots")
 
 
 ## Calor: só o jogador local de cada peer (é ele quem manda na própria vida).
