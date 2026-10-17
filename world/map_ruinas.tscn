@@ -1,33 +1,34 @@
-[gd_scene load_steps=39 format=3]
+[gd_scene load_steps=40 format=3 uid="uid://cf54jvjy1668h"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
-[ext_resource type="Resource" path="res://items/maps/ruinas.tres" id="3_ruinas"]
+[ext_resource type="Resource" uid="uid://byovli4tm5xs0" path="res://items/maps/ruinas.tres" id="3_ruinas"]
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
 [ext_resource type="Script" path="res://items/shop_offer.gd" id="9_shop_offer"]
 [ext_resource type="Script" path="res://gameplay/art/toon_override.gd" id="art_toon_override"]
-[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
-[ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
-[ext_resource type="Script" path="res://gameplay/environment/ruins_terrain.gd" id="env_terrain"]
-[ext_resource type="Script" path="res://gameplay/environment/ruins_layout.gd" id="env_layout"]
-[ext_resource type="Script" path="res://gameplay/environment/ruins_structure.gd" id="env_structure"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
-[ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
 [ext_resource type="Script" path="res://gameplay/enemies/boss/boss_altar.gd" id="b_boss_altar"]
 [ext_resource type="PackedScene" path="res://gameplay/enemies/boss/ancient_guardian.tscn" id="b_guardian_scene"]
-[ext_resource type="Environment" path="res://world/environment_ruinas.tres" id="w_env_ruinas"]
-[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="t_estilingue"]
-[ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
-[ext_resource type="Resource" path="res://items/tools/forcado.tres" id="t_forcado"]
-[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
-[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
-[ext_resource type="Resource" path="res://items/tools/lanterna_magnesio.tres" id="t_lanterna_magnesio"]
+[ext_resource type="Script" path="res://gameplay/environment/decoration_scatter.gd" id="deco_scatter"]
+[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
+[ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
+[ext_resource type="Script" path="res://gameplay/environment/ruins_layout.gd" id="env_layout"]
+[ext_resource type="Script" path="res://gameplay/environment/ruins_structure.gd" id="env_structure"]
+[ext_resource type="Script" path="res://gameplay/environment/ruins_terrain.gd" id="env_terrain"]
+[ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
+[ext_resource type="PackedScene" uid="uid://3q1pqo6818cx" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
+[ext_resource type="PackedScene" uid="uid://tpyunr7h3idb" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
+[ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
 [ext_resource type="PackedScene" path="res://gameplay/quests/ruinas/ruinas_secrets.tscn" id="q_ruinas_secrets"]
-[ext_resource type="Resource" path="res://items/tools/dinamite.tres" id="t_dinamite"]
+[ext_resource type="Resource" uid="uid://dl0lf0jvb2ceo" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
+[ext_resource type="Resource" uid="uid://dtjgyrnx1hry8" path="res://items/tools/dinamite.tres" id="t_dinamite"]
+[ext_resource type="Resource" uid="uid://by7msg0gg6mj3" path="res://items/tools/estilingue.tres" id="t_estilingue"]
+[ext_resource type="Resource" uid="uid://cm315ea2rqmc6" path="res://items/tools/forcado.tres" id="t_forcado"]
+[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
+[ext_resource type="Resource" uid="uid://soda27bugbxa" path="res://items/tools/lanterna_magnesio.tres" id="t_lanterna_magnesio"]
+[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
+[ext_resource type="Environment" uid="uid://drs6p2j2o86og" path="res://world/environment_ruinas.tres" id="w_env_ruinas"]
 
 [sub_resource type="BoxShape3D" id="Shape_wall_x"]
 size = Vector3(1, 6, 62)
@@ -207,7 +208,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0, 6)
 [node name="Counter" type="Node3D" parent="Banca"]
 script = ExtResource("env_structure")
 kind = 9
-size = Vector3(1.2, 0.9, 5.0)
+size = Vector3(1.2, 0.9, 5)
 
 [node name="Offer1" type="Node3D" parent="Banca"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -2.4)
@@ -225,7 +226,7 @@ script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_forcado")
 
 [node name="Offer4" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_kit_medico")
 
@@ -269,3 +270,8 @@ boss_offset = Vector3(0, 0, -2)
 label_text = "O guardião dorme debaixo das lajes... [cavar]"
 
 [node name="RuinasSecrets" parent="." instance=ExtResource("q_ruinas_secrets")]
+
+[node name="DecorationScatter" type="Node3D" parent="."]
+script = ExtResource("deco_scatter")
+theme = "ruinas"
+seed_value = 303

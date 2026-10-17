@@ -1,4 +1,4 @@
-[gd_scene load_steps=74 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=75 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -7,12 +7,13 @@
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
 [ext_resource type="Script" path="res://items/shop_offer.gd" id="9_shop_offer"]
-[ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="11_tool_armadilha_rede"]
-[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="11_tool_estilingue"]
+[ext_resource type="Resource" uid="uid://dl0lf0jvb2ceo" path="res://items/tools/armadilha_rede.tres" id="11_tool_armadilha_rede"]
+[ext_resource type="Resource" uid="uid://by7msg0gg6mj3" path="res://items/tools/estilingue.tres" id="11_tool_estilingue"]
 [ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="11_tool_kit_medico"]
 [ext_resource type="Resource" path="res://items/tools/repelente.tres" id="11_tool_repelente"]
 [ext_resource type="Script" path="res://gameplay/art/toon_override.gd" id="art_toon_override"]
 [ext_resource type="Script" path="res://gameplay/enemies/boss/boss_altar.gd" id="b_boss_altar"]
+[ext_resource type="Script" path="res://gameplay/environment/decoration_scatter.gd" id="deco_scatter"]
 [ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 [ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
 [ext_resource type="Script" path="res://gameplay/environment/palm_model.gd" id="env_palm"]
@@ -966,3 +967,8 @@ shape = SubResource("CylinderShape3D_boss_arena_blocker")
 script = ExtResource("art_toon_override")
 
 [node name="PraiaSecrets" parent="." instance=ExtResource("q_praia_secrets")]
+
+[node name="DecorationScatter" type="Node3D" parent="."]
+script = ExtResource("deco_scatter")
+seed_value = 101
+open_sides = PackedInt32Array(3)

@@ -1,34 +1,35 @@
-[gd_scene load_steps=41 format=3]
+[gd_scene load_steps=41 format=3 uid="uid://4q15piwkl53i"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
-[ext_resource type="Resource" path="res://items/maps/cratera.tres" id="3_cratera"]
+[ext_resource type="Resource" uid="uid://bsxkwda08q1nf" path="res://items/maps/cratera.tres" id="3_cratera"]
 [ext_resource type="Script" path="res://gameplay/digging/spot_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="5_enemy_spawner"]
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
 [ext_resource type="Script" path="res://items/shop_offer.gd" id="9_shop_offer"]
 [ext_resource type="Script" path="res://gameplay/art/toon_override.gd" id="art_toon_override"]
+[ext_resource type="Script" path="res://gameplay/environment/crater_altar.gd" id="c_crater_altar"]
+[ext_resource type="Script" path="res://gameplay/environment/decoration_scatter.gd" id="deco_scatter"]
 [ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 [ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
-[ext_resource type="Script" path="res://gameplay/environment/crater_terrain.gd" id="env_terrain"]
 [ext_resource type="Script" path="res://gameplay/environment/crater_layout.gd" id="env_layout"]
 [ext_resource type="Script" path="res://gameplay/environment/crater_structure.gd" id="env_structure"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
+[ext_resource type="Script" path="res://gameplay/environment/crater_terrain.gd" id="env_terrain"]
+[ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
+[ext_resource type="PackedScene" uid="uid://3q1pqo6818cx" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
+[ext_resource type="PackedScene" uid="uid://tpyunr7h3idb" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
 [ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
-[ext_resource type="Script" path="res://gameplay/environment/crater_altar.gd" id="c_crater_altar"]
-[ext_resource type="Environment" path="res://world/environment_cratera.tres" id="w_env_cratera"]
-[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="t_estilingue"]
-[ext_resource type="Resource" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
-[ext_resource type="Resource" path="res://items/tools/forcado.tres" id="t_forcado"]
-[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
-[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
-[ext_resource type="Resource" path="res://items/tools/lanterna_magnesio.tres" id="t_lanterna_magnesio"]
-[ext_resource type="Resource" path="res://items/tools/arpao_corda.tres" id="t_arpao_corda"]
-[ext_resource type="Resource" path="res://items/tools/pulso_magnetico.tres" id="t_pulso_magnetico"]
 [ext_resource type="PackedScene" path="res://gameplay/quests/cratera/cratera_secrets.tscn" id="q_cratera_secrets"]
-[ext_resource type="Resource" path="res://items/tools/dinamite.tres" id="t_dinamite"]
+[ext_resource type="Resource" uid="uid://dl0lf0jvb2ceo" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
+[ext_resource type="Resource" uid="uid://ifcbrd61bewn" path="res://items/tools/arpao_corda.tres" id="t_arpao_corda"]
+[ext_resource type="Resource" uid="uid://dtjgyrnx1hry8" path="res://items/tools/dinamite.tres" id="t_dinamite"]
+[ext_resource type="Resource" uid="uid://by7msg0gg6mj3" path="res://items/tools/estilingue.tres" id="t_estilingue"]
+[ext_resource type="Resource" uid="uid://cm315ea2rqmc6" path="res://items/tools/forcado.tres" id="t_forcado"]
+[ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
+[ext_resource type="Resource" uid="uid://soda27bugbxa" path="res://items/tools/lanterna_magnesio.tres" id="t_lanterna_magnesio"]
+[ext_resource type="Resource" uid="uid://icgswj1vn3k1" path="res://items/tools/pulso_magnetico.tres" id="t_pulso_magnetico"]
+[ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
+[ext_resource type="Environment" uid="uid://cgaoja6dt0jxw" path="res://world/environment_cratera.tres" id="w_env_cratera"]
 
 [sub_resource type="BoxShape3D" id="Shape_wall_x"]
 size = Vector3(1, 8, 62)
@@ -94,10 +95,10 @@ script = ExtResource("env_terrain")
 
 [node name="Grass" type="MultiMeshInstance3D" parent="Terrain"]
 script = ExtResource("env_grass")
-cluster_centers = Array[Vector3]([Vector3(-10, 16, 4.5), Vector3(10, 16, 4.0), Vector3(-18, 6, 3.5), Vector3(6, 6, 3.5), Vector3(-8, -14, 4.0), Vector3(-16, -10, 4.0), Vector3(2, -20, 4.5), Vector3(18, 12, 3.5)])
+cluster_centers = Array[Vector3]([Vector3(-10, 16, 4.5), Vector3(10, 16, 4), Vector3(-18, 6, 3.5), Vector3(6, 6, 3.5), Vector3(-8, -14, 4), Vector3(-16, -10, 4), Vector3(2, -20, 4.5), Vector3(18, 12, 3.5)])
 tufts_per_cluster = 75
 seed_value = 88
-exclusion_zones = Array[Vector3]([Vector3(0, 0, 3.5), Vector3(3.5, 3.5, 4.5), Vector3(8.5, 6, 4.0), Vector3(-14, 10, 6.0), Vector3(-16, -14, 4.5), Vector3(18, 18, 5.0)])
+exclusion_zones = Array[Vector3]([Vector3(0, 0, 3.5), Vector3(3.5, 3.5, 4.5), Vector3(8.5, 6, 4), Vector3(-14, 10, 6), Vector3(-16, -14, 4.5), Vector3(18, 18, 5)])
 max_x = 30.0
 terrain = 4
 color_dark = Color(0.35, 0.15, 0.55, 1)
@@ -231,7 +232,7 @@ script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_kit_medico")
 
 [node name="Offer5" type="Node3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_repelente")
 
@@ -275,6 +276,10 @@ script = ExtResource("art_toon_override")
 [node name="CraterAltar" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 18)
 script = ExtResource("c_crater_altar")
-boss_offset = Vector3(0, 0, -3)
 
 [node name="CrateraSecrets" parent="." instance=ExtResource("q_cratera_secrets")]
+
+[node name="DecorationScatter" type="Node3D" parent="."]
+script = ExtResource("deco_scatter")
+theme = "cratera"
+seed_value = 505

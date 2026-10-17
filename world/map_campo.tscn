@@ -1,4 +1,4 @@
-[gd_scene load_steps=54 format=3 uid="uid://djlnpnnc3081a"]
+[gd_scene load_steps=55 format=3 uid="uid://djlnpnnc3081a"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://items/sell_point.gd" id="8_sell_point"]
 [ext_resource type="Script" path="res://gameplay/art/toon_override.gd" id="art_toon_override"]
 [ext_resource type="Script" path="res://gameplay/enemies/boss/mole_altar.gd" id="b_mole_altar"]
+[ext_resource type="Script" path="res://gameplay/environment/decoration_scatter.gd" id="deco_scatter"]
 [ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 [ext_resource type="Script" path="res://gameplay/environment/fence_line.gd" id="env_fence"]
 [ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
@@ -32,7 +33,7 @@
 [ext_resource type="PackedScene" path="res://gameplay/quests/campo/campo_secrets.tscn" id="q_campo_secrets"]
 [ext_resource type="Script" path="res://items/shop_offer.gd" id="s_shop_offer"]
 [ext_resource type="Resource" uid="uid://dl0lf0jvb2ceo" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
-[ext_resource type="Resource" path="res://items/tools/estilingue.tres" id="t_estilingue"]
+[ext_resource type="Resource" uid="uid://by7msg0gg6mj3" path="res://items/tools/estilingue.tres" id="t_estilingue"]
 [ext_resource type="Resource" uid="uid://cm315ea2rqmc6" path="res://items/tools/forcado.tres" id="t_forcado"]
 [ext_resource type="Resource" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
 [ext_resource type="Resource" path="res://items/tools/repelente.tres" id="t_repelente"]
@@ -1621,3 +1622,8 @@ script = ExtResource("b_mole_altar")
 script = ExtResource("art_toon_override")
 
 [node name="CampoSecrets" parent="." instance=ExtResource("q_campo_secrets")]
+
+[node name="DecorationScatter" type="Node3D" parent="."]
+script = ExtResource("deco_scatter")
+theme = "campo"
+seed_value = 202
