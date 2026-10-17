@@ -13,8 +13,15 @@ func test_footstep_sounds_defined_and_loadable() -> void:
 		assert_gt(sounds.size(), 0, "Superfície %s deve ter ao menos 1 som definido" % s)
 		for path: String in sounds:
 			assert_true(ResourceLoader.exists(path), "Arquivo de áudio deve existir: %s" % path)
-			var stream: Resource = ResourceLoader.load(path)
-			assert_not_null(stream, "Arquivo de áudio deve carregar com sucesso: %s" % path)
+			var stream: AudioStream = ResourceLoader.load(path) as AudioStream
+			assert_not_null(stream, "Arquivo de áudio deve carregar AudioStream válido: %s" % path)
+
+	var water_sounds: Array[String] = SFX.footstep_sound_for_surface(&"water")
+	assert_eq(water_sounds.size(), 3, "FOOTSTEP_WATER deve ter 3 variantes dedicadas")
+	for path: String in water_sounds:
+		assert_true(path.contains("water_step_"), "FOOTSTEP_WATER deve usar water_step_*.wav: %s" % path)
+		var stream: AudioStream = ResourceLoader.load(path) as AudioStream
+		assert_not_null(stream, "water_step deve carregar como AudioStream válido: %s" % path)
 
 
 func test_footstep_volume_offsets() -> void:

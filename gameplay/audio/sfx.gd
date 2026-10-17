@@ -25,7 +25,7 @@ const FOOTSTEP_SNOW: Array[String] = [_IMPACT + "footstep_snow_004.ogg"]
 const FOOTSTEP_GRASS: Array[String] = [_IMPACT + "impactSoft_medium_002.ogg"]
 const FOOTSTEP_STONE: Array[String] = [_IMPACT + "impactGeneric_light_000.ogg", _IMPACT + "impactGeneric_light_001.ogg"]
 const FOOTSTEP_CRYSTAL: Array[String] = [_IMPACT + "impactPlate_light_000.ogg", _IMPACT + "impactPlate_light_001.ogg"]
-const FOOTSTEP_WATER: Array[String] = [_GEN + "sand_throw_0.wav", _GEN + "sand_throw_1.wav"]
+const FOOTSTEP_WATER: Array[String] = [_GEN + "water_step_0.wav", _GEN + "water_step_1.wav", _GEN + "water_step_2.wav"]
 const FOOTSTEP_WOOD: Array[String] = [_IMPACT + "impactSoft_medium_002.ogg", _RPG + "dropLeather.ogg"]
 
 const ITEM_IMPACT_METAL: Array[String] = [_IMPACT + "impactPlate_light_000.ogg", _IMPACT + "impactPlate_light_001.ogg", _RPG + "metalClick.ogg"]

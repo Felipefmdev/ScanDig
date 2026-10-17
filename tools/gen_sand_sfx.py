@@ -95,6 +95,29 @@ def thud(dur: float, f: float) -> list[float]:
     return [math.sin(2 * math.pi * f * i / SR) * math.exp(-i / SR / 0.03) for i in range(n)]
 
 
+def water_droplets(dur: float, count: int = 9) -> list[float]:
+    """Gotas e bolhas curtas: chirps senoidais ascendentes (400 -> 900 Hz) de 8-20 ms."""
+    n = int(SR * dur)
+    out = [0.0] * n
+    for _ in range(count):
+        t0 = random.uniform(0.01, max(0.02, dur - 0.025))
+        start = int(t0 * SR)
+        blen = int(SR * random.uniform(0.008, 0.020))
+        f0 = random.uniform(380.0, 480.0)
+        f1 = random.uniform(780.0, 950.0)
+        amp = random.uniform(0.25, 0.65) * math.exp(-t0 / (dur * 0.85))
+        phase = 0.0
+        for i in range(blen):
+            if start + i >= n:
+                break
+            frac = i / max(1, blen - 1)
+            f = f0 + (f1 - f0) * (frac ** 1.3)
+            phase += 2 * math.pi * f / SR
+            env = math.sin(math.pi * frac)
+            out[start + i] += math.sin(phase) * env * amp
+    return out
+
+
 def mix(*layers: tuple[list[float], float, float]) -> list[float]:
     """layers: (amostras, ganho, atraso em s)."""
     total = max(int(d * SR) + len(s) for s, g, d in layers)
@@ -162,6 +185,15 @@ def main() -> None:
             (swish(0.18, 1300, 700, 0.02), 0.45, 0.0),
         )
         report.append(write("sand_step_%d.wav" % k, s))
+    for k in range(3):
+        _swish_bp.clear()
+        # passo na água rasa: splash filtrado (600-1800 Hz, ataque suave) + gotas/bolhas (chirps 400->900 Hz)
+        s = mix(
+            (swish(0.24, 650 + 60 * k, 1650 - 80 * k, 0.035), 0.85, 0.0),
+            (crunch(0.22, 280, 600, 1800, 0.08), 0.65, 0.01),
+            (water_droplets(0.25, 8 + 2 * k), 0.55, 0.015),
+        )
+        report.append(write("water_step_%d.wav" % k, s))
     print("%-26s %8s %8s" % ("ficheiro", "pico dB", "RMS dB"))
     for name, pk, rms in report:
         print("%-26s %8.1f %8.1f" % (name, pk, rms))
@@ -169,3 +201,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
