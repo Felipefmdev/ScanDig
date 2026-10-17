@@ -231,3 +231,93 @@ func test_interaction_prompt_when_carrying_and_targeting() -> void:
 	carrier.global_position = Vector3(1, 0, 0)
 	carrier._update_interaction_target()
 	assert_true(carrier.interact_prompt.text.contains("Reanimar"), "Prompt dentro da base deve indicar reanimar colega")
+
+
+func test_downed_orbital_camera_rotates_and_zooms_without_affecting_carrier() -> void:
+	var p: Player = _spawn("1", Vector3(0, 0, 0))
+	var carrier: Player = _spawn("2", Vector3(1, 0, 0))
+	p.allow_downed = true
+	p.enter_downed()
+
+	assert_true(p.avatar.visible, "Avatar local visível em 3.ª pessoa quando caído")
+	var initial_angles: Vector2 = p.get_downed_orbit_angles()
+	var initial_dist: float = p.get_downed_orbit_distance()
+	var initial_cam_pos: Vector3 = p.camera.global_position
+
+	# Movimento do rato roda yaw/pitch orbital sem rodar o corpo caído
+	var body_rot_before: float = p.rotation.y
+	p.apply_mouse_look(Vector2(120.0, -60.0))
+	var angles_after: Vector2 = p.get_downed_orbit_angles()
+	assert_ne(angles_after.x, initial_angles.x, "Yaw orbital rodou com o rato")
+	assert_ne(angles_after.y, initial_angles.y, "Pitch orbital rodou com o rato")
+	assert_eq(p.rotation.y, body_rot_before, "Corpo caído não roda ao mover a câmara orbital")
+	assert_ne(p.camera.global_position, initial_cam_pos, "Posição global da câmara orbital mudou")
+
+	# Zoom com limites [DOWNED_ORBIT_MIN_DIST, DOWNED_ORBIT_MAX_DIST]
+	p.zoom_downed_orbit(-0.5)
+	assert_lt(p.get_downed_orbit_distance(), initial_dist, "Zoom in aproxima a câmara")
+	p.zoom_downed_orbit(-10.0)
+	assert_almost_eq(p.get_downed_orbit_distance(), Player.DOWNED_ORBIT_MIN_DIST, 0.001, "Zoom mínimo respeitado")
+	p.zoom_downed_orbit(20.0)
+	assert_almost_eq(p.get_downed_orbit_distance(), Player.DOWNED_ORBIT_MAX_DIST, 0.001, "Zoom máximo respeitado")
+
+	# Carregar não altera a câmara em 1.ª pessoa do colega que carrega
+	carrier.carry_player(p)
+	assert_almost_eq(carrier.head.position.y, 1.6, 0.01, "Câmara de quem carrega mantém altura de 1.ª pessoa")
+
+
+func test_downed_give_up_hold_progress_and_emergency_rescue_to_base() -> void:
+	var p: Player = _spawn("1", Vector3(0, 0, 0))
+	p.allow_downed = true
+	# Afasta o jogador da base e adiciona um item na mochila antes de cair
+	p.global_position = Vector3(25.0, 0.0, -18.0)
+	p.enter_downed()
+	var coin: ItemData = load("res://items/catalog/moeda_antiga.tres") as ItemData
+	p.inventory.add_item(CarriedItem.create(coin, 50, 1.0, false))
+	assert_eq(p.inventory.get_count(), 1)
+	assert_true(p.give_up_bar.visible, "Barra de desistência visível quando caído")
+	assert_true(p.interact_prompt.text.contains("resgate de emergência na base"), "Prompt ScanDig visível quando caído")
+
+	# Segurar 0.5 s (< 1.0 s) avança a barra a 50% mas não desiste
+	p.update_downed_give_up(0.5, true)
+	assert_true(p.is_downed, "Com 0.5s ainda continua caído")
+	assert_almost_eq(p.give_up_progress_ratio(), 0.5, 0.01, "Progresso aos 50%")
+	assert_almost_eq(p.give_up_bar.value, 50.0, 1.0, "Barra de progresso em 50%")
+	assert_true(p.interact_prompt.text.contains("50%"), "Prompt mostra percentagem do hold")
+
+	# Largar o botão zera o progresso
+	p.update_downed_give_up(0.1, false)
+	assert_eq(p.give_up_progress_ratio(), 0.0, "Soltar [E] reinicia o progresso")
+	assert_true(p.is_downed)
+
+	# Segurar >= 1.0 s conclui o resgate de emergência na base e larga a mochila onde caiu
+	p.update_downed_give_up(0.5, true)
+	p.update_downed_give_up(0.55, true)
+	assert_false(p.is_downed, "Aos >= 1.0s deixa de estar caído")
+	assert_true(p.is_alive(), "Jogador está vivo após resgate na base")
+	assert_eq(p.health, p.max_health, "Vida restaurada na base")
+	assert_almost_eq(p.global_position.distance_to(Vector3.ZERO), 0.0, 0.05, "Reapareceu no ponto de partida (base)")
+	assert_eq(p.inventory.get_count(), 0, "Mochila largada no local onde caiu")
+	assert_false(p.give_up_bar.visible, "Barra de desistência escondida ao regressar à base")
+
+
+func test_downed_camera_and_hud_cleanup_on_revive() -> void:
+	var _sp: SellPoint = _create_sell_point(Vector3(0, 0, 0), 4.0)
+	var p: Player = _spawn("1", Vector3(1, 0, 0))
+	p.allow_downed = true
+	p.enter_downed()
+	p.apply_mouse_look(Vector2(80.0, -40.0))
+	p.update_downed_give_up(0.4, true)
+	assert_true(p.give_up_bar.visible)
+	assert_true(p.avatar.visible)
+
+	# Reanimação limpa HUD de caído e restaura câmara em 1.ª pessoa
+	p.revive()
+	assert_false(p.is_downed)
+	assert_eq(p.give_up_progress_ratio(), 0.0, "Progresso de desistir limpo ao reviver")
+	assert_false(p.give_up_bar.visible, "Barra de desistir escondida ao reviver")
+	assert_eq(p.interact_prompt.text, "", "Prompt limpo ao reviver")
+	assert_false(p.avatar.visible, "Avatar local volta a ficar invisível em 1.ª pessoa")
+	assert_almost_eq(p.head.position.y, 1.6, 0.01, "Head volta à altura de 1.ª pessoa")
+	assert_almost_eq(p.camera.position.length(), 0.0, 0.01, "Câmara volta à origem da Head")
+

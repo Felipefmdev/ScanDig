@@ -481,7 +481,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		apply_mouse_look((event as InputEventMouseMotion).relative)
 
 	# [Esc] (ação "pause") é do menu de pausa (CorePauseMenu, #77).
-	if is_settings_open() or is_downed:
+	if is_settings_open():
+		return
+	if is_downed:
+		if event is InputEventMouseButton and event.is_pressed():
+			if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			var mb_downed: InputEventMouseButton = event as InputEventMouseButton
+			if mb_downed.button_index == MOUSE_BUTTON_WHEEL_UP:
+				zoom_downed_orbit(-DOWNED_ORBIT_ZOOM_STEP)
+			elif mb_downed.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				zoom_downed_orbit(DOWNED_ORBIT_ZOOM_STEP)
 		return
 	if event is InputEventMouseButton and event.is_pressed():
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
@@ -495,6 +505,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Olhar com o mouse; invert_y inverte o eixo vertical (Jogabilidade, #77).
 func apply_mouse_look(relative: Vector2) -> void:
+	if is_downed:
+		apply_downed_orbit_look(relative)
+		return
 	_sway_look += relative
 	rotate_y(-relative.x * mouse_sensitivity)
 	head.rotate_x(-relative.y * mouse_sensitivity * (-1.0 if invert_y else 1.0))
@@ -503,10 +516,17 @@ func apply_mouse_look(relative: Vector2) -> void:
 
 func _physics_process(delta: float) -> void:
 	if is_downed:
+		if is_local() and not is_settings_open():
+			var holding_interact: bool = InputMap.has_action("interact") and Input.is_action_pressed("interact")
+			update_downed_give_up(delta, holding_interact)
+			if not is_downed:
+				return
 		if carried_by != null and is_instance_valid(carried_by):
 			global_position = carried_by.global_position - carried_by.global_transform.basis.z * 0.35 + Vector3.UP * 0.85
 			rotation.y = carried_by.rotation.y
 			velocity = Vector3.ZERO
+			if is_local():
+				_update_downed_orbit_camera()
 			return
 		# No chão caído: apenas gravidade e amortecimento horizontal
 		velocity.x = move_toward(velocity.x, 0.0, ground_deceleration * delta)
@@ -517,6 +537,8 @@ func _physics_process(delta: float) -> void:
 				grav *= fall_gravity_multiplier
 			velocity += grav * delta
 		move_and_slide()
+		if is_local():
+			_update_downed_orbit_camera()
 		return
 
 	var on_floor: bool = is_on_floor()
@@ -581,11 +603,8 @@ func _process(_delta: float) -> void:
 		avatar.set_pitch(head.rotation.x)
 		return
 	if is_downed:
-		if interact_prompt != null:
-			if carried_by != null:
-				interact_prompt.text = "🤝 A ser transportado por %s..." % _get_player_name(carried_by)
-			else:
-				interact_prompt.text = "💀 Estás caído! Aguarda que um colega te leve à base."
+		_update_downed_orbit_camera()
+		_update_downed_hud()
 		return
 	update_tool_sway(_delta)
 	_update_extra_hud()
@@ -1108,6 +1127,23 @@ func revive(restore_health_fraction: float = 0.5) -> void:
 		SFX.play_ui(SFX.RESPAWN)
 
 
+## Câmara orbital e resgate de emergência quando caído em coop (#85).
+const GIVE_UP_HOLD_TIME: float = 1.0
+const DOWNED_ORBIT_MIN_DIST: float = 1.8
+const DOWNED_ORBIT_MAX_DIST: float = 4.5
+const DOWNED_ORBIT_DEFAULT_DIST: float = 2.8
+const DOWNED_ORBIT_ZOOM_STEP: float = 0.35
+const DOWNED_ORBIT_MIN_PITCH: float = deg_to_rad(-75.0)
+const DOWNED_ORBIT_MAX_PITCH: float = deg_to_rad(-10.0)
+const DOWNED_ORBIT_PIVOT_OFFSET: Vector3 = Vector3(0.0, 0.45, 0.0)
+
+var _downed_orbit_yaw: float = 0.0
+var _downed_orbit_pitch: float = deg_to_rad(-30.0)
+var _downed_orbit_dist: float = DOWNED_ORBIT_DEFAULT_DIST
+var _give_up_hold: float = 0.0
+var give_up_bar: ProgressBar = null
+
+
 func _on_is_downed_changed(downed: bool) -> void:
 	if avatar != null:
 		avatar.set_downed(downed)
@@ -1119,9 +1155,12 @@ func _on_is_downed_changed(downed: bool) -> void:
 		if not is_in_group(DOWNED_GROUP):
 			add_to_group(DOWNED_GROUP)
 		if is_local():
-			if head != null:
-				head.position.y = 0.35
-				head.rotation.x = deg_to_rad(-10.0)
+			_downed_orbit_yaw = rotation.y
+			_downed_orbit_pitch = deg_to_rad(-30.0)
+			_downed_orbit_dist = DOWNED_ORBIT_DEFAULT_DIST
+			_give_up_hold = 0.0
+			if avatar != null:
+				avatar.visible = true
 			if shovel_rig != null:
 				shovel_rig.visible = false
 			if tool_view != null:
@@ -1131,7 +1170,9 @@ func _on_is_downed_changed(downed: bool) -> void:
 					detector.call("set_active", false)
 				else:
 					detector.visible = false
-			_show_temporary_message("💀 Foste derrubado! Um colega tem de te levar à base para te reanimar.", Color(1.0, 0.35, 0.35), 5.0)
+			_update_downed_orbit_camera()
+			_update_downed_hud()
+			_show_temporary_message("💀 Foste derrubado! Aguarda socorro ou segura [%s] para resgate de emergência." % _get_interact_key_label(), Color(1.0, 0.35, 0.35), 5.0)
 	else:
 		if is_in_group(DOWNED_GROUP):
 			remove_from_group(DOWNED_GROUP)
@@ -1140,10 +1181,140 @@ func _on_is_downed_changed(downed: bool) -> void:
 		if is_local():
 			if not is_in_group(LOCAL_GROUP):
 				add_to_group(LOCAL_GROUP)
+			_give_up_hold = 0.0
+			if give_up_bar != null:
+				give_up_bar.visible = false
+				give_up_bar.value = 0.0
+			if interact_prompt != null:
+				interact_prompt.text = ""
+			if avatar != null:
+				avatar.visible = false
 			if head != null:
-				head.position.y = 1.6
-				head.rotation.x = 0.0
+				head.position = Vector3(0.0, 1.6, 0.0)
+				head.rotation = Vector3.ZERO
+			if camera != null:
+				camera.position = Vector3.ZERO
+				camera.rotation = Vector3.ZERO
 			_update_tool_in_hand()
+
+
+func apply_downed_orbit_look(relative: Vector2) -> void:
+	if not is_downed or not is_local():
+		return
+	_downed_orbit_yaw -= relative.x * mouse_sensitivity
+	var pitch_delta: float = -relative.y * mouse_sensitivity * (-1.0 if invert_y else 1.0)
+	_downed_orbit_pitch = clampf(_downed_orbit_pitch + pitch_delta, DOWNED_ORBIT_MIN_PITCH, DOWNED_ORBIT_MAX_PITCH)
+	_update_downed_orbit_camera()
+
+
+func zoom_downed_orbit(delta_dist: float) -> void:
+	if not is_downed or not is_local():
+		return
+	_downed_orbit_dist = clampf(_downed_orbit_dist + delta_dist, DOWNED_ORBIT_MIN_DIST, DOWNED_ORBIT_MAX_DIST)
+	_update_downed_orbit_camera()
+
+
+func get_downed_orbit_distance() -> float:
+	return _downed_orbit_dist
+
+
+func get_downed_orbit_angles() -> Vector2:
+	return Vector2(_downed_orbit_yaw, _downed_orbit_pitch)
+
+
+func _update_downed_orbit_camera() -> void:
+	if not is_downed or not is_local() or head == null or camera == null:
+		return
+	var pivot: Vector3 = global_position + DOWNED_ORBIT_PIVOT_OFFSET
+	var orbit_basis: Basis = Basis(Vector3.UP, _downed_orbit_yaw) * Basis(Vector3.RIGHT, _downed_orbit_pitch)
+	var desired_pos: Vector3 = pivot + orbit_basis.z * _downed_orbit_dist
+	var actual_dist: float = _downed_orbit_dist
+	var world3d: World3D = get_world_3d()
+	if world3d != null and is_inside_tree():
+		var space: PhysicsDirectSpaceState3D = world3d.direct_space_state
+		if space != null:
+			var exclude_rids: Array[RID] = [get_rid()]
+			if carried_by != null and is_instance_valid(carried_by):
+				exclude_rids.append(carried_by.get_rid())
+			var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
+				pivot, desired_pos, GROUND_MASK, exclude_rids
+			)
+			var hit: Dictionary = space.intersect_ray(query)
+			if not hit.is_empty() and hit.has("position"):
+				var hit_dist: float = pivot.distance_to(hit["position"])
+				actual_dist = clampf(hit_dist - 0.18, 0.4, _downed_orbit_dist)
+	var cam_pos: Vector3 = pivot + orbit_basis.z * actual_dist
+	cam_pos.y = maxf(cam_pos.y, global_position.y + 0.25)
+	head.global_position = pivot
+	head.global_basis = Basis.IDENTITY
+	camera.global_transform = Transform3D(orbit_basis, cam_pos).looking_at(pivot, Vector3.UP)
+
+
+func give_up_progress_ratio() -> float:
+	return clampf(_give_up_hold / GIVE_UP_HOLD_TIME, 0.0, 1.0) if is_downed else 0.0
+
+
+func update_downed_give_up(delta: float, holding: bool) -> void:
+	if not is_downed:
+		_give_up_hold = 0.0
+		return
+	if holding:
+		_give_up_hold += delta
+		if _give_up_hold >= GIVE_UP_HOLD_TIME:
+			give_up_downed()
+			return
+	else:
+		_give_up_hold = 0.0
+	_update_downed_hud()
+
+
+func give_up_downed() -> void:
+	if not is_downed:
+		return
+	var lost: int = _drop_all_items()
+	if carried_by != null and is_instance_valid(carried_by):
+		if carried_by.carried_player == self:
+			carried_by.carried_player = null
+		carried_by = null
+	is_downed = false
+	collision_layer = 1
+	_give_up_hold = 0.0
+	_on_is_downed_changed(false)
+	if _is_multiplayer_active():
+		if multiplayer.is_server():
+			_rpc_sync_downed.rpc(false)
+		else:
+			_rpc_sync_downed.rpc_id(1, false)
+	var msg: String = "🚨 Resgate de emergência acionado! Regressaste à base de expedição."
+	if lost > 0:
+		msg += "\nA mochila ficou onde caíste (%d itens) — volta para a recuperar!" % lost
+	_show_temporary_message(msg, UiPalette.ORANGE, 4.0)
+	_respawn()
+
+
+func _get_interact_key_label() -> String:
+	if InputMap.has_action("interact"):
+		for ev: InputEvent in InputMap.action_get_events("interact"):
+			if ev is InputEventKey:
+				var ek: InputEventKey = ev as InputEventKey
+				var code: Key = ek.keycode if ek.keycode != KEY_NONE else ek.physical_keycode
+				if code != KEY_NONE:
+					return OS.get_keycode_string(code).to_upper()
+	return "E"
+
+
+func _update_downed_hud() -> void:
+	if not is_local():
+		return
+	var key_lbl: String = _get_interact_key_label()
+	var pct: int = int(round(give_up_progress_ratio() * 100.0))
+	if interact_prompt != null:
+		var prefix: String = ("🤝 A ser transportado por %s... | " % _get_player_name(carried_by)) if (carried_by != null and is_instance_valid(carried_by)) else "💀 Caído! Aguarde socorro ou "
+		var suffix: String = (" (%d%%)" % pct) if pct > 0 else ""
+		interact_prompt.text = "%sSegure [%s] para resgate de emergência na base%s" % [prefix, key_lbl, suffix]
+	if give_up_bar != null:
+		give_up_bar.visible = is_downed
+		give_up_bar.value = float(pct)
 
 
 # ---------------------------------------------------------------------------
@@ -1302,7 +1473,7 @@ func _check_team_wipe() -> void:
 			var pl: Player = n as Player
 			if pl != null and not everyone.has(pl):
 				everyone.append(pl)
-	if everyone.is_empty():
+	if everyone.size() < 2 and multiplayer.get_peers().is_empty():
 		return
 	for pl: Player in everyone:
 		if not pl.is_downed:
@@ -1633,6 +1804,26 @@ func _setup_extra_hud() -> void:
 	boss_timer_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	boss_timer_label.visible = false
 	hud.add_child(boss_timer_label)
+	give_up_bar = ProgressBar.new()
+	give_up_bar.name = "GiveUpBar"
+	give_up_bar.show_percentage = false
+	give_up_bar.min_value = 0.0
+	give_up_bar.max_value = 100.0
+	give_up_bar.step = 0.1
+	give_up_bar.custom_minimum_size = Vector2(240, 12)
+	give_up_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	give_up_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	give_up_bar.position += Vector2(-120, 66)
+	var give_up_bg: StyleBoxFlat = StyleBoxFlat.new()
+	give_up_bg.bg_color = Color(0.12, 0.1, 0.08, 0.85)
+	give_up_bg.set_corner_radius_all(4)
+	give_up_bar.add_theme_stylebox_override(&"background", give_up_bg)
+	var give_up_fill: StyleBoxFlat = StyleBoxFlat.new()
+	give_up_fill.bg_color = UiPalette.ORANGE
+	give_up_fill.set_corner_radius_all(4)
+	give_up_bar.add_theme_stylebox_override(&"fill", give_up_fill)
+	give_up_bar.visible = false
+	hud.add_child(give_up_bar)
 
 
 func _update_extra_hud() -> void:
