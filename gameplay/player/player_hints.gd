@@ -10,7 +10,7 @@ const PATH_META: StringName = &"scandig_hints_path"
 
 const TEXTS: Dictionary = {
 	"hunger": "💡 Com fome? Cave fora dos sinais: às vezes sai comida. Segure o clique com ela na mão para comer (um golpe interrompe).",
-	"throw": "💡 Segure [Q] para arremessar o item: rápido, ele machuca os bichos.",
+	"throw": "💡 Segure [{drop}] para arremessar o item: rápido, ele machuca os bichos.",
 	"dynamite": "💡 Dinamite: clique para lançar. A explosão também te acerta: afaste-se!",
 	"seagull": "💡 Gaivotas roubam itens do chão e da mochila. Derrube-a para recuperar.",
 	"wear": "💡 As armas se gastam com o uso. Quando partirem, compre outra na banca.",
@@ -53,4 +53,11 @@ static func take(id: String) -> String:
 	cfg.load(hints_path())
 	cfg.set_value(SECTION, id, true)
 	cfg.save(hints_path())
-	return str(TEXTS[id])
+	return str(TEXTS[id]).replace("{drop}", _drop_label())
+
+
+## Tecla atual de soltar/arremessar (Configurações > Controles); "Q" sem o CoreSettings.
+static func _drop_label() -> String:
+	if SettingsManager.instance == null:
+		return "Q"
+	return SettingsManager.binding_label(SettingsManager.instance.get_binding("drop"))
