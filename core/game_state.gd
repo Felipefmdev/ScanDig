@@ -81,6 +81,7 @@ const CREATURES: Dictionary = {
 const EXTRA_BOSSES: Array[String] = [
 	"octopus", "crow_king", "scarecrow",
 	"idol_mummy", "cave_yeti", "ancient_walrus", "the_sleeper", "the_echo",
+	"gold_colossus",
 ]
 
 const UPGRADES: Dictionary = {
