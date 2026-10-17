@@ -254,22 +254,28 @@ static func build(id: String, is_rare: bool = false) -> Node3D:
 			LowPolyMesh.prism(glow, Vector3(0.0, 0.02, 0.12), Vector3(0.0, 0.02, 0.13), 0.01, 0.006, 6, TURQUOISE)
 			glow_color = Color(0.05, 0.35, 0.3)
 		"bussola_congelada":
-			LowPolyMesh.box(st, Vector3(0.0, 0.045, 0.0), Vector3(0.16, 0.09, 0.15), Basis(Vector3.UP, 0.2), ICE)
-			_compass(st, BRONZE, BRONZE_DARK)
-			LowPolyMesh.prism(st, Vector3(-0.06, 0.08, 0.04), Vector3(-0.04, 0.11, 0.03), 0.03, 0.0, 4, ICE)
-			LowPolyMesh.prism(glow, Vector3(0.0, 0.05, 0.0), Vector3(0.0, 0.06, 0.0), 0.05, 0.05, 8, Color("#80d0ff"))
-			glow_color = Color(0.1, 0.3, 0.5)
+			# Bússola de latão presa num bloco de gelo azul rachado (gelo translúcido por cima).
+			LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.16, 0.0), 0.075, 0.06, 6, ICE.darkened(0.15))
+			LowPolyMesh.prism(st, Vector3(0.012, 0.03, 0.0), Vector3(0.012, 0.135, 0.0), 0.071, 0.056, 6, ICE)
+			_ring(st, Vector3(0.0, 0.085, 0.062), Vector3.FORWARD, 0.042, 0.009, 10, BRONZE)
+			LowPolyMesh.prism(st, Vector3(0.0, 0.085, 0.058), Vector3(0.0, 0.085, 0.066), 0.036, 0.036, 10, DIAL)
+			LowPolyMesh.box(st, Vector3(0.0, 0.085, 0.068), Vector3(0.006, 0.05, 0.003), Basis(Vector3.FORWARD, 0.5), RED_GEM)
+			LowPolyMesh.box(st, Vector3(0.0, 0.135, 0.062), Vector3(0.012, 0.016, 0.008), Basis.IDENTITY, BRONZE_DARK)
+			for k: int in 3:
+				LowPolyMesh.box(st, Vector3(-0.05 + 0.05 * float(k), 0.165, 0.02), Vector3(0.018, 0.014, 0.012), Basis(Vector3.UP, float(k)), Color.WHITE)
 		"crampon_enferrujado":
-			LowPolyMesh.box(st, Vector3(0.0, 0.025, 0.0), Vector3(0.11, 0.012, 0.19), Basis.IDENTITY, RUST)
-			LowPolyMesh.box(st, Vector3(0.0, 0.025, 0.0), Vector3(0.06, 0.014, 0.12), Basis.IDENTITY, RUST_DARK)
-			for side: float in [-1.0, 1.0]:
-				for k: int in 4:
-					var z: float = -0.07 + 0.045 * float(k)
-					LowPolyMesh.prism(st, Vector3(0.048 * side, 0.02, z), Vector3(0.052 * side, 0.0, z), 0.012, 0.0, 4, IRON)
-			LowPolyMesh.box(st, Vector3(0.0, 0.04, -0.04), Vector3(0.13, 0.01, 0.025), Basis.IDENTITY, LEATHER)
-			LowPolyMesh.box(st, Vector3(0.0, 0.04, 0.05), Vector3(0.13, 0.01, 0.025), Basis.IDENTITY, LEATHER)
-			_ring(st, Vector3(0.065, 0.04, 0.05), Vector3.RIGHT, 0.012, 0.004, 6, BRONZE)
-			LowPolyMesh.box(st, Vector3(-0.03, 0.032, 0.02), Vector3(0.035, 0.008, 0.04), Basis.IDENTITY, ICE)
+			# Armação de ferro com espigões por baixo, tiras de couro e uma fivela.
+			for z: float in [-0.055, 0.055]:
+				LowPolyMesh.prism(st, Vector3(-0.08, 0.03, z), Vector3(0.08, 0.03, z), 0.009, 0.009, 5, RUST)
+			for x: float in [-0.07, 0.0, 0.07]:
+				LowPolyMesh.prism(st, Vector3(x, 0.03, -0.055), Vector3(x, 0.03, 0.055), 0.008, 0.008, 5, RUST_DARK)
+				for z: float in [-0.055, 0.055]:
+					LowPolyMesh.prism(st, Vector3(x, 0.03, z), Vector3(x, -0.005, z * 1.1), 0.008, 0.0, 4, IRON.lightened(0.25))
+			LowPolyMesh.prism(st, Vector3(0.08, 0.03, 0.0), Vector3(0.115, 0.012, 0.0), 0.01, 0.0, 4, IRON.lightened(0.25))
+			_ring(st, Vector3(-0.02, 0.05, 0.0), Vector3.RIGHT, 0.06, 0.008, 10, LEATHER)
+			_ring(st, Vector3(0.05, 0.05, 0.0), Vector3.RIGHT, 0.055, 0.008, 10, LEATHER.darkened(0.15))
+			LowPolyMesh.box(st, Vector3(-0.02, 0.11, 0.0), Vector3(0.025, 0.02, 0.012), Basis.IDENTITY, IRON)
+			LowPolyMesh.box(st, Vector3(-0.1, 0.035, 0.03), Vector3(0.015, 0.012, 0.015), Basis.IDENTITY, Color.WHITE)
 		"cristal_eco":
 			LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.035, 0.0), 0.08, 0.075, 7, STONE_DARK)
 			LowPolyMesh.prism(glow, Vector3(0.0, 0.02, 0.0), Vector3(0.01, 0.19, 0.0), 0.04, 0.0, 6, VIOLET_GLOW)
@@ -296,14 +302,18 @@ static func build(id: String, is_rare: bool = false) -> Node3D:
 			LowPolyMesh.box(st, Vector3(0.0, 0.056, 0.0), Vector3(0.06, 0.004, 0.005), Basis.IDENTITY, GOLD)
 			_ring(st, Vector3(0.0, 0.02, -0.075), Vector3.UP, 0.01, 0.004, 6, GOLD_DARK)
 		"geodo_estrelar":
-			LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.08, 0.0), 0.085, 0.08, 9, STONE_GREY)
-			LowPolyMesh.prism(st, Vector3(0.0, 0.08, 0.0), Vector3(0.0, 0.09, 0.0), 0.08, 0.07, 9, STONE_DARK)
-			LowPolyMesh.prism(glow, Vector3(0.0, 0.04, 0.0), Vector3(0.0, 0.085, 0.0), 0.068, 0.065, 8, DEEP_BLUE)
+			# Geodo partido, deitado: crosta cinza enferrujada e a cavidade azul-escura com estrelas.
+			LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.05, 0.0), 0.09, 0.095, 9, STONE_GREY)
+			LowPolyMesh.prism(st, Vector3(0.0, 0.05, 0.0), Vector3(0.0, 0.058, 0.0), 0.095, 0.085, 9, RUST)
+			LowPolyMesh.prism(st, Vector3(0.0, 0.035, 0.0), Vector3(0.0, 0.059, 0.0), 0.07, 0.07, 9, DEEP_BLUE)
+			for k: int in 7:
+				var a: float = TAU * float(k) / 7.0
+				var p: Vector3 = Vector3(cos(a) * 0.045, 0.055, sin(a) * 0.045)
+				LowPolyMesh.prism(st, p, p + Vector3(-cos(a) * 0.012, 0.022, -sin(a) * 0.012), 0.014, 0.0, 4, DEEP_BLUE.lightened(0.2))
 			for k: int in 6:
-				var a: float = TAU * float(k) / 6.0 + 0.3
-				var r: float = 0.035 if k % 2 == 0 else 0.02
-				LowPolyMesh.box(glow, Vector3(sin(a) * r, 0.086, cos(a) * r), Vector3(0.008, 0.008, 0.008), Basis.IDENTITY, CYAN_GLOW)
-			glow_color = Color(0.1, 0.2, 0.45)
+				var a2: float = TAU * float(k) / 6.0 + 0.4
+				LowPolyMesh.box(glow, Vector3(cos(a2) * 0.03, 0.062, sin(a2) * 0.025), Vector3(0.008, 0.004, 0.008), Basis(Vector3.UP, a2), Color.WHITE)
+			glow_color = Color(0.25, 0.3, 0.55)
 		"idolo_jade":
 			LowPolyMesh.box(st, Vector3(0.0, 0.015, 0.0), Vector3(0.09, 0.03, 0.08), Basis.IDENTITY, JADE_DARK)
 			LowPolyMesh.box(st, Vector3(0.0, 0.065, 0.0), Vector3(0.075, 0.07, 0.065), Basis.IDENTITY, JADE)
@@ -346,12 +356,15 @@ static func build(id: String, is_rare: bool = false) -> Node3D:
 			for k: int in 3:
 				LowPolyMesh.box(st, Vector3(0.0, 0.03, 0.045), Vector3(0.008, 0.004, 0.05), Basis(Vector3.UP, PI * float(k) / 3.0), GOLD_DARK)
 		"nucleo_adormecido":
-			LowPolyMesh.prism(st, Vector3(0.0, 0.01, 0.0), Vector3(0.0, 0.07, 0.0), 0.075, 0.08, 8, OBSIDIAN)
-			LowPolyMesh.prism(st, Vector3(0.0, 0.07, 0.0), Vector3(0.0, 0.13, 0.0), 0.08, 0.065, 8, OBSIDIAN)
-			LowPolyMesh.box(glow, Vector3(0.0, 0.07, 0.0), Vector3(0.09, 0.014, 0.01), Basis(Vector3.UP, 0.4), MAGMA_GLOW)
-			LowPolyMesh.box(glow, Vector3(0.02, 0.07, 0.0), Vector3(0.01, 0.014, 0.09), Basis(Vector3.FORWARD, 0.3), MAGMA_GLOW)
-			LowPolyMesh.box(glow, Vector3(-0.02, 0.09, 0.03), Vector3(0.04, 0.04, 0.01), Basis(Vector3.RIGHT, 0.5), MAGMA_GLOW)
-			glow_color = Color(0.6, 0.2, 0.05)
+			# Núcleo de obsidiana em forma de ovo com rachaduras de magma que brilham.
+			LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.07, 0.0), 0.07, 0.09, 8, OBSIDIAN)
+			LowPolyMesh.prism(st, Vector3(0.0, 0.07, 0.0), Vector3(0.0, 0.17, 0.0), 0.09, 0.055, 8, OBSIDIAN.lightened(0.08))
+			LowPolyMesh.prism(st, Vector3(0.0, 0.17, 0.0), Vector3(0.0, 0.2, 0.0), 0.055, 0.0, 8, OBSIDIAN)
+			for k: int in 5:
+				var a: float = TAU * float(k) / 5.0 + 0.3
+				var p0: Vector3 = Vector3(cos(a) * 0.086, 0.04 + 0.02 * float(k % 2), sin(a) * 0.086)
+				LowPolyMesh.prism(glow, p0, p0 + Vector3(cos(a + 0.5) * 0.005, 0.1, sin(a + 0.5) * 0.005) * 0.9, 0.006, 0.003, 4, MAGMA_GLOW)
+			glow_color = Color(0.8, 0.28, 0.05)
 		"nucleo_guardiao":
 			LowPolyMesh.prism(st, Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.045, 0.0), 0.085, 0.078, 6, STONE_DARK)
 			LowPolyMesh.prism(st, Vector3(0.0, 0.04, 0.0), Vector3(0.0, 0.10, 0.0), 0.068, 0.072, 8, STONE_GREY)
