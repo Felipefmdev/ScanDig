@@ -11,6 +11,7 @@ Documentação técnica de `res://core/` e `res://ui/`. Se algo aqui divergir do
 | `CoreSave` | `res://core/save_manager.gd` | `SaveManager` | `SaveManager.instance` |
 | `CoreSession` | `res://core/session_manager.gd` | `SessionManager` | `SessionManager.instance` ou `/root/CoreSession` |
 | `CoreSettings` | `res://core/settings_manager.gd` | `SettingsManager` | `SettingsManager.instance` |
+| `CoreInputDevice` | `res://core/input_device.gd` | `InputDevice` | `InputDevice.instance`; atalhos estáticos `using_gamepad()`, `action_label(ação)` |
 | `CoreWeather` | `res://core/weather_manager.gd` | `WeatherManager` | `WeatherManager.instance`; no gameplay, `WeatherManager.now_*()` (neutros sem o autoload) |
 | `CoreWeatherFx` | `res://ui/weather_fx.gd` | `WeatherFx` | `WeatherFx.instance` (partículas e névoa do clima, só local) |
 | `CoreWeatherUI` | `res://ui/weather_hud.gd` | `WeatherHud` | `WeatherHud.instance` (aviso e ícone do clima, camada 6) |
@@ -283,6 +284,13 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 - Host que sai no meio da expedição chama `SaveManager.save_game()` antes de limpar: dinheiro e museu ganhos até ali ficam salvos, mas o dia **não** avança e não há resumo.
 - Os outros peers não mudam: se um cliente sai, o host recebe `peer_disconnected`; se o host sai, os clientes recebem `server_disconnected` → `host_lost`.
 - O botão "Sair da sessão" da UI deve chamar `disconnect_game()`.
+
+### Controle (gamepad, #102)
+- **Duas colunas de bindings** no `CoreSettings`: `[controls]` (teclado/mouse, como antes) e `[controls_pad]` (comando). A seção é separada para o cfg antigo continuar valendo sem migração e para cada coluna se aplicar, conferir conflito e restaurar sozinha. Tipos do comando: `{"type": "joy_button", "code": JoyButton}` e `{"type": "joy_axis", "code": JoyAxis, "sign": 1|-1}`; `{"type": "none"}` = sem binding (vence o padrão; aparece quando uma troca tira o botão de uma ação sem botão antigo para devolver).
+- API: `get_pad_binding(ação)`, `set_binding` (a coluna vem do tipo do binding), `find_conflict` (só na mesma coluna), `reset_controls()` (as duas), `binding_label` (também "A", "LB", "RT", "Analógico E ↑"…), `binding_from_event` (botão apertado ou eixo com |v| > 0,5).
+- Padrão (`DEFAULT_PAD_BINDINGS`): analógico esquerdo anda, direito olha (`look_*`); A pula, X interage, B solta/arremessa (segurar carrega), RT usa a ferramenta, LT cava com cuidado, RB ataca, LB/Y trocam o espaço da mochila (`slot_prev`/`slot_next`; o direcional ←/→ também, fixo em `EXTRA_PAD_EVENTS`), Start pausa, L3 corre. Nos menus, A = `ui_accept` e B = `ui_cancel` (acrescentados pelo `InputDevice`).
+- `[gameplay] pad_look_sensitivity` (graus/s, 60–360, padrão 180). O olhar usa `InputDevice.look_vector` (zona morta radial 0,15 e curva 1,7) e o mesmo caminho do mouse no player (`apply_mouse_look`); "Inverter eixo Y" vale para os dois.
+- **`InputDevice`** (`CoreInputDevice`): `is_using_gamepad()` e `signal device_changed(using_gamepad)`, pelo último input (eixo só conta além de 0,35; mouse só com movimento > 4 px). Só observa; nunca marca o evento como tratado. `action_label(ação)` dá a tecla ou o botão do dispositivo em uso; `fill_action_labels("Segure [{drop}]…")` troca qualquer `{ação}`. **A mira assistida da #90 deve usar este helper.**
 
 ### Clima por mapa (`CoreWeather`, #99)
 - Eventos por mapa em `WeatherManager.WEATHER_BY_MAP`: chuva (`rain`) na Praia e no Campo, nevasca (`blizzard`) na Geleira e tempestade de cinzas (`ashstorm`) na Cratera. Ruínas não tem evento. Cada mapa define `warning_s`, `duration_min/max`, `interval_min/max` e `intensity`. Os efeitos no auge ficam em `EFFECTS_BY_KIND`. **Tempos e intensidades se ajustam só nessas duas constantes.**

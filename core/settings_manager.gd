@@ -14,6 +14,9 @@ const DEFAULT_PATH: String = "user://scandig_settings.cfg"
 const VIDEO: String = "video"
 const AUDIO: String = "audio"
 const CONTROLS: String = "controls"
+## Coluna do comando (#102), seção à parte: o [controls] antigo (teclado/mouse) continua igual,
+## sem migração, e cada coluna se aplica, confere conflito e restaura sozinha.
+const CONTROLS_PAD: String = "controls_pad"
 const GAMEPLAY: String = "gameplay"
 
 const WINDOW_MODES: Array[String] = ["windowed", "fullscreen", "borderless"]
@@ -31,6 +34,8 @@ const VIDEO_TRIAL_SECONDS: float = 10.0
 const SENSITIVITY_RANGE: Vector2 = Vector2(0.0005, 0.008)
 const FOV_RANGE: Vector2 = Vector2(60.0, 100.0)
 const HUD_TEXT_SCALE_RANGE: Vector2 = Vector2(0.8, 1.5)
+## Olhar com o analógico direito (#102), em graus por segundo com o analógico no fim.
+const PAD_LOOK_SENSITIVITY_RANGE: Vector2 = Vector2(60.0, 360.0)
 ## Antes do #77 as opções do Esc ficavam em [player] (player_settings.gd). Lidas se o arquivo
 ## ainda não tem [gameplay] e apagadas do [player] ao gravar (o nome continua lá).
 const LEGACY_GAMEPLAY_KEYS: Array[String] = ["mouse_sensitivity", "fov", "view_bobbing"]
@@ -55,8 +60,9 @@ const DEFAULTS: Dictionary = {
 		"music": 1.0,
 		"sfx": 1.0,
 	},
-	# Só as trocas do jogador; o resto vem de DEFAULT_BINDINGS.
+	# Só as trocas do jogador; o resto vem de DEFAULT_BINDINGS / DEFAULT_PAD_BINDINGS.
 	CONTROLS: {},
+	CONTROLS_PAD: {},
 	GAMEPLAY: {
 		"mouse_sensitivity": 0.0025,
 		"fov": 75.0,
@@ -65,6 +71,7 @@ const DEFAULTS: Dictionary = {
 		"show_fps": false,
 		"show_hints": true,
 		"hud_text_scale": 1.0,
+		"pad_look_sensitivity": 180.0,
 	},
 }
 
@@ -175,6 +182,14 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 			for action: String in CONTROL_ACTIONS:
 				if _valid_binding(values.get(action)):
 					out[action] = {"type": values[action]["type"], "code": int(values[action]["code"])}
+				elif _is_none_binding(values.get(action)):
+					out[action] = {"type": "none"}
+		CONTROLS_PAD:
+			for action: String in CONTROL_ACTIONS:
+				if _valid_pad_binding(values.get(action)):
+					out[action] = _normalized_pad_binding(values[action])
+				elif _is_none_binding(values.get(action)):
+					out[action] = {"type": "none"}
 		GAMEPLAY:
 			var sens: Variant = values.get("mouse_sensitivity")
 			if sens is float or sens is int:
@@ -188,6 +203,9 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 			var hud: Variant = values.get("hud_text_scale")
 			if hud is float or hud is int:
 				out["hud_text_scale"] = clampf(float(hud), HUD_TEXT_SCALE_RANGE.x, HUD_TEXT_SCALE_RANGE.y)
+			var pad_look: Variant = values.get("pad_look_sensitivity")
+			if pad_look is float or pad_look is int:
+				out["pad_look_sensitivity"] = clampf(float(pad_look), PAD_LOOK_SENSITIVITY_RANGE.x, PAD_LOOK_SENSITIVITY_RANGE.y)
 	return out
 
 
@@ -306,7 +324,7 @@ func _apply_section(section: String, apply_window: bool) -> void:
 			_apply_video(get_section(VIDEO), apply_window)
 		AUDIO:
 			_apply_audio(get_section(AUDIO))
-		CONTROLS:
+		CONTROLS, CONTROLS_PAD:
 			_apply_controls()
 		GAMEPLAY:
 			# Sensibilidade, FOV, balanço e inverter Y: o player escuta settings_changed.
@@ -360,10 +378,12 @@ func _apply_video(values: Dictionary, apply_window: bool) -> void:
 
 # --- Controles (#77, etapa 2) --------------------------------------------------
 
-## Ações remapeáveis, na ordem da aba Controles.
+## Ações remapeáveis, na ordem da aba Controles. slot_prev/slot_next e look_* (#102) não têm
+## tecla padrão (a roda e o mouse fazem isso), só botão/eixo do comando.
 const CONTROL_ACTIONS: Array[String] = [
-	"move_forward", "move_backward", "move_left", "move_right", "jump", "sprint",
-	"interact", "use_tool", "careful_dig", "attack", "drop",
+	"move_forward", "move_backward", "move_left", "move_right",
+	"look_up", "look_down", "look_left", "look_right", "jump", "sprint",
+	"interact", "use_tool", "careful_dig", "attack", "drop", "slot_prev", "slot_next",
 	"slot_1", "slot_2", "slot_3", "slot_4", "slot_5", "slot_6", "slot_7", "slot_8", "pause",
 ]
 const ACTION_LABELS: Dictionary = {
@@ -371,7 +391,10 @@ const ACTION_LABELS: Dictionary = {
 	"move_left": "Andar para a esquerda", "move_right": "Andar para a direita",
 	"jump": "Pular", "sprint": "Correr", "interact": "Interagir / pegar",
 	"use_tool": "Usar ferramenta", "careful_dig": "Cavar com cuidado", "attack": "Atacar",
-	"drop": "Soltar / arremessar item", "slot_1": "Espaço 1 da mochila", "slot_2": "Espaço 2 da mochila",
+	"drop": "Soltar / arremessar item", "slot_prev": "Espaço anterior da mochila",
+	"slot_next": "Próximo espaço da mochila", "look_up": "Olhar para cima", "look_down": "Olhar para baixo",
+	"look_left": "Olhar para a esquerda", "look_right": "Olhar para a direita",
+	"slot_1": "Espaço 1 da mochila", "slot_2": "Espaço 2 da mochila",
 	"slot_3": "Espaço 3 da mochila", "slot_4": "Espaço 4 da mochila", "slot_5": "Espaço 5 da mochila",
 	"slot_6": "Espaço 6 da mochila", "slot_7": "Espaço 7 da mochila", "slot_8": "Espaço 8 da mochila",
 	"pause": "Pausa",
@@ -390,6 +413,55 @@ const DEFAULT_BINDINGS: Dictionary = {
 	"slot_5": {"type": "key", "code": KEY_5}, "slot_6": {"type": "key", "code": KEY_6},
 	"slot_7": {"type": "key", "code": KEY_7}, "slot_8": {"type": "key", "code": KEY_8},
 	"pause": {"type": "key", "code": KEY_ESCAPE},
+}
+## Comando (#102, Xbox/genérico pela SDL da Godot). Analógico esquerdo anda, direito olha;
+## A pula, X interage, B solta/arremessa (segurar carrega, como o Q); RT usa a ferramenta, LT
+## cava com cuidado; RB ataca, LB/Y trocam o espaço da mochila; Start pausa, L3 corre.
+## {"type": "joy_button", "code": JoyButton} ou {"type": "joy_axis", "code": JoyAxis, "sign": 1|-1}
+const DEFAULT_PAD_BINDINGS: Dictionary = {
+	"move_forward": {"type": "joy_axis", "code": JOY_AXIS_LEFT_Y, "sign": -1},
+	"move_backward": {"type": "joy_axis", "code": JOY_AXIS_LEFT_Y, "sign": 1},
+	"move_left": {"type": "joy_axis", "code": JOY_AXIS_LEFT_X, "sign": -1},
+	"move_right": {"type": "joy_axis", "code": JOY_AXIS_LEFT_X, "sign": 1},
+	"look_up": {"type": "joy_axis", "code": JOY_AXIS_RIGHT_Y, "sign": -1},
+	"look_down": {"type": "joy_axis", "code": JOY_AXIS_RIGHT_Y, "sign": 1},
+	"look_left": {"type": "joy_axis", "code": JOY_AXIS_RIGHT_X, "sign": -1},
+	"look_right": {"type": "joy_axis", "code": JOY_AXIS_RIGHT_X, "sign": 1},
+	"jump": {"type": "joy_button", "code": JOY_BUTTON_A},
+	"sprint": {"type": "joy_button", "code": JOY_BUTTON_LEFT_STICK},
+	"interact": {"type": "joy_button", "code": JOY_BUTTON_X},
+	"use_tool": {"type": "joy_axis", "code": JOY_AXIS_TRIGGER_RIGHT, "sign": 1},
+	"careful_dig": {"type": "joy_axis", "code": JOY_AXIS_TRIGGER_LEFT, "sign": 1},
+	"attack": {"type": "joy_button", "code": JOY_BUTTON_RIGHT_SHOULDER},
+	"drop": {"type": "joy_button", "code": JOY_BUTTON_B},
+	"slot_prev": {"type": "joy_button", "code": JOY_BUTTON_LEFT_SHOULDER},
+	"slot_next": {"type": "joy_button", "code": JOY_BUTTON_Y},
+	"pause": {"type": "joy_button", "code": JOY_BUTTON_START},
+}
+## Fixos (fora da aba Controles): o direcional ←/→ também troca o espaço da mochila.
+const EXTRA_PAD_EVENTS: Dictionary = {
+	"slot_prev": [{"type": "joy_button", "code": JOY_BUTTON_DPAD_LEFT}],
+	"slot_next": [{"type": "joy_button", "code": JOY_BUTTON_DPAD_RIGHT}],
+}
+## Zona morta por ação no InputMap: andar 0.2 (o get_vector faz o resto); olhar quase nenhuma
+## (a curva e a zona morta radial ficam no InputDevice.look_vector); gatilhos 0.3.
+const PAD_ACTION_DEADZONES: Dictionary = {
+	"move_forward": 0.2, "move_backward": 0.2, "move_left": 0.2, "move_right": 0.2,
+	"look_up": 0.02, "look_down": 0.02, "look_left": 0.02, "look_right": 0.02,
+	"use_tool": 0.3, "careful_dig": 0.3,
+}
+const JOY_BUTTON_NAMES: Dictionary = {
+	JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y",
+	JOY_BUTTON_BACK: "Select", JOY_BUTTON_GUIDE: "Guia", JOY_BUTTON_START: "Start",
+	JOY_BUTTON_LEFT_STICK: "L3", JOY_BUTTON_RIGHT_STICK: "R3",
+	JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB",
+	JOY_BUTTON_DPAD_UP: "↑", JOY_BUTTON_DPAD_DOWN: "↓", JOY_BUTTON_DPAD_LEFT: "←", JOY_BUTTON_DPAD_RIGHT: "→",
+}
+## [eixo] -> [nome com sinal -1, nome com sinal +1]
+const JOY_AXIS_NAMES: Dictionary = {
+	JOY_AXIS_LEFT_X: ["Analógico E ←", "Analógico E →"], JOY_AXIS_LEFT_Y: ["Analógico E ↑", "Analógico E ↓"],
+	JOY_AXIS_RIGHT_X: ["Analógico D ←", "Analógico D →"], JOY_AXIS_RIGHT_Y: ["Analógico D ↑", "Analógico D ↓"],
+	JOY_AXIS_TRIGGER_LEFT: ["LT", "LT"], JOY_AXIS_TRIGGER_RIGHT: ["RT", "RT"],
 }
 const KEY_NAMES: Dictionary = {
 	KEY_SPACE: "Espaço", KEY_SHIFT: "Shift", KEY_CTRL: "Ctrl", KEY_ALT: "Alt", KEY_ENTER: "Enter",
@@ -413,50 +485,119 @@ static func _valid_binding(value: Variant) -> bool:
 	return (b.get("type") == "key" or b.get("type") == "mouse") and (b.get("code") is int) and int(b["code"]) > 0
 
 
+## Binding do comando: botão (0..JOY_BUTTON_MAX) ou eixo (0..JOY_AXIS_MAX) com sinal ±1.
+static func _valid_pad_binding(value: Variant) -> bool:
+	if not value is Dictionary:
+		return false
+	var b: Dictionary = value
+	var code: Variant = b.get("code")
+	if not (code is int or code is float):
+		return false
+	match b.get("type"):
+		"joy_button":
+			return int(code) >= 0 and int(code) < JOY_BUTTON_MAX
+		"joy_axis":
+			var sign_value: Variant = b.get("sign")
+			return int(code) >= 0 and int(code) < JOY_AXIS_MAX and (sign_value is int or sign_value is float) and absi(int(sign_value)) == 1
+	return false
+
+
+## Ação sem binding nesta coluna (troca que tirou o dela; vence o padrão).
+static func _is_none_binding(value: Variant) -> bool:
+	return value is Dictionary and (value as Dictionary).get("type") == "none"
+
+
+static func is_pad_binding(binding: Dictionary) -> bool:
+	return binding.get("type") == "joy_button" or binding.get("type") == "joy_axis"
+
+
+static func _normalized_pad_binding(b: Dictionary) -> Dictionary:
+	if b["type"] == "joy_axis":
+		return {"type": "joy_axis", "code": int(b["code"]), "sign": 1 if int(b["sign"]) > 0 else -1}
+	return {"type": "joy_button", "code": int(b["code"])}
+
+
 ## Tecla ou botão atual da ação (o salvo ou o padrão).
 func get_binding(action: String) -> Dictionary:
 	var saved: Dictionary = get_section(CONTROLS)
+	if _is_none_binding(saved.get(action)):
+		return {}
 	if _valid_binding(saved.get(action)):
 		return (saved[action] as Dictionary).duplicate()
 	return (DEFAULT_BINDINGS.get(action, {}) as Dictionary).duplicate()
 
 
-## Outra ação que já usa este binding, ou "".
+## Botão/eixo atual da ação no comando (o salvo ou o padrão; {} = nenhum).
+func get_pad_binding(action: String) -> Dictionary:
+	var saved: Dictionary = get_section(CONTROLS_PAD)
+	if _is_none_binding(saved.get(action)):
+		return {}
+	if _valid_pad_binding(saved.get(action)):
+		return _normalized_pad_binding(saved[action])
+	return (DEFAULT_PAD_BINDINGS.get(action, {}) as Dictionary).duplicate()
+
+
+## Outra ação que já usa este binding na MESMA coluna (teclado/mouse ou comando), ou "".
 func find_conflict(action: String, binding: Dictionary) -> String:
+	var pad: bool = is_pad_binding(binding)
 	for other: String in CONTROL_ACTIONS:
-		if other != action and get_binding(other) == binding:
+		if other == action:
+			continue
+		var current: Dictionary = get_pad_binding(other) if pad else get_binding(other)
+		if current == binding:
 			return other
 	return ""
 
 
 ## Troca o binding de uma ação. Com conflito: false, a menos que swap (a outra ação fica com o
 ## binding antigo desta).
+## A coluna vem do tipo do binding: tecla/mouse vai para [controls], botão/eixo do comando para
+## [controls_pad]. Na troca, a outra ação fica com o binding antigo desta (se não tiver, fica sem).
 func set_binding(action: String, binding: Dictionary, swap: bool = false) -> bool:
-	if not CONTROL_ACTIONS.has(action) or not _valid_binding(binding):
+	var pad: bool = is_pad_binding(binding)
+	if not CONTROL_ACTIONS.has(action) or not (_valid_pad_binding(binding) if pad else _valid_binding(binding)):
 		return false
 	var other: String = find_conflict(action, binding)
 	if not other.is_empty() and not swap:
 		return false
-	var controls: Dictionary = get_section(CONTROLS)
+	var section: String = CONTROLS_PAD if pad else CONTROLS
+	var controls: Dictionary = get_section(section)
 	if not other.is_empty():
-		controls[other] = get_binding(action)
-	controls[action] = {"type": binding["type"], "code": int(binding["code"])}
-	_values[CONTROLS] = sanitize(CONTROLS, controls)
-	_apply_section(CONTROLS, false)
+		var previous: Dictionary = get_pad_binding(action) if pad else get_binding(action)
+		if previous.is_empty():
+			# Sem binding antigo para devolver: a outra ação perde este (explícito, vence o padrão).
+			controls[other] = {"type": "none"}
+		else:
+			controls[other] = previous
+	controls[action] = _normalized_pad_binding(binding) if pad else {"type": binding["type"], "code": int(binding["code"])}
+	_values[section] = sanitize(section, controls)
+	_apply_section(section, false)
 	save_settings()
-	settings_changed.emit(CONTROLS, get_section(CONTROLS))
+	settings_changed.emit(section, get_section(section))
 	return true
 
 
+## "Restaurar padrão" da aba Controles: as duas colunas.
 func reset_controls() -> void:
 	_values[CONTROLS] = {}
+	_values[CONTROLS_PAD] = {}
 	_apply_section(CONTROLS, false)
 	save_settings()
 	settings_changed.emit(CONTROLS, {})
+	settings_changed.emit(CONTROLS_PAD, {})
 
 
-## Binding a partir de um evento capturado na tela ({} se não for tecla nem botão do mouse).
+## Binding a partir de um evento capturado na tela ({} se não for tecla nem botão do mouse;
+## no comando: botão apertado, ou eixo com |valor| > 0.5 e o sinal dele).
 static func binding_from_event(event: InputEvent) -> Dictionary:
+	var joy_button: InputEventJoypadButton = event as InputEventJoypadButton
+	if joy_button != null:
+		return {"type": "joy_button", "code": int(joy_button.button_index)} if joy_button.pressed and joy_button.button_index >= 0 else {}
+	var joy_motion: InputEventJoypadMotion = event as InputEventJoypadMotion
+	if joy_motion != null:
+		if absf(joy_motion.axis_value) <= 0.5 or joy_motion.axis < 0:
+			return {}
+		return {"type": "joy_axis", "code": int(joy_motion.axis), "sign": 1 if joy_motion.axis_value > 0.0 else -1}
 	var key: InputEventKey = event as InputEventKey
 	if key != null:
 		var code: int = key.physical_keycode if key.physical_keycode != KEY_NONE else key.keycode
@@ -468,6 +609,17 @@ static func binding_from_event(event: InputEvent) -> Dictionary:
 
 
 static func event_from_binding(binding: Dictionary) -> InputEvent:
+	if binding.get("type") == "joy_button":
+		var joy_button: InputEventJoypadButton = InputEventJoypadButton.new()
+		joy_button.device = -1  # qualquer controle
+		joy_button.button_index = int(binding["code"]) as JoyButton
+		return joy_button
+	if binding.get("type") == "joy_axis":
+		var joy_motion: InputEventJoypadMotion = InputEventJoypadMotion.new()
+		joy_motion.device = -1
+		joy_motion.axis = int(binding["code"]) as JoyAxis
+		joy_motion.axis_value = 1.0 if int(binding.get("sign", 1)) > 0 else -1.0
+		return joy_motion
 	if binding.get("type") == "mouse":
 		var mouse: InputEventMouseButton = InputEventMouseButton.new()
 		mouse.button_index = int(binding["code"]) as MouseButton
@@ -477,8 +629,14 @@ static func event_from_binding(binding: Dictionary) -> InputEvent:
 	return key
 
 
-## Nome legível em português ("Espaço", "Botão esquerdo", "E").
+## Nome legível em português ("Espaço", "Botão esquerdo", "E", "A", "LB", "RT", "Analógico E ↑").
 static func binding_label(binding: Dictionary) -> String:
+	if _valid_pad_binding(binding):
+		var pad_code: int = int(binding["code"])
+		if binding["type"] == "joy_axis":
+			var names: Array = JOY_AXIS_NAMES.get(pad_code, ["Eixo %d-" % pad_code, "Eixo %d+" % pad_code])
+			return str(names[1] if int(binding["sign"]) > 0 else names[0])
+		return str(JOY_BUTTON_NAMES.get(pad_code, "Botão %d" % pad_code))
 	if not _valid_binding(binding):
 		return "—"
 	var code: int = int(binding["code"])
@@ -489,15 +647,25 @@ static func binding_label(binding: Dictionary) -> String:
 	return OS.get_keycode_string(code as Key)
 
 
-## Troca no InputMap os eventos de teclado e mouse de cada ação (controle de jogo fica).
+## Troca no InputMap os eventos das duas colunas de cada ação: teclado/mouse e comando (os
+## fixos do EXTRA_PAD_EVENTS entram junto com a coluna do comando).
 func _apply_controls() -> void:
 	for action: String in CONTROL_ACTIONS:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
 		for ev: InputEvent in InputMap.action_get_events(action):
-			if ev is InputEventKey or ev is InputEventMouseButton:
+			if ev is InputEventKey or ev is InputEventMouseButton or ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				InputMap.action_erase_event(action, ev)
-		InputMap.action_add_event(action, event_from_binding(get_binding(action)))
+		var keyboard: Dictionary = get_binding(action)
+		if not keyboard.is_empty():
+			InputMap.action_add_event(action, event_from_binding(keyboard))
+		var pad: Dictionary = get_pad_binding(action)
+		if not pad.is_empty():
+			InputMap.action_add_event(action, event_from_binding(pad))
+		for extra: Dictionary in EXTRA_PAD_EVENTS.get(action, []):
+			InputMap.action_add_event(action, event_from_binding(extra))
+		if PAD_ACTION_DEADZONES.has(action):
+			InputMap.action_set_deadzone(action, float(PAD_ACTION_DEADZONES[action]))
 
 
 # --- Jogabilidade (#77, etapa 3) -----------------------------------------------
