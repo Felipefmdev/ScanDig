@@ -58,6 +58,11 @@ const NOISE_PER_SECOND: float = 1.5
 const RARE_SIGNAL_THRESHOLD: float = 0.7
 ## Fração da volta que um blip demora a desvanecer.
 const BLIP_FADE_FRACTION: float = 0.92
+## Chuva (#99, CoreWeather.detector_noise 0..1): blips falsos por segundo com ruído 1 (a chuva
+## fica em ~0.35 → um a cada ~6 s), tremor máximo das barras de sinal e do tom do ping.
+const WEATHER_FALSE_BLIPS_PER_SEC: float = 0.5
+const WEATHER_SIGNAL_JITTER: float = 0.25
+const WEATHER_PING_WOBBLE: float = 0.04
 
 # Timbres por material
 const IRON_BUZZ_HZ: float = 38.0
@@ -84,6 +89,8 @@ class RadarBlip extends RefCounted:
 	var depth_cm: int = 0
 	var is_rare: bool = false
 	var strength: float = 0.0
+	## Blip falso da chuva (#99): só desenho, esmaecido; sem ping, alvo nem barulho.
+	var is_noise: bool = false
 
 
 var max_detection_distance: float = 8.0
@@ -108,6 +115,10 @@ var _ping_freq: float = 440.0
 var _ping_rare: bool = false
 var _ping_gain: float = 1.0
 var _ping_t: float = -1.0
+
+## Ruído do clima (#99): sorteios próprios e chaves negativas para os blips falsos.
+var _weather_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _noise_blip_seq: int = 0
 
 var _pin_audio: AudioStreamPlayer3D = null
 var _pin_tick_timer: float = 0.0
@@ -240,11 +251,17 @@ func _refresh_level_stats() -> void:
 	max_detection_distance = base_detection_distance + range_bonus_per_level * float(get_detector_level() - 1)
 
 
+## Alcance de verdade agora: o do nível × o clima (cinzas, #99). Lido na hora, sem gravar em
+## max_detection_distance (um upgrade não acumula nem apaga o efeito).
+func get_effective_detection_distance() -> float:
+	return max_detection_distance * WeatherManager.now_radar_scale()
+
+
 ## Alcance para inimigos: igual ao dos itens, ou 1.5× a partir do Nv.6.
 func get_enemy_detection_distance() -> float:
 	if get_detector_level() >= LONG_ENEMY_LEVEL:
-		return max_detection_distance * ENEMY_RANGE_MULTIPLIER
-	return max_detection_distance
+		return get_effective_detection_distance() * ENEMY_RANGE_MULTIPLIER
+	return get_effective_detection_distance()
 
 
 ## Nível do pinpointer (0 a 2): GameState (upgrade comprado) tem prioridade sobre o @export.
@@ -263,13 +280,23 @@ func is_rare_revealed(spot: BuriedSpot, signal_strength: float) -> bool:
 
 
 func get_signal_strength() -> float:
-	if not is_instance_valid(_current_target) or _current_distance > max_detection_distance:
+	if not is_instance_valid(_current_target) or _current_distance > get_effective_detection_distance():
 		return 0.0
 	return _strength_for_distance(_current_distance)
 
 
+## Sinal mostrado nas barras: o real com um tremor pequeno na chuva (#99). O alvo continua a
+## leitura mais forte; o valor real (get_signal_strength) não muda.
+func get_display_strength() -> float:
+	var strength: float = get_signal_strength()
+	var noise: float = WeatherManager.now_detector_noise()
+	if noise <= 0.0 or strength <= 0.0:
+		return strength
+	return clampf(strength + _weather_rng.randf_range(-1.0, 1.0) * noise * WEATHER_SIGNAL_JITTER, 0.0, 1.0)
+
+
 func _strength_for_distance(dist: float) -> float:
-	var dist_factor: float = clampf((dist - 0.5) / (max_detection_distance - 0.5), 0.0, 1.0)
+	var dist_factor: float = clampf((dist - 0.5) / (get_effective_detection_distance() - 0.5), 0.0, 1.0)
 	return 1.0 - dist_factor
 
 
@@ -333,7 +360,8 @@ func _radar_angle(radar_pos: Vector2) -> float:
 func _update_target_detection() -> void:
 	var spots: Array[Node] = get_tree().get_nodes_in_group("buried_spots")
 	var closest_spot: BuriedSpot = null
-	var min_dist: float = max_detection_distance + 0.1
+	var range_m: float = get_effective_detection_distance()
+	var min_dist: float = range_m + 0.1
 
 	for spot: Node in spots:
 		if spot is BuriedSpot and spot.is_inside_tree():
@@ -344,7 +372,7 @@ func _update_target_detection() -> void:
 
 	var had_target: bool = (_current_target != null)
 
-	if min_dist <= max_detection_distance and closest_spot != null:
+	if min_dist <= range_m and closest_spot != null:
 		_current_target = closest_spot
 		_current_distance = min_dist
 		item_detected.emit(_current_target.item, get_signal_strength())
@@ -374,11 +402,36 @@ func _update_sweep(delta: float) -> void:
 		if enemy is Node3D and enemy.is_inside_tree():
 			_sweep_check(enemy as Node3D, true, prev, step)
 
+	var noise: float = WeatherManager.now_detector_noise()
+	if noise > 0.0 and _weather_rng.randf() < noise * WEATHER_FALSE_BLIPS_PER_SEC * delta:
+		add_weather_noise_blip()
+
+
+## Chuva (#99): um blip falso fraco na linha do varrimento. Não vira alvo, não toca ping e não
+## faz barulho (o DisturbanceMeter só ouve o ping do alvo real).
+func add_weather_noise_blip() -> RadarBlip:
+	var ref: Node3D = _get_radar_basis_node()
+	var dist: float = get_effective_detection_distance() * _weather_rng.randf_range(0.3, 0.95)
+	var angle: float = sweep_angle + _weather_rng.randf_range(-0.05, 0.05)
+	var basis: Basis = ref.global_transform.basis
+	var forward: Vector3 = Vector3(-basis.z.x, 0.0, -basis.z.z)
+	if forward.length_squared() < 0.0001:
+		forward = Vector3(-basis.y.x, 0.0, -basis.y.z)
+	forward = forward.normalized()
+	var right: Vector3 = Vector3(-forward.z, 0.0, forward.x)
+	var blip: RadarBlip = RadarBlip.new()
+	blip.world_pos = ref.global_position + (right * sin(angle) + forward * cos(angle)) * dist
+	blip.is_noise = true
+	blip.strength = _weather_rng.randf_range(0.1, 0.3)
+	_noise_blip_seq += 1
+	_blips[-_noise_blip_seq] = blip
+	return blip
+
 
 func _sweep_check(node: Node3D, is_enemy: bool, prev_angle: float, step: float) -> void:
 	var radar_pos: Vector2 = world_to_radar(node.global_position)
 	var dist: float = radar_pos.length()
-	if dist > (get_enemy_detection_distance() if is_enemy else max_detection_distance):
+	if dist > (get_enemy_detection_distance() if is_enemy else get_effective_detection_distance()):
 		return
 	if fposmod(_radar_angle(radar_pos) - prev_angle, TAU) > step:
 		return
@@ -436,7 +489,7 @@ func get_current_target() -> BuriedSpot:
 func get_target_count() -> int:
 	var count: int = 0
 	for blip: Variant in _blips.values():
-		if not (blip as RadarBlip).is_enemy:
+		if not (blip as RadarBlip).is_enemy and not (blip as RadarBlip).is_noise:
 			count += 1
 	return count
 
@@ -459,6 +512,8 @@ func _start_ping(spot: BuriedSpot, signal_strength: float) -> void:
 	_ping_freq = _get_frequency_for_item(item)
 	_ping_rare = is_rare_revealed(spot, signal_strength)
 	_ping_gain = lerpf(0.45, 1.0, signal_strength)
+	# Chuva (#99): o tom oscila um pouco (o material continua reconhecível).
+	_ping_freq *= 1.0 + _weather_rng.randf_range(-1.0, 1.0) * WeatherManager.now_detector_noise() * WEATHER_PING_WOBBLE
 	_ping_t = 0.0
 	_reset_oscillators()
 
@@ -602,7 +657,7 @@ func is_pinpointing() -> bool:
 
 ## Metros do centro à borda do radar: zoom de PINPOINT_VIEW_DISTANCE enquanto o pinpointer guia.
 func get_radar_view_distance() -> float:
-	return PINPOINT_VIEW_DISTANCE if is_pinpointing() else max_detection_distance
+	return PINPOINT_VIEW_DISTANCE if is_pinpointing() else get_effective_detection_distance()
 
 
 ## Segundos entre bips: PINPOINT_TICK_FAR a PINPOINT_RANGE m, PINPOINT_TICK_NEAR em cima do alvo.
@@ -724,7 +779,7 @@ static func get_size_name(size: ItemData.SizeCategory) -> String:
 
 
 func _signal_bars() -> String:
-	var bars_count: int = int(round(get_signal_strength() * 6.0))
+	var bars_count: int = int(round(get_display_strength() * 6.0))
 	var bars_text: String = ""
 	for i: int in range(6):
 		bars_text += "█" if i < bars_count else "░"
@@ -738,7 +793,7 @@ func _signal_bars() -> String:
 func get_footer_lines() -> PackedStringArray:
 	var level: int = get_detector_level()
 	var lines: PackedStringArray = PackedStringArray()
-	var head: String = "Nv.%d  %dm" % [level, int(round(max_detection_distance))]
+	var head: String = "Nv.%d  %dm" % [level, int(round(get_effective_detection_distance()))]
 	var enemies: int = get_enemy_count()
 	if enemies > 0:
 		head += "  ⚠%d" % enemies

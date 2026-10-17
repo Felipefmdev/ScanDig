@@ -632,7 +632,8 @@ func get_dig_damage_multiplier() -> float:
 
 ## Fator de velocidade da animação de cavar (pás melhores cavam mais depressa).
 func get_dig_speed_factor() -> float:
-	return 1.0 + float(maxi(shovel_level, 1) - 1) * SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL
+	# Chuva (#99, CoreWeather): terra mole cava mais rápido.
+	return (1.0 + float(maxi(shovel_level, 1) - 1) * SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL) * WeatherManager.now_dig_speed_mult()
 
 
 func _perform_dig(is_careful: bool) -> void:
@@ -1647,7 +1648,8 @@ func is_afk() -> bool:
 func tick_hunger(delta: float) -> void:
 	if is_afk():
 		return  # ausente: nem cai a fome nem dói a falta dela
-	set_hunger(hunger - hunger_decay_per_sec * delta)
+	# Nevasca (#99, CoreWeather): o frio gasta mais fome.
+	set_hunger(hunger - hunger_decay_per_sec * WeatherManager.now_hunger_mult() * delta)
 	if hunger < max_hunger * 0.4:
 		show_hint("hunger")
 	if hunger <= 0.0:

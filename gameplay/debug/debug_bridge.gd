@@ -28,7 +28,7 @@ const CONDITION_VARS: PackedStringArray = [
 ## (estado da missão 0..4: OFFER, ACTIVE, READY, EVENT, DONE).
 const CONDITION_PREFIXES: PackedStringArray = ["flag_", "quest_"]
 ## Métodos que o passo "call" pode chamar (atalhos de debug para testar segredos e eventos).
-const DEBUG_CALL_METHODS: PackedStringArray = ["force_low_tide", "wake_immediately", "start", "trigger"]
+const DEBUG_CALL_METHODS: PackedStringArray = ["force_low_tide", "wake_immediately", "start", "trigger", "force_weather"]
 const DIG_MODES: PackedStringArray = ["fast", "careful", "smart"]
 ## Distância "infinita" usada pelas variáveis nearest_spot/sell_dist quando não há alvo.
 const NO_TARGET_DISTANCE: float = 9999.0
@@ -1485,11 +1485,14 @@ func _debug_call(target_name: String, method: String) -> void:
 ## Primeiro nó da cena atual com este nome (procura recursiva).
 func _find_named(node_name: String) -> Node:
 	var scene: Node = get_tree().current_scene
-	if scene == null:
-		return null
-	if String(scene.name) == node_name:
-		return scene
-	return scene.find_child(node_name, true, false)
+	if scene != null:
+		if String(scene.name) == node_name:
+			return scene
+		var found: Node = scene.find_child(node_name, true, false)
+		if found != null:
+			return found
+	# Autoloads (ex.: CoreWeather, #99) ficam fora da cena.
+	return get_tree().root.get_node_or_null(NodePath(node_name))
 
 
 func _active_wave() -> WaveEvent:

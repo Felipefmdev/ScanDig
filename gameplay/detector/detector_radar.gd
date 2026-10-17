@@ -32,6 +32,8 @@ const FOOTER_LINE_HEIGHT: float = 17.0
 const FOOTER_FONT_SIZE: int = 14
 ## Profundidade (cm) a partir da qual o blip do Nv3 fica no tamanho/brilho mínimo.
 const DEEP_CM: float = 60.0
+## Opacidade dos blips falsos da chuva (#99), relativa a um blip real.
+const NOISE_BLIP_ALPHA: float = 0.35
 
 var detector: MetalDetector = null
 var _time: float = 0.0
@@ -145,6 +147,10 @@ func _angle_dir(angle: float) -> Vector2:
 
 
 func _draw_item_blip(p: Vector2, alpha: float, blip: MetalDetector.RadarBlip, level: int) -> void:
+	if blip.is_noise:
+		# Chuva (#99): blip falso pequeno e esmaecido, sem cor de material.
+		draw_circle(p, BLIP_RADIUS * 0.6, Color(LEVEL1_COLOR, alpha * NOISE_BLIP_ALPHA))
+		return
 	var color: Color = LEVEL1_COLOR
 	var r: float = BLIP_RADIUS
 	var brightness: float = 1.0
