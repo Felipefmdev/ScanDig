@@ -60,6 +60,13 @@ for char_id, scene_path, ref_id in CHARACTERS:
     ref_img = Image.open(ref_path).convert("RGB")
     rend_img = Image.open(render_path).convert("RGB")
     
+    # Center-crop reference to square before resizing to prevent distortion
+    w, h = ref_img.size
+    min_dim = min(w, h)
+    left = (w - min_dim) // 2
+    top = (h - min_dim) // 2
+    ref_img = ref_img.crop((left, top, left + min_dim, top + min_dim))
+    
     ref_img = ref_img.resize((400, 400), Image.Resampling.LANCZOS)
     rend_img = rend_img.resize((400, 400), Image.Resampling.LANCZOS)
     
@@ -70,6 +77,9 @@ for char_id, scene_path, ref_id in CHARACTERS:
     
     draw.text((15, 12), f"{char_id} (Ref: {ref_id}.jpg)", fill=(40, 30, 20))
     draw.text((415, 12), f"{char_id} (Modelo 3D Godot)", fill=(40, 30, 20))
+    
+    os.makedirs("docs/art/character_cards", exist_ok=True)
+    card.save(f"docs/art/character_cards/{char_id}.png")
     
     cards.append((char_id, card))
     print(f"Rendered and paired {char_id}")
