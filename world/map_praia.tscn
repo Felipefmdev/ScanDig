@@ -928,7 +928,7 @@ script = ExtResource("9_shop_offer")
 tool_data = ExtResource("11_tool_kit_medico")
 
 [node name="Label" type="Label3D" parent="Banca"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)
 pixel_size = 0.008
 billboard = 1
 modulate = Color(0.55, 0.9, 1, 1)

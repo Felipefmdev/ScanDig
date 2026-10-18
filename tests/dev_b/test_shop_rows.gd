@@ -107,3 +107,19 @@ func test_lobby_panel_uses_chips() -> void:
 	assert_eq(hud.money_label.text, "Dinheiro  " + UiFormat.money(777))
 	assert_string_contains(hud.detector_label.text, "Detector")
 	assert_string_contains(hud.museum_label.text, "Museu")
+
+
+## #122 (E7): rótulos 3D das bancas com altura alternada entre vizinhos e abaixo da placa.
+func test_stall_labels_alternate_height() -> void:
+	var stall: Node3D = Node3D.new()
+	add_child_autofree(stall)
+	var labels: Array[Label3D] = []
+	for id: String in ["estilingue", "repelente", "armadilha_rede"]:
+		var offer: ShopOffer = ShopOffer.new()
+		offer.tool_data = load("res://items/tools/%s.tres" % id) as ToolData
+		stall.add_child(offer)
+		labels.append(offer.find_children("*", "Label3D", false, false)[0] as Label3D)
+	assert_eq(labels[0].position.y, labels[2].position.y, "alternados: 1º e 3º na mesma altura")
+	assert_almost_eq(labels[1].position.y - labels[0].position.y, ShopOffer.LABEL_STAGGER, 0.001, "2º mais alto")
+	assert_almost_eq(labels[0].pixel_size, ShopOffer.LABEL_PIXEL_SIZE, 0.00001)
+	assert_lt(0.54 + labels[1].position.y + 2.0 * 1.3 * labels[1].font_size * labels[1].pixel_size, 2.1 - 0.15, "abaixo da placa LOJA")

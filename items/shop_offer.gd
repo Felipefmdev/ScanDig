@@ -10,6 +10,16 @@ signal purchased(tool_data: ToolData)
 const GROUP: StringName = &"shop_offers"
 ## Tempo máximo à espera de item_purchase_result (igual à aba Loja).
 const PURCHASE_TIMEOUT: float = 5.0
+## Rótulo 3D (#122): fonte grande com pixel pequeno (nítido de perto e legível a uns metros) e,
+## entre vizinhos da mesma banca, alturas alternadas para os rótulos não se cruzarem
+## quando a banca é vista de lado. Com a altura alternada, cada rótulo pode ser mais largo que o
+## vão entre ofertas (0,9 m): o nome cabe numa linha (nome + preço) e o alto fica abaixo da placa
+## "LOJA" (2,1 m).
+const LABEL_HEIGHT: float = 0.45
+const LABEL_STAGGER: float = 0.32
+const LABEL_FONT_SIZE: int = 48
+const LABEL_PIXEL_SIZE: float = 0.0022
+const LABEL_WIDTH_M: float = 1.4
 
 @export var tool_data: ToolData = null
 
@@ -37,16 +47,30 @@ func _ready() -> void:
 	_label = Label3D.new()
 	_label.text = "%s\n%s" % [tool_data.display_name, MoneyFormat.money(tool_data.price)]
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.position.y = 0.55
-	_label.font_size = 24
-	# Quebra nomes longos em várias linhas (largura ~0,8 m) para não colidir com o vizinho.
+	_label.position.y = LABEL_HEIGHT + (LABEL_STAGGER if _stall_order() % 2 == 1 else 0.0)
+	_label.font_size = LABEL_FONT_SIZE
+	# Só nomes muito longos quebram (largura LABEL_WIDTH_M); a altura alternada separa os vizinhos.
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_label.width = 200.0
+	_label.width = LABEL_WIDTH_M / LABEL_PIXEL_SIZE
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	_label.pixel_size = 0.004
-	_label.outline_size = 6
+	_label.pixel_size = LABEL_PIXEL_SIZE
+	_label.outline_size = 14
 	_label.outline_modulate = UiPalette.INK
 	add_child(_label)
+
+
+## Posição desta oferta entre as ShopOffer irmãs (a ordem na banca).
+func _stall_order() -> int:
+	var parent: Node = get_parent()
+	if parent == null:
+		return 0
+	var order: int = 0
+	for sibling: Node in parent.get_children():
+		if sibling == self:
+			return order
+		if sibling is ShopOffer:
+			order += 1
+	return order
 
 
 func set_highlighted(on: bool) -> void:

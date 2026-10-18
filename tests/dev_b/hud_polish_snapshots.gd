@@ -127,10 +127,13 @@ func _praia_shop() -> void:
 	for o: Node3D in offers:
 		center += o.global_position
 	center /= offers.size()
+	# De frente para a banca (eixo +Z local do pai das ofertas), um pouco de lado.
+	var stall: Node3D = offers[0].get_parent() as Node3D
+	var front: Vector3 = (stall.global_transform.basis * Vector3(0.5, 0, 1)).normalized()
 	var player: Node3D = get_first_node_in_group(&"player") as Node3D
 	var head: Node3D = player.get_node(^"Head") as Node3D
-	player.global_position = center + Vector3(0, 0, 4.5)
+	player.global_position = center + front * 3.2
 	player.look_at(Vector3(center.x, player.global_position.y, center.z))
-	head.rotation.x = -0.2
+	head.rotation.x = -0.15
 	await _frames(30)
 	await _save_shot("loja_praia")
