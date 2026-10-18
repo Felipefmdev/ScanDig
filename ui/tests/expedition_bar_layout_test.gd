@@ -21,15 +21,16 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
-## Hotbar mais larga (mochila de 8): mesma conta de Hotbar.get_slot_size, separação 8 do player.tscn.
-func _hotbar_rect(view: Vector2) -> Rect2:
+## Hotbar mais larga (mochila de 8): a conta da própria Hotbar (get_bar_rect), com a altura do
+## player.tscn (offset_top -112, offset_bottom -16).
+func _hotbar_rect() -> Rect2:
 	var hotbar: Hotbar = Hotbar.new()
-	hotbar.add_theme_constant_override(&"separation", 8)
+	hotbar.offset_top = -112.0
+	hotbar.offset_bottom = -16.0
 	root.add_child(hotbar)
-	var side: float = hotbar.get_slot_size(8).x
+	var r: Rect2 = hotbar.get_bar_rect(8)
 	hotbar.queue_free()
-	var width: float = side * 8.0 + 8.0 * 7.0
-	return Rect2(view.x * 0.5 - width * 0.5, view.y - 112.0, width, 96.0)
+	return r
 
 
 func _run() -> void:
@@ -62,7 +63,7 @@ func _run() -> void:
 	var boss: Rect2 = Rect2(view.x * 0.5 - 260.0, 70.0, 520.0, 50.0)
 	var hud_rects: Dictionary = {
 		"BossHud (chefe)": boss,
-		"hotbar de 8": _hotbar_rect(view),
+		"hotbar de 8": _hotbar_rect(),
 		"vida": Rect2(24.0, view.y - 72.0, 280.0, 52.0),
 		"radar": Rect2(24.0, view.y - 330.0, 220.0, 244.0),
 		"ameaça": Rect2(view.x - 304.0, 20.0, 280.0, 52.0),

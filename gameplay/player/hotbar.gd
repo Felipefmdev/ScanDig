@@ -21,6 +21,9 @@ const SIDE_RESERVED: float = 320.0
 const HAND_SCREEN_X: float = 0.68
 ## Folga entre a hotbar e a mão (inclui a escala e a sombra do slot selecionado).
 const HAND_GAP: float = 16.0
+## Largura reservada à direita para a barra da expedição (SessionUI: ~260 px + margem 16), que
+## limita a faixa quando a mão fica mais à direita (telas menos largas que 16:9).
+const EXPEDITION_RESERVED: float = 288.0
 const COLOR_BG: Color = Color(0.169, 0.129, 0.094, 0.65)
 const COLOR_BORDER: Color = UiPalette.INK
 const COLOR_SELECTED: Color = UiPalette.GOLD
@@ -88,7 +91,7 @@ func _on_viewport_resized() -> void:
 func _band() -> Vector2:
 	var view: Vector2 = get_viewport_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
 	var aspect: float = view.x / maxf(view.y, 1.0)
-	var right: float = view.x * (0.5 + 0.5 * HAND_SCREEN_X / aspect) - HAND_GAP
+	var right: float = minf(view.x * (0.5 + 0.5 * HAND_SCREEN_X / aspect) - HAND_GAP, view.x - EXPEDITION_RESERVED)
 	return Vector2(SIDE_RESERVED, maxf(right, SIDE_RESERVED + MIN_SLOT_SIZE))
 
 
@@ -107,18 +110,24 @@ func get_slot_size(count: int) -> Vector2:
 	return Vector2(side, side)
 
 
-## Centrada na tela; se não couber na faixa livre, desliza para dentro dela.
+## Retângulo (x e largura) da hotbar com `count` slots: centrada na tela; se não couber na faixa
+## livre, desliza para dentro dela. A altura fica com o player.tscn.
+func get_bar_rect(count: int) -> Rect2:
+	var side: float = get_slot_size(count).x
+	var sep: int = COMPACT_SEPARATION if side < COMPACT_SLOT_SIZE else SEPARATION
+	var w: float = side * count + sep * maxi(count - 1, 0)
+	var band: Vector2 = _band()
+	var view: Vector2 = get_viewport_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
+	var center: float = clampf(view.x * 0.5, band.x + w * 0.5, maxf(band.y - w * 0.5, band.x + w * 0.5))
+	return Rect2(center - w * 0.5, view.y + offset_top, w, offset_bottom - offset_top)
+
+
 func _place() -> void:
 	if not is_inside_tree():
 		return
-	var sep: int = COMPACT_SEPARATION if _is_compact() else SEPARATION
-	add_theme_constant_override("separation", sep)
-	var n: int = _slot_panels.size()
-	var w: float = _slot_size.x * n + sep * maxi(n - 1, 0)
-	var band: Vector2 = _band()
-	var view_w: float = get_viewport_rect().size.x
-	var center: float = clampf(view_w * 0.5, band.x + w * 0.5, maxf(band.y - w * 0.5, band.x + w * 0.5))
-	offset_left = center - view_w * 0.5
+	add_theme_constant_override("separation", COMPACT_SEPARATION if _is_compact() else SEPARATION)
+	var r: Rect2 = get_bar_rect(_slot_panels.size())
+	offset_left = r.get_center().x - get_viewport_rect().size.x * 0.5
 	offset_right = offset_left
 
 
