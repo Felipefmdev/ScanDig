@@ -84,10 +84,10 @@ func _run() -> void:
 		for shot: Array in [["mapa_tesouro_0", [] as Array[String]], ["mapa_tesouro_4", four], ["mapa_tesouro_completo", GameState.MAP_FRAGMENT_IDS]]:
 			GameState.instance.load_snapshot({"map_fragments": shot[1]})
 			await _shot(shot[0])
-			print("RECT %s %s base %s mapa %s" % [_tag, shot[0], _rect(base.get_child(0) as Control), _rect(treasure_page.get_node(^"TreasureMapScroll") as Control)])
+			print("RECT %s %s base %s mapa %s" % [_tag, shot[0], _rect(base.get_child(0) as Control), _rect(treasure_page.find_child("TreasureMapScroll", true, false) as Control)])
 		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.5}, false)
 		await _shot("mapa_tesouro_completo_hud150")
-		print("RECT %s mapa_hud150 base %s mapa %s" % [_tag, _rect(base.get_child(0) as Control), _rect(treasure_page.get_node(^"TreasureMapScroll") as Control)])
+		print("RECT %s mapa_hud150 base %s mapa %s" % [_tag, _rect(base.get_child(0) as Control), _rect(treasure_page.find_child("TreasureMapScroll", true, false) as Control)])
 		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.0}, false)
 		GameState.instance.load_snapshot({"map_fragments": [] as Array[String]})
 	tabs.current_tab = 0

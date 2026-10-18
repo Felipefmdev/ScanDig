@@ -134,7 +134,7 @@ func test_base_station_uses_parchment() -> void:
 	add_child_autofree(ui)
 	var page: Node = ui.tab_container.get_node_or_null(BaseStationUI.TREASURE_TAB_TITLE)
 	assert_not_null(page)
-	var scroll: Node = page.get_node_or_null(^"TreasureMapScroll")
+	var scroll: Node = page.find_child("TreasureMapScroll", true, false)
 	assert_true(scroll is TreasureMapParchment, "o nó TreasureMapScroll é o pergaminho desenhado")
 	GameState.instance._host_complete_quest("ze_anzol")
 	assert_true((scroll as TreasureMapParchment).found.has("praia_frag_1"))

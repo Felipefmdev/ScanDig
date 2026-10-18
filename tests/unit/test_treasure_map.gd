@@ -121,11 +121,11 @@ func test_base_has_treasure_map_tab_with_hints() -> void:
 	add_child_autofree(ui)
 	var page: Node = ui.tab_container.get_node_or_null(BaseStationUI.TREASURE_TAB_TITLE)
 	assert_not_null(page, "Aba Mapa do Tesouro")
-	var count: Label = page.get_node(^"TreasureCountLabel") as Label
-	var hints: Label = page.get_node(^"TreasureHintsLabel") as Label
+	var count: Label = page.find_child("TreasureCountLabel", true, false) as Label
+	var hints: Label = page.find_child("TreasureHintsLabel", true, false) as Label
 	assert_string_contains(count.text, "0/8")
 	assert_string_contains(hints.text, "Pescador Zé", "Dica do que falta")
 	gs._host_complete_quest("ze_anzol")
 	assert_string_contains(count.text, "1/8", "Atualiza quando chega um fragmento")
 	assert_false(hints.text.contains("Pescador Zé"), "A dica do encontrado desaparece")
-	assert_true((page.get_node(^"TreasureMapScroll") as TreasureMapScroll).found.has("praia_frag_1"))
+	assert_true((page.find_child("TreasureMapScroll", true, false) as TreasureMapScroll).found.has("praia_frag_1"))

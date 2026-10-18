@@ -2,7 +2,7 @@ extends GutTest
 
 ## "Ver museu" no lobby: a câmera começa na tenda; o botão da aba Museu leva a câmera (Tween) até a
 ## vitrine, esconde os painéis da Base e deixa só o "Voltar"; Voltar ou Esc/B (ui_cancel) trazem a
-## câmera de volta, os painéis voltam e o foco volta ao botão.
+## câmera de volta, os painéis voltam e o foco volta ao botão. A Base cabe na tela com ui_scale 1.3.
 
 const LOBBY_SCENE: PackedScene = preload("res://world/lobby_base.tscn")
 ## Câmera da tenda (a de antes da #111).
@@ -91,3 +91,17 @@ func test_cancel_when_closed_is_ignored() -> void:
 	assert_true(ui_layer.visible)
 	assert_true(_close_to(camera.transform, TENT_TRANSFORM))
 
+
+func test_base_fits_viewport_with_ui_scale_130() -> void:
+	get_tree().root.content_scale_factor = 1.3
+	var panel: Control = base.get_node("PanelContainer") as Control
+	for i: int in base.tab_container.get_tab_count():
+		base.tab_container.current_tab = i
+		await wait_frames(4)
+		var view_h: float = base.get_viewport().get_visible_rect().size.y
+		var rect: Rect2 = panel.get_global_rect()
+		assert_lte(rect.end.y, view_h, "aba %d: Base (%.0f) cabe na tela (%.0f)" % [i, rect.end.y, view_h])
+		assert_true(base.tab_container.get_tab_control(i) is ScrollContainer, "aba %d rola" % i)
+	get_tree().root.content_scale_factor = 1.0
+	await wait_frames(4)
+	assert_lte(panel.get_global_rect().end.y, base.get_viewport().get_visible_rect().size.y, "ui_scale 1.0 também cabe")

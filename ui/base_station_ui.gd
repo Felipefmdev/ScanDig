@@ -89,6 +89,14 @@ const MAP_LOCKED_COLOR: Color = UiPalette.METAL
 ## Sem MuseumView na cena (a Base aberta sozinha, nos testes), o botão some.
 var view_museum_btn: Button = null
 
+## A Base cabe na tela (ui_scale 1.3 em 960x540 incluso): cada aba rola num ScrollContainer (com o
+## nome da aba; o conteúdo vira o filho "Page") e a altura das abas é a da maior, limitada ao que
+## cabe entre o topo da Base e a borda de baixo.
+const BOTTOM_MARGIN: float = 12.0
+const MIN_PAGE_HEIGHT: float = 120.0
+var _page_scrolls: Array[ScrollContainer] = []
+var _fit_queued: bool = false
+
 
 func _resolve_node(unique_id: String, rel_path: String) -> Node:
 	if has_node("%" + unique_id):
@@ -108,6 +116,7 @@ func _ready() -> void:
 	# A loja já usa o CoreSession (nome dos mapas) no primeiro refresh.
 	_session = get_node_or_null(SESSION_PATH)
 	_build_treasure_tab()
+	_wrap_pages_in_scroll()
 	_apply_tab_titles()
 	_resolve_game_state()
 	_setup_expeditions()
@@ -116,6 +125,8 @@ func _ready() -> void:
 		tab_container.tab_changed.connect(func(_tab: int) -> void: _sync_hidden_tab_widths())
 		_sync_hidden_tab_widths.call_deferred()
 		_focus_initial.call_deferred()
+		get_viewport().size_changed.connect(_queue_fit_height)
+		_queue_fit_height()
 
 
 ## Rótulos curtos + nome completo na dica de cada aba.
@@ -151,20 +162,88 @@ func _unhandled_input(event: InputEvent) -> void:
 ## não dimensiona as abas ocultas, e um Container oculto não reorganiza os filhos; sem
 ## largura, os Labels com quebra de linha mediriam uma letra por linha e a Base ficaria
 ## gigante até cada aba ser aberta. Aqui os Labels com quebra das abas ocultas recebem a
-## largura da aba atual (as abas são VBox sem margem, então é a largura deles).
+## largura da aba atual (as abas são VBox sem margem, então é a largura deles). Com as abas
+## dentro de ScrollContainers, a largura vem do ScrollContainer da aba atual (que o TabContainer
+## dimensiona na hora), e vale também para o conteúdo da própria aba atual, que o ScrollContainer
+## só reorganiza depois.
 func _sync_hidden_tab_widths() -> void:
-	var current: Control = tab_container.get_current_tab_control()
-	if current == null:
+	var current_tab: Control = tab_container.get_current_tab_control()
+	if current_tab == null:
 		return
+	var width: float = current_tab.size.x
+	if current_tab is ScrollContainer:
+		var bar: VScrollBar = (current_tab as ScrollContainer).get_v_scroll_bar()
+		if bar.visible:
+			width -= bar.size.x
 	for i in range(tab_container.get_tab_count()):
-		var page: Control = tab_container.get_tab_control(i)
-		if page == current:
-			continue
+		var page: Control = get_page(i)
+		if page != tab_container.get_tab_control(i) and not is_equal_approx(page.size.x, width):
+			page.size = Vector2(width, page.size.y)
 		for child: Node in page.get_children():
 			var label: Label = child as Label
-			if label != null and label.autowrap_mode != TextServer.AUTOWRAP_OFF and not is_equal_approx(label.size.x, current.size.x):
-				label.size = Vector2(current.size.x, label.size.y)
+			if label != null and label.autowrap_mode != TextServer.AUTOWRAP_OFF and not is_equal_approx(label.size.x, width):
+				label.size = Vector2(width, label.size.y)
 				label.update_minimum_size()
+
+
+## Conteúdo da aba `index` (dentro do ScrollContainer da aba).
+func get_page(index: int) -> Control:
+	var tab: Control = tab_container.get_tab_control(index)
+	if tab is ScrollContainer and tab.get_child_count() > 0:
+		return tab.get_child(0) as Control
+	return tab
+
+
+func _wrap_pages_in_scroll() -> void:
+	if tab_container == null:
+		return
+	var current: int = tab_container.current_tab
+	for child: Node in tab_container.get_children():
+		var page: Control = child as Control
+		if page == null or page is ScrollContainer:
+			continue
+		var scroll: ScrollContainer = ScrollContainer.new()
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.follow_focus = true
+		var index: int = page.get_index()
+		var page_name: StringName = page.name
+		page.name = "Page"
+		scroll.name = page_name
+		tab_container.add_child(scroll)
+		tab_container.move_child(scroll, index)
+		page.reparent(scroll, false)
+		page.visible = true
+		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		page.minimum_size_changed.connect(_queue_fit_height)
+		_page_scrolls.append(scroll)
+	tab_container.current_tab = current
+
+
+func _queue_fit_height() -> void:
+	if not _fit_queued:
+		_fit_queued = true
+		_fit_height.call_deferred()
+
+
+## Altura das abas = a da maior, sem passar da borda de baixo da tela.
+func _fit_height() -> void:
+	_fit_queued = false
+	var panel: Control = get_node_or_null(^"PanelContainer") as Control
+	if _page_scrolls.is_empty() or panel == null or not is_inside_tree():
+		return
+	_sync_hidden_tab_widths()
+	var content_h: float = 0.0
+	for scroll: ScrollContainer in _page_scrolls:
+		content_h = maxf(content_h, (scroll.get_child(0) as Control).get_combined_minimum_size().y)
+	var current_h: float = _page_scrolls[0].custom_minimum_size.y
+	var overhead: float = panel.get_combined_minimum_size().y - current_h
+	var avail: float = get_viewport().get_visible_rect().size.y - panel.global_position.y - BOTTOM_MARGIN - overhead
+	var h: float = minf(content_h, maxf(avail, MIN_PAGE_HEIGHT))
+	if is_equal_approx(h, current_h):
+		return
+	for scroll: ScrollContainer in _page_scrolls:
+		scroll.custom_minimum_size.y = h
 
 
 # --- Expedições ---------------------------------------------------------------
