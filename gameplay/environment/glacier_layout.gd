@@ -64,6 +64,14 @@ const PIECES: Array = [
 	[K.SNOW_PINE, -10.0, -22.0, 70, Vector3(1.0, 4.3, 1.0)],
 ]
 
+const SHORTCUT_SCRIPT: Script = preload("res://gameplay/objects/shortcuts/rope_shortcut.gd")
+
+## Atalhos de Arpão (#105): [id, display_name, type, x1, z1, x2, z2]
+const SHORTCUTS: Array = [
+	["geleira_crista_zipline", "Tirolesa da Crista", "zipline", -22.0, -15.0, -8.0, -2.0],
+	["geleira_fenda_ponte", "Ponte da Fenda Glacial", "rope_bridge", 6.0, -18.0, 16.0, -18.0],
+]
+
 @export var rebuild_now: bool = false:
 	set(value):
 		rebuild_now = false
@@ -94,3 +102,12 @@ func rebuild() -> void:
 		n.rotation.y = deg_to_rad(float(p[3]))
 		add_child(n)
 		i += 1
+
+	for sc_info: Array in SHORTCUTS:
+		var s_id: String = sc_info[0]
+		var s_name: String = sc_info[1]
+		var s_type: String = sc_info[2]
+		var p1: Vector3 = Vector3(sc_info[3], GlacierTerrain.height_at(sc_info[3], sc_info[4]), sc_info[4])
+		var p2: Vector3 = Vector3(sc_info[5], GlacierTerrain.height_at(sc_info[5], sc_info[6]), sc_info[6])
+		SHORTCUT_SCRIPT.call("create_shortcut", self, s_id, s_name, s_type, p1, p2)
+

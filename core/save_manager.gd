@@ -35,7 +35,7 @@ const TEST_SAVE_FILE_PATH: String = "user://test_saves/scandig_save.json"
 const MSG_CORRUPT: String = "O save estava corrompido e foi salvo como backup. Começando um jogo novo."
 const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar."
 ## Campos que o apply_snapshot só aceita como Array.
-const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments"]
+const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments", "built_shortcuts"]
 ## Campos numéricos opcionais (team_money é obrigatório e conferido à parte).
 const NUMBER_FIELDS: Array[String] = ["current_day", "equipped_detector_level", "saved_at"]
 
@@ -389,6 +389,7 @@ func save_game(target_state: GameState = null) -> Error:
 		"intact_items": Array(state.intact_items),
 		"rare_items": Array(state.rare_items),
 		"map_fragments": Array(state.map_fragments),
+		"built_shortcuts": Array(state.built_shortcuts),
 		"game_completed": state.game_completed,
 	}
 

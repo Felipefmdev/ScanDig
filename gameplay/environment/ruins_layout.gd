@@ -56,6 +56,14 @@ const TREES: Array = [
 	[-17, -20, 3.6], [15, -26, 3.8], [-6, 18, 3.3],
 ]
 
+const SHORTCUT_SCRIPT: Script = preload("res://gameplay/objects/shortcuts/rope_shortcut.gd")
+
+## Atalhos de Arpão (#105): [id, display_name, type, x1, z1, x2, z2]
+const SHORTCUTS: Array = [
+	["ruinas_templo_zipline", "Tirolesa do Templo", "zipline", 3.0, -15.0, 4.0, 5.0],
+	["ruinas_cripta_ponte", "Ponte da Cripta", "rope_bridge", -15.5, -6.0, -28.5, -6.0],
+]
+
 @export var rebuild_now: bool = false:
 	set(value):
 		rebuild_now = false
@@ -95,3 +103,12 @@ func rebuild() -> void:
 		tree.position = Vector3(t[0], RuinsTerrain.height_at(t[0], t[1]) - 0.1, t[1])
 		add_child(tree)
 		i += 1
+
+	for sc_info: Array in SHORTCUTS:
+		var s_id: String = sc_info[0]
+		var s_name: String = sc_info[1]
+		var s_type: String = sc_info[2]
+		var p1: Vector3 = Vector3(sc_info[3], RuinsTerrain.height_at(sc_info[3], sc_info[4]), sc_info[4])
+		var p2: Vector3 = Vector3(sc_info[5], RuinsTerrain.height_at(sc_info[5], sc_info[6]), sc_info[6])
+		SHORTCUT_SCRIPT.call("create_shortcut", self, s_id, s_name, s_type, p1, p2)
+

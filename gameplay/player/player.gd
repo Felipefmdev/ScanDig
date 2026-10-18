@@ -341,6 +341,14 @@ const WHEELBARROW_SCRIPT: Script = preload("res://gameplay/objects/wheelbarrow/w
 var pushing_wheelbarrow: Node3D = null
 var _target_wheelbarrow: Node3D = null
 var _target_crow_nest: Node3D = null
+## Atalhos construídos com o arpão (#105):
+const ROPE_ANCHOR_SCRIPT: Script = preload("res://gameplay/objects/shortcuts/rope_anchor.gd")
+const ROPE_SHORTCUT_SCRIPT: Script = preload("res://gameplay/objects/shortcuts/rope_shortcut.gd")
+var _hooked_anchor: RopeAnchor = null
+var _target_zipline: RopeShortcut = null
+var is_ziplining: bool = false
+var _active_zipline: RopeShortcut = null
+var _zipline_progress: float = 0.0
 
 # Contador de Sessão: total já entregue na base
 var session_money: int = 0
@@ -526,6 +534,21 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not is_settings_open():
 		apply_mouse_look((event as InputEventMouseMotion).relative)
+
+	# Tirolesa (#105): Pular / soltar do cabo
+	if is_ziplining:
+		if event.is_action_pressed(&"jump"):
+			is_ziplining = false
+			if _active_zipline != null and is_instance_valid(_active_zipline):
+				var p_start: Vector3 = _active_zipline.get_zipline_start()
+				var p_end: Vector3 = _active_zipline.get_zipline_end()
+				var slide_dir: Vector3 = (p_end - p_start).normalized()
+				velocity = slide_dir * 8.0 + Vector3.UP * 4.2
+			_active_zipline = null
+			_show_temporary_message("Pulou da tirolesa!", UiPalette.GOLD, 0.8)
+			SFX.play_ui(SFX.DROP, 0.0, 0.1)
+			get_viewport().set_input_as_handled()
+		return
 
 	# [Esc] (ação "pause") é do menu de pausa (CorePauseMenu, #77).
 	if is_settings_open():
@@ -800,7 +823,14 @@ func _update_aim_assist(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if is_ziplining:
+		_process_zipline(delta)
+		return
+
 	if is_downed:
+		if _hooked_anchor != null and is_instance_valid(_hooked_anchor):
+			_hooked_anchor.set_hooked(false)
+			_hooked_anchor = null
 		if is_local() and not is_settings_open():
 			var holding_interact: bool = InputMap.has_action("interact") and Input.is_action_pressed("interact")
 			update_downed_give_up(delta, holding_interact)
@@ -2691,6 +2721,11 @@ func _interact() -> void:
 			_show_temporary_message("O ninho de corvo está vazio no momento.", Color(0.85, 0.85, 0.85), 1.5)
 		return
 
+	# Tirolesa (#105): Descer deslizando pelo cabo
+	if _target_zipline != null and is_instance_valid(_target_zipline):
+		start_ziplining(_target_zipline)
+		return
+
 	if carried_player != null:
 		var sp: SellPoint = _get_sell_point_in_range()
 		if sp != null:
@@ -2923,7 +2958,10 @@ func _update_interaction_target() -> void:
 	var downed_p: Player = _find_target_downed_player()
 	_target_downed_player = downed_p
 
-	var offer: ShopOffer = null if (_target_downed_player != null or carried_player != null or pushing_wheelbarrow != null or _target_crow_nest != null) else _find_target_offer()
+	var target_zip: RopeShortcut = null if (_target_wheelbarrow != null or pushing_wheelbarrow != null or _target_crow_nest != null or _target_downed_player != null or carried_player != null) else _find_target_zipline()
+	_target_zipline = target_zip
+
+	var offer: ShopOffer = null if (_target_downed_player != null or carried_player != null or pushing_wheelbarrow != null or _target_crow_nest != null or _target_zipline != null) else _find_target_offer()
 	if offer != _target_offer:
 		if _target_offer != null and is_instance_valid(_target_offer):
 			_target_offer.set_highlighted(false)
@@ -2931,7 +2969,7 @@ func _update_interaction_target() -> void:
 		if _target_offer != null:
 			_target_offer.set_highlighted(true)
 
-	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null or pushing_wheelbarrow != null or _target_crow_nest != null) else _find_target_pickup()
+	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null or pushing_wheelbarrow != null or _target_crow_nest != null or _target_zipline != null) else _find_target_pickup()
 	if target != _target_pickup:
 		if _target_pickup != null and is_instance_valid(_target_pickup):
 			_target_pickup.set_highlighted(false)
@@ -2981,6 +3019,8 @@ func _update_interaction_target() -> void:
 			interact_prompt.text = "[E] Vasculhar ninho de corvo (%d %s)" % [count, "achado" if count == 1 else "achados"]
 		else:
 			interact_prompt.text = "[E] Ninho de corvo (vazio)"
+	elif _target_zipline != null and is_instance_valid(_target_zipline):
+		interact_prompt.text = "[E] Descer pela tirolesa"
 	elif _target_offer != null:
 		var full: String = "  — mochila cheia!" if inventory.is_full() else ""
 		interact_prompt.text = _target_offer.get_prompt() + full
@@ -3013,6 +3053,9 @@ func _on_inventory_changed() -> void:
 
 
 func _on_selected_slot_changed(_index: int) -> void:
+	if _hooked_anchor != null and is_instance_valid(_hooked_anchor):
+		_hooked_anchor.set_hooked(false)
+		_hooked_anchor = null
 	_update_tool_in_hand()
 	if is_inspecting:
 		refresh_inspect_card()
@@ -3647,31 +3690,49 @@ func fire_harpoon() -> int:
 	var hit_count: int = 0
 	var hit_point: Vector3 = origin + fwd * harpoon_range
 
+	# 0. Postes de ancoragem para atalhos de tirolesa/ponte de corda (#105)
+	const HARPOON_ANCHOR_RANGE: float = 28.0
+	var best_anchor: RopeAnchor = null
+	var best_anchor_dist: float = HARPOON_ANCHOR_RANGE + 0.1
+	for n: Node in get_tree().get_nodes_in_group(RopeAnchor.GROUP):
+		var anchor: RopeAnchor = n as RopeAnchor
+		if anchor == null or not is_instance_valid(anchor):
+			continue
+		var to_a: Vector3 = anchor.get_hook_point() - origin
+		var dist_a: float = to_a.length()
+		if dist_a > HARPOON_ANCHOR_RANGE or dist_a < 0.3:
+			continue
+		var dot_a: float = fwd.dot(to_a / dist_a)
+		if dot_a >= harpoon_cone_dot and dist_a < best_anchor_dist:
+			best_anchor_dist = dist_a
+			best_anchor = anchor
+
 	var best_target: Node3D = null
 	var best_dist: float = harpoon_range + 0.1
 	var is_pickup: bool = false
 
 	# 1. Inimigos alinhados com a mira dentro do alcance de 14m
-	for n: Node in get_tree().get_nodes_in_group("enemies"):
-		if not (n is Node3D):
-			continue
-		var enemy: Node3D = n as Node3D
-		if enemy.has_method("is_alive") and not enemy.call("is_alive"):
-			continue
-		var to_e: Vector3 = enemy.global_position - origin
-		var to_e_flat: Vector3 = Vector3(to_e.x, 0.0, to_e.z)
-		var dist_flat: float = to_e_flat.length()
-		var dist_3d: float = to_e.length()
-		if dist_flat > harpoon_range or dist_3d < 0.2:
-			continue
-		var dot: float = fwd_flat.dot(to_e_flat / maxf(dist_flat, 0.001))
-		if dot >= harpoon_cone_dot and dist_flat < best_dist:
-			best_dist = dist_flat
-			best_target = enemy
-			is_pickup = false
+	if best_anchor == null:
+		for n: Node in get_tree().get_nodes_in_group("enemies"):
+			if not (n is Node3D):
+				continue
+			var enemy: Node3D = n as Node3D
+			if enemy.has_method("is_alive") and not enemy.call("is_alive"):
+				continue
+			var to_e: Vector3 = enemy.global_position - origin
+			var to_e_flat: Vector3 = Vector3(to_e.x, 0.0, to_e.z)
+			var dist_flat: float = to_e_flat.length()
+			var dist_3d: float = to_e.length()
+			if dist_flat > harpoon_range or dist_3d < 0.2:
+				continue
+			var dot: float = fwd_flat.dot(to_e_flat / maxf(dist_flat, 0.001))
+			if dot >= harpoon_cone_dot and dist_flat < best_dist:
+				best_dist = dist_flat
+				best_target = enemy
+				is_pickup = false
 
 	# 2. Se não encontrou inimigo, verifica pickups de itens no chão
-	if best_target == null:
+	if best_anchor == null and best_target == null:
 		for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
 			var pickup: ItemPickup = n as ItemPickup
 			if pickup == null or not is_instance_valid(pickup):
@@ -3687,21 +3748,69 @@ func fire_harpoon() -> int:
 				is_pickup = true
 
 	# 3. Raycast se o cone não encontrou
-	if best_target == null:
+	if best_anchor == null and best_target == null:
 		var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(
-			origin, origin + fwd * harpoon_range, PICKUP_MASK | 1, [get_rid()]
+			origin, origin + fwd * HARPOON_ANCHOR_RANGE, PICKUP_MASK | 1 | (1 << 2), [get_rid()]
 		)
 		var hit: Dictionary = space.intersect_ray(query)
 		if not hit.is_empty():
-			hit_point = hit["position"]
 			var col: Object = hit.get("collider", null)
-			if col is ItemPickup:
+			if col is RopeAnchor:
+				best_anchor = col as RopeAnchor
+			elif col is ItemPickup:
 				best_target = col as ItemPickup
 				is_pickup = true
+				hit_point = hit["position"]
 			elif col is Node3D and (col as Node3D).is_in_group("enemies"):
 				best_target = col as Node3D
 				is_pickup = false
+				hit_point = hit["position"]
+			else:
+				hit_point = hit["position"]
+
+	if best_anchor != null:
+		hit_point = best_anchor.get_hook_point()
+		_spawn_harpoon_rope(origin + fwd * 0.4 - Vector3.UP * 0.1, hit_point)
+		hit_count = 1
+		if best_anchor.is_shortcut_built():
+			_show_temporary_message("⚡ Este atalho já foi construído!", UiPalette.ORANGE, 1.5)
+			SFX.play_ui(SFX.STONE_IMPACT, -1.0, 0.1)
+		elif _hooked_anchor == null:
+			_hooked_anchor = best_anchor
+			_hooked_anchor.set_hooked(true)
+			_show_temporary_message("⚓ Arpão fixado no poste! Mire no poste oposto para esticar o atalho.", UiPalette.GOLD, 2.5)
+			SFX.play_ui(SFX.STONE_IMPACT, 0.0, 0.1)
+			_shake_camera(0.02, 0.12)
+		elif _hooked_anchor == best_anchor:
+			_show_temporary_message("⚓ Arpão já fixado neste poste. Mire no poste oposto!", UiPalette.GOLD, 1.8)
+			SFX.play_ui(SFX.STONE_IMPACT, -2.0, 0.1)
+		else:
+			var matches: bool = (best_anchor.pair_anchor_id == _hooked_anchor.anchor_id or (not best_anchor.shortcut_id.is_empty() and best_anchor.shortcut_id == _hooked_anchor.shortcut_id))
+			if matches:
+				var target_sc_id: String = _hooked_anchor.shortcut_id
+				var sc_type: String = best_anchor.shortcut_type
+				var built_any: bool = false
+				for s_node: Node in get_tree().get_nodes_in_group(RopeShortcut.GROUP):
+					var sc: RopeShortcut = s_node as RopeShortcut
+					if sc != null and sc.shortcut_id == target_sc_id:
+						sc.build()
+						built_any = true
+				if not built_any and GameState.instance != null:
+					GameState.instance.build_shortcut(target_sc_id)
+				_hooked_anchor.set_hooked(false)
+				_hooked_anchor = null
+				best_anchor.set_hooked(true)
+				SFX.play_ui(SFX.BUY, 0.0, 0.0)
+				_shake_camera(0.035, 0.25)
+				if sc_type == "zipline":
+					_show_temporary_message("⚡ Tirolesa construída com sucesso! Segure [E] no topo para descer.", UiPalette.GREEN_BOTTLE.lightened(0.3), 3.0)
+				else:
+					_show_temporary_message("🌉 Ponte de corda esticada! Travessia liberada para pedestres e carrinho.", UiPalette.GREEN_BOTTLE.lightened(0.3), 3.0)
+			else:
+				_show_temporary_message("❌ Estes postes não formam um par de atalho!", UiPalette.RED_BURNT, 2.0)
+				SFX.play_ui(SFX.STONE_IMPACT, -3.0, 0.1)
+		return hit_count
 
 	if best_target != null:
 		hit_point = best_target.global_position
@@ -4441,3 +4550,79 @@ func on_wheelbarrow_released(wb: Node3D) -> void:
 		_clear_wheelbarrow_messages()
 		if wb != null and bool(wb.get("is_tipped")):
 			_show_temporary_message("⚠️ Carrinho tombado! A carga foi derramada.", Color(1.0, 0.45, 0.35), 2.0)
+
+
+## Atalhos de Arpão (#105): Tirolesa e Ponte de Corda
+func _find_target_zipline() -> RopeShortcut:
+	var best: RopeShortcut = null
+	var best_dist: float = 3.2
+	for node: Node in get_tree().get_nodes_in_group(RopeShortcut.GROUP):
+		var sc: RopeShortcut = node as RopeShortcut
+		if sc == null or not is_instance_valid(sc) or not sc.is_built:
+			continue
+		if sc.shortcut_type != "zipline":
+			continue
+		var start_p: Vector3 = sc.get_zipline_start()
+		var dist: float = global_position.distance_to(start_p)
+		if dist < best_dist:
+			best_dist = dist
+			best = sc
+	return best
+
+
+func start_ziplining(zipline: RopeShortcut) -> void:
+	if zipline == null or not is_instance_valid(zipline):
+		return
+	if pushing_wheelbarrow != null:
+		_show_temporary_message("Não é possível usar a tirolesa empurrando o carrinho!", UiPalette.ORANGE, 1.5)
+		return
+	if carried_player != null:
+		_show_temporary_message("Não é possível usar a tirolesa carregando um parceiro!", UiPalette.ORANGE, 1.5)
+		return
+	is_ziplining = true
+	_active_zipline = zipline
+	_zipline_progress = 0.0
+	global_position = zipline.get_zipline_start() - Vector3.UP * 1.2
+	SFX.play_ui(SFX.SLINGSHOT_FIRE, 2.0, 0.1)
+	_show_temporary_message("⚡ Deslizando pela tirolesa! [Espaço] para soltar.", UiPalette.GOLD, 1.5)
+
+
+func _process_zipline(delta: float) -> void:
+	if _active_zipline == null or not is_instance_valid(_active_zipline) or not _active_zipline.is_built:
+		is_ziplining = false
+		_active_zipline = null
+		return
+
+	var p_start: Vector3 = _active_zipline.get_zipline_start()
+	var p_end: Vector3 = _active_zipline.get_zipline_end()
+	var total_dist: float = p_start.distance_to(p_end)
+	if total_dist < 0.2:
+		is_ziplining = false
+		_active_zipline = null
+		return
+
+	var slide_dir: Vector3 = (p_end - p_start).normalized()
+	var slide_speed: float = 13.5
+	var progress_step: float = (slide_speed / total_dist) * delta
+	_zipline_progress = minf(_zipline_progress + progress_step, 1.0)
+
+	var cable_pt: Vector3 = p_start.lerp(p_end, _zipline_progress)
+	global_position = cable_pt - Vector3.UP * 1.2
+	velocity = slide_dir * slide_speed
+
+	if Input.is_action_just_pressed(&"jump") and not is_settings_open():
+		is_ziplining = false
+		_active_zipline = null
+		velocity = slide_dir * 8.0 + Vector3.UP * 4.2
+		_show_temporary_message("Pulou da tirolesa!", UiPalette.GOLD, 0.8)
+		SFX.play_ui(SFX.DROP, 0.0, 0.1)
+		return
+
+	if _zipline_progress >= 1.0:
+		is_ziplining = false
+		_active_zipline = null
+		global_position = p_end - Vector3.UP * 1.2
+		velocity = slide_dir * 5.0 + Vector3.UP * 1.5
+		_show_temporary_message("Chegada da tirolesa!", UiPalette.GREEN_BOTTLE.lightened(0.3), 1.0)
+		SFX.play_ui(SFX.PICKUP, 0.0, 0.1)
+

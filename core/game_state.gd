@@ -30,6 +30,8 @@ signal game_completed_changed(completed: bool)
 signal game_victory()
 ## Em todos os peers, uma vez por fragmento novo do Mapa do Tesouro (#112).
 signal map_fragment_found(fragment_id: String)
+## Em todos os peers, quando um atalho de tirolesa ou ponte de corda é construído com o arpão (#105).
+signal shortcut_built(shortcut_id: String)
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
@@ -148,6 +150,8 @@ var intact_items: Array[String] = []
 var rare_items: Array[String] = []
 ## Fragmentos do Mapa do Tesouro já encontrados (#112), ids de MAP_FRAGMENT_IDS.
 var map_fragments: Array[String] = []
+## Atalhos construídos com o arpão (#105): ids dos atalhos completados.
+var built_shortcuts: Array[String] = []
 var game_completed: bool = false
 
 
@@ -673,6 +677,34 @@ func _host_report_creature(kind: String) -> void:
 	_broadcast_snapshot()
 
 
+## Atalhos construídos com o arpão (#105): tirolesa e ponte de corda.
+func is_shortcut_built(shortcut_id: String) -> bool:
+	return built_shortcuts.has(shortcut_id)
+
+
+func build_shortcut(shortcut_id: String) -> void:
+	if shortcut_id.is_empty():
+		return
+	if not is_authority():
+		_send_to_host(&"_host_build_shortcut", [shortcut_id])
+		return
+	_host_build_shortcut(shortcut_id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_build_shortcut(shortcut_id: String) -> void:
+	if not is_authority() or built_shortcuts.has(shortcut_id):
+		return
+	var data: Dictionary = get_snapshot()
+	var shortcuts: Array = Array(built_shortcuts).duplicate()
+	shortcuts.append(shortcut_id)
+	data["built_shortcuts"] = shortcuts
+	apply_snapshot(data)
+	_broadcast_snapshot()
+	if SaveManager.instance != null:
+		SaveManager.instance.save_game(self)
+
+
 ## Chefes, missões e segredos acontecem só no mundo do host: aceita a chamada local
 ## (sender 0) ou do próprio host. Compras, entregas e desbloqueios aceitam qualquer peer.
 func _is_host_sender(kind: String, id: String) -> bool:
@@ -700,6 +732,7 @@ func get_snapshot() -> Dictionary:
 		"intact_items": Array(intact_items),
 		"rare_items": Array(rare_items),
 		"map_fragments": Array(map_fragments),
+		"built_shortcuts": Array(built_shortcuts).duplicate(),
 		"game_completed": game_completed,
 	}
 
@@ -747,6 +780,11 @@ func apply_snapshot(data: Dictionary) -> void:
 				frags.append(id)
 		new_fragments = _new_ids(map_fragments, frags)
 		map_fragments = frags
+	var new_shortcuts: Array[String] = []
+	if data.get("built_shortcuts") is Array:
+		var scs: Array[String] = _to_id_list(data["built_shortcuts"])
+		new_shortcuts = _new_ids(built_shortcuts, scs)
+		built_shortcuts = scs
 	if data.get("upgrade_levels") is Dictionary:
 		# JSON devolve números como float e pode conter chaves obsoletas.
 		var source: Dictionary = data["upgrade_levels"]
@@ -769,6 +807,8 @@ func apply_snapshot(data: Dictionary) -> void:
 		creature_discovered.emit(kind)
 	for fragment_id: String in new_fragments:
 		map_fragment_found.emit(fragment_id)
+	for shortcut_id: String in new_shortcuts:
+		shortcut_built.emit(shortcut_id)
 	if game_completed != old_completed:
 		game_completed_changed.emit(game_completed)
 	state_synced.emit()
@@ -885,6 +925,7 @@ func reset_state() -> void:
 	intact_items.clear()
 	rare_items.clear()
 	map_fragments.clear()
+	built_shortcuts.clear()
 	game_completed = false
 	_broadcast_snapshot()
 
