@@ -213,7 +213,7 @@ func _run() -> void:
 		won["seen_creatures"] = ["crab", "hermit_crab", "seagull", "mole", "bat"]
 		won["intact_items"] = ["alianca_ouro", "bussola"]
 		GameState.instance.load_snapshot(won)
-		GameState.instance._host_report_boss_defeated("the_sleeper")
+		GameState.instance._host_report_boss_defeated("gold_colossus")
 		# Sobras das capturas anteriores (toast do segredo do snapshot acima, barra de chefe).
 		ui._clear_toasts()
 		boss_hud.visible = false

@@ -23,9 +23,9 @@ signal quest_completed(quest_id: String, reward: int)
 signal secret_found(secret_id: String)
 ## Em todos os peers, uma vez por criatura nova no Diário de campo (seen_creatures).
 signal creature_discovered(kind: String)
-## Em todos os peers, quando o jogo é concluído (derrota de the_sleeper).
+## Em todos os peers, quando o jogo é concluído (derrota do FINAL_BOSS_ID, o colosso da ilha).
 signal game_completed_changed(completed: bool)
-## Vitória ao vivo: só quando the_sleeper é derrotado nesta sessão (em todos os peers presentes).
+## Vitória ao vivo: só quando o FINAL_BOSS_ID é derrotado nesta sessão (em todos os peers presentes).
 ## Carregar save, entrar no meio ou reconectar não emite: isso é estado (game_completed_changed).
 signal game_victory()
 ## Em todos os peers, uma vez por fragmento novo do Mapa do Tesouro (#112).
@@ -102,6 +102,9 @@ const CREATURES: Dictionary = {
 	"ice_wolf": "Lobo do Gelo", "penguin": "Pinguim-ladrão", "walrus": "Morsa",
 	"crawler": "Rastejante", "floater": "Flutuante",
 }
+## Final do jogo (#103/#115): o Colosso do Tesouro, o chefe disfarçado na Ilha do Tesouro. O
+## the_sleeper (Cratera) é um chefe como os outros (dá o cratera_frag_2).
+const FINAL_BOSS_ID: String = "gold_colossus"
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
 ## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
 ## Mapas 3-5: idol_mummy, cave_yeti, ancient_walrus, the_sleeper, the_echo (#75).
@@ -529,18 +532,18 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 	if known:
 		defeated_bosses.append(boss_id)
 		var data: Dictionary = get_snapshot()
-		if boss_id == "the_sleeper":
+		if boss_id == FINAL_BOSS_ID:
 			data["game_completed"] = true
 		_add_earned_fragments(data)
 		apply_snapshot(data)
 		if _is_online():
 			_receive_snapshot.rpc(data)
-		if boss_id == "the_sleeper":
+		if boss_id == FINAL_BOSS_ID:
 			# Depois do snapshot: RPCs reliable do mesmo nó chegam em ordem (contagens já novas).
 			_receive_game_victory()
 			if _is_online():
 				_receive_game_victory.rpc()
-		if boss_id == "the_sleeper" and SaveManager.instance != null and SaveManager.instance.is_progress_applied():
+		if boss_id == FINAL_BOSS_ID and SaveManager.instance != null and SaveManager.instance.is_progress_applied():
 			SaveManager.instance.save_game()
 
 
@@ -725,7 +728,7 @@ func apply_snapshot(data: Dictionary) -> void:
 	var old_completed: bool = game_completed
 	if data.has("game_completed"):
 		game_completed = bool(data["game_completed"])
-	if defeated_bosses.has("the_sleeper"):
+	if defeated_bosses.has(FINAL_BOSS_ID):
 		game_completed = true
 	if data.get("intact_items") is Array:
 		intact_items = _to_id_list(data["intact_items"])

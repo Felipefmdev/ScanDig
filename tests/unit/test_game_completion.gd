@@ -24,8 +24,8 @@ func test_defeating_sleeper_marks_game_completed() -> void:
 	var gs: GameState = GameState.instance
 	assert_not_null(gs)
 	watch_signals(gs)
-	gs._host_report_boss_defeated("the_sleeper")
-	assert_true(gs.is_game_completed(), "derrotar the_sleeper marca game_completed")
+	gs._host_report_boss_defeated(GameState.FINAL_BOSS_ID)
+	assert_true(gs.is_game_completed(), "derrotar o chefe final (gold_colossus, #115) marca game_completed")
 	assert_signal_emitted_with_parameters(gs, "game_completed_changed", [true])
 
 

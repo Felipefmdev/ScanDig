@@ -51,7 +51,7 @@ func test_live_victory_opens_with_counts() -> void:
 	gs.found_secrets = secrets
 	gs.seen_creatures = creatures
 	watch_signals(gs)
-	gs._host_report_boss_defeated("the_sleeper")
+	gs._host_report_boss_defeated("gold_colossus")
 	assert_signal_emit_count(gs, "game_victory", 1)
 	assert_signal_emitted_with_parameters(gs, "game_completed_changed", [true])
 	assert_true(VictoryScreen.is_open(), "abre na vitória ao vivo")
@@ -67,7 +67,7 @@ func test_loading_completed_save_does_not_open() -> void:
 	watch_signals(gs)
 	var data: Dictionary = gs.get_snapshot()
 	data["game_completed"] = true
-	data["defeated_bosses"] = ["the_sleeper"]
+	data["defeated_bosses"] = ["gold_colossus"]
 	gs.load_snapshot(data)
 	assert_signal_emitted_with_parameters(gs, "game_completed_changed", [true])
 	assert_signal_not_emitted(gs, "game_victory")
@@ -77,7 +77,7 @@ func test_loading_completed_save_does_not_open() -> void:
 func test_full_state_snapshot_does_not_open() -> void:
 	var gs: GameState = GameState.instance
 	var data: Dictionary = gs.get_snapshot()
-	data["defeated_bosses"] = ["the_sleeper"]
+	data["defeated_bosses"] = ["gold_colossus"]
 	gs._receive_snapshot(data)
 	assert_true(gs.is_game_completed())
 	assert_false(VictoryScreen.is_open(), "entrar no meio (snapshot completo) não abre")
@@ -85,14 +85,25 @@ func test_full_state_snapshot_does_not_open() -> void:
 
 func test_defeating_again_does_not_reopen() -> void:
 	var gs: GameState = GameState.instance
-	gs._host_report_boss_defeated("the_sleeper")
+	gs._host_report_boss_defeated("gold_colossus")
 	assert_true(VictoryScreen.is_open())
 	_screen().continue_button.pressed.emit()
 	assert_false(VictoryScreen.is_open())
 	watch_signals(gs)
-	gs._host_report_boss_defeated("the_sleeper")
+	gs._host_report_boss_defeated("gold_colossus")
 	assert_signal_not_emitted(gs, "game_victory")
 	assert_false(VictoryScreen.is_open(), "chefe já derrotado não reabre")
+
+
+func test_the_sleeper_is_a_normal_boss_now() -> void:
+	var gs: GameState = GameState.instance
+	watch_signals(gs)
+	gs._host_report_boss_defeated("the_sleeper")
+	assert_true(gs.defeated_bosses.has("the_sleeper"), "entra nos chefes vencidos")
+	assert_true(gs.map_fragments.has("cratera_frag_2"), "e dá o fragmento da Cratera")
+	assert_false(gs.is_game_completed(), "não é mais o final (#115)")
+	assert_signal_not_emitted(gs, "game_victory")
+	assert_false(VictoryScreen.is_open())
 
 
 func test_other_boss_does_not_open() -> void:
@@ -108,7 +119,7 @@ func test_continue_closes_and_restores_mouse() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	# Headless pode não guardar o modo: compara com o que o Input devolve de fato.
 	var before: Input.MouseMode = Input.mouse_mode
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	assert_true(VictoryScreen.is_open())
 	assert_eq(screen._previous_mouse_mode, before, "guardou o modo do mouse")
 	assert_eq(Input.mouse_mode, Input.MOUSE_MODE_VISIBLE)
@@ -122,7 +133,7 @@ func test_blocks_pause_menu_and_player_input() -> void:
 	var player: Player = PLAYER_SCENE.instantiate() as Player
 	add_child_autofree(player)
 	assert_false(player.is_settings_open())
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	assert_true(player.is_settings_open(), "player parado com a tela aberta")
 	assert_false(PauseMenu.instance.can_open(), "pausa não abre por cima")
 	assert_false(PauseMenu.instance.open())
@@ -134,25 +145,25 @@ func test_blocks_pause_menu_and_player_input() -> void:
 
 func test_victory_closes_open_pause_menu() -> void:
 	assert_true(PauseMenu.instance.open())
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	assert_false(PauseMenu.is_open(), "a pausa aberta (coop) fecha na vitória")
 	assert_true(VictoryScreen.is_open())
 
 
 func test_closes_on_scene_change_and_reset() -> void:
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	assert_true(VictoryScreen.is_open())
 	SessionManager.instance.scene_changing.emit("res://world/lobby_base.tscn")
 	assert_false(VictoryScreen.is_open(), "fecha na troca de cena")
 	GameState.instance.reset_state()
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	assert_true(VictoryScreen.is_open())
 	GameState.instance.reset_state()
 	assert_false(VictoryScreen.is_open(), "jogo zerado: fecha")
 
 
 func test_pause_action_closes() -> void:
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	var ev: InputEventAction = InputEventAction.new()
 	ev.action = &"pause"
 	ev.pressed = true
@@ -164,7 +175,7 @@ func test_pause_action_closes() -> void:
 
 func test_credits_button_swaps_card_view() -> void:
 	var screen: VictoryScreen = _screen()
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	assert_true(screen.summary_view.visible, "abre nas contagens")
 	assert_false(screen.credits_view.visible)
 	screen.credits_button.pressed.emit()
@@ -180,7 +191,7 @@ func test_credits_button_swaps_card_view() -> void:
 
 func test_reopen_starts_on_summary() -> void:
 	var screen: VictoryScreen = _screen()
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	screen.credits_button.pressed.emit()
 	screen.close()
 	screen.open()
@@ -191,7 +202,7 @@ func test_reopen_starts_on_summary() -> void:
 
 func test_pause_action_in_credits_goes_back() -> void:
 	var screen: VictoryScreen = _screen()
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	screen.credits_button.pressed.emit()
 	var ev: InputEventAction = InputEventAction.new()
 	ev.action = &"pause"
@@ -211,7 +222,7 @@ func test_intact_items_row() -> void:
 	var before: Array[String] = gs.intact_items.duplicate()
 	var intact: Array[String] = ["alianca_ouro", "moeda_antiga", "bussola"]
 	gs.intact_items = intact
-	gs._host_report_boss_defeated("the_sleeper")
+	gs._host_report_boss_defeated("gold_colossus")
 	assert_true(VictoryScreen.is_open())
 	assert_eq(screen.intact_value.text, "3 / %d" % gs.get_total_catalog_items(), "linha Peças intactas")
 	var grid: GridContainer = screen.intact_value.get_parent() as GridContainer

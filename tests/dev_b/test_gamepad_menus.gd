@@ -135,7 +135,7 @@ func test_settings_tabs_with_shoulders() -> void:
 
 
 func test_victory_and_credits() -> void:
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	var screen: VictoryScreen = VictoryScreen.instance
 	assert_true(VictoryScreen.is_open())
 	assert_eq(_focus(), screen.continue_button, "abre com foco em Continuar explorando")

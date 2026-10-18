@@ -35,9 +35,9 @@ func _run() -> void:
 	data["found_secrets"] = [GameState.SECRETS[0]]
 	GameState.instance.load_snapshot(data)
 	await _w(0.5)
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	# Chefe já derrotado: não repete a vitória.
-	GameState.instance._host_report_boss_defeated("the_sleeper")
+	GameState.instance._host_report_boss_defeated("gold_colossus")
 	print("HOST victory_sent completed=", GameState.instance.is_game_completed(), " open=", VictoryScreen.is_open())
 	_check(_victories == 1, "host game_victory=%d" % _victories)
 	_check(VictoryScreen.is_open(), "tela não abriu no host")
