@@ -41,7 +41,7 @@ shadow_blur = 1.4
 [node name="CameraPivot" type="Node3D" parent="."]
 
 [node name="Camera3D" type="Camera3D" parent="CameraPivot"]
-transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 4.2, 13)
+transform = Transform3D(1, 0, 0, 0, 0.99863, -0.052336, 0, 0.052336, 0.99863, 0, 2.2, 13)
 current = true
 fov = 60.0
 

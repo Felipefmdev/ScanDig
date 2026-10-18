@@ -319,6 +319,8 @@ func _build() -> void:
 	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root_control.add_child(center)
+	# Com o mouse, o foco inicial no primeiro botão não acende borda (#122).
+	UiFocus.follow_pointer(center)
 	var stack: VBoxContainer = VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 14)
 	center.add_child(stack)
@@ -482,8 +484,9 @@ func _button(text: String, variation: StringName = &"", icon_name: String = "") 
 	return button
 
 
-## Hover e foco (mouse, teclado ou controle) crescem o botão um pouco; o contorno de foco do
-## tema continua lá.
+## Hover do mouse e foco por teclado/controle crescem o botão um pouco; o contorno de foco do
+## tema só aparece fora do mouse. Foco com o mouse não cresce (#122): o primeiro botão focado ao
+## abrir (Continuar) fica da largura dos outros, destacado só pela cor.
 func _add_focus_scale(button: Button) -> void:
 	var grow: Callable = func(on: bool) -> void:
 		button.pivot_offset = button.size * 0.5
@@ -494,9 +497,9 @@ func _add_focus_scale(button: Button) -> void:
 		var tween: Tween = button.create_tween()
 		tween.tween_property(button, "scale", target, 0.08)
 	button.mouse_entered.connect(grow.bind(true))
-	button.focus_entered.connect(grow.bind(true))
-	button.mouse_exited.connect(func() -> void: grow.call(button.has_focus()))
-	button.focus_exited.connect(grow.bind(false))
+	button.focus_entered.connect(func() -> void: grow.call(not InputDevice.using_pointer()))
+	button.mouse_exited.connect(func() -> void: grow.call(button.has_focus() and not InputDevice.using_pointer()))
+	button.focus_exited.connect(func() -> void: grow.call(button.is_hovered()))
 
 
 ## Balanço lento do logo (rotação em volta do centro), em loop.

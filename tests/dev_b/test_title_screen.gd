@@ -198,12 +198,31 @@ func test_title_polish_version_tagline_icons_and_motion() -> void:
 	assert_eq(title.tagline_label.text, TitleScreen.TAGLINE)
 	for button: Button in [title.continue_button, title.new_game_button, title.load_button, title.coop_button, title.settings_button, title.quit_button]:
 		assert_not_null(button.icon, "ícone em %s" % button.text)
+	InputDevice.instance.set_using_pointer(false)
 	title.load_button.grab_focus()
 	await wait_seconds(0.2)
-	assert_almost_eq(title.load_button.scale.x, TitleScreen.BUTTON_FOCUS_SCALE, 0.001, "foco cresce o botão")
+	assert_almost_eq(title.load_button.scale.x, TitleScreen.BUTTON_FOCUS_SCALE, 0.001, "foco por teclado cresce o botão")
 	title.coop_button.grab_focus()
 	await wait_seconds(0.2)
 	assert_almost_eq(title.load_button.scale.x, 1.0, 0.001, "sem foco volta")
+	InputDevice.instance.set_using_pointer(true)
 	var start: float = title.logo_label.rotation
 	await wait_seconds(0.3)
 	assert_ne(title.logo_label.rotation, start, "logo balança")
+
+
+## #122 (E5): com o mouse, o Continuar focado ao abrir fica da largura e no alinhamento dos
+## outros (sem escala) e sem borda de foco; a borda volta ao navegar pelo teclado.
+func test_continue_same_width_and_focus_only_with_keyboard() -> void:
+	InputDevice.instance.set_using_pointer(true)
+	_write_slot(1, 111, 100)
+	var title: TitleScreen = _title()
+	await wait_seconds(0.2)
+	assert_true(title.continue_button.visible and title.continue_button.has_focus(), "Continuar focado")
+	assert_almost_eq(title.continue_button.scale.x, 1.0, 0.001, "sem escala com o mouse")
+	assert_eq(title.continue_button.size.x, title.new_game_button.size.x, "mesma largura")
+	assert_eq(title.continue_button.global_position.x, title.new_game_button.global_position.x, "mesmo alinhamento")
+	assert_eq(title.continue_button.get_theme_stylebox(&"focus").get_class(), "StyleBoxEmpty", "mouse: sem borda de foco")
+	InputDevice.instance.set_using_pointer(false)
+	assert_ne(title.continue_button.get_theme_stylebox(&"focus").get_class(), "StyleBoxEmpty", "teclado: borda de foco")
+	InputDevice.instance.set_using_pointer(true)

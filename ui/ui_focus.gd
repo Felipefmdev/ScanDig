@@ -4,6 +4,43 @@ extends RefCounted
 ## Navegação por comando e teclado nos menus (#102): achar e focar o primeiro controle de uma
 ## tela, encadear cima/baixo entre os controles visíveis (a busca automática de vizinho da Godot
 ## não acha bem os controles dentro de CanvasLayer) e trocar de aba com LB/RB (ou Ctrl+Tab).
+## Borda de foco só ao navegar por teclado/comando (#122): follow_pointer.
+
+## Tipos cuja borda de foco some com o mouse (o LineEdit mantém: mostra onde se digita).
+const POINTER_HIDDEN_FOCUS: Array[StringName] = [&"Button", &"CheckBox", &"CheckButton", &"OptionButton",
+	&"MenuButton", &"ItemList", &"HSlider", &"VSlider", &"SpinBox"]
+
+static var _pointer_theme: Theme = null
+
+
+## Tema que só apaga a borda de foco; o resto cai no tema dos ancestrais.
+static func pointer_theme() -> Theme:
+	if _pointer_theme == null:
+		_pointer_theme = Theme.new()
+		var empty: StyleBoxEmpty = StyleBoxEmpty.new()
+		for type: StringName in POINTER_HIDDEN_FOCUS:
+			_pointer_theme.set_stylebox(&"focus", type, empty)
+		_pointer_theme.set_stylebox(&"tab_focus", &"TabContainer", empty)
+		_pointer_theme.set_stylebox(&"tab_focus", &"TabBar", empty)
+	return _pointer_theme
+
+
+## `target` (sem tema próprio) esconde a borda de foco dos descendentes enquanto o último input
+## for o mouse e mostra de novo com teclado/comando. A busca de tema da Godot passa pelo tema mais
+## próximo e cai no dos ancestrais para o que ele não tem.
+static func follow_pointer(target: Control) -> void:
+	if target == null:
+		return
+	target.theme = pointer_theme() if InputDevice.using_pointer() else null
+	if InputDevice.instance == null:
+		return
+	var apply: Callable = func(on: bool) -> void:
+		if is_instance_valid(target):
+			target.theme = pointer_theme() if on else null
+	InputDevice.instance.pointer_changed.connect(apply)
+	target.tree_exiting.connect(func() -> void:
+		if InputDevice.instance != null and InputDevice.instance.pointer_changed.is_connected(apply):
+			InputDevice.instance.pointer_changed.disconnect(apply))
 
 
 ## Controles visíveis e focáveis sob `root`, em ordem de árvore.

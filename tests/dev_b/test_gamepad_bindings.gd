@@ -181,6 +181,34 @@ func test_input_device_switches_and_labels() -> void:
 	assert_eq(InputDevice.action_label("slot_next"), "Y", "sem tecla: cai no botão do comando")
 
 
+## #122: ponteiro = o mouse foi o último a mexer; tecla e comando desligam (borda de foco nos menus).
+func test_pointer_follows_last_input() -> void:
+	var device: InputDevice = InputDevice.instance
+	device.set_using_pointer(true)
+	var key: InputEventKey = InputEventKey.new()
+	key.physical_keycode = KEY_DOWN
+	key.pressed = true
+	device.observe(key)
+	assert_false(InputDevice.using_pointer(), "tecla: navegando pelo teclado")
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	device.observe(click)
+	assert_true(InputDevice.using_pointer(), "clique: mouse")
+	var press: InputEventJoypadButton = InputEventJoypadButton.new()
+	press.button_index = JOY_BUTTON_DPAD_DOWN
+	press.pressed = true
+	device.observe(press)
+	assert_false(InputDevice.using_pointer(), "comando: sem ponteiro")
+	var holder: Control = Control.new()
+	add_child_autofree(holder)
+	UiFocus.follow_pointer(holder)
+	assert_null(holder.theme, "fora do mouse: tema herdado (com borda)")
+	device.set_using_pointer(true)
+	assert_eq(holder.theme, UiFocus.pointer_theme(), "mouse: tema que apaga a borda de foco")
+	device.set_using_gamepad(false)
+
+
 func test_look_vector_deadzone_and_curve() -> void:
 	assert_eq(InputDevice.look_vector(Vector2(0.1, 0.05)), Vector2.ZERO, "dentro da zona morta: zero")
 	assert_almost_eq(InputDevice.look_vector(Vector2(1, 0)), Vector2(1, 0), Vector2.ONE * 0.0001, "no fim: 1")

@@ -7,8 +7,11 @@ extends Node
 ## px (tremida não alterna). action_label(ação) devolve a tecla ou o botão do dispositivo ativo.
 ## A mira assistida no comando (#90) deve usar is_using_gamepad() / device_changed daqui.
 ## Também guarda a matemática do olhar com o analógico (look_vector). Autoload CoreInputDevice.
+## Ponteiro (#122): o mouse foi o último a mexer (tecla ou comando desligam); os menus só mostram
+## a borda de foco fora dele (UiFocus.follow_pointer).
 
 signal device_changed(using_gamepad: bool)
+signal pointer_changed(using_pointer: bool)
 
 ## Eixo além disto conta como "usando o comando" (deriva leve dos analógicos não conta).
 const AXIS_ACTIVITY: float = 0.35
@@ -21,6 +24,8 @@ const LOOK_CURVE: float = 1.7
 static var instance: InputDevice = null
 
 var _using_gamepad: bool = false
+## Começa no mouse: o foco inicial dos menus não acende a borda até alguém navegar.
+var _using_pointer: bool = true
 
 
 func _enter_tree() -> void:
@@ -62,6 +67,7 @@ func observe(event: InputEvent) -> void:
 			gamepad = 0
 	if gamepad >= 0:
 		set_using_gamepad(gamepad == 1)
+		set_using_pointer(gamepad == 0 and (event is InputEventMouseButton or event is InputEventMouseMotion))
 
 
 func set_using_gamepad(on: bool) -> void:
@@ -73,6 +79,18 @@ func set_using_gamepad(on: bool) -> void:
 
 func is_using_gamepad() -> bool:
 	return _using_gamepad
+
+
+func set_using_pointer(on: bool) -> void:
+	if on == _using_pointer:
+		return
+	_using_pointer = on
+	pointer_changed.emit(on)
+
+
+## Atalho seguro (sem o autoload: mouse).
+static func using_pointer() -> bool:
+	return instance == null or instance._using_pointer
 
 
 ## Atalho seguro (sem o autoload: teclado/mouse).
