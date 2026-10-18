@@ -127,7 +127,7 @@ signal player_revived(player: Player, by_player: Player)
 @export_group("Som")
 @export var footsteps_enabled: bool = true
 ## Volume dos passos na areia (dB). Baixo de propósito: é um som repetitivo.
-@export_range(-40.0, 0.0) var footsteps_volume_db: float = -24.0
+@export_range(-40.0, 0.0) var footsteps_volume_db: float = -16.0
 
 const BASE_DIG_COOLDOWN: float = 0.35
 ## Layer 5 (ItemPickup).
@@ -297,8 +297,13 @@ var _held_museum_key: String = ""
 ## Distância percorrida desde o último passo (sons de passos na areia).
 var _step_distance: float = 0.0
 const STEP_LENGTH: float = 1.15
+## Velocidade de queda (m/s) a partir da qual a aterrissagem faz som (um pulo normal chega a ~4.5).
+const LAND_SOUND_SPEED: float = 3.5
 ## Fase do balanço da câmera (rad): avança PI por passo, o passo toca no vale.
 var _bob_phase: float = 0.0
+## Passos de jogador remoto (#123): última posição vista e distância desde o último passo.
+var _remote_last_pos: Vector3 = Vector3.INF
+var _remote_step_dist: float = 0.0
 var _bob_weight: float = 0.0
 var _coyote_left: float = 0.0
 var _jump_buffer_left: float = 0.0
@@ -871,6 +876,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = jump_velocity
 		_jump_buffer_left = 0.0
 		_coyote_left = 0.0
+		SFX.play_at(SFX.JUMP, global_position, footsteps_volume_db + 2.0, 0.1)
 
 	# Menu de pausa aberto (coop não pausa a árvore): parado, mas a física segue.
 	var input_dir: Vector2 = Vector2.ZERO if is_settings_open() else Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
@@ -885,7 +891,10 @@ func _physics_process(delta: float) -> void:
 	else:
 		_apply_horizontal_movement(direction, input_dir, on_floor, delta)
 
+	var fall_speed: float = -velocity.y
 	move_and_slide()
+	if not on_floor and is_on_floor() and fall_speed > LAND_SOUND_SPEED:
+		_play_land_sound(fall_speed)
 	_guard_fall_through(delta)
 	if carried_player != null and is_instance_valid(carried_player):
 		carried_player.global_position = global_position - global_transform.basis.z * 0.35 + Vector3.UP * 0.85
@@ -919,6 +928,7 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	if not is_local():
 		avatar.set_pitch(head.rotation.x)
+		_update_remote_footsteps(_delta)
 		return
 	_apply_pad_look(_delta)
 	if is_downed:
@@ -1015,7 +1025,8 @@ func _on_remote_dig_result(res: Dictionary, is_careful: bool, spot_pos: Vector3)
 
 ## A lâmina cravou: só agora o dig() é aplicado.
 func _on_shovel_impact(ground_point: Vector3) -> void:
-	SFX.play_at(SFX.DIG_CAREFUL if _dig_is_careful else SFX.DIG_FAST, ground_point, -6.0 if _dig_is_careful else -3.0, 0.06)
+	SFX.play_at(SFX.dig_sound_for_surface(_detect_surface_type(), _dig_is_careful), ground_point,
+		-6.0 if _dig_is_careful else -3.0, 0.06)
 	if not _dig_is_careful:
 		_shake_camera(0.035, 0.2)
 	var spot: BuriedSpot = _dig_target
@@ -2850,7 +2861,7 @@ func _drop_selected(charge: float = 0.0) -> void:
 	var thrown: ItemPickup = ItemPickup.spawn(get_parent(), c, pos, get_throw_impulse(charge))
 	if thrown != null and charge > 0.0:
 		thrown.impacted.connect(func(e: Node3D, dmg: float) -> void: _register_hit(e, dmg))
-	SFX.play_at(SFX.DROP if charge < 0.3 else SFX.SLINGSHOT_FIRE, pos, -3.0)
+	SFX.play_at(SFX.DROP if charge < 0.3 else SFX.THROW, pos, -3.0)
 
 
 ## Interactable (#39/#40): o [E] fica com o jogador quando ele tem alvo próprio (produto da
@@ -4050,6 +4061,39 @@ func _update_footsteps(delta: float) -> void:
 		# O 1.o passo sai pouco depois de arrancar.
 		_bob_phase = PI * 0.4
 	_apply_head_bob(horizontal)
+
+
+## Queda (#123): passo da superfície mais forte + baque, mais alto quanto maior a queda.
+func _play_land_sound(fall_speed: float) -> void:
+	if not footsteps_enabled:
+		return
+	var surface: StringName = _detect_surface_type()
+	var extra: float = clampf((fall_speed - LAND_SOUND_SPEED) * 1.2, 0.0, 8.0)
+	SFX.play_at(SFX.footstep_sound_for_surface(surface), global_position,
+		footsteps_volume_db + SFX.footstep_volume_offset(surface) + 4.0 + extra, 0.06)
+	SFX.play_at(SFX.LAND, global_position, footsteps_volume_db - 4.0 + extra, 0.1)
+
+
+## Passos de outro jogador (#123): o _physics_process dele não corre neste peer, então o passo
+## sai da distância andada (posição vinda do NetSync), um a cada STEP_LENGTH metros no chão.
+func _update_remote_footsteps(delta: float) -> void:
+	var pos: Vector3 = global_position
+	var first: bool = _remote_last_pos == Vector3.INF
+	var moved: Vector3 = Vector3.ZERO if first else pos - _remote_last_pos
+	_remote_last_pos = pos
+	if first or delta <= 0.0 or not footsteps_enabled or is_downed or is_ziplining:
+		return
+	var flat: float = Vector2(moved.x, moved.z).length()
+	# parado, teleporte ou no ar (subindo/descendo mais do que anda)
+	if flat / delta < 0.5 or flat > 2.0 or absf(moved.y) > flat + 0.02:
+		return
+	_remote_step_dist += flat
+	if _remote_step_dist < STEP_LENGTH:
+		return
+	_remote_step_dist = 0.0
+	var surface: StringName = _detect_surface_type()
+	SFX.play_at(SFX.footstep_sound_for_surface(surface), pos,
+		footsteps_volume_db + SFX.footstep_volume_offset(surface) + randf_range(-1.5, 1.5), 0.06)
 
 
 ## Deteta a superfície por baixo do jogador (How to Fish SurfaceManager).
