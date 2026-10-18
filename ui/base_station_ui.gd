@@ -39,6 +39,8 @@ var _session: Node = null
 var _maps: Array[MapData] = []
 
 var _game_state: GameState = null
+## upgrade_id -> {"row", "name", "pips", "detail"} das linhas da Loja.
+var _shop_rows: Dictionary = {}
 ## Pasta dos ItemData do Museu; testes podem trocar antes do _ready.
 var catalog_dir: String = "res://items/catalog"
 var _catalog_items: Array[ItemData] = []
@@ -49,6 +51,11 @@ const SHOP_BUTTONS: Array[String] = ["detector", "pinpointer", "shovel", "backpa
 ## BASE_BACKPACK_CAPACITY (core antigo). Lida via mapa de constantes para não
 ## quebrar a análise estática enquanto a constante não existir.
 const DEFAULT_BACKPACK_BASE: int = 3
+## Linhas da Loja (#119): ícone de UiIcons de cada melhoria, pips e largura do botão Comprar.
+const SHOP_ICONS: Dictionary = {"detector": "detector", "pinpointer": "pinpointer", "shovel": "shovel", "backpack": "backpack"}
+const SHOP_ICON_SIDE: float = 32.0
+const SHOP_PIP_SIZE: Vector2 = Vector2(14, 8)
+const SHOP_BUY_WIDTH: float = 128.0
 const WAITING_GAME_STATE_TOOLTIP: String = "Aguardando conexão com o estado do jogo..."
 ## Tempo máximo aguardando purchase_result antes de liberar os botões novamente.
 const PURCHASE_TIMEOUT_SEC: float = 5.0
@@ -475,6 +482,102 @@ func _setup_shop_buttons() -> void:
 		var btn: Button = _get_shop_button(upgrade_id)
 		if btn != null:
 			btn.pressed.connect(_purchase_upgrade.bind(upgrade_id))
+			_build_shop_row(upgrade_id, btn)
+
+
+## Linha da Loja (#119): ícone, nome, pips de nível e uma linha de detalhe à esquerda; o botão
+## Comprar (o mesmo Buy*Button da cena, com o preço) vai para a direita da linha.
+func _build_shop_row(upgrade_id: String, btn: Button) -> void:
+	if _shop_rows.has(upgrade_id):
+		return
+	var page: Node = btn.get_parent()
+	var row: PanelContainer = PanelContainer.new()
+	row.name = String(btn.name).trim_suffix("Button") + "Row"
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = UiPalette.PAPER_LIGHT
+	style.border_color = UiPalette.PAPER_DARK
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 8.0
+	style.content_margin_right = 6.0
+	style.content_margin_top = 3.0
+	style.content_margin_bottom = 3.0
+	row.add_theme_stylebox_override(&"panel", style)
+	page.add_child(row)
+	page.move_child(row, btn.get_index())
+	var box: HBoxContainer = HBoxContainer.new()
+	box.add_theme_constant_override(&"separation", 10)
+	row.add_child(box)
+	var icon: TextureRect = TextureRect.new()
+	icon.name = "Icon"
+	icon.texture = UiIcons.get_icon(str(SHOP_ICONS.get(upgrade_id, "")), 64)
+	icon.custom_minimum_size = Vector2(SHOP_ICON_SIDE, SHOP_ICON_SIDE)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	box.add_child(icon)
+	var info: VBoxContainer = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.add_theme_constant_override(&"separation", 2)
+	box.add_child(info)
+	var name_label: Label = Label.new()
+	name_label.name = "Name"
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	info.add_child(name_label)
+	var line: HBoxContainer = HBoxContainer.new()
+	line.add_theme_constant_override(&"separation", 8)
+	info.add_child(line)
+	var pips: HBoxContainer = HBoxContainer.new()
+	pips.name = "Pips"
+	pips.add_theme_constant_override(&"separation", 3)
+	pips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(pips)
+	var detail: Label = Label.new()
+	detail.name = "Detail"
+	detail.add_theme_font_size_override(&"font_size", 13)
+	detail.add_theme_color_override(&"font_color", UiPalette.WOOD)
+	detail.clip_text = true
+	detail.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(detail)
+	btn.reparent(box, false)
+	btn.custom_minimum_size = Vector2(SHOP_BUY_WIDTH, 40)
+	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	btn.theme_type_variation = &"PrimaryButton"
+	btn.clip_text = false
+	btn.add_theme_font_size_override(&"font_size", 14)
+	_shop_rows[upgrade_id] = {"row": row, "name": name_label, "pips": pips, "detail": detail}
+
+
+## Pips de nível: `level` cheios (laranja) de `max_level`.
+func _set_shop_pips(pips: HBoxContainer, level: int, max_level: int) -> void:
+	while pips.get_child_count() < max_level:
+		var pip: Panel = Panel.new()
+		pip.custom_minimum_size = SHOP_PIP_SIZE
+		pips.add_child(pip)
+	while pips.get_child_count() > max_level:
+		var extra: Node = pips.get_child(pips.get_child_count() - 1)
+		pips.remove_child(extra)
+		extra.queue_free()
+	for i: int in pips.get_child_count():
+		var pip_style: StyleBoxFlat = StyleBoxFlat.new()
+		pip_style.bg_color = UiPalette.ORANGE if i < level else UiPalette.PAPER_DARK
+		pip_style.border_color = UiPalette.INK
+		pip_style.set_border_width_all(1)
+		pip_style.set_corner_radius_all(3)
+		(pips.get_child(i) as Panel).add_theme_stylebox_override(&"panel", pip_style)
+
+
+func _set_shop_row(upgrade_id: String, display_name: String, level: int, max_level: int, detail: String) -> void:
+	if not _shop_rows.has(upgrade_id):
+		return
+	var row: Dictionary = _shop_rows[upgrade_id]
+	(row["name"] as Label).text = display_name
+	(row["detail"] as Label).text = detail
+	_set_shop_pips(row["pips"] as HBoxContainer, level, max_level)
 
 
 func _get_shop_button(upgrade_id: String) -> Button:
@@ -516,29 +619,36 @@ func _refresh_shop_buttons() -> void:
 		if not GameState.UPGRADES.has(upgrade_id):
 			# Upgrade ainda não existe no core em execução.
 			btn.visible = false
+			if _shop_rows.has(upgrade_id):
+				(_shop_rows[upgrade_id]["row"] as Control).visible = false
 			continue
 		btn.visible = true
 		var display_name: String = GameState.UPGRADES[upgrade_id]["name"]
 		var level: int = _game_state.get_upgrade_level(upgrade_id)
 		var max_level: int = _game_state.get_upgrade_max_level(upgrade_id)
 		var cost: int = _game_state.get_next_upgrade_cost(upgrade_id)
-		var header: String = "%s  •  Nível %d/%d" % [display_name, level, max_level]
+		var detail: String = "Nível %d/%d" % [level, max_level]
 		if upgrade_id == "detector":
 			# O radar começa no nível 1 com o detector no nível 0.
-			header += " (radar Nv.%d)" % (level + 1)
+			detail += "  •  radar Nv.%d" % (level + 1)
+		if _shop_rows.has(upgrade_id):
+			(_shop_rows[upgrade_id]["row"] as Control).visible = true
 		if cost < 0:
-			btn.text = "%s\nNÍVEL MÁXIMO" % header
+			_set_shop_row(upgrade_id, display_name, level, max_level, detail)
+			btn.text = "Máximo"
 			btn.tooltip_text = "%s já está no nível máximo." % display_name
 			btn.disabled = true
 			continue
 		var reason: String = _get_upgrade_block_reason(upgrade_id, cost)
 		var required_map: String = _get_next_upgrade_required_map(upgrade_id)
 		if not required_map.is_empty() and reason.begins_with("Desbloqueie"):
-			btn.text = "%s\n🔒 Requer %s — %s" % [header, _get_map_display_name(required_map), UiFormat.money(cost)]
+			_set_shop_row(upgrade_id, display_name, level, max_level, "🔒 Requer %s" % _get_map_display_name(required_map))
+			btn.text = "🔒 %s" % UiFormat.money(cost)
 			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 			btn.disabled = true
 			continue
-		btn.text = "%s\nComprar nível %d — %s" % [header, level + 1, UiFormat.money(cost)]
+		_set_shop_row(upgrade_id, display_name, level, max_level, detail)
+		btn.text = "Comprar\n%s" % UiFormat.money(cost)
 		if not reason.is_empty():
 			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 		elif upgrade_id == "detector":

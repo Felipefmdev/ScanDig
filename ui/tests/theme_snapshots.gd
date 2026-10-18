@@ -93,7 +93,7 @@ func _run() -> void:
 	tabs.current_tab = 0
 	print("RECT %s menu %s" % [_tag, _rect(menu.get_child(0) as Control)])
 	if hud != null:
-		print("RECT %s hud %s" % [_tag, _rect(hud.get_node("MarginContainer/PanelContainer") as Control)])
+		print("RECT %s hud %s" % [_tag, _rect(hud.get_node("MarginContainer/Chips") as Control)])
 
 	menu.mode_tabs.current_tab = 1
 	await _shot("menu_rede_local")

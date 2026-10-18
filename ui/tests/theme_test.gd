@@ -62,10 +62,11 @@ func _same_color(c: Control, item: String, type: String) -> bool:
 
 
 func _check_scenes(base: BaseStationUI, menu: MultiplayerMenu, hud: Node, ui: SessionUI) -> void:
-	var hud_panel: PanelContainer = hud.get_node("MarginContainer/PanelContainer") as PanelContainer
-	var hud_label: Label = hud.get_node("%MoneyLabel") as Label
-	_check(_same_box(hud_panel, "panel", "WornPanel"), "HUD: painel WornPanel do theme")
-	_check(_same_color(hud_label, "font_color", "Label"), "HUD: cor do Label do theme")
+	# HUD do lobby (#119): Equipe / Detector / Museu em UiChip (papel claro, texto de tinta).
+	var money_chip: UiChip = hud.get_node("%MoneyChip") as UiChip
+	_check(money_chip != null and money_chip.icon_rect.texture != null, "HUD: chip do dinheiro com ícone")
+	_check(money_chip != null and money_chip.label.get_theme_color("font_color").is_equal_approx(UiPalette.INK), "HUD: texto do chip em INK")
+	_check(money_chip != null and (money_chip.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.is_equal_approx(UiChip.make_style().bg_color), "HUD: fundo de papel do chip")
 
 	var menu_panel: PanelContainer = menu.get_node("PanelContainer") as PanelContainer
 	_check(_same_box(menu_panel, "panel", "WornPanel"), "menu: painel WornPanel do theme")
@@ -87,7 +88,7 @@ func _check_scenes(base: BaseStationUI, menu: MultiplayerMenu, hud: Node, ui: Se
 
 	var base_panel: PanelContainer = base.get_node("PanelContainer") as PanelContainer
 	_check(_same_box(base_panel, "panel", "WornPanel"), "Base: painel WornPanel do theme")
-	_check(_same_box(base.buy_detector_btn, "normal", "Button"), "Base: Button do theme")
+	_check(_same_box(base.buy_detector_btn, "normal", "PrimaryButton"), "Base: botão Comprar da Loja como PrimaryButton do theme (#119)")
 	_check(_same_color(base.secrets_label, "font_color", "Label"), "Base: cor do Label do theme")
 	_check(_same_box(base.map_list, "panel", "ItemList") and _same_box(base.map_list, "selected", "ItemList"), "Base: ItemList do theme")
 	_check(_same_box(base.item_select_box, "normal", "OptionButton"), "Base: OptionButton do theme")
@@ -258,7 +259,7 @@ func _check_layout(base: BaseStationUI, menu: MultiplayerMenu, hud: Node) -> voi
 	var tabs: TabContainer = base.get_node("%TabContainer") as TabContainer
 	var base_panel: Control = base.get_node("PanelContainer") as Control
 	var menu_panel: Control = menu.get_node("PanelContainer") as Control
-	var hud_panel: Control = hud.get_node("MarginContainer/PanelContainer") as Control
+	var hud_panel: Control = hud.get_node("MarginContainer/Chips") as Control
 	_check(tabs.use_hidden_tabs_for_min_size, "abas da Base com altura da maior aba")
 	for logical: Vector2i in LOGICAL_SIZES:
 		root.size = logical

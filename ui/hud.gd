@@ -1,22 +1,18 @@
 class_name HUD
 extends CanvasLayer
 
-## HUD principal exibindo recursos da equipe, detector e museu.
+## HUD principal exibindo recursos da equipe, detector e museu, um UiChip para cada (#119).
 
-@onready var money_label: Label = _resolve_label("MoneyLabel", "MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MoneyLabel")
-@onready var detector_label: Label = _resolve_label("DetectorLabel", "MarginContainer/PanelContainer/MarginContainer/VBoxContainer/DetectorLabel")
-@onready var museum_label: Label = _resolve_label("MuseumLabel", "MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MuseumLabel")
+@onready var money_label: Label = _chip_label("MoneyChip")
+@onready var detector_label: Label = _chip_label("DetectorChip")
+@onready var museum_label: Label = _chip_label("MuseumChip")
 
 var _game_state: GameState = null
 
 
-func _resolve_label(unique_id: String, rel_path: String) -> Label:
-	if has_node("%" + unique_id):
-		return get_node("%" + unique_id) as Label
-	if has_node(rel_path):
-		return get_node(rel_path) as Label
-	var found: Node = find_child(unique_id, true, false)
-	return found as Label if found is Label else null
+func _chip_label(unique_id: String) -> Label:
+	var chip: UiChip = get_node_or_null("%" + unique_id) as UiChip
+	return chip.label if chip != null else null
 
 
 func _ready() -> void:
@@ -50,17 +46,17 @@ func _resolve_game_state() -> void:
 
 func update_money(new_amount: int) -> void:
 	if money_label != null:
-		money_label.text = "Equipe: %s" % UiFormat.money(new_amount)
+		money_label.text = "Equipe  %s" % UiFormat.money(new_amount)
 
 
 func update_detector(level: int) -> void:
 	if detector_label != null:
-		detector_label.text = "Detector: Nível %d" % level
+		detector_label.text = "Detector  nível %d" % level
 
 
 func update_museum(total_found: int, max_items: int) -> void:
 	if museum_label != null:
-		museum_label.text = "Museu: %d/%d descobertos" % [total_found, max_items]
+		museum_label.text = "Museu  %d/%d" % [total_found, max_items]
 
 
 func _on_money_changed(new_amount: int) -> void:
