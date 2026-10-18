@@ -103,7 +103,7 @@ func _summary_from(read: Dictionary) -> Dictionary:
 		"money": int(data.get("team_money", 0)) if read["status"] == ReadStatus.OK else 0,
 		"museum_found": (found as Array).size() if read["status"] == ReadStatus.OK and found is Array else 0,
 		"museum_total": state.get_total_catalog_items() if state != null else 0,
-		"game_completed": bool(data.get("game_completed", false)) or (data.get("defeated_bosses", []) is Array and (data.get("defeated_bosses", []) as Array).has("the_sleeper")),
+		"game_completed": _beat_final_boss(data),
 		"saved_at": int(data.get("saved_at", 0)) if read["status"] == ReadStatus.OK else 0,
 		"error": str(read["error"]),
 	}
@@ -585,13 +585,16 @@ func _upgrade_save_data(source: Dictionary) -> Dictionary:
 		save_data["intact_items"] = []
 	if not save_data.has("map_fragments"):
 		save_data["map_fragments"] = []
-	# Conclusão do jogo (#81): se já venceu the_sleeper, marca como concluído.
-	if not save_data.has("game_completed"):
-		var defeated: Variant = save_data.get("defeated_bosses", [])
-		save_data["game_completed"] = (defeated is Array) and (defeated as Array).has("the_sleeper")
-	else:
-		save_data["game_completed"] = bool(save_data["game_completed"])
+	# Conclusão do jogo (#81/#115): sempre pelos chefes vencidos, nunca pelo bool gravado. Saves
+	# antigos concluídos pelo the_sleeper (o final antigo) voltam a "não concluído".
+	save_data["game_completed"] = _beat_final_boss(save_data)
 	return save_data
+
+
+## Venceu o chefe final (GameState.FINAL_BOSS_ID) segundo os chefes do save.
+static func _beat_final_boss(data: Dictionary) -> bool:
+	var defeated: Variant = data.get("defeated_bosses", [])
+	return defeated is Array and (defeated as Array).has(GameState.FINAL_BOSS_ID)
 
 
 ## Renomeia o save para <save>.corrupt-<unix>.json e devolve o caminho novo.

@@ -309,7 +309,8 @@ func _title_shots() -> void:
 			items.append("item_%d" % k)
 		var file: FileAccess = FileAccess.open(save.slot_path(i + 1), FileAccess.WRITE)
 		file.store_string(JSON.stringify({"version": SaveManager.SAVE_VERSION, "saved_at": s["at"], "team_money": s["money"],
-			"current_day": s["day"], "discovered_items": items, "game_completed": s["completed"]}))
+			"current_day": s["day"], "discovered_items": items, "game_completed": s["completed"],
+			"defeated_bosses": [GameState.FINAL_BOSS_ID] if s["completed"] else []}))
 		file.close()
 	title.show_main()
 	await _shot("titulo_com_save")

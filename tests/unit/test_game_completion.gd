@@ -32,6 +32,7 @@ func test_defeating_sleeper_marks_game_completed() -> void:
 func test_snapshot_roundtrip_preserves_game_completed() -> void:
 	var gs: GameState = GameState.instance
 	assert_not_null(gs)
+	gs.defeated_bosses = [GameState.FINAL_BOSS_ID]  # #115: concluído = venceu o chefe final
 	gs.game_completed = true
 	var snapshot: Dictionary = gs.get_snapshot()
 	assert_true(snapshot.has("game_completed"), "snapshot possui chave game_completed")
@@ -50,7 +51,7 @@ func test_save_manager_saves_and_loads_game_completed() -> void:
 
 	sm.use_test_save_dir("game_completion_test")
 	gs.game_completed = true
-	gs.defeated_bosses = ["the_sleeper"]
+	gs.defeated_bosses = [GameState.FINAL_BOSS_ID]
 	var err: Error = sm.save_game()
 	assert_eq(err, OK, "salvou com sucesso")
 
@@ -65,11 +66,11 @@ func test_save_manager_saves_and_loads_game_completed() -> void:
 	assert_true(gs.is_game_completed(), "carregamento restaurou game_completed")
 
 
-func test_save_migration_infers_game_completed_from_the_sleeper() -> void:
+func test_save_migration_infers_game_completed_from_final_boss() -> void:
 	var sm: SaveManager = SaveManager.instance
 	assert_not_null(sm)
 
-	# Save sem game_completed, mas com the_sleeper nos chefes derrotados:
+	# Save sem game_completed, mas com o chefe final (#115) nos chefes derrotados:
 	var legacy_complete: Dictionary = {
 		"version": 4,
 		"team_money": 5000,
@@ -77,13 +78,13 @@ func test_save_migration_infers_game_completed_from_the_sleeper() -> void:
 		"discovered_items": [],
 		"upgrade_levels": {},
 		"unlocked_maps": ["cratera"],
-		"defeated_bosses": ["king_crab", "the_sleeper"],
+		"defeated_bosses": ["king_crab", GameState.FINAL_BOSS_ID],
 	}
 	var upgraded_complete: Dictionary = sm._upgrade_save_data(legacy_complete)
 	assert_true(upgraded_complete.has("game_completed"), "migração adiciona game_completed")
-	assert_true(upgraded_complete["game_completed"], "the_sleeper em defeated_bosses infere true")
+	assert_true(upgraded_complete["game_completed"], "chefe final em defeated_bosses infere true")
 
-	# Save sem game_completed e sem the_sleeper:
+	# Save sem game_completed e sem o chefe final:
 	var legacy_incomplete: Dictionary = {
 		"version": 4,
 		"team_money": 200,
@@ -94,7 +95,7 @@ func test_save_migration_infers_game_completed_from_the_sleeper() -> void:
 		"defeated_bosses": ["king_crab"],
 	}
 	var upgraded_incomplete: Dictionary = sm._upgrade_save_data(legacy_incomplete)
-	assert_false(upgraded_incomplete["game_completed"], "sem the_sleeper infere false")
+	assert_false(upgraded_incomplete["game_completed"], "sem o chefe final infere false")
 
 
 func test_crater_altar_overlay_uses_worn_panel_theme() -> void:

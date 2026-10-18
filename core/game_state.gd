@@ -726,10 +726,9 @@ func apply_snapshot(data: Dictionary) -> void:
 		new_creatures = _new_ids(seen_creatures, seen)
 		seen_creatures = seen
 	var old_completed: bool = game_completed
-	if data.has("game_completed"):
-		game_completed = bool(data["game_completed"])
-	if defeated_bosses.has(FINAL_BOSS_ID):
-		game_completed = true
+	# Derivado dos chefes vencidos (#115): o bool gravado não conta. Um save antigo "concluído"
+	# pelo the_sleeper deixa de estar concluído até o colosso cair.
+	game_completed = defeated_bosses.has(FINAL_BOSS_ID)
 	if data.get("intact_items") is Array:
 		intact_items = _to_id_list(data["intact_items"])
 	var new_fragments: Array[String] = []

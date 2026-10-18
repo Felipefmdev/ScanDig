@@ -43,7 +43,8 @@ func _title() -> TitleScreen:
 
 func _write_slot(n: int, money: int, saved_at: int, completed: bool = false) -> void:
 	var data: Dictionary = {"version": SaveManager.SAVE_VERSION, "saved_at": saved_at, "team_money": money,
-		"current_day": 3, "discovered_items": ["alianca_ouro"], "game_completed": completed}
+		"current_day": 3, "discovered_items": ["alianca_ouro"], "game_completed": completed,
+		"defeated_bosses": [GameState.FINAL_BOSS_ID] if completed else []}
 	var file: FileAccess = FileAccess.open(SaveManager.instance.slot_path(n), FileAccess.WRITE)
 	file.store_string(JSON.stringify(data))
 	file.close()
