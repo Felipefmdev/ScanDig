@@ -8,10 +8,19 @@ extends HBoxContainer
 ## achado de museu).
 
 const SLOT_SIZE: Vector2 = Vector2(92, 92)
-## Com muitos slots (mochila até 8) encolhem até aqui para não tapar a vida (canto inferior esquerdo).
-const MIN_SLOT_SIZE: float = 64.0
-## Largura reservada em cada lado do ecrã (painel de vida: 24 + 280 px + margem).
+## Com muitos slots (mochila até 8) encolhem até aqui para caber entre a vida e a mão.
+const MIN_SLOT_SIZE: float = 28.0
+## Abaixo disto o slot fica compacto: só ícone, número e marca (sem nome e valor).
+const COMPACT_SLOT_SIZE: float = 48.0
+const SEPARATION: int = 8
+const COMPACT_SEPARATION: int = 4
+## Largura reservada à esquerda do ecrã (painel de vida: 24 + 280 px + margem).
 const SIDE_RESERVED: float = 320.0
+## Borda esquerda da mão do viewmodel (Hand/ToolView, câmara de 75° com altura fixa) em NDC x
+## vezes o aspecto: na tela fica em 0,5 + 0,5 * HAND_SCREEN_X / aspecto (≈ 69% da largura em 16:9).
+const HAND_SCREEN_X: float = 0.68
+## Folga entre a hotbar e a mão (inclui a escala e a sombra do slot selecionado).
+const HAND_GAP: float = 16.0
 const COLOR_BG: Color = Color(0.169, 0.129, 0.094, 0.65)
 const COLOR_BORDER: Color = UiPalette.INK
 const COLOR_SELECTED: Color = UiPalette.GOLD
@@ -27,6 +36,8 @@ var _slot_size: Vector2 = SLOT_SIZE
 
 func bind(inv: Inventory) -> void:
 	inventory = inv
+	if is_inside_tree() and not get_viewport().size_changed.is_connected(_on_viewport_resized):
+		get_viewport().size_changed.connect(_on_viewport_resized)
 	inventory.inventory_changed.connect(_rebuild)
 	inventory.selected_slot_changed.connect(_on_selected_slot_changed)
 	if ItemIcons.can_render() and is_inside_tree():
@@ -57,15 +68,58 @@ func _rebuild() -> void:
 	for i: int in _slot_panels.size():
 		_fill_slot(i)
 	_on_selected_slot_changed(inventory.selected_slot)
+	_place()
 
 
-## Quadrado por slot: SLOT_SIZE se couber entre as margens laterais, senão mais pequeno.
+## ui_scale ou janela mudou: refaz os slots se o tamanho mudou, senão só reposiciona.
+func _on_viewport_resized() -> void:
+	if inventory == null:
+		return
+	if get_slot_size(inventory.capacity) != _slot_size:
+		for p: PanelContainer in _slot_panels:
+			p.queue_free()
+		_slot_panels.clear()
+		_rebuild()
+	else:
+		_place()
+
+
+## Faixa horizontal livre (x = início, y = fim): da vida até a mão do viewmodel.
+func _band() -> Vector2:
+	var view: Vector2 = get_viewport_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
+	var aspect: float = view.x / maxf(view.y, 1.0)
+	var right: float = view.x * (0.5 + 0.5 * HAND_SCREEN_X / aspect) - HAND_GAP
+	return Vector2(SIDE_RESERVED, maxf(right, SIDE_RESERVED + MIN_SLOT_SIZE))
+
+
+func _is_compact() -> bool:
+	return _slot_size.x < COMPACT_SLOT_SIZE
+
+
+## Quadrado por slot: SLOT_SIZE se couber na faixa livre, senão mais pequeno (compacto < 48).
 func get_slot_size(count: int) -> Vector2:
-	var view_w: float = get_viewport_rect().size.x if is_inside_tree() else 1280.0
-	var sep: float = float(get_theme_constant("separation"))
-	var avail: float = view_w - 2.0 * SIDE_RESERVED - sep * float(maxi(count - 1, 0))
-	var side: float = clampf(floorf(avail / float(maxi(count, 1))), MIN_SLOT_SIZE, SLOT_SIZE.x)
+	var band: Vector2 = _band()
+	var n: int = maxi(count, 1)
+	var side: float = floorf((band.y - band.x - SEPARATION * (n - 1)) / float(n))
+	if side < COMPACT_SLOT_SIZE:
+		side = floorf((band.y - band.x - COMPACT_SEPARATION * (n - 1)) / float(n))
+	side = clampf(side, MIN_SLOT_SIZE, SLOT_SIZE.x)
 	return Vector2(side, side)
+
+
+## Centrada na tela; se não couber na faixa livre, desliza para dentro dela.
+func _place() -> void:
+	if not is_inside_tree():
+		return
+	var sep: int = COMPACT_SEPARATION if _is_compact() else SEPARATION
+	add_theme_constant_override("separation", sep)
+	var n: int = _slot_panels.size()
+	var w: float = _slot_size.x * n + sep * maxi(n - 1, 0)
+	var band: Vector2 = _band()
+	var view_w: float = get_viewport_rect().size.x
+	var center: float = clampf(view_w * 0.5, band.x + w * 0.5, maxf(band.y - w * 0.5, band.x + w * 0.5))
+	offset_left = center - view_w * 0.5
+	offset_right = offset_left
 
 
 func _make_slot_panel() -> PanelContainer:
@@ -73,6 +127,9 @@ func _make_slot_panel() -> PanelContainer:
 	panel.theme = preload("res://ui/theme/scandig_theme.tres")
 	panel.custom_minimum_size = _slot_size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _is_compact():
+		# Quadrado, rente ao fundo (o HBox esticaria até a altura dos slots com nome).
+		panel.size_flags_vertical = Control.SIZE_SHRINK_END
 
 	var box: VBoxContainer = VBoxContainer.new()
 	box.name = "Box"
@@ -89,12 +146,12 @@ func _make_slot_panel() -> PanelContainer:
 	box.add_child(art)
 	var swatch: ColorRect = ColorRect.new()
 	swatch.name = "Swatch"
-	swatch.custom_minimum_size = Vector2(22, 22)
+	swatch.custom_minimum_size = Vector2.ONE * minf(22.0, roundf(_slot_size.x * 0.5))
 	swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.add_child(swatch)
 	var icon: TextureRect = TextureRect.new()
 	icon.name = "Icon"
-	var icon_side: float = roundf(_slot_size.x * 0.5)
+	var icon_side: float = roundf(_slot_size.x * (0.7 if _is_compact() else 0.5))
 	icon.custom_minimum_size = Vector2(icon_side, icon_side)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -104,6 +161,8 @@ func _make_slot_panel() -> PanelContainer:
 
 	box.add_child(_make_label("Name", 13, Color.WHITE))
 	box.add_child(_make_label("Value", 12, UiPalette.GREEN_BOTTLE.lightened(0.4)))
+	for l: Node in [box.get_node("Name"), box.get_node("Value")]:
+		(l as Label).visible = not _is_compact()
 
 	# Por cima da caixa: número do slot (canto superior esquerdo) e marca do tipo (direito).
 	var overlay: Control = Control.new()
@@ -122,10 +181,11 @@ func _make_slot_panel() -> PanelContainer:
 	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mark.anchor_left = 1.0
 	mark.anchor_right = 1.0
-	mark.offset_left = -MARK_SIDE
+	var mark_side: float = minf(MARK_SIDE, roundf(_slot_size.x * 0.4))
+	mark.offset_left = -mark_side
 	mark.offset_right = 0.0
 	mark.offset_top = 0.0
-	mark.offset_bottom = MARK_SIDE
+	mark.offset_bottom = mark_side
 	overlay.add_child(mark)
 	return panel
 
