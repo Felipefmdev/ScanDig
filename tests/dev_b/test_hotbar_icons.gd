@@ -45,6 +45,24 @@ func test_headless_falls_back_to_color_swatch() -> void:
 	assert_eq((_slot(0, "Overlay/Key") as Label).text, "1")
 
 
+func test_empty_slot_is_only_the_frame() -> void:
+	# #122 (E4): sem quadrado cinza, sem traço e sem fundo; só a borda (e o número do slot).
+	_inv.add_item(_item("moeda_antiga"))
+	_inv.select(0)
+	for path: String in ["Box/Art/Swatch", "Box/Art/Icon"]:
+		assert_false((_slot(1, path) as CanvasItem).visible, "vazio sem %s" % path)
+	assert_eq((_slot(1, "Box/Name") as Label).text, "", "vazio sem traço")
+	assert_eq((_slot(1, "Box/Value") as Label).text, "")
+	assert_null((_slot(1, "Overlay/TypeMark") as TextureRect).texture)
+	var style: StyleBoxFlat = _hotbar._slot_panels[1].get_theme_stylebox(&"panel") as StyleBoxFlat
+	assert_eq(style.bg_color.a, 0.0, "vazio sem fundo")
+	assert_gt(style.border_width_left, 0, "a moldura fica")
+	var filled: StyleBoxFlat = _hotbar._slot_panels[0].get_theme_stylebox(&"panel") as StyleBoxFlat
+	assert_gt(filled.bg_color.a, 0.0, "slot com item mantém o fundo")
+	_inv.remove_at(0)
+	assert_false((_slot(0, "Box/Art/Swatch") as ColorRect).visible, "esvaziado: sem quadrado")
+
+
 func test_cached_icon_replaces_swatch() -> void:
 	var c: CarriedItem = _item("concha_dourada")
 	var fake: ImageTexture = ImageTexture.create_from_image(Image.create(8, 8, false, Image.FORMAT_RGBA8))

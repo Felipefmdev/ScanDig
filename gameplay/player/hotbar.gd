@@ -5,7 +5,7 @@ extends HBoxContainer
 ## (acompanha melhorias de capacidade) e destaca o slot selecionado (borda dourada e leve
 ## escala). Cada slot mostra o ícone 3D do item (ItemIcons, #119); até o ícone ficar pronto, e
 ## sempre no headless, fica o quadrado na cor do item. No canto, a marca do tipo (ferramenta ou
-## achado de museu).
+## achado de museu). Slot vazio é só a moldura (#122): sem fundo, quadrado nem traço.
 
 const SLOT_SIZE: Vector2 = Vector2(92, 92)
 ## Com muitos slots (mochila até 8) encolhem até aqui para caber entre a vida e a mão.
@@ -226,12 +226,10 @@ func _fill_slot(i: int) -> void:
 	var texture: Texture2D = ItemIcons.get_icon(c, get_tree() if is_inside_tree() else null) if c != null else null
 	icon.texture = texture
 	icon.visible = texture != null
-	swatch.visible = texture == null
+	swatch.visible = texture == null and c != null
 	mark.texture = null
 	if c == null:
-		swatch.color = Color(1, 1, 1, 0.08)
-		name_label.text = "—"
-		name_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.35))
+		name_label.text = ""
 		value_label.text = ""
 	elif c.is_tool():
 		swatch.color = COLOR_TOOL
@@ -261,6 +259,8 @@ func _on_selected_slot_changed(index: int) -> void:
 		var selected: bool = (i == index)
 		var style: StyleBoxFlat = StyleBoxFlat.new()
 		style.bg_color = Color(UiPalette.INK.r, UiPalette.INK.g, UiPalette.INK.b, 0.85) if selected else COLOR_BG
+		if not selected and inventory != null and inventory.get_item(i) == null:
+			style.bg_color = Color.TRANSPARENT
 		style.border_color = COLOR_SELECTED if selected else COLOR_BORDER
 		var w: int = 3 if selected else 1
 		if selected:
