@@ -44,10 +44,14 @@ func after_each() -> void:
 	sm._night = false
 	sm._pending_summary = {}
 	sm.scene_change_enabled = true
-	# O _rpc_return_to_lobby abre o resumo do dia (CoreSessionUI): fecha para os próximos testes.
-	var session_ui: Node = get_tree().root.get_node_or_null(^"CoreSessionUI")
-	if session_ui != null and session_ui.has_method(&"_on_summary_close_pressed"):
-		session_ui.call(&"_on_summary_close_pressed")
+	# O _rpc_return_to_lobby abre o resumo do dia e o scene_changing a tela de carregamento
+	# (CoreSessionUI, que travam a pausa): fecha os dois para os próximos testes.
+	var session_ui: SessionUI = SessionUI.instance
+	if session_ui != null:
+		session_ui._loading_token += 1
+		session_ui.loading_screen.visible = false
+		session_ui._on_summary_close_pressed()
+		session_ui._refresh_expedition_bar()
 	GameState.instance.reset_state()
 
 
@@ -240,3 +244,11 @@ func test_hud_night_chip() -> void:
 	night.restore()
 	await wait_frames(2)
 	assert_null(chips.get_node_or_null("NightChip"), "de dia some")
+
+
+func test_teardown_leaves_pause_usable() -> void:
+	sm.scene_changing.emit(SessionManager.LOBBY_SCENE)
+	sm._rpc_enter_map("praia", true)
+	sm._rpc_return_to_lobby({})
+	after_each()
+	assert_true(PauseMenu.instance.can_open(), "sem carregamento nem resumo abertos depois do teste")
