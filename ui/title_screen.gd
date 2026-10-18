@@ -15,6 +15,11 @@ const BUTTON_FOCUS_SCALE: float = 1.04
 ## Logo: balanço lento (graus) e respiração da escala.
 const LOGO_SWAY_DEG: float = 2.0
 const LOGO_SWAY_SECONDS: float = 2.6
+## Palmeiras do fundo: o colormap Kenney fica pálido na luz da Praia. Um toon próprio (só aqui; o
+## .glb fica intocado) multiplicado por PALM_TINT leva o tronco ao marrom e as folhas ao verde das
+## palmeiras dos mapas (PalmModel).
+const PALM_NODES: Array[NodePath] = [^"Props/Palm1", ^"Props/Palm2"]
+const PALM_TINT: Color = Color(0.56, 0.5, 0.44)
 const NEW_GAME_CONFIRM: String = "Começar um jogo novo no slot %d?\nO progresso atual dele vai para o backup."
 const DELETE_CONFIRM: String = "Apagar o slot %d? Isso não pode ser desfeito."
 const SLOT_TITLES: Dictionary = {
@@ -90,8 +95,26 @@ func _ready() -> void:
 	SessionManager.launch_mode = ""
 	_pivot = get_node_or_null(^"CameraPivot") as Node3D
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_tint_palms()
 	_build()
 	show_main()
+
+
+func _tint_palms() -> void:
+	for path: NodePath in PALM_NODES:
+		var palm: Node = get_node_or_null(path)
+		if palm == null:
+			continue
+		ToonKit.apply_to_imported(palm)
+		for node: Node in palm.find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = node as MeshInstance3D
+			for s: int in mi.mesh.get_surface_count():
+				var toon: ShaderMaterial = mi.get_surface_override_material(s) as ShaderMaterial
+				if toon == null:
+					continue
+				var tinted: ShaderMaterial = toon.duplicate() as ShaderMaterial
+				tinted.set_shader_parameter(&"albedo_color", PALM_TINT)
+				mi.set_surface_override_material(s, tinted)
 
 
 ## Um frame depois: se o bot (ou quem abriu o título) já trocou de cena, o título saiu e não faz
