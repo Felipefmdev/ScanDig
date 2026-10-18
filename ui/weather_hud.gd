@@ -18,7 +18,7 @@ const CLEAR_TEXT: String = "O tempo abriu"
 const TOAST_SECONDS: float = 3.5
 ## Canto superior direito, abaixo da barra de Ameaça (em unidades da tela base).
 const MARGIN_RIGHT: float = 24.0
-const TOAST_TOP: float = 76.0
+const TOAST_TOP: float = 88.0
 const STACK_GAP: float = 8.0
 
 static var instance: WeatherHud = null

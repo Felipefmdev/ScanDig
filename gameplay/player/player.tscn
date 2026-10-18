@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://gameplay/detector/metal_detector.tscn" id="2_detector"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://gameplay/weapons/slingshot/slingshot_model.gd" id="8_slingshot"]
 [ext_resource type="Script" path="res://gameplay/player/player_avatar.gd" id="9_avatar"]
 [ext_resource type="Theme" uid="uid://dt4byoe88efie" path="res://ui/theme/scandig_theme.tres" id="10_theme"]
+[ext_resource type="Script" path="res://ui/ui_chip.gd" id="11_chip"]
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
 properties/0/path = NodePath(".:position")
@@ -120,18 +121,24 @@ mouse_filter = 2
 theme = ExtResource("10_theme")
 theme_override_constants/separation = 2
 
-[node name="SessionInfoLabel" type="Label" parent="HUD"]
+[node name="TopChips" type="HBoxContainer" parent="HUD"]
 offset_left = 24.0
 offset_top = 20.0
 offset_right = 380.0
-offset_bottom = 60.0
+offset_bottom = 52.0
+mouse_filter = 2
 theme = ExtResource("10_theme")
-theme_override_colors/font_color = Color(0.952941, 0.917647, 0.827451, 1)
-theme_override_colors/font_outline_color = Color(0.168627, 0.129412, 0.094118, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 18
-text = "🎒 Mochila: 0 itens | 💰 R$ 0"
-vertical_alignment = 1
+theme_override_constants/separation = 10
+
+[node name="BagChip" type="PanelContainer" parent="HUD/TopChips"]
+layout_mode = 2
+script = ExtResource("11_chip")
+icon_name = "backpack"
+
+[node name="MoneyChip" type="PanelContainer" parent="HUD/TopChips"]
+layout_mode = 2
+script = ExtResource("11_chip")
+icon_name = "coin"
 
 [node name="ThreatPanel" type="VBoxContainer" parent="HUD"]
 anchors_preset = 1
@@ -151,7 +158,7 @@ theme_override_colors/font_color = Color(0.952941, 0.917647, 0.827451, 1)
 theme_override_colors/font_outline_color = Color(0.168627, 0.129412, 0.094118, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 16
-text = "☠ Ameaça do Subsolo"
+text = "Ameaça do Subsolo"
 horizontal_alignment = 2
 
 [node name="ThreatBar" type="ProgressBar" parent="HUD/ThreatPanel"]

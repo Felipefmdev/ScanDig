@@ -14,7 +14,8 @@ func test_player_hud_theme_and_variations() -> void:
 
 	var threat_panel: Control = player.get_node("HUD/ThreatPanel") as Control
 	var health_panel: Control = player.get_node("HUD/HealthPanel") as Control
-	var session_label: Label = player.get_node("HUD/SessionInfoLabel") as Label
+	var top_chips: Control = player.get_node("HUD/TopChips") as Control
+	var session_label: Label = player.get_node("HUD/TopChips/MoneyChip/Box/Label") as Label
 	var threat_title: Label = player.get_node("HUD/ThreatPanel/ThreatTitle") as Label
 	var threat_bar: ProgressBar = player.get_node("HUD/ThreatPanel/ThreatBar") as ProgressBar
 	var health_label: Label = player.get_node("HUD/HealthPanel/HealthLabel") as Label
@@ -24,7 +25,7 @@ func test_player_hud_theme_and_variations() -> void:
 
 	assert_not_null(threat_panel.theme, "ThreatPanel deve ter theme definido")
 	assert_not_null(health_panel.theme, "HealthPanel deve ter theme definido")
-	assert_not_null(session_label.theme, "SessionInfoLabel deve ter theme definido")
+	assert_not_null(top_chips.theme, "TopChips (mochila e dinheiro) deve ter theme definido")
 	assert_not_null(interact_prompt.theme, "InteractPrompt deve ter theme definido")
 	assert_not_null(hotbar.theme, "Hotbar deve ter theme definido")
 

@@ -220,7 +220,9 @@ const THREAT_MESSAGES: Array[String] = [
 ## Pilha de mensagens temporárias (#32): no topo, por baixo do nome/barra do chefe (BossHud,
 ## y 70-125); o prompt [E] fica sozinho por baixo da mira.
 @onready var message_stack: VBoxContainer = $HUD/MessageStack
-@onready var session_info_label: Label = $HUD/SessionInfoLabel
+## Chips do topo (#119): dinheiro da equipe e mochila (UiChip cria o Box/Label no _init).
+@onready var session_info_label: Label = $HUD/TopChips/MoneyChip/Box/Label
+@onready var bag_info_label: Label = $HUD/TopChips/BagChip/Box/Label
 @onready var threat_panel: Control = $HUD/ThreatPanel
 @onready var threat_bar: ProgressBar = $HUD/ThreatPanel/ThreatBar
 @onready var health_label: Label = $HUD/HealthPanel/HealthLabel
@@ -380,6 +382,7 @@ func _ready() -> void:
 	_setup_hunger_hud()
 
 	_setup_threat_hud()
+	PlayerHudStyle.apply(get_node_or_null(^"HUD"))
 	_hit_feedback = HIT_FEEDBACK_SCRIPT.new()
 	add_child(_hit_feedback)
 	_setup_tool_sway()
@@ -936,11 +939,12 @@ func get_hud_messages() -> PackedStringArray:
 func _update_session_hud() -> void:
 	if session_info_label == null:
 		return
-	var bag: String = "🎒 Mochila: %d/%d (%s)" % [inventory.get_count(), inventory.capacity, MoneyFormat.money(inventory.get_total_value())]
+	if bag_info_label != null:
+		bag_info_label.text = "%d/%d  •  %s" % [inventory.get_count(), inventory.capacity, MoneyFormat.money(inventory.get_total_value())]
 	if GameState.instance != null:
-		session_info_label.text = "%s | 💰 Equipe: %s" % [bag, MoneyFormat.money(GameState.instance.team_money)]
+		session_info_label.text = "Equipe  %s" % MoneyFormat.money(GameState.instance.team_money)
 	else:
-		session_info_label.text = "%s | 💰 Entregue: %s" % [bag, MoneyFormat.money(session_money)]
+		session_info_label.text = "Entregue  %s" % MoneyFormat.money(session_money)
 
 
 func _on_team_money_changed(_new_amount: int) -> void:
@@ -1751,7 +1755,7 @@ func _refresh_hunger_hud() -> void:
 	_hunger_bar.max_value = max_hunger
 	_hunger_bar.value = hunger
 	var low: bool = hunger <= max_hunger * 0.25
-	_hunger_label.text = ("🍖 Fome: %d / %d" % [int(ceilf(hunger)), int(max_hunger)]) + ("  (com fome!)" if low else "")
+	_hunger_label.text = ("Fome   %d/%d" % [int(ceilf(hunger)), int(max_hunger)]) + ("  (com fome!)" if low else "")
 	if is_overloaded():
 		_hunger_label.text += "   🎒 pesado"
 	elif backpack_weight_multiplier() < 1.0:
@@ -1909,7 +1913,7 @@ func _on_health_changed(current: float, max_value: float) -> void:
 		health_bar.max_value = max_value
 		health_bar.value = current
 	if health_label != null:
-		health_label.text = "❤ Vida: %d / %d" % [int(ceilf(current)), int(max_value)]
+		health_label.text = "Vida   %d/%d" % [int(ceilf(current)), int(max_value)]
 
 
 # ---------------------------------------------------------------------------

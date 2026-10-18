@@ -295,7 +295,7 @@ func _check_player(menu: PauseMenu, sm: SettingsManager) -> void:
 	_check(normal < 0.0 and is_equal_approx(player.head.rotation.x, -normal), "inverter Y: %.4f vira %.4f" % [normal, player.head.rotation.x])
 
 	# Tamanho do texto do HUD (inclusive texto criado depois).
-	var label: Label = player.get_node(^"HUD/SessionInfoLabel") as Label
+	var label: Label = player.get_node(^"HUD/TopChips/MoneyChip/Box/Label") as Label
 	var base: int = label.get_theme_font_size(&"font_size")
 	sm.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.5})
 	_check(label.get_theme_font_size(&"font_size") == roundi(base * 1.5), "HUD 150 %%: %d → %d" % [base, label.get_theme_font_size(&"font_size")])
