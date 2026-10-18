@@ -98,21 +98,7 @@ func test_save_migration_infers_game_completed_from_final_boss() -> void:
 	assert_false(upgraded_incomplete["game_completed"], "sem o chefe final infere false")
 
 
-func test_crater_altar_overlay_uses_worn_panel_theme() -> void:
-	var altar: CraterAltar = CraterAltar.new()
-	add_child_autofree(altar)
-	altar.show_victory_and_credits()
-
-	var overlay: CanvasLayer = altar.get_node_or_null("VictoryCreditsOverlay") as CanvasLayer
-	assert_not_null(overlay, "VictoryCreditsOverlay criado")
-
-	var card: PanelContainer = overlay.find_child("CreditsCard", true, false) as PanelContainer
-	assert_not_null(card, "CreditsCard presente")
-	assert_eq(card.theme_type_variation, &"WornPanel", "CreditsCard usa variação WornPanel")
-
-	var btn: Button = overlay.find_child("ContinueButton", true, false) as Button
-	assert_not_null(btn, "Botão continuar presente")
-	assert_eq(btn.theme_type_variation, &"PrimaryButton", "Botão usa PrimaryButton")
+# #115: o overlay do CraterAltar saiu (VictoryScreen); ver tests/dev_b/test_crater_altar_no_overlay.gd.
 
 
 func test_base_station_ui_reflects_game_completed() -> void:

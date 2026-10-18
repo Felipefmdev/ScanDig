@@ -4,7 +4,7 @@ extends GutTest
 ## Cobre:
 ##   1) Arma exclusiva Pulso Magnético (MagneticPulseModel, MagneticPulseWorld, ToolData e mecânicas no Player: empurrar inimigos com dano/knockback/stun, puxar itens metálicos);
 ##   2) Terreno e estruturas da Cratera (CraterTerrain, CraterStructure, CraterLayout, GroundSnap);
-##   3) Cena MapCratera (WorldEnvironment, EnemySpawner, SpotSpawner, BaseEntrega, Banca com 8 ofertas incluindo pulso_magnetico, CraterAltar com créditos);
+##   3) Cena MapCratera (WorldEnvironment, EnemySpawner, SpotSpawner, BaseEntrega, Banca com 8 ofertas incluindo pulso_magnetico, CraterAltar sem overlay de vitória próprio, #115);
 ##   4) Missões, relíquias e segredos (CrateraSecrets, Dra. Vega, antenas, wave event, cristais ressonantes, O Eco, gravidade baixa, geodo, pilar, cortina, easter eggs).
 
 const PULSE_MODEL_SCRIPT: Script = preload("res://gameplay/weapons/magnetic_pulse/magnetic_pulse_model.gd")
@@ -209,10 +209,8 @@ func test_map_cratera_scene_structure() -> void:
 	# Altar do chefe principal (O Dorminhoco / The Sleeper)
 	var altar: CraterAltar = map.get_node_or_null("CraterAltar") as CraterAltar
 	assert_not_null(altar, "CraterAltar presente")
-	assert_false(altar._credits_shown)
-	altar.show_victory_and_credits()
-	assert_true(altar._credits_shown, "Overlay de créditos finais acionado na vitória")
-	assert_not_null(altar.get_node_or_null("VictoryCreditsOverlay"), "Painel de créditos instanciado")
+	# #115: vitória e créditos ficam na VictoryScreen (final no gold_colossus).
+	assert_false(altar.has_method(&"show_victory_and_credits"), "sem overlay de vitória próprio")
 
 
 # ---------------------------------------------------------------------------
