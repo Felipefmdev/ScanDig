@@ -745,7 +745,7 @@ func _build_treasure_tab() -> void:
 	_treasure_count_label = Label.new()
 	_treasure_count_label.name = "TreasureCountLabel"
 	page.add_child(_treasure_count_label)
-	_treasure_scroll = TreasureMapScroll.new()
+	_treasure_scroll = TreasureMapParchment.new()
 	_treasure_scroll.name = "TreasureMapScroll"
 	_treasure_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.add_child(_treasure_scroll)

@@ -76,6 +76,20 @@ func _run() -> void:
 			base.map_list.item_selected.emit(1)
 		await _shot("lobby_%s" % shot_names[i])
 		print("RECT %s %s base %s min_h %d" % [_tag, shot_names[i], _rect(base.get_child(0) as Control), int((base.get_child(0) as Control).get_combined_minimum_size().y)])
+	# Mapa do Tesouro (#117): pergaminho com 0 peças, 4 (das duas linhas) e completo; completo a 150 %.
+	var treasure_page: Control = tabs.get_node_or_null(BaseStationUI.TREASURE_TAB_TITLE) as Control
+	if treasure_page != null:
+		tabs.current_tab = treasure_page.get_index()
+		var four: Array[String] = ["praia_frag_1", "ruinas_frag_1", "geleira_frag_2", "cratera_frag_2"]
+		for shot: Array in [["mapa_tesouro_0", [] as Array[String]], ["mapa_tesouro_4", four], ["mapa_tesouro_completo", GameState.MAP_FRAGMENT_IDS]]:
+			GameState.instance.load_snapshot({"map_fragments": shot[1]})
+			await _shot(shot[0])
+			print("RECT %s %s base %s mapa %s" % [_tag, shot[0], _rect(base.get_child(0) as Control), _rect(treasure_page.get_node(^"TreasureMapScroll") as Control)])
+		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.5}, false)
+		await _shot("mapa_tesouro_completo_hud150")
+		print("RECT %s mapa_hud150 base %s mapa %s" % [_tag, _rect(base.get_child(0) as Control), _rect(treasure_page.get_node(^"TreasureMapScroll") as Control)])
+		SettingsManager.instance.set_section(SettingsManager.GAMEPLAY, {"hud_text_scale": 1.0}, false)
+		GameState.instance.load_snapshot({"map_fragments": [] as Array[String]})
 	tabs.current_tab = 0
 	print("RECT %s menu %s" % [_tag, _rect(menu.get_child(0) as Control)])
 	if hud != null:
