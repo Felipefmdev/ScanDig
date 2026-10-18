@@ -42,7 +42,17 @@ const JOIN_STAGE_TEXTS: Dictionary = {
 @onready var copy_ip_button: Button = _resolve_node("CopyIPButton", "PanelContainer/MarginContainer/VBoxContainer/ModeTabs/Rede local (IP)/CopyIPButton") as Button
 @onready var players_list: ItemList = _resolve_node("PlayersList", "PanelContainer/MarginContainer/VBoxContainer/PlayersList") as ItemList
 
+## Painel que o menu não pode cobrir (a Base, no lobby). Se o menu cruzar com ele (ui_scale alto),
+## fica recolhido num botão "Multiplayer" e abre por cima ao clicar.
+@export var avoid_path: NodePath
+const AVOID_GAP: float = 8.0
+
 var _net_manager: NetworkManager = null
+var _avoid: Control = null
+var _panel: Control = null
+var _collapse_button: Button = null
+## Recolhido (só vale enquanto o menu cruza o painel de avoid_path).
+var _collapsed: bool = true
 ## Tentativa online em andamento: "" | "host" | "join". Bloqueia hospedar/entrar.
 var _online_attempt: String = ""
 ## Código normalizado (sem hífen) exibido na caixa da sala; "" = caixa oculta.
@@ -96,6 +106,8 @@ func _ready() -> void:
 		# Apagar o progresso é ação de perigo (theme ScanDig, #51).
 		new_game_dialog.get_ok_button().theme_type_variation = &"DangerButton"
 
+	_setup_collapse()
+
 	# Base aberta pela tela inicial em "Novo jogo/Continuar/Carregar" (solo, #100): o menu de rede
 	# começa oculto. Modo vazio (bots, testes, lobby aberto direto) = como sempre.
 	if SessionManager.launch_mode == SessionManager.LAUNCH_SOLO:
@@ -117,6 +129,57 @@ func _focus_for_pad() -> void:
 	UiFocus.link_chain(UiFocus.focusables(self))
 	if host_online_button.is_visible_in_tree():
 		host_online_button.grab_focus()
+	elif _collapse_button != null and _collapse_button.is_visible_in_tree():
+		_collapse_button.grab_focus()
+
+
+func _setup_collapse() -> void:
+	_avoid = get_node_or_null(avoid_path) as Control if not avoid_path.is_empty() else null
+	_panel = get_node_or_null(^"PanelContainer") as Control
+	if _avoid == null or _panel == null:
+		return
+	_collapse_button = Button.new()
+	_collapse_button.name = "CollapseButton"
+	_collapse_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_collapse_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_collapse_button.pressed.connect(_on_collapse_pressed)
+	add_child(_collapse_button)
+	get_viewport().size_changed.connect(_update_collapse)
+	_avoid.visibility_changed.connect(_update_collapse)
+	_update_collapse()
+
+
+## O menu cruza o painel de avoid_path (na horizontal, com a folga AVOID_GAP).
+func is_crowded() -> bool:
+	if _avoid == null or not _avoid.is_visible_in_tree():
+		return false
+	return get_global_rect().position.x < _avoid.get_global_rect().end.x + AVOID_GAP
+
+
+func is_collapsed() -> bool:
+	return _collapse_button != null and is_crowded() and _collapsed
+
+
+func _update_collapse() -> void:
+	if _collapse_button == null:
+		return
+	var crowded: bool = is_crowded()
+	_collapse_button.visible = crowded
+	_collapse_button.text = "Multiplayer ▴" if not _collapsed else "Multiplayer ▾"
+	_panel.visible = not (crowded and _collapsed)
+	_panel.offset_top = _collapse_button.get_combined_minimum_size().y + 4.0 if crowded else 0.0
+	# Aberto sobre o painel: desenha por cima dele.
+	z_index = 1 if crowded and not _collapsed else 0
+
+
+func _on_collapse_pressed() -> void:
+	_collapsed = not _collapsed
+	_update_collapse()
+	UiFocus.link_chain(UiFocus.focusables(self))
+	if not _collapsed and host_online_button != null and host_online_button.is_visible_in_tree():
+		host_online_button.grab_focus()
+	else:
+		_collapse_button.grab_focus()
 
 
 func _resolve_network_manager() -> void:
