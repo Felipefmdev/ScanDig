@@ -51,7 +51,7 @@ func _exit_tree() -> void:
 func _ready() -> void:
 	add_to_group("buried_spots")
 	if not rare_decided:
-		is_rare_variant = item != null and randf() < rare_variant_chance
+		is_rare_variant = item != null and randf() < NightMode.rare_chance(rare_variant_chance)
 	_create_visuals()
 	_create_particles()
 	_update_mound()

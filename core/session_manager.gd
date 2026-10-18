@@ -15,6 +15,9 @@ signal peer_scene_ready(peer_id: int, map_id: String)
 ## Quem escuta pode remover nós replicados de forma síncrona (remove_child + queue_free)
 ## para que os despawns saiam antes do RPC de volta ao lobby.
 signal expedition_ending(map_id: String)
+## Em todos os peers: a cena pedida em _change_scene terminou de carregar (um frame depois dos
+## _ready dela). A noite (#109) se aplica aqui, antes de o peer se avisar pronto ao host.
+signal scene_loaded(scene_path: String)
 
 const LOBBY_SCENE: String = "res://world/lobby_base.tscn"
 ## Tela inicial (#100), a main scene do projeto.
@@ -34,6 +37,11 @@ static var instance: SessionManager = null
 static var launch_mode: String = ""
 
 var _current_map: MapData = null
+## Expedição noturna (#109): escolhida pelo host na mesa e levada no RPC de entrada e no sync.
+## Só vale para mapas com config em NightMode.NIGHT_BY_MAP; volta a false no lobby.
+var _night: bool = false
+## Testes: false = os RPCs de cena só mudam o estado, sem trocar a cena de verdade.
+var scene_change_enabled: bool = true
 var _last_summary: Dictionary = {}
 ## Resumo em construção (só no host, durante a expedição).
 var _pending_summary: Dictionary = {}
@@ -183,6 +191,17 @@ func get_current_map() -> MapData:
 	return _current_map
 
 
+## A expedição atual é noturna (#109). false no lobby e fora de sessão.
+static func is_night() -> bool:
+	return instance != null and instance._night and instance._current_map != null
+
+
+## Argumentos do _rpc_sync_scene para quem entra no meio: o mapa atual ("" = lobby) e a noite.
+func get_sync_scene_args() -> Array:
+	var map_id: String = _current_map.id if _current_map != null else ""
+	return [map_id, _night and _current_map != null]
+
+
 func get_last_summary() -> Dictionary:
 	return _last_summary.duplicate(true)
 
@@ -203,7 +222,7 @@ func get_ready_peers() -> Array[int]:
 
 # --- Pedidos (só o host executa) -------------------------------------------------
 
-func request_start_expedition(map_id: String) -> void:
+func request_start_expedition(map_id: String, night: bool = false) -> void:
 	if not multiplayer.is_server():
 		push_warning("SessionManager: apenas o host pode iniciar expedições.")
 		return
@@ -220,16 +239,18 @@ func request_start_expedition(map_id: String) -> void:
 	var state: GameState = GameState.instance
 	var map_data: MapData = _find_map(map_id)
 	var money: int = state.team_money
+	night = night and NightMode.is_available(map_id)
 	_pending_summary = {
 		"day": state.current_day,
 		"map_id": map_id,
 		"map_name": map_data.display_name,
+		"night": night,
 		"money_start": money,
 		"money_end": money,
 		"money_earned": 0,
 		"entries": [],
 	}
-	_call_all(&"_rpc_enter_map", [map_id])
+	_call_all(&"_rpc_enter_map", [map_id, night])
 
 
 func request_end_expedition() -> void:
@@ -259,12 +280,13 @@ func request_end_expedition() -> void:
 # --- RPCs (host -> todos) -------------------------------------------------------
 
 @rpc("authority", "call_local", "reliable")
-func _rpc_enter_map(map_id: String) -> void:
+func _rpc_enter_map(map_id: String, night: bool = false) -> void:
 	var map_data: MapData = _find_map(map_id)
 	if map_data == null:
 		push_error("SessionManager: mapa '%s' não encontrado neste peer." % map_id)
 		return
 	_current_map = map_data
+	_night = night and NightMode.is_available(map_id)
 	_change_scene(MAP_SCENE_FORMAT % map_id)
 	expedition_started.emit(map_id)
 
@@ -272,6 +294,7 @@ func _rpc_enter_map(map_id: String) -> void:
 @rpc("authority", "call_local", "reliable")
 func _rpc_return_to_lobby(summary: Dictionary) -> void:
 	_current_map = null
+	_night = false
 	_last_summary = summary.duplicate(true)
 	_change_scene(LOBBY_SCENE)
 	expedition_ended.emit(_last_summary)
@@ -279,12 +302,13 @@ func _rpc_return_to_lobby(summary: Dictionary) -> void:
 
 ## Sincroniza a cena de um peer que entrou no meio (map_id vazio = lobby).
 @rpc("authority", "call_remote", "reliable")
-func _rpc_sync_scene(map_id: String) -> void:
+func _rpc_sync_scene(map_id: String, night: bool = false) -> void:
 	if map_id.is_empty():
 		_current_map = null
+		_night = false
 		_change_scene(LOBBY_SCENE)
 	else:
-		_rpc_enter_map(map_id)
+		_rpc_enter_map(map_id, night)
 
 
 ## Cliente -> host: o mapa atual terminou de carregar neste peer.
@@ -304,8 +328,8 @@ func _rpc_report_scene_ready(map_id: String) -> void:
 func _on_peer_connected(peer_id: int) -> void:
 	# O GameState já envia o snapshot completo; aqui enviamos a cena atual.
 	if multiplayer.is_server() and peer_id != HOST_PEER_ID:
-		var map_id: String = _current_map.id if _current_map != null else ""
-		_rpc_sync_scene.rpc_id(peer_id, map_id)
+		var args: Array = get_sync_scene_args()
+		_rpc_sync_scene.rpc_id(peer_id, args[0], args[1])
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
@@ -314,6 +338,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 func _on_server_disconnected() -> void:
 	_current_map = null
+	_night = false
 	_pending_summary = {}
 	_ready_peers.clear()
 	_change_scene(LOBBY_SCENE)
@@ -329,6 +354,7 @@ func _on_session_left(was_host: bool) -> void:
 		if save != null:
 			save.save_game()
 	_current_map = null
+	_night = false
 	_pending_summary = {}
 	_ready_peers.clear()
 	_change_scene(LOBBY_SCENE)
@@ -364,6 +390,8 @@ func _call_all(method: StringName, args: Array) -> void:
 func _change_scene(scene_path: String) -> void:
 	# Toda troca de cena invalida quem estava pronto; cada peer reavisa ao carregar.
 	_ready_peers.clear()
+	if not scene_change_enabled:
+		return
 	_pending_scene_path = scene_path
 	var tree: SceneTree = get_tree()
 	var current: Node = tree.current_scene
@@ -374,8 +402,11 @@ func _change_scene(scene_path: String) -> void:
 
 
 func _on_scene_loaded(scene_path: String) -> void:
+	scene_loaded.emit(scene_path)
 	if _current_map == null or scene_path != MAP_SCENE_FORMAT % _current_map.id:
 		return
+	if _night and multiplayer.is_server():
+		NightMode.apply_to_spawner(EnemySpawner.find(get_tree()), _current_map.id)
 	if multiplayer.is_server():
 		_mark_ready(HOST_PEER_ID, _current_map.id)
 	elif _is_online():
@@ -423,6 +454,7 @@ func return_to_title() -> void:
 	if _is_online() and NetworkManager.instance != null:
 		NetworkManager.instance.disconnect_game()
 	_current_map = null
+	_night = false
 	_pending_summary = {}
 	_ending = false
 	launch_mode = ""

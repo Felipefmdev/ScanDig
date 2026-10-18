@@ -360,6 +360,8 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 				return "'start_expedition' deve ser o id do mapa"
 			step["map_id"] = value
 			step["timeout"] = timeout
+			# #109: {"start_expedition": "praia", "night": true} = expedição noturna.
+			step["night"] = d.get("night", false) == true
 		"sleep":
 			if not _is_number(value) or float(value) < 0.0:
 				return "'sleep' deve ser um numero >= 0"
@@ -667,7 +669,7 @@ func _execute(step: Dictionary) -> void:
 		"join":
 			await _join(step["ip"], step["port"], step["timeout"])
 		"start_expedition":
-			await _start_expedition(step["map_id"], step["timeout"])
+			await _start_expedition(step["map_id"], step["timeout"], step["night"])
 		"ui_tab":
 			_ui_tab(step["target"])
 			# O TabContainer só mostra a página nova no frame seguinte.
@@ -1545,7 +1547,7 @@ func _join(ip: String, port: int, timeout: float) -> void:
 
 
 ## Host: inicia a expedição pelo fluxo normal e espera que o mapa carregue.
-func _start_expedition(map_id: String, timeout: float) -> void:
+func _start_expedition(map_id: String, timeout: float, night: bool = false) -> void:
 	var sm: SessionManager = SessionManager.instance
 	if sm == null:
 		_error("start_expedition: CoreSession indisponivel")
@@ -1553,7 +1555,7 @@ func _start_expedition(map_id: String, timeout: float) -> void:
 	if not sm.can_start_map(map_id):
 		_error("start_expedition: '%s' indisponivel (bloqueado ou sem cena)" % map_id)
 		return
-	sm.request_start_expedition(map_id)
+	sm.request_start_expedition(map_id, night)
 	var t0: float = _elapsed()
 	while not sm.is_peer_scene_ready(multiplayer.get_unique_id()):
 		if _elapsed() - t0 > timeout:

@@ -98,7 +98,7 @@ func _spawn_spot() -> void:
 	var spot: BuriedSpot = _net_spawner.spawn({
 		"n": _spawn_counter,
 		"item_id": item.id,
-		"rare": randf() < map_data.rare_variant_chance,
+		"rare": randf() < NightMode.rare_chance(map_data.rare_variant_chance),
 		"pos": to_local(spawn_pos),
 	}) as BuriedSpot
 	if spot == null:

@@ -30,7 +30,7 @@ static func spawn(from: Node, world_pos: Vector3, n: int, group: StringName = &"
 	var spot: Node = net.spawn({
 		"n": n,
 		"item_id": item.id,
-		"rare": map_data != null and randf() < map_data.rare_variant_chance,
+		"rare": map_data != null and randf() < NightMode.rare_chance(map_data.rare_variant_chance),
 		"pos": (spawner as Node3D).to_local(world_pos),
 	})
 	if spot != null:
