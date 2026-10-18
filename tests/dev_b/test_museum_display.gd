@@ -138,3 +138,23 @@ func test_rare_items_saved_and_old_save_loads() -> void:
 	assert_eq(save.load_game(), OK, "save antigo sem rare_items carrega")
 	assert_eq(gs.discovered_items, ["lata_enferrujada"] as Array[String])
 	assert_true(gs.rare_items.is_empty(), "sem o campo, nenhuma rara")
+
+
+## Polimento (#119): plaquinha de madeira com face de latão e texto de tinta; fundo de madeira
+## média (não quase preto).
+func test_plaques_are_brass_with_dark_text_and_back_is_lighter() -> void:
+	_build()
+	var section: Node3D = museum.get_node("Site_praia") as Node3D
+	var plate: MeshInstance3D = section.get_node("PlaquePlate") as MeshInstance3D
+	var frame: MeshInstance3D = section.get_node("PlaqueFrame") as MeshInstance3D
+	var label: Label3D = section.get_node("Plaque") as Label3D
+	assert_eq((plate.material_override as StandardMaterial3D).albedo_color, MuseumDisplay.BRASS, "face de latão")
+	assert_eq((frame.material_override as StandardMaterial3D).albedo_color, MuseumDisplay.WOOD_DARK, "moldura de madeira")
+	assert_eq(label.modulate, MuseumDisplay.PLAQUE_INK, "texto escuro")
+	assert_eq(label.outline_size, 0)
+	assert_lt((plate.mesh as BoxMesh).size.x, MuseumDisplay.SECTION_WIDTH * 0.5, "plaquinha menor que meia seção")
+	var back: MeshInstance3D = museum.get_node("Back") as MeshInstance3D
+	var back_mat: StandardMaterial3D = back.material_override as StandardMaterial3D
+	assert_gt(back_mat.albedo_color.get_luminance(), 0.3, "fundo menos preto")
+	assert_true(back_mat.emission_enabled, "brilho próprio contra a sombra da prateleira")
+	assert_not_null(museum.get_node("Highlight/PlaquePlate"), "pedestal do ídolo com a mesma plaquinha")

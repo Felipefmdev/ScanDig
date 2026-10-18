@@ -52,6 +52,14 @@ const PEDESTAL_HEIGHT: float = 0.07
 const WOOD: Color = Color("#6b4426")
 const WOOD_DARK: Color = Color("#3e2716")
 const PLAQUE: Color = Color("#d9c08a")
+## Fundo das prateleiras: madeira média (o WOOD_DARK ficava quase preto na sombra).
+const BACK: Color = Color("#a87a4e")
+## Plaquinha (#119): moldura de madeira com face de latão e texto de tinta.
+const BRASS: Color = Color("#c9a24a")
+const PLAQUE_INK: Color = Color("#2b2118")
+const PLAQUE_SIZE: Vector2 = Vector2(0.86, 0.15)
+## Brilho próprio do fundo: a prateleira de cima faz sombra e o fundo ficava cinza-escuro.
+const BACK_GLOW: float = 0.22
 const EMPTY_MARK: Color = Color(0.0, 0.0, 0.0, 0.35)
 const SEAL: Color = Color("#3f9a52")
 const SEAL_RIM: Color = Color("#e0b040")
@@ -213,7 +221,12 @@ func _build_cabinet() -> void:
 	var total_h: float = BOTTOM_Y + rows * SECTION_HEIGHT + 0.1
 	# Assoalho da ala: a estante fica na grama, ao lado da tenda, com o pedestal do ídolo à frente.
 	_add_box(self, "Deck", Vector3(0.0, 0.05, 0.85), Vector3(total_w + 0.6, 0.1, DEPTH + 2.2), WOOD)
-	_add_box(self, "Back", Vector3(0.0, total_h * 0.5, -DEPTH * 0.5), Vector3(total_w, total_h, 0.06), WOOD_DARK)
+	var back: MeshInstance3D = _add_box(self, "Back", Vector3(0.0, total_h * 0.5, -DEPTH * 0.5), Vector3(total_w, total_h, 0.06), BACK)
+	var back_mat: StandardMaterial3D = (back.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+	back_mat.emission_enabled = true
+	back_mat.emission = BACK
+	back_mat.emission_energy_multiplier = BACK_GLOW
+	back.material_override = back_mat
 	_add_box(self, "Top", Vector3(0.0, total_h, 0.0), Vector3(total_w + 0.1, 0.08, DEPTH + 0.06), WOOD)
 	for c: int in COLUMNS + 1:
 		var x: float = -total_w * 0.5 + SECTION_GAP * 0.5 + c * (SECTION_WIDTH + SECTION_GAP)
@@ -251,15 +264,7 @@ func _build_section(site_id: String, title: String, origin: Vector3) -> void:
 		slot.position = Vector3(x, b * board_step, 0.02)
 		section.add_child(slot)
 		_slots[ids[k]] = slot
-	var plaque: Label3D = Label3D.new()
-	plaque.name = "Plaque"
-	plaque.position = Vector3(0.0, SECTION_HEIGHT - 0.2, DEPTH * 0.5 + 0.01)
-	plaque.pixel_size = 0.0045
-	plaque.font_size = 48
-	plaque.outline_size = 10
-	plaque.modulate = PLAQUE
-	plaque.outline_modulate = WOOD_DARK
-	section.add_child(plaque)
+	var plaque: Label3D = _add_plaque(section, Vector3(0.0, SECTION_HEIGHT - 0.17, DEPTH * 0.5), PLAQUE_SIZE)
 	_plaques[site_id] = plaque
 	plaque.set_meta(&"title", title)
 
@@ -276,16 +281,9 @@ func _build_highlight() -> void:
 	slot.position = Vector3(0.0, 0.545, 0.0)
 	stand.add_child(slot)
 	_slots[HIGHLIGHT_ID] = slot
-	var label: Label3D = Label3D.new()
-	label.name = "Plaque"
+	var label: Label3D = _add_plaque(stand, Vector3(0.0, 0.32, 0.2), Vector2(0.5, 0.09))
 	label.text = "Tesouro da Ilha"
-	label.position = Vector3(0.0, 0.3, 0.21)
-	label.pixel_size = 0.0035
-	label.font_size = 40
-	label.outline_size = 8
-	label.modulate = PLAQUE
-	label.outline_modulate = WOOD_DARK
-	stand.add_child(label)
+	label.font_size = 28
 	_highlight_light = OmniLight3D.new()
 	_highlight_light.name = "Light"
 	_highlight_light.position = Vector3(0.0, 1.2, 0.3)
@@ -362,6 +360,24 @@ func _update_plaques(state: GameState) -> void:
 				found += 1
 		var label: Label3D = _plaques[site_id]
 		label.text = "%s  %d/%d" % [str(label.get_meta(&"title")), found, ids.size()]
+
+
+## Plaquinha na frente de `parent`: moldura de madeira, face de latão e o texto de tinta (o
+## Label3D "Plaque", que _update_plaques preenche).
+func _add_plaque(parent: Node3D, front_center: Vector3, size: Vector2) -> Label3D:
+	_add_box(parent, "PlaqueFrame", front_center + Vector3(0.0, 0.0, 0.006), Vector3(size.x + 0.04, size.y + 0.04, 0.012), WOOD_DARK)
+	_add_box(parent, "PlaquePlate", front_center + Vector3(0.0, 0.0, 0.014), Vector3(size.x, size.y, 0.006), BRASS)
+	var label: Label3D = Label3D.new()
+	label.name = "Plaque"
+	label.position = front_center + Vector3(0.0, 0.0, 0.019)
+	label.pixel_size = 0.0022 if size.x < PLAQUE_SIZE.x else 0.003
+	label.font_size = 40
+	label.outline_size = 0
+	label.modulate = PLAQUE_INK
+	label.shaded = false
+	label.double_sided = false
+	parent.add_child(label)
+	return label
 
 
 func _add_box(parent: Node3D, node_name: String, pos: Vector3, size: Vector3, color: Color, glow: bool = false) -> MeshInstance3D:
