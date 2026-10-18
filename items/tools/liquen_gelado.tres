@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_tool")
 id = &"liquen_gelado"
-display_name = "LÃ­quen Gelado"
+display_name = "Líquen Gelado"
 description = "Crocante de gelo. Recupera 15 de vida e mata a fome."
 price = 0
 category = 2

@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_tool")
 id = &"larva_termica"
-display_name = "Larva TÃ©rmica"
+display_name = "Larva Térmica"
 description = "Morna ao toque. Recupera 22 de vida e mata a fome."
 price = 0
 category = 2
