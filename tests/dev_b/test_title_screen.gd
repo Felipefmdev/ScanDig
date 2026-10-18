@@ -147,8 +147,10 @@ func test_delete_slot_with_confirmation() -> void:
 func test_coop_uses_chosen_slot() -> void:
 	_write_slot(3, 777, 100)
 	var title: TitleScreen = _title()
+	assert_eq(title.coop_button.text, "Multiplayer", "o botão se chama Multiplayer, não Coop")
 	title.coop_button.pressed.emit()
 	assert_eq(title.slot_mode, "coop")
+	assert_eq(title.slots_title.text, "Multiplayer: escolha o slot do host")
 	title.slot_buttons[2].pressed.emit()
 	assert_eq(SaveManager.instance.current_slot(), 3, "o host usa o slot escolhido")
 	assert_eq(GameState.instance.team_money, 777)
@@ -164,6 +166,8 @@ func test_multiplayer_menu_hidden_in_solo_shown_in_coop() -> void:
 	var coop: Control = MENU_SCENE.instantiate() as Control
 	add_child_autofree(coop)
 	assert_true(coop.visible, "coop: menu de rede aberto")
+	var header: Label = coop.find_child("TitleLabel", true, false) as Label
+	assert_eq(header.text, "Multiplayer", "cabeçalho do menu de rede")
 	SessionManager.launch_mode = ""
 	var default_menu: Control = MENU_SCENE.instantiate() as Control
 	add_child_autofree(default_menu)

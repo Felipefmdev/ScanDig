@@ -2,9 +2,9 @@ class_name TitleScreen
 extends Node3D
 
 ## Tela inicial (#100), a main scene do projeto: Continuar (só com save), Novo jogo, Carregar,
-## Coop, Configurações e Sair, sobre uma vista lenta da base (fundo 3D só de enfeite: sem
+## Multiplayer, Configurações e Sair, sobre uma vista lenta da base (fundo 3D só de enfeite: sem
 ## jogador, rede nem spawners). Solo ativa o slot, aplica e abre a base sem o MultiplayerMenu;
-## Coop abre a base com ele, usando o slot escolhido. Com --bot=, --script/-s (GUT, testes,
+## Multiplayer abre a base com ele, usando o slot escolhido. Com --bot=, --script/-s (GUT, testes,
 ## capturas) a tela é pulada e a base abre como antes.
 
 const ORBIT_SPEED: float = 0.05
@@ -13,7 +13,7 @@ const DELETE_CONFIRM: String = "Apagar o slot %d? Isso não pode ser desfeito."
 const SLOT_TITLES: Dictionary = {
 	"load": "Carregar jogo",
 	"new": "Novo jogo: escolha o slot",
-	"coop": "Coop: escolha o slot do host",
+	"coop": "Multiplayer: escolha o slot do host",
 }
 
 static var instance: TitleScreen = null
@@ -305,7 +305,7 @@ func _build() -> void:
 	continue_button = _button("Continuar", &"PrimaryButton")
 	new_game_button = _button("Novo jogo")
 	load_button = _button("Carregar")
-	coop_button = _button("Coop")
+	coop_button = _button("Multiplayer")
 	settings_button = _button("Configurações")
 	quit_button = _button("Sair", &"DangerButton")
 	for button: Button in [continue_button, new_game_button, load_button, coop_button, settings_button, quit_button]:
