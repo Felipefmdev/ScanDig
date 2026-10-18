@@ -57,7 +57,7 @@ const BACK: Color = Color("#a87a4e")
 ## Plaquinha (#119): moldura de madeira com face de latão e texto de tinta.
 const BRASS: Color = Color("#c9a24a")
 const PLAQUE_INK: Color = Color("#2b2118")
-const PLAQUE_SIZE: Vector2 = Vector2(0.86, 0.15)
+const PLAQUE_SIZE: Vector2 = Vector2(0.98, 0.18)
 ## Brilho próprio do fundo: a prateleira de cima faz sombra e o fundo ficava cinza-escuro.
 const BACK_GLOW: float = 0.22
 const EMPTY_MARK: Color = Color(0.0, 0.0, 0.0, 0.35)
@@ -281,7 +281,7 @@ func _build_highlight() -> void:
 	slot.position = Vector3(0.0, 0.545, 0.0)
 	stand.add_child(slot)
 	_slots[HIGHLIGHT_ID] = slot
-	var label: Label3D = _add_plaque(stand, Vector3(0.0, 0.32, 0.2), Vector2(0.5, 0.09))
+	var label: Label3D = _add_plaque(stand, Vector3(0.0, 0.32, 0.2), Vector2(0.64, 0.1))
 	label.text = "Tesouro da Ilha"
 	label.font_size = 28
 	_highlight_light = OmniLight3D.new()
@@ -370,7 +370,8 @@ func _add_plaque(parent: Node3D, front_center: Vector3, size: Vector2) -> Label3
 	var label: Label3D = Label3D.new()
 	label.name = "Plaque"
 	label.position = front_center + Vector3(0.0, 0.0, 0.019)
-	label.pixel_size = 0.0022 if size.x < PLAQUE_SIZE.x else 0.003
+	# Legível na vista do "Ver museu" (MuseumView) em 960x540.
+	label.pixel_size = 0.0026 if size.x < PLAQUE_SIZE.x else 0.0037
 	label.font_size = 40
 	label.outline_size = 0
 	label.modulate = PLAQUE_INK
