@@ -4363,6 +4363,15 @@ func _get_marker_root() -> Node:
 
 
 ## Carrinho de mão (#104):
+func _clear_wheelbarrow_messages() -> void:
+	if message_stack == null:
+		return
+	for child: Node in message_stack.get_children():
+		var l: Label = child as Label
+		if l != null and (l.text.containsn("carrinho") or l.text.containsn("carga")):
+			l.queue_free()
+
+
 func start_pushing_wheelbarrow(wb: Node3D) -> void:
 	if wb == null or not is_instance_valid(wb):
 		return
@@ -4370,6 +4379,7 @@ func start_pushing_wheelbarrow(wb: Node3D) -> void:
 		stop_pushing_wheelbarrow()
 	pushing_wheelbarrow = wb
 	wb.call("start_pushing", self)
+	_clear_wheelbarrow_messages()
 	_show_temporary_message("🛒 Empurrando carrinho de mão ([Q] para soltar)", UiPalette.GOLD, 1.8)
 
 
@@ -4378,6 +4388,7 @@ func stop_pushing_wheelbarrow() -> void:
 		var wb: Node3D = pushing_wheelbarrow
 		pushing_wheelbarrow = null
 		wb.call("stop_pushing")
+		_clear_wheelbarrow_messages()
 		_show_temporary_message("Carrinho de mão solto.", Color(0.85, 0.85, 0.85), 1.2)
 	else:
 		pushing_wheelbarrow = null
@@ -4386,3 +4397,6 @@ func stop_pushing_wheelbarrow() -> void:
 func on_wheelbarrow_released(wb: Node3D) -> void:
 	if pushing_wheelbarrow == wb:
 		pushing_wheelbarrow = null
+		_clear_wheelbarrow_messages()
+		if wb != null and bool(wb.get("is_tipped")):
+			_show_temporary_message("⚠️ Carrinho tombado! A carga foi derramada.", Color(1.0, 0.45, 0.35), 2.0)

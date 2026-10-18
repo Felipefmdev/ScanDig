@@ -27,7 +27,6 @@ var pushing_peer_id: int = 0
 
 var _mesh_root: Node3D = null
 var _cargo_visual_root: Node3D = null
-var _prompt_label: Label3D = null
 var _wheel_mesh: MeshInstance3D = null
 var _wheel_rot: float = 0.0
 var _tip_cooldown: float = 0.0
@@ -270,143 +269,114 @@ func _spill_cargo(scatter_impulse: Vector3) -> void:
 	cargo_changed.emit(0, MAX_CAPACITY)
 
 
+const ToolMesh = preload("res://gameplay/weapons/tool_mesh.gd")
+const ITEM_MODELS_SCRIPT: Script = preload("res://items/item_models.gd")
+
+const RUST_METAL: Color = Color(0.36, 0.38, 0.40)
+const RUST_DARK: Color = Color(0.24, 0.24, 0.26)
+const WOOD_PLANK: Color = Color(0.50, 0.34, 0.20)
+const WOOD_DARK: Color = Color(0.35, 0.22, 0.12)
+const TIRE_RUBBER: Color = Color(0.14, 0.14, 0.16)
+
+var _wheel_root: Node3D = null
+
+
 func _build_visuals() -> void:
 	_mesh_root = Node3D.new()
 	_mesh_root.name = "ModelRoot"
 	add_child(_mesh_root)
 
-	var metal_mat: StandardMaterial3D = StandardMaterial3D.new()
-	metal_mat.albedo_color = Color(0.32, 0.46, 0.44) # Verde/cinza azulado rústico
-	metal_mat.metallic = 0.65
-	metal_mat.roughness = 0.45
+	var mat_metal: ShaderMaterial = ToolMesh.prop_material(&"metal_rust", RUST_METAL)
+	mat_metal.set_shader_parameter(&"rust_amount", 0.55)
+	mat_metal.set_shader_parameter(&"rust_color", Color(0.48, 0.22, 0.10))
 
-	var dark_metal: StandardMaterial3D = StandardMaterial3D.new()
-	dark_metal.albedo_color = Color(0.18, 0.18, 0.20)
-	dark_metal.metallic = 0.85
-	dark_metal.roughness = 0.3
+	var mat_wood: ShaderMaterial = ToolMesh.prop_material(&"wood", WOOD_PLANK)
+	mat_wood.set_shader_parameter(&"grain_scale", 16.0)
 
-	var rubber_mat: StandardMaterial3D = StandardMaterial3D.new()
-	rubber_mat.albedo_color = Color(0.12, 0.12, 0.14)
-	rubber_mat.roughness = 0.9
+	var mat_dark: ShaderMaterial = ToolMesh.prop_material(&"metal_rust", RUST_DARK)
+	mat_dark.set_shader_parameter(&"rust_amount", 0.35)
 
-	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.58, 0.40, 0.24)
-	wood_mat.roughness = 0.7
+	var st_wood: SurfaceTool = ToolMesh.begin()
+	var st_metal: SurfaceTool = ToolMesh.begin()
 
-	# 1. Caçamba (Tub) - fundo e bordas
-	var tub_bottom: MeshInstance3D = MeshInstance3D.new()
-	var bottom_mesh: BoxMesh = BoxMesh.new()
-	bottom_mesh.size = Vector3(0.68, 0.06, 0.88)
-	tub_bottom.mesh = bottom_mesh
-	tub_bottom.material_override = metal_mat
-	tub_bottom.position = Vector3(0.0, 0.32, -0.05)
-	_mesh_root.add_child(tub_bottom)
+	# 1. Fundo da caçamba: tábuas de madeira rústica com vigas
+	for k: int in 3:
+		var x_off: float = (float(k) - 1.0) * 0.22
+		LowPolyMesh.box(st_wood, Vector3(x_off, 0.32, -0.05), Vector3(0.20, 0.045, 0.86), Basis.IDENTITY, WOOD_PLANK)
+	LowPolyMesh.box(st_wood, Vector3(0.0, 0.28, -0.32), Vector3(0.66, 0.04, 0.06), Basis.IDENTITY, WOOD_DARK)
+	LowPolyMesh.box(st_wood, Vector3(0.0, 0.28, 0.22), Vector3(0.66, 0.04, 0.06), Basis.IDENTITY, WOOD_DARK)
 
-	# Laterais da caçamba
-	var left_wall: MeshInstance3D = MeshInstance3D.new()
-	var wall_mesh: BoxMesh = BoxMesh.new()
-	wall_mesh.size = Vector3(0.04, 0.30, 0.88)
-	left_wall.mesh = wall_mesh
-	left_wall.material_override = metal_mat
-	left_wall.position = Vector3(-0.33, 0.47, -0.05)
-	_mesh_root.add_child(left_wall)
+	# 2. Laterais da caçamba de madeira com reforços de ferro enferrujado
+	for side: float in [-1.0, 1.0]:
+		var wall_b: Basis = Basis(Vector3.FORWARD, deg_to_rad(-8.0 * side))
+		LowPolyMesh.box(st_wood, Vector3(side * 0.33, 0.47, -0.05), Vector3(0.04, 0.28, 0.86), wall_b, WOOD_PLANK)
+		for z_pos: float in [-0.40, 0.0, 0.35]:
+			LowPolyMesh.box(st_metal, Vector3(side * 0.355, 0.47, z_pos), Vector3(0.015, 0.29, 0.04), wall_b, RUST_METAL)
+			LowPolyMesh.box(st_metal, Vector3(side * 0.365, 0.54, z_pos), Vector3(0.012, 0.02, 0.02), wall_b, RUST_DARK)
+			LowPolyMesh.box(st_metal, Vector3(side * 0.365, 0.40, z_pos), Vector3(0.012, 0.02, 0.02), wall_b, RUST_DARK)
 
-	var right_wall: MeshInstance3D = MeshInstance3D.new()
-	right_wall.mesh = wall_mesh
-	right_wall.material_override = metal_mat
-	right_wall.position = Vector3(0.33, 0.47, -0.05)
-	_mesh_root.add_child(right_wall)
+	# Parede traseira
+	var b_wall_b: Basis = Basis(Vector3.RIGHT, deg_to_rad(6.0))
+	LowPolyMesh.box(st_wood, Vector3(0.0, 0.47, 0.38), Vector3(0.66, 0.28, 0.04), b_wall_b, WOOD_PLANK)
 
-	var back_wall: MeshInstance3D = MeshInstance3D.new()
-	var b_wall_mesh: BoxMesh = BoxMesh.new()
-	b_wall_mesh.size = Vector3(0.66, 0.30, 0.04)
-	back_wall.mesh = b_wall_mesh
-	back_wall.material_override = metal_mat
-	back_wall.position = Vector3(0.0, 0.47, 0.38)
-	_mesh_root.add_child(back_wall)
+	# Parede dianteira
+	var f_wall_b: Basis = Basis(Vector3.RIGHT, deg_to_rad(-16.0))
+	LowPolyMesh.box(st_wood, Vector3(0.0, 0.45, -0.47), Vector3(0.66, 0.26, 0.04), f_wall_b, WOOD_PLANK)
 
-	var front_wall: MeshInstance3D = MeshInstance3D.new()
-	var f_wall_mesh: BoxMesh = BoxMesh.new()
-	f_wall_mesh.size = Vector3(0.66, 0.26, 0.04)
-	front_wall.mesh = f_wall_mesh
-	front_wall.material_override = metal_mat
-	front_wall.position = Vector3(0.0, 0.45, -0.48)
-	_mesh_root.add_child(front_wall)
+	# Borda superior de metal com cantoneiras de ferro enferrujado
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st_metal, Vector3(side * 0.34, 0.61, -0.05), Vector3(0.03, 0.02, 0.88), Basis.IDENTITY, RUST_METAL)
+	LowPolyMesh.box(st_metal, Vector3(0.0, 0.61, 0.39), Vector3(0.68, 0.02, 0.03), Basis.IDENTITY, RUST_METAL)
+	LowPolyMesh.box(st_metal, Vector3(0.0, 0.58, -0.52), Vector3(0.68, 0.02, 0.03), Basis.IDENTITY, RUST_METAL)
 
-	# 2. Roda dianteira
-	_wheel_mesh = MeshInstance3D.new()
-	var cyl: CylinderMesh = CylinderMesh.new()
-	cyl.top_radius = 0.20
-	cyl.bottom_radius = 0.20
-	cyl.height = 0.09
-	_wheel_mesh.mesh = cyl
-	_wheel_mesh.material_override = rubber_mat
-	_wheel_mesh.position = Vector3(0.0, 0.20, -0.58)
-	_wheel_mesh.rotation.z = deg_to_rad(90.0) # Roda alinhada no eixo lateral
-	_mesh_root.add_child(_wheel_mesh)
+	# 3. Braços / varais de madeira que vão até as manoplas
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st_wood, Vector3(side * 0.28, 0.48, 0.35), Vector3(0.055, 0.055, 0.90), Basis(Vector3.RIGHT, deg_to_rad(-5.0)), WOOD_DARK)
+		LowPolyMesh.prism(st_wood, Vector3(side * 0.28, 0.52, 0.72), Vector3(side * 0.28, 0.54, 0.92), 0.022, 0.02, 6, WOOD_PLANK)
 
-	# Eixo da roda
-	var axle: MeshInstance3D = MeshInstance3D.new()
-	var axle_mesh: CylinderMesh = CylinderMesh.new()
-	axle_mesh.top_radius = 0.03
-	axle_mesh.bottom_radius = 0.03
-	axle_mesh.height = 0.26
-	axle.mesh = axle_mesh
-	axle.material_override = dark_metal
-	axle.position = Vector3(0.0, 0.20, -0.58)
-	axle.rotation.z = deg_to_rad(90.0)
-	_mesh_root.add_child(axle)
+	# 4. Pés traseiros de apoio em ferro forjado
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.prism(st_metal, Vector3(side * 0.26, 0.30, 0.28), Vector3(side * 0.26, 0.06, 0.30), 0.022, 0.022, 4, RUST_DARK)
+		LowPolyMesh.box(st_metal, Vector3(side * 0.26, 0.05, 0.30), Vector3(0.06, 0.015, 0.08), Basis.IDENTITY, RUST_DARK)
+		LowPolyMesh.prism(st_metal, Vector3(side * 0.26, 0.06, 0.30), Vector3(side * 0.26, 0.30, 0.05), 0.016, 0.016, 4, RUST_METAL)
 
-	# 3. Pés traseiros de apoio
-	for x_pos: float in [-0.26, 0.26]:
-		var leg: MeshInstance3D = MeshInstance3D.new()
-		var leg_mesh: CylinderMesh = CylinderMesh.new()
-		leg_mesh.top_radius = 0.022
-		leg_mesh.bottom_radius = 0.022
-		leg_mesh.height = 0.30
-		leg.mesh = leg_mesh
-		leg.material_override = dark_metal
-		leg.position = Vector3(x_pos, 0.15, 0.32)
-		_mesh_root.add_child(leg)
+	# Garfo dianteiro de suporte da roda
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.prism(st_metal, Vector3(side * 0.18, 0.30, -0.38), Vector3(side * 0.09, 0.20, -0.58), 0.022, 0.018, 4, RUST_DARK)
 
-	# 4. Braços e manoplas traseiras
-	for x_pos: float in [-0.28, 0.28]:
-		var handle: MeshInstance3D = MeshInstance3D.new()
-		var handle_mesh: BoxMesh = BoxMesh.new()
-		handle_mesh.size = Vector3(0.045, 0.045, 0.55)
-		handle.mesh = handle_mesh
-		handle.material_override = wood_mat
-		handle.position = Vector3(x_pos, 0.50, 0.62)
-		_mesh_root.add_child(handle)
+	ToolMesh.part(_mesh_root, "Wood", st_wood, mat_wood)
+	ToolMesh.part(_mesh_root, "MetalRust", st_metal, mat_metal)
 
-		var grip: MeshInstance3D = MeshInstance3D.new()
-		var grip_mesh: CylinderMesh = CylinderMesh.new()
-		grip_mesh.top_radius = 0.028
-		grip_mesh.bottom_radius = 0.028
-		grip_mesh.height = 0.14
-		grip.mesh = grip_mesh
-		grip.material_override = rubber_mat
-		grip.position = Vector3(x_pos, 0.50, 0.84)
-		grip.rotation.x = deg_to_rad(90.0)
-		_mesh_root.add_child(grip)
+	# 5. Roda giratória dianteira (com pneu, aro e raios)
+	_wheel_root = Node3D.new()
+	_wheel_root.name = "WheelRoot"
+	_wheel_root.position = Vector3(0.0, 0.20, -0.58)
+	_mesh_root.add_child(_wheel_root)
 
-	# 5. Carga visual dentro da caçamba
+	var st_wheel_rubber: SurfaceTool = ToolMesh.begin()
+	var st_wheel_metal: SurfaceTool = ToolMesh.begin()
+
+	ToolMesh.y_prism(st_wheel_rubber, Vector3.ZERO, -0.045, 0.045, 0.21, 0.21, 14, 0.0, TIRE_RUBBER)
+	ToolMesh.y_prism(st_wheel_metal, Vector3.ZERO, -0.04, 0.04, 0.16, 0.16, 12, 0.0, RUST_METAL)
+	ToolMesh.y_prism(st_wheel_metal, Vector3.ZERO, -0.07, 0.07, 0.05, 0.05, 8, 0.0, RUST_DARK)
+	for i: int in 4:
+		var ang: float = float(i) * (PI * 0.25)
+		LowPolyMesh.box(st_wheel_metal, Vector3.ZERO, Vector3(0.018, 0.30, 0.018), Basis(Vector3.FORWARD, ang), RUST_DARK)
+
+	var mat_rubber: ShaderMaterial = ToolMesh.prop_material(&"metal_rust", TIRE_RUBBER)
+	mat_rubber.set_shader_parameter(&"rust_amount", 0.1)
+
+	var w_metal_inst: MeshInstance3D = ToolMesh.part(_wheel_root, "WheelMetal", st_wheel_metal, mat_dark)
+	w_metal_inst.rotation.z = deg_to_rad(90.0)
+
+	var w_rubber_inst: MeshInstance3D = ToolMesh.part(_wheel_root, "WheelRubber", st_wheel_rubber, mat_rubber)
+	w_rubber_inst.rotation.z = deg_to_rad(90.0)
+
+	# 6. Carga visual dentro da caçamba
 	_cargo_visual_root = Node3D.new()
 	_cargo_visual_root.name = "CargoVisuals"
-	_cargo_visual_root.position = Vector3(0.0, 0.38, -0.05)
+	_cargo_visual_root.position = Vector3(0.0, 0.36, -0.05)
 	_mesh_root.add_child(_cargo_visual_root)
-
-	# 6. Rótulo de texto flutuante / prompt
-	_prompt_label = Label3D.new()
-	_prompt_label.name = "PromptLabel"
-	_prompt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_prompt_label.no_depth_test = true
-	_prompt_label.pixel_size = 0.005
-	_prompt_label.font_size = 30
-	_prompt_label.outline_size = 8
-	_prompt_label.outline_modulate = Color(0.05, 0.05, 0.05, 0.9)
-	_prompt_label.position = Vector3(0.0, 1.05, 0.0)
-	add_child(_prompt_label)
 
 
 func _update_cargo_visuals() -> void:
@@ -415,42 +385,40 @@ func _update_cargo_visuals() -> void:
 	for child: Node in _cargo_visual_root.get_children():
 		child.queue_free()
 
-	# Gera pequenas caixas / pacotes de carga representativos
 	var offsets: Array[Vector3] = [
-		Vector3(-0.16, 0.06, -0.22),
-		Vector3(0.16, 0.06, -0.22),
-		Vector3(0.0, 0.06, 0.0),
-		Vector3(-0.16, 0.06, 0.20),
-		Vector3(0.16, 0.06, 0.20),
+		Vector3(-0.16, 0.04, -0.20),
+		Vector3(0.16, 0.04, -0.20),
+		Vector3(0.0, 0.05, 0.02),
+		Vector3(-0.16, 0.04, 0.22),
+		Vector3(0.16, 0.04, 0.22),
 	]
-
-	var parcel_mat: StandardMaterial3D = StandardMaterial3D.new()
-	parcel_mat.albedo_color = Color(0.78, 0.62, 0.38) # Marrom pergaminho / embrulho
-	parcel_mat.roughness = 0.8
 
 	for i: int in cargo.size():
 		if i >= offsets.size():
 			break
 		var item: CarriedItem = cargo[i]
-		var p: MeshInstance3D = MeshInstance3D.new()
-		var b: BoxMesh = BoxMesh.new()
-		b.size = Vector3(0.24, 0.16, 0.26)
-		p.mesh = b
-		p.material_override = parcel_mat
-		p.position = offsets[i]
-		p.rotation.y = float(i) * 0.4
-		_cargo_visual_root.add_child(p)
+		if item == null:
+			continue
+		var model: Node3D = null
+		if item.item != null and not item.item.id.is_empty():
+			model = ITEM_MODELS_SCRIPT.call("build", item.item.id, item.is_rare_variant) as Node3D
+		if model != null:
+			model.position = offsets[i]
+			model.rotation.y = float(i) * 0.7
+			model.scale = Vector3(1.1, 1.1, 1.1)
+			_cargo_visual_root.add_child(model)
+		else:
+			var p: MeshInstance3D = MeshInstance3D.new()
+			var b: BoxMesh = BoxMesh.new()
+			b.size = Vector3(0.22, 0.14, 0.24)
+			p.mesh = b
+			var parcel_mat: StandardMaterial3D = StandardMaterial3D.new()
+			parcel_mat.albedo_color = Color(0.72, 0.58, 0.36)
+			p.material_override = parcel_mat
+			p.position = offsets[i]
+			p.rotation.y = float(i) * 0.4
+			_cargo_visual_root.add_child(p)
 
 
 func _update_prompt() -> void:
-	if _prompt_label == null:
-		return
-	if is_tipped:
-		_prompt_label.text = "⚠️ Carrinho tombado! [E] Desvirar"
-		_prompt_label.modulate = Color(1.0, 0.35, 0.3)
-	elif pushing_player != null:
-		_prompt_label.text = "🛒 Carrinho de mão (%d/%d)" % [cargo.size(), MAX_CAPACITY]
-		_prompt_label.modulate = UiPalette.GOLD
-	else:
-		_prompt_label.text = "🛒 Carrinho de mão (%d/%d)\n[E] Empurrar" % [cargo.size(), MAX_CAPACITY]
-		_prompt_label.modulate = Color(1.0, 0.95, 0.8)
+	pass
