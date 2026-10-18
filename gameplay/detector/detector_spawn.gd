@@ -6,7 +6,7 @@ extends Marker3D
 ## si e mais um por cada peer que carrega o mapa (cada jogador precisa do seu).
 
 const TOOL_ID: StringName = &"detector"
-const TOOL_NAME: String = "Detetor de Metais"
+const TOOL_NAME: String = "Detector de Metais"
 const WORLD_MODEL: PackedScene = preload("res://gameplay/detector/detector_world_model.tscn")
 ## Distância entre detetores extra (um por jogador), ao longo do X local do marcador.
 const EXTRA_SPACING: float = 0.6

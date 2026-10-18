@@ -30,7 +30,7 @@ const LEGACY_FILE_NAME: String = "scandig_save.legacy.json"
 const SAVE_VERSION: int = 4
 ## Pasta dos saves isolados dos testes (use_test_save_dir).
 const TEST_SAVES_DIR: String = "user://test_saves"
-const MSG_CORRUPT: String = "O save estava corrompido e foi guardado como backup. Começando um jogo novo."
+const MSG_CORRUPT: String = "O save estava corrompido e foi salvo como backup. Começando um jogo novo."
 const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar."
 ## Campos que o apply_snapshot só aceita como Array.
 const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments"]
@@ -286,7 +286,7 @@ func delete_save_file() -> Error:
 		return OK
 	var error: Error = DirAccess.remove_absolute(save_path)
 	if error != OK:
-		push_error("SaveManager: Falha ao remover ficheiro de gravação. Erro: %d" % error)
+		push_error("SaveManager: Falha ao remover o arquivo do save. Erro: %d" % error)
 		return error
 	_progress_applied = true
 	save_state_changed.emit()
@@ -391,7 +391,7 @@ func save_game(target_state: GameState = null) -> Error:
 		game_saved.emit()
 		save_state_changed.emit()
 	else:
-		save_failed.emit("Falha ao salvar ficheiro: código %d" % error)
+		save_failed.emit("Falha ao salvar o arquivo: código %d" % error)
 	return error
 
 
@@ -405,7 +405,7 @@ func load_game(target_state: GameState = null) -> Error:
 		return ERR_DOES_NOT_EXIST
 
 	if not has_save_file():
-		var err_msg: String = "SaveManager: Ficheiro de gravação não encontrado em %s." % save_path
+		var err_msg: String = "SaveManager: Arquivo do save não encontrado em %s." % save_path
 		push_warning(err_msg)
 		return ERR_FILE_NOT_FOUND
 
@@ -487,7 +487,7 @@ func _apply_saved_progress() -> Error:
 			save_state_changed.emit()
 			return OK
 		ReadStatus.CORRUPT:
-			push_warning("SaveManager: save corrompido (%s); guardado em %s." % [read["error"], _quarantine_corrupt_save()])
+			push_warning("SaveManager: save corrompido (%s); salvo em %s." % [read["error"], _quarantine_corrupt_save()])
 			_progress_applied = true
 			state.reset_state()
 			save_load_failed.emit(MSG_CORRUPT)
@@ -609,7 +609,7 @@ func _quarantine_corrupt_save() -> String:
 		target = "%s.corrupt-%d-%d.json" % [save_path.get_basename(), int(Time.get_unix_time_from_system()), suffix]
 		suffix += 1
 	if DirAccess.rename_absolute(save_path, target) != OK:
-		push_error("SaveManager: não foi possível guardar o save corrompido em %s." % target)
+		push_error("SaveManager: não foi possível salvar o save corrompido em %s." % target)
 	return target
 
 

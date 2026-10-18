@@ -372,7 +372,7 @@ func _on_new_game_pressed() -> void:
 		return
 	var summary: Dictionary = _get_save_summary()
 	if bool(summary.get("valid", false)):
-		new_game_dialog.dialog_text = "Apagar o progresso salvo (%s)? Um backup será guardado." % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
+		new_game_dialog.dialog_text = "Apagar o progresso salvo (%s)? Um backup será salvo." % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
 		new_game_dialog.ok_button_text = "Apagar e começar"
 	else:
 		new_game_dialog.dialog_text = "Começar do zero?"

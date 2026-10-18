@@ -303,14 +303,14 @@ func _apply_hud(p: int, rnd: int, left: int, ratio: float) -> void:
 			_hud.visible = false
 			return
 		Phase.BREAK:
-			_hud_round.text = "Prepara-te... ronda %d/%d" % [rnd + 1, rounds.size()]
+			_hud_round.text = "Prepare-se... onda %d/%d" % [rnd + 1, rounds.size()]
 		Phase.FIGHT:
-			_hud_round.text = "Ronda %d/%d  —  inimigos: %d" % [rnd, rounds.size(), left]
+			_hud_round.text = "Onda %d/%d  —  inimigos: %d" % [rnd, rounds.size(), left]
 		Phase.WON:
 			_hud_round.text = "Vitória!"
 			_hud_hide_left = HUD_LINGER
 		Phase.LOST:
-			_hud_round.text = "%s perdido... fala outra vez para tentar de novo" % defend_name
+			_hud_round.text = "%s perdido... fale outra vez para tentar de novo" % defend_name
 			_hud_hide_left = HUD_LINGER
 	_hud.visible = true
 

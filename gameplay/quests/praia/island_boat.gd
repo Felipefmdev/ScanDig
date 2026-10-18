@@ -59,7 +59,7 @@ func _on_interact(peer_id: int) -> void:
 	if sm == null or not sm.can_start_map(ISLAND_ID):
 		say_to(peer_id, "O mapa está completo, mas o barco ainda não está pronto para a viagem.", 4.0)
 		return
-	say_all("⛵ Mapa completo! A equipa zarpa para a Ilha do Tesouro...", 3.0)
+	say_all("⛵ Mapa completo! A equipe zarpa para a Ilha do Tesouro...", 3.0)
 	# A Praia termina (resumo e save) e, já no lobby, o host parte para a ilha. O temporizador
 	# fica no SessionManager (este nó desaparece com a cena).
 	# Callable no Script (estático), não neste nó: sobrevive à troca de cena.

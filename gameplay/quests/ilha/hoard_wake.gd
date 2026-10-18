@@ -69,7 +69,7 @@ func _on_boss_left() -> void:
 func _on_boss_defeated() -> void:
 	defeated = true
 	set_active(false)
-	say_all("💰 O Colosso desfez-se! O tesouro principal da ilha é vosso!", 4.0)
+	say_all("💰 O Colosso se desfez! O tesouro principal da ilha é de vocês!", 4.0)
 
 
 ## Host: conta os achados desenterrados na ilha (spots do SpotSpawner e pontos frescos).
@@ -102,7 +102,7 @@ func _on_find(_item: ItemData, _value: int, _integrity: float) -> void:
 		return
 	finds += 1
 	if finds == finds_to_wake - warn_before:
-		say_all("O monte de ouro no alto da ilha estremece... alguém está a cavar demais.", 3.5)
+		say_all("O monte de ouro no alto da ilha estremece... alguém está cavando demais.", 3.5)
 	elif finds >= finds_to_wake:
 		say_all("O ouro do monte acordou com o barulho!", 3.0)
 		wake()

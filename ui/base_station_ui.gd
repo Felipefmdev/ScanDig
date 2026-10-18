@@ -790,7 +790,7 @@ func _refresh_treasure_map() -> void:
 	_treasure_scroll.found = found
 	var total: int = GameState.MAP_FRAGMENT_IDS.size()
 	if found.size() >= total:
-		_treasure_count_label.text = "🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipa." % [found.size(), total]
+		_treasure_count_label.text = "🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipe." % [found.size(), total]
 	else:
 		_treasure_count_label.text = "🗺️ Fragmentos do mapa:" + UiFormat.NBSP + "%d/%d" % [found.size(), total]
 	# Só as próximas dicas: a Base tem a altura da maior aba e tem de caber em 1152x648.

@@ -75,7 +75,7 @@ const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", 
 ## no pergaminho (coluna, linha numa grelha de 4 x 2) e `hint` a dica do painel na base.
 const MAP_FRAGMENTS: Dictionary = {
 	"praia_frag_1": {"map": "praia", "source": "quest:ze_anzol", "piece": Vector2i(0, 1),
-		"hint": "O Pescador Zé guarda um pedaço de papel velho no barco: ajuda-o."},
+		"hint": "O Pescador Zé guarda um pedaço de papel velho no barco: ajude o pescador."},
 	"campo_frag_1": {"map": "campo", "source": "boss:giant_mole", "piece": Vector2i(1, 1),
 		"hint": "Algo grande cava túneis debaixo do círculo de pedras do Campo."},
 	"ruinas_frag_1": {"map": "ruinas", "source": "quest:ines_camara", "piece": Vector2i(1, 0),

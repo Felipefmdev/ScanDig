@@ -155,7 +155,7 @@ func _tick_hot(delta: float) -> void:
 				and absf(local.global_position.y - c.y) < 2.0:
 			local.call("take_damage", HOT_DPS * delta)
 			if local.has_method("_show_temporary_message") and int(Time.get_ticks_msec() / 700) % 3 == 0:
-				local.call("_show_temporary_message", "🔥 Ainda está quente! Espera arrefecer.", Color(1.0, 0.55, 0.25), 0.8)
+				local.call("_show_temporary_message", "🔥 Ainda está quente! Espere esfriar.", Color(1.0, 0.55, 0.25), 0.8)
 
 
 func hot_count() -> int:

@@ -7,7 +7,7 @@
 script = ExtResource("1_tool")
 id = &"repelente"
 display_name = "Repelente de Caranguejo"
-description = "Spray: inimigos a 8 m fogem e enterram-se; baixa a ameaça do subsolo."
+description = "Spray: inimigos a até 8 m fogem e se enterram; baixa a ameaça do subsolo."
 price = 60
 category = 1
 charges = 3

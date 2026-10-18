@@ -17,7 +17,7 @@ const TITLE_TEXT: String = "Jogo concluído"
 const SUBTITLE_TEXT: String = "O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.\nLeve o Ídolo de Ouro, o tesouro principal, ao Museu.\nAinda há peças, segredos e bichos por achar."
 const CREDITS_TITLE: String = "— CRÉDITOS —"
 ## Fonte única dos créditos (veio do overlay do gameplay/environment/crater_altar.gd).
-const CREDITS_TEXT: String = "Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral\nBroca (Dev_Player) — Controlo 1ª Pessoa, Ferramentas, Terrenos e Segredos\nSonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes\nDev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo\nFelipe — Concepção, Arte Low-Poly Toon e Direção Criativa"
+const CREDITS_TEXT: String = "Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral\nBroca (Dev_Player) — Controle em 1ª Pessoa, Ferramentas, Terrenos e Segredos\nSonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes\nDev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo\nFelipe — Concepção, Arte Low-Poly Toon e Direção Criativa"
 
 static var instance: VictoryScreen = null
 

@@ -9,8 +9,8 @@ extends Node3D
 ## o seu jogador (HUD) a partir do relógio sincronizado da maré.
 
 const BURIED_SPOT_SCENE: PackedScene = preload("res://items/buried_spot.tscn")
-const MSG_LOW: String = "🌊 Maré baixa! A faixa molhada ficou a descoberto: há coisas para cavar junto ao mar."
-const MSG_RISING: String = "🌊 A maré está a subir: os buracos da faixa molhada vão ficar debaixo de água!"
+const MSG_LOW: String = "🌊 Maré baixa! A faixa molhada ficou descoberta: há coisas para cavar perto do mar."
+const MSG_RISING: String = "🌊 A maré está subindo: os buracos da faixa molhada vão ficar debaixo da água!"
 const MSG_HIGH: String = "🌊 Maré cheia: o mar cobriu a faixa molhada. As ondas trazem coisas à areia."
 const MSG_COLOR: Color = Color(0.55, 0.85, 1.0)
 const MSG_TIME: float = 4.0

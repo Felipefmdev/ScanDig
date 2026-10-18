@@ -19,7 +19,7 @@ signal health_changed(current: float, max_value: float)
 enum State { EMERGE, IDLE, CRYSTAL_SPIKES_TELE, CRYSTAL_SPIKES, GRAVITY_INVERT_TELE, GRAVITY_INVERT, METEOR_TELE, METEOR_ROLL, EXPOSED, DYING }
 
 const BOSS_ID: StringName = &"the_sleeper"
-const BOSS_NAME: String = "O QUE DORME LÁ EM BAIXO"
+const BOSS_NAME: String = "O QUE DORME LÁ EMBAIXO"
 const GROUP_BOSSES: StringName = &"bosses"
 const TROPHY_ITEM_ID: String = "nucleo_adormecido"
 const SECONDARY_TROPHY_ID: String = "orbe_vibrante"

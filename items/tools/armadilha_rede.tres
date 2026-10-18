@@ -7,7 +7,7 @@
 script = ExtResource("1_tool")
 id = &"armadilha_rede"
 display_name = "Armadilha de Rede"
-description = "Coloca no chão: prende o primeiro inimigo 5 s e causa 15 de dano."
+description = "Coloque no chão: prende o primeiro inimigo 5 s e causa 15 de dano."
 price = 120
 category = 1
 charges = 2

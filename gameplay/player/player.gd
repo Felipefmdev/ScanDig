@@ -203,7 +203,7 @@ const THREAT_MESSAGE_FONT_SIZE: int = 30
 const THREAT_MESSAGE_COLOR: Color = UiPalette.RED_BURNT
 const THREAT_MESSAGES: Array[String] = [
 	"O chão treme...",
-	"O chão treme... algo se mexe lá em baixo.",
+	"O chão treme... algo se mexe lá embaixo.",
 	"O chão treme... O SUBSOLO ACORDOU!",
 ]
 
@@ -829,7 +829,7 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 		]
 		if is_perfect:
 			msg += "\n✔ ESCAVAÇÃO PERFEITA! (+25%)"
-		msg += "\n[E] apanhar"
+		msg += "\n[E] pegar"
 		_show_temporary_message(msg, color, duration)
 	elif damaged:
 		var layer_num: int = max_layers - dirt_left
@@ -938,7 +938,7 @@ func _update_session_hud() -> void:
 		return
 	var bag: String = "🎒 Mochila: %d/%d (%s)" % [inventory.get_count(), inventory.capacity, MoneyFormat.money(inventory.get_total_value())]
 	if GameState.instance != null:
-		session_info_label.text = "%s | 💰 Equipa: %s" % [bag, MoneyFormat.money(GameState.instance.team_money)]
+		session_info_label.text = "%s | 💰 Equipe: %s" % [bag, MoneyFormat.money(GameState.instance.team_money)]
 	else:
 		session_info_label.text = "%s | 💰 Entregue: %s" % [bag, MoneyFormat.money(session_money)]
 
@@ -1122,7 +1122,7 @@ func _die() -> void:
 		return
 	var msg: String = "💀 Você desmaiou... e acordou de volta no ponto de partida."
 	if lost > 0:
-		msg += "\nA mochila caiu no local da morte (%d itens) — volte para apanhar!" % lost
+		msg += "\nA mochila caiu no local da morte (%d itens) — volte para pegar!" % lost
 	_show_temporary_message(msg, Color(1.0, 0.4, 0.4), 4.0)
 	_respawn()
 
@@ -1167,7 +1167,7 @@ func revive(restore_health_fraction: float = 0.5) -> void:
 	set_hunger(max_hunger * 0.5)
 	_on_is_downed_changed(false)
 	if is_local():
-		_show_temporary_message("✨ Foste reanimado na base! De volta à expedição.", Color(0.3, 1.0, 0.4), 3.0)
+		_show_temporary_message("✨ Você foi reanimado na base! De volta à expedição.", Color(0.3, 1.0, 0.4), 3.0)
 		SFX.play_ui(SFX.RESPAWN)
 
 
@@ -1216,7 +1216,7 @@ func _on_is_downed_changed(downed: bool) -> void:
 					detector.visible = false
 			_update_downed_orbit_camera()
 			_update_downed_hud()
-			_show_temporary_message("💀 Foste derrubado! Aguarda socorro ou segura [%s] para resgate de emergência." % _get_interact_key_label(), Color(1.0, 0.35, 0.35), 5.0)
+			_show_temporary_message("💀 Você foi derrubado! Aguarde socorro ou segure [%s] para resgate de emergência." % _get_interact_key_label(), Color(1.0, 0.35, 0.35), 5.0)
 	else:
 		if is_in_group(DOWNED_GROUP):
 			remove_from_group(DOWNED_GROUP)
@@ -1329,9 +1329,9 @@ func give_up_downed() -> void:
 			_rpc_sync_downed.rpc(false)
 		else:
 			_rpc_sync_downed.rpc_id(1, false)
-	var msg: String = "🚨 Resgate de emergência acionado! Regressaste à base de expedição."
+	var msg: String = "🚨 Resgate de emergência acionado! Você voltou à base de expedição."
 	if lost > 0:
-		msg += "\nA mochila ficou onde caíste (%d itens) — volta para a recuperar!" % lost
+		msg += "\nA mochila ficou onde você caiu (%d itens) — volte para buscar!" % lost
 	_show_temporary_message(msg, UiPalette.ORANGE, 4.0)
 	_respawn()
 
@@ -1347,7 +1347,7 @@ func _update_downed_hud() -> void:
 	var key_lbl: String = _get_interact_key_label()
 	var pct: int = int(round(give_up_progress_ratio() * 100.0))
 	if interact_prompt != null:
-		var prefix: String = ("🤝 A ser transportado por %s... | " % _get_player_name(carried_by)) if (carried_by != null and is_instance_valid(carried_by)) else "💀 Caído! Aguarde socorro ou "
+		var prefix: String = ("🤝 Sendo carregado por %s... | " % _get_player_name(carried_by)) if (carried_by != null and is_instance_valid(carried_by)) else "💀 Caído! Aguarde socorro ou "
 		var suffix: String = (" (%d%%)" % pct) if pct > 0 else ""
 		interact_prompt.text = "%sSegure [%s] para resgate de emergência na base%s" % [prefix, key_lbl, suffix]
 	if give_up_bar != null:
@@ -1542,7 +1542,7 @@ func _team_wipe_respawn() -> void:
 			_rpc_sync_downed.rpc(false)
 		else:
 			_rpc_sync_downed.rpc_id(1, false)
-	_show_temporary_message("💫 A equipa toda caiu! Acordaram no ponto de partida (as mochilas ficaram onde tombaram).",
+	_show_temporary_message("💫 A equipe toda caiu! Vocês acordaram no ponto de partida (as mochilas ficaram onde caíram).",
 		Color(1.0, 0.75, 0.35), 4.0)
 
 
@@ -1553,9 +1553,9 @@ func _perform_carry(carrier: Player, target: Player) -> void:
 	target.carried_by = carrier
 	target.collision_layer = 0
 	if carrier.is_local():
-		carrier._show_temporary_message("🤝 A carregar %s. Leva-o à base!" % carrier._get_player_name(target), Color(0.4, 0.8, 1.0), 2.5)
+		carrier._show_temporary_message("🤝 Carregando %s. Leve até a base!" % carrier._get_player_name(target), Color(0.4, 0.8, 1.0), 2.5)
 	if target.is_local():
-		target._show_temporary_message("🤝 %s está a carregar-te!" % target._get_player_name(carrier), Color(0.4, 0.8, 1.0), 2.5)
+		target._show_temporary_message("🤝 %s está carregando você!" % target._get_player_name(carrier), Color(0.4, 0.8, 1.0), 2.5)
 	carrier.player_carried.emit(carrier, target)
 
 
@@ -1571,7 +1571,7 @@ func _perform_drop(carrier: Player) -> void:
 	dropped.global_position = carrier.global_position + fwd.normalized() * 0.9 + Vector3.UP * 0.1
 	dropped.velocity = Vector3.ZERO
 	if carrier.is_local():
-		carrier._show_temporary_message("Largaste o corpo de %s." % carrier._get_player_name(dropped), Color(0.9, 0.9, 0.9), 1.5)
+		carrier._show_temporary_message("Você largou o corpo de %s." % carrier._get_player_name(dropped), Color(0.9, 0.9, 0.9), 1.5)
 	carrier.player_dropped.emit(carrier, dropped)
 
 
@@ -1583,7 +1583,7 @@ func _perform_revive(reviver: Player, target: Player) -> void:
 	target.carried_by = null
 	target.revive()
 	if reviver != null and reviver.is_local():
-		reviver._show_temporary_message("✨ Reanimaste %s!" % reviver._get_player_name(target), Color(0.3, 1.0, 0.4), 2.5)
+		reviver._show_temporary_message("✨ Você reanimou %s!" % reviver._get_player_name(target), Color(0.3, 1.0, 0.4), 2.5)
 	target.player_revived.emit(target, reviver)
 
 
@@ -1793,7 +1793,7 @@ func poop_splat() -> void:
 		t.parallel().tween_property(blob, "modulate:a", 0.0, SPLAT_TIME * 0.5)
 	t.tween_callback(_splat_layer.queue_free)
 	SFX.play_ui(SFX.SHELL_KNOCK, -4.0, 0.2)
-	_show_temporary_message("💩 Uma gaivota acertou-te em cheio!", Color(0.95, 0.95, 0.85), 2.0)
+	_show_temporary_message("💩 Uma gaivota acertou você em cheio!", Color(0.95, 0.95, 0.85), 2.0)
 
 
 ## Mostra a dica `id` uma única vez por jogador (só o jogador local). Verdadeiro se mostrou.
@@ -2211,7 +2211,7 @@ func _interact() -> void:
 		return
 	if _already_has_unique_tool(_target_pickup.carried):
 		SFX.play_ui(SFX.ERROR, -4.0)
-		_show_temporary_message("Já tem um %s (deixe-o para outro jogador)." % _target_pickup.carried.get_display_name(),
+		_show_temporary_message("Já tem um %s (deixe para outro jogador)." % _target_pickup.carried.get_display_name(),
 			Color(0.9, 0.9, 0.9), 1.6)
 		return
 	var root: PickupsRoot = PickupsRoot.find(get_tree())
@@ -2247,7 +2247,7 @@ func _add_picked_item(c: CarriedItem) -> void:
 		return
 	SFX.play_ui(SFX.PICKUP)
 	var value: String = "" if c.is_tool() else " (%s)" % MoneyFormat.money(c.final_value)
-	_show_temporary_message("✋ Apanhou: %s%s" % [c.get_display_name(), value],
+	_show_temporary_message("✋ Pegou: %s%s" % [c.get_display_name(), value],
 		Color(0.85, 0.55, 1.0) if c.is_rare_variant else Color(0.95, 0.95, 0.85), 1.4)
 
 
@@ -2260,7 +2260,7 @@ func receive_granted_item(c: CarriedItem) -> void:
 ## PickupsRoot (cliente): outro jogador apanhou primeiro (ou ficámos longe demais).
 func on_pickup_denied() -> void:
 	_pickup_pending_until = 0
-	_show_temporary_message("Alguém apanhou primeiro.", Color(0.9, 0.9, 0.9), 1.2)
+	_show_temporary_message("Alguém pegou primeiro.", Color(0.9, 0.9, 0.9), 1.2)
 
 
 var _drop_hold: float = 0.0
@@ -2396,7 +2396,7 @@ func _update_interaction_target() -> void:
 		if _already_has_unique_tool(aimed):
 			suffix = "  — já tem um"
 		var value: String = "" if aimed.is_tool() else " (%s)" % MoneyFormat.money(aimed.final_value)
-		interact_prompt.text = "[E] Apanhar %s%s%s" % [aimed.get_display_name(), value, suffix]
+		interact_prompt.text = "[E] Pegar %s%s%s" % [aimed.get_display_name(), value, suffix]
 	else:
 		interact_prompt.text = ""
 	# "[E]"/"[Q]" viram a tecla configurada ou o botão do comando (#102); refeito a cada frame.
@@ -2664,7 +2664,7 @@ func wear_tool(c: CarriedItem) -> void:
 		if idx >= 0:
 			inventory.remove_at(idx)
 		SFX.play_ui(SFX.PLAYER_DEATH, -8.0, 0.2)
-		_show_temporary_message("🔧 %s partiu de tanto uso! Compre outro na banca." % c.tool_name, UiPalette.ORANGE, 2.2)
+		_show_temporary_message("🔧 %s quebrou de tanto uso! Compre outro na banca." % c.tool_name, UiPalette.ORANGE, 2.2)
 	else:
 		if c.wear_ratio() <= 0.5:
 			show_hint("wear")
@@ -3298,7 +3298,7 @@ func rescue_from_fall() -> void:
 	velocity = Vector3.ZERO
 	_knockback_time = 0.0
 	global_position = target + Vector3.UP * 0.5
-	_show_temporary_message("🌀 Caíste por um buraco do mundo... de volta ao chão firme.", Color(0.8, 0.9, 1.0), 2.0)
+	_show_temporary_message("🌀 Você caiu por um buraco do mundo... de volta ao chão firme.", Color(0.8, 0.9, 1.0), 2.0)
 
 
 ## Velocidade alvo: andar, ou correr com Shift indo pra frente (sem correr agachado na escavação).
@@ -3592,7 +3592,7 @@ func apply_snare(seconds: float) -> void:
 	if not is_local() or health <= 0.0:
 		return
 	_snare_time = maxf(_snare_time, clampf(seconds, 0.0, 4.0))
-	_show_temporary_message("🐍 Uma cobra enrolou-se em ti! Abana (WASD)!", Color(0.6, 1.0, 0.45), 1.6)
+	_show_temporary_message("🐍 Uma cobra se enrolou em você! Sacuda (WASD)!", Color(0.6, 1.0, 0.45), 1.6)
 
 
 ## Corvo-Rei roubou a ferramenta: sem atacar nem usar ferramentas durante `seconds`.
@@ -3603,7 +3603,7 @@ func apply_disarm(seconds: float) -> void:
 	_disarm_time = maxf(_disarm_time, clampf(seconds, 0.0, 8.0))
 	if tool_view != null:
 		tool_view.visible = false
-	_show_temporary_message("👑 O Corvo-Rei roubou-te a ferramenta! Acerta-lhe!", Color(1.0, 0.55, 0.35), 2.0)
+	_show_temporary_message("👑 O Corvo-Rei roubou sua ferramenta! Acerte nele!", Color(1.0, 0.55, 0.35), 2.0)
 
 
 ## Corvo-Rei largou a ferramenta (levou um golpe): volta já à mão.
@@ -3656,7 +3656,7 @@ func _apply_chaos_effects(direction: Vector3, delta: float) -> Vector3:
 		if Input.is_action_just_pressed(action):
 			_snare_time -= SNARE_SHAKE_OFF
 	if _snare_time <= 0.0:
-		_show_temporary_message("Soltaste-te!", Color(0.8, 1.0, 0.7), 0.8)
+		_show_temporary_message("Você se soltou!", Color(0.8, 1.0, 0.7), 0.8)
 	return direction * SNARE_SPEED_FACTOR
 
 

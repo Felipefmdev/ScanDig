@@ -11,9 +11,9 @@ const PATH_META: StringName = &"scandig_hints_path"
 const TEXTS: Dictionary = {
 	"hunger": "💡 Com fome? Cave fora dos sinais: às vezes sai comida. Segure o clique com ela na mão para comer (um golpe interrompe).",
 	"throw": "💡 Segure [{drop}] para arremessar o item: rápido, ele machuca os bichos.",
-	"dynamite": "💡 Dinamite: clique para lançar. A explosão também te acerta: afaste-se!",
-	"seagull": "💡 Gaivotas roubam itens do chão e da mochila. Derrube-a para recuperar.",
-	"wear": "💡 As armas se gastam com o uso. Quando partirem, compre outra na banca.",
+	"dynamite": "💡 Dinamite: clique para lançar. A explosão também acerta você: afaste-se!",
+	"seagull": "💡 Gaivotas roubam itens do chão e da mochila. Derrube a gaivota para recuperar.",
+	"wear": "💡 As armas se gastam com o uso. Quando quebrarem, compre outra na banca.",
 }
 
 

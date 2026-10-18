@@ -74,7 +74,7 @@ func _tick_boss_timer(delta: float) -> void:
 		return
 	boss_time += delta
 	while _boss_warned < BOSS_WARNINGS.size() and boss_time_left() <= BOSS_WARNINGS[_boss_warned]:
-		_rpc_boss_notice.rpc("⏳ O chefe está a cansar-se: %d s para fugir!" % int(BOSS_WARNINGS[_boss_warned]))
+		_rpc_boss_notice.rpc("⏳ O chefe está se cansando: %d s para fugir!" % int(BOSS_WARNINGS[_boss_warned]))
 		_boss_warned += 1
 	if boss_time >= BOSS_TIME_LIMIT:
 		leave_fight()
@@ -85,7 +85,7 @@ func leave_fight() -> void:
 	if _dead:
 		return
 	_dead = true
-	_rpc_boss_notice.rpc("💨 O chefe cansou e fugiu! Acorde-o de novo para tentar outra vez.")
+	_rpc_boss_notice.rpc("💨 O chefe cansou e fugiu! Acorde ele de novo para tentar outra vez.")
 	spawn_particles(global_position + Vector3.UP * 0.5, death_color, 40, 4.0)
 	left_fight.emit()
 	queue_free()

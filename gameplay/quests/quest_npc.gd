@@ -44,7 +44,7 @@ enum QuestState { OFFER, ACTIVE, READY, EVENT, DONE }
 
 const HOLDING_DETECT_RANGE: float = 4.0
 const HOLDING_REACT_COOLDOWN: float = 10.0
-const DEFAULT_HOLDING_LINE: String = "É isso! Traz cá!"
+const DEFAULT_HOLDING_LINE: String = "É isso! Traga aqui!"
 const QUEST_HOLDING_ITEMS: Dictionary = {
 	"ze_anzol": ["concha_dourada", "alianca_ouro", "bussola_naufragio", "medalhao_sereia", "mapa_na_garrafa", "tatuira", "marisco"],
 	"lurdes_chaves": ["chave_enferrujada", "sino_bronze", "anel_do_poco", "ferradura_velha"],
