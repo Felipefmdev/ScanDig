@@ -1,6 +1,6 @@
 # Capturas do polimento da UI (#119), antes e depois (precisa de janela):
 # "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 960x540 --windowed --script res://tests/dev_b/ui_polish_snapshots.gd -- --prefix=antes_
-# Grava em .bot_runs/theme/<prefixo>{titulo,hud_praia,hotbar,loja,museu}.png. Save isolado
+# Grava em .bot_runs/theme/<prefixo>{titulo,hud_praia,hotbar,loja,museu,base_ui130}.png. Save isolado
 # (use_test_save_dir): não toca o save do jogador.
 extends SceneTree
 
@@ -79,7 +79,6 @@ func _run() -> void:
 	var tabs: TabContainer = base.get_node("%TabContainer") as TabContainer
 	tabs.current_tab = 0
 	await _shot("loja")
-	(current_scene.get_node("UILayer") as CanvasLayer).visible = false
 	var museum: MuseumDisplay = current_scene.get_node("MuseumDisplay") as MuseumDisplay
 	var some: Array = []
 	for site_id: String in museum.get_site_items():
@@ -87,12 +86,17 @@ func _run() -> void:
 		for k in range(0, ids.size(), 2):
 			some.append(ids[k])
 	GameState.instance.load_snapshot({"discovered_items": some})
-	var cam: Camera3D = Camera3D.new()
-	current_scene.add_child(cam)
-	var center: Vector3 = museum.global_position
-	cam.global_position = center + museum.global_basis * Vector3(0.0, 1.5, 4.8)
-	cam.look_at(center + Vector3(0.0, 1.35, 0.0))
-	cam.make_current()
+	# "Ver museu": a câmera vai da tenda até a vitrine (MuseumView), só com o "Voltar".
+	var view: MuseumView = current_scene.get_node("MuseumView") as MuseumView
+	view.open()
+	await create_timer(MuseumView.TWEEN_TIME + 0.3).timeout
 	await _shot("museu", 12)
+	view.close()
+	await create_timer(MuseumView.TWEEN_TIME + 0.3).timeout
+	# Base com ui_scale 1.3 (cabe na tela, com rolagem nas abas).
+	root.content_scale_factor = 1.3
+	tabs.current_tab = 1
+	await _shot("base_ui130", 20)
+	root.content_scale_factor = 1.0
 	GameState.instance.reset_state()
 	quit()

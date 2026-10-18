@@ -85,6 +85,10 @@ var _treasure_hints_label: Label = null
 ## Cor das linhas de mapas que ainda não podem ser jogados.
 const MAP_LOCKED_COLOR: Color = UiPalette.METAL
 
+## "Ver museu" (aba Museu): leva a câmera do lobby até a vitrine 3D (MuseumView, no lobby_base).
+## Sem MuseumView na cena (a Base aberta sozinha, nos testes), o botão some.
+var view_museum_btn: Button = null
+
 
 func _resolve_node(unique_id: String, rel_path: String) -> Node:
 	if has_node("%" + unique_id):
@@ -693,6 +697,59 @@ func _setup_museum_controls() -> void:
 		sell_item_btn.pressed.connect(_on_sell_test_pressed)
 	if register_item_btn != null:
 		register_item_btn.pressed.connect(_on_register_test_pressed)
+	_build_view_museum_button()
+
+
+## "Catálogo..." e o botão "Ver museu" na mesma linha (a aba não fica mais alta).
+func _build_view_museum_button() -> void:
+	if museum_item_list == null:
+		return
+	var page: Control = museum_item_list.get_parent() as Control
+	var info: Label = page.get_node_or_null(^"MuseumInfoLabel") as Label
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "MuseumInfoRow"
+	page.add_child(row)
+	page.move_child(row, info.get_index() if info != null else 0)
+	if info != null:
+		info.reparent(row, false)
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	view_museum_btn = Button.new()
+	view_museum_btn.name = "ViewMuseumButton"
+	view_museum_btn.text = "Ver museu"
+	view_museum_btn.tooltip_text = "Ver a vitrine do Museu ao lado da tenda"
+	view_museum_btn.icon = UiIcons.get_icon("museum", 48)
+	view_museum_btn.add_theme_constant_override(&"icon_max_width", 20)
+	view_museum_btn.focus_mode = Control.FOCUS_ALL
+	view_museum_btn.pressed.connect(_on_view_museum_pressed)
+	row.add_child(view_museum_btn)
+	_refresh_view_museum_button.call_deferred()
+
+
+func _museum_view() -> MuseumView:
+	if not is_inside_tree():
+		return null
+	return get_tree().get_first_node_in_group(MuseumView.GROUP) as MuseumView
+
+
+func _refresh_view_museum_button() -> void:
+	var view: MuseumView = _museum_view()
+	view_museum_btn.visible = view != null and view.is_available()
+
+
+func _on_view_museum_pressed() -> void:
+	var view: MuseumView = _museum_view()
+	if view == null:
+		return
+	if not view.closed.is_connected(_on_museum_view_closed):
+		view.closed.connect(_on_museum_view_closed)
+	view.open()
+
+
+## De volta à tenda: o foco volta ao "Ver museu" (teclado e controle).
+func _on_museum_view_closed() -> void:
+	if view_museum_btn != null and view_museum_btn.is_visible_in_tree():
+		view_museum_btn.grab_focus()
 
 
 func _purchase_upgrade(upgrade_id: String) -> void:
