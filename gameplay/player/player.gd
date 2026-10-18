@@ -336,6 +336,10 @@ var _marker_pressed: bool = false
 var _marker_press_time: float = 0.0
 var _wheel_mouse_offset: Vector2 = Vector2.ZERO
 var _last_marker_type: int = 0
+## Carrinho de mão (#104):
+const WHEELBARROW_SCRIPT: Script = preload("res://gameplay/objects/wheelbarrow/wheelbarrow.gd")
+var pushing_wheelbarrow: Node3D = null
+var _target_wheelbarrow: Node3D = null
 
 # Contador de Sessão: total já entregue na base
 var session_money: int = 0
@@ -363,6 +367,8 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	if pushing_wheelbarrow != null:
+		stop_pushing_wheelbarrow()
 	if carried_player != null and is_instance_valid(carried_player):
 		_perform_drop(self)
 	if carried_by != null and is_instance_valid(carried_by):
@@ -544,6 +550,25 @@ func _unhandled_input(event: InputEvent) -> void:
 					plant_marker_at_aim(_last_marker_type)
 				get_viewport().set_input_as_handled()
 				return
+
+		# Carrinho de mão (#104): Soltar com [Q]
+		if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
+			if event.is_action_pressed(&"drop"):
+				stop_pushing_wheelbarrow()
+				get_viewport().set_input_as_handled()
+				return
+
+		# Carrinho de mão (#104): Guardar item selecionado da mochila com [R]
+		var wb_target: Node3D = pushing_wheelbarrow if pushing_wheelbarrow != null else _target_wheelbarrow
+		if wb_target != null and is_instance_valid(wb_target) and not bool(wb_target.get("is_tipped")):
+			if event.is_action_pressed(&"inspect"):
+				var selected: CarriedItem = inventory.get_selected() if inventory != null else null
+				if selected != null and not selected.is_tool() and bool(wb_target.call("can_add_item")):
+					inventory.remove_item(selected)
+					wb_target.call("add_item", selected)
+					_show_temporary_message("🛒 Guardado no carrinho: %s" % selected.get_display_name(), UiPalette.GOLD, 1.4)
+					get_viewport().set_input_as_handled()
+					return
 	# Comando (#102): um botão do controle prende o mouse como o clique; LB/Y (← →) trocam o
 	# espaço da mochila como a roda (caído: aproximam e afastam a câmera).
 	if event is InputEventJoypadButton and event.is_pressed() and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
@@ -821,6 +846,9 @@ func _physics_process(delta: float) -> void:
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	direction = _apply_chaos_effects(direction, delta)
+	if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
+		var wb_factor: float = float(pushing_wheelbarrow.call("get_push_speed_factor"))
+		direction *= wb_factor
 	if _knockback_time > 0.0:
 		_knockback_time -= delta
 	else:
@@ -1361,6 +1389,8 @@ func _should_enter_downed() -> bool:
 func enter_downed() -> void:
 	if is_downed:
 		return
+	if pushing_wheelbarrow != null:
+		stop_pushing_wheelbarrow()
 	if carried_player != null:
 		drop_carried_player()
 	is_downed = true
@@ -2623,6 +2653,34 @@ func _handle_inventory_actions() -> void:
 func _interact() -> void:
 	if is_downed:
 		return
+
+	# Carrinho de mão (#104): Se empurrando, entrega carga na base ou solta
+	if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
+		var sp: SellPoint = _get_sell_point_in_range()
+		if sp != null:
+			var total_cart: int = int(pushing_wheelbarrow.call("deliver_cargo", sp))
+			var items: Array[CarriedItem] = inventory.take_where(SellPoint.can_deliver)
+			var total_inv: int = sp.deliver(items)
+			var total: int = total_cart + total_inv
+			if total > 0:
+				session_items_count += items.size()
+				session_money += total
+				_update_session_hud()
+				SFX.play_ui(SFX.DELIVER_COINS)
+				_show_temporary_message("📦 Entregue: carga e mochila, %s" % MoneyFormat.money(total), UiPalette.GREEN_BOTTLE.lightened(0.3), 2.5)
+			return
+		stop_pushing_wheelbarrow()
+		return
+
+	# Carrinho de mão (#104): Se olhando para um carrinho, desvira ou começa a empurrar
+	if _target_wheelbarrow != null and is_instance_valid(_target_wheelbarrow):
+		if bool(_target_wheelbarrow.get("is_tipped")):
+			_target_wheelbarrow.call("upright_cart")
+			_show_temporary_message("🛒 Carrinho de mão desvirado!", UiPalette.GOLD, 1.5)
+			return
+		start_pushing_wheelbarrow(_target_wheelbarrow)
+		return
+
 	if carried_player != null:
 		var sp: SellPoint = _get_sell_point_in_range()
 		if sp != null:
@@ -2801,11 +2859,36 @@ func _find_target_pickup() -> ItemPickup:
 	return best
 
 
+func _find_target_wheelbarrow() -> Node3D:
+	if not is_inside_tree() or camera == null:
+		return null
+	var from: Vector3 = camera.global_position
+	var fwd: Vector3 = -camera.global_transform.basis.z
+	var best: Node3D = null
+	var best_dist: float = 3.2
+	for n: Node in get_tree().get_nodes_in_group(&"wheelbarrows"):
+		var wb: Node3D = n as Node3D
+		if wb == null or not is_instance_valid(wb):
+			continue
+		var to_wb: Vector3 = wb.global_position + Vector3.UP * 0.4 - from
+		var dist: float = to_wb.length()
+		if dist > best_dist:
+			continue
+		if fwd.dot(to_wb / dist) < 0.60:
+			continue
+		best = wb
+		best_dist = dist
+	return best
+
+
 func _update_interaction_target() -> void:
+	var target_wb: Node3D = pushing_wheelbarrow if pushing_wheelbarrow != null else _find_target_wheelbarrow()
+	_target_wheelbarrow = target_wb
+
 	var downed_p: Player = _find_target_downed_player()
 	_target_downed_player = downed_p
 
-	var offer: ShopOffer = null if (_target_downed_player != null or carried_player != null) else _find_target_offer()
+	var offer: ShopOffer = null if (_target_downed_player != null or carried_player != null or pushing_wheelbarrow != null) else _find_target_offer()
 	if offer != _target_offer:
 		if _target_offer != null and is_instance_valid(_target_offer):
 			_target_offer.set_highlighted(false)
@@ -2813,7 +2896,7 @@ func _update_interaction_target() -> void:
 		if _target_offer != null:
 			_target_offer.set_highlighted(true)
 
-	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null) else _find_target_pickup()
+	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null or pushing_wheelbarrow != null) else _find_target_pickup()
 	if target != _target_pickup:
 		if _target_pickup != null and is_instance_valid(_target_pickup):
 			_target_pickup.set_highlighted(false)
@@ -2826,7 +2909,17 @@ func _update_interaction_target() -> void:
 	var sell_point: SellPoint = _get_sell_point_in_range()
 	var deliverable: int = _count_deliverable()
 
-	if carried_player != null:
+	if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
+		var cargo_arr: Array = pushing_wheelbarrow.get("cargo") as Array if pushing_wheelbarrow.get("cargo") is Array else []
+		var wb_cargo: int = cargo_arr.size()
+		var wb_max: int = int(pushing_wheelbarrow.get("MAX_CAPACITY"))
+		if sell_point != null:
+			interact_prompt.text = "[E] Entregar carga e mochila na base | [Q] Soltar carrinho"
+		elif not inventory.is_empty() and bool(pushing_wheelbarrow.call("can_add_item")):
+			interact_prompt.text = "[Q] Soltar carrinho | [R] Guardar item (%d/%d)" % [wb_cargo, wb_max]
+		else:
+			interact_prompt.text = "[Q] Soltar carrinho de mão (%d/%d)" % [wb_cargo, wb_max]
+	elif carried_player != null:
 		if sell_point != null:
 			interact_prompt.text = "[E] Reanimar %s na base | [Q] Largar" % _get_player_name(carried_player)
 		else:
@@ -2836,6 +2929,17 @@ func _update_interaction_target() -> void:
 			interact_prompt.text = "[E] Reanimar %s" % _get_player_name(_target_downed_player)
 		else:
 			interact_prompt.text = "[E] Carregar %s" % _get_player_name(_target_downed_player)
+	elif _target_wheelbarrow != null and is_instance_valid(_target_wheelbarrow):
+		var cargo_arr: Array = _target_wheelbarrow.get("cargo") as Array if _target_wheelbarrow.get("cargo") is Array else []
+		var wb_cargo: int = cargo_arr.size()
+		var wb_max: int = int(_target_wheelbarrow.get("MAX_CAPACITY"))
+		var is_tip: bool = bool(_target_wheelbarrow.get("is_tipped"))
+		if is_tip:
+			interact_prompt.text = "[E] Desvirar carrinho de mão"
+		elif not inventory.is_empty() and bool(_target_wheelbarrow.call("can_add_item")):
+			interact_prompt.text = "[E] Empurrar carrinho | [R] Guardar item (%d/%d)" % [wb_cargo, wb_max]
+		else:
+			interact_prompt.text = "[E] Empurrar carrinho de mão (%d/%d)" % [wb_cargo, wb_max]
 	elif _target_offer != null:
 		var full: String = "  — mochila cheia!" if inventory.is_full() else ""
 		interact_prompt.text = _target_offer.get_prompt() + full
@@ -4256,3 +4360,29 @@ func _get_marker_root() -> Node:
 	if get_parent() != null:
 		return get_parent()
 	return self
+
+
+## Carrinho de mão (#104):
+func start_pushing_wheelbarrow(wb: Node3D) -> void:
+	if wb == null or not is_instance_valid(wb):
+		return
+	if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
+		stop_pushing_wheelbarrow()
+	pushing_wheelbarrow = wb
+	wb.call("start_pushing", self)
+	_show_temporary_message("🛒 Empurrando carrinho de mão ([Q] para soltar)", UiPalette.GOLD, 1.8)
+
+
+func stop_pushing_wheelbarrow() -> void:
+	if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
+		var wb: Node3D = pushing_wheelbarrow
+		pushing_wheelbarrow = null
+		wb.call("stop_pushing")
+		_show_temporary_message("Carrinho de mão solto.", Color(0.85, 0.85, 0.85), 1.2)
+	else:
+		pushing_wheelbarrow = null
+
+
+func on_wheelbarrow_released(wb: Node3D) -> void:
+	if pushing_wheelbarrow == wb:
+		pushing_wheelbarrow = null

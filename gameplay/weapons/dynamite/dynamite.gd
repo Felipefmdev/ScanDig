@@ -108,6 +108,15 @@ static func apply_blast(tree: SceneTree, center: Vector3, thrower: Node3D) -> Di
 		p.push((dir + Vector3.UP * 0.8).normalized() * ITEM_PUSH)
 		p.crack(ItemPickup.EXPLOSION_CRACK)
 		out["items"] += 1
+	for n: Node in tree.get_nodes_in_group(&"wheelbarrows"):
+		var wb: Node3D = n as Node3D
+		if wb == null or not is_instance_valid(wb):
+			continue
+		var to: Vector3 = wb.global_position - center
+		if to.length() > PUSH_RADIUS:
+			continue
+		var dir: Vector3 = to.normalized() if to.length() > 0.05 else Vector3.UP
+		wb.call("apply_impulse", (dir + Vector3.UP * 0.8).normalized() * 12.0)
 	for n: Node in tree.get_nodes_in_group(&"players"):
 		var pl: Node3D = n as Node3D
 		if pl == null or not is_instance_valid(pl) or not pl.has_method("apply_knockback"):
