@@ -18,6 +18,7 @@ const TAB_GAMEPLAY: int = 3
 ## Sensibilidade mostrada em % do padrão (0.0025 = 100 %), como no painel antigo do Esc.
 const SENSITIVITY_UNIT: float = 0.0025
 const CAPTURE_TEXT: String = "Pressione uma tecla…"
+const CAPTURE_PAD_TEXT: String = "Aperte um botão…"
 const SAVED_TEXT: String = "Configurações salvas"
 const HINTS_RESET_TEXT: String = "Dicas reativadas"
 const HINTS: Script = preload("res://gameplay/player/player_hints.gd")
@@ -43,12 +44,18 @@ var confirm_label: Label = null
 var keep_button: Button = null
 var revert_button: Button = null
 var control_buttons: Dictionary = {}
+## Coluna do comando (#102): ação -> botão de bind.
+var pad_buttons: Dictionary = {}
+const COLUMN_KEYBOARD: String = "keyboard"
+const COLUMN_PAD: String = "pad"
 var conflict_panel: PanelContainer = null
 var conflict_label: Label = null
 var swap_button: Button = null
 var conflict_cancel_button: Button = null
-## Ação esperando tecla ("" = nenhuma) e o binding em conflito aguardando Trocar/Cancelar.
+## Ação esperando tecla ("" = nenhuma), a coluna dela e o binding em conflito aguardando
+## Trocar/Cancelar.
 var capturing: String = ""
+var capture_column: String = COLUMN_KEYBOARD
 var _conflict_binding: Dictionary = {}
 var sensitivity_slider: HSlider = null
 var sensitivity_value: Label = null
@@ -232,15 +239,33 @@ func _build() -> void:
 	audio_page.name = "Áudio"
 	tabs.add_child(audio_page)
 
-	# Controles (etapa 2): uma linha por ação; clicar espera a tecla nova.
+	# Controles (etapa 2; coluna do comando no #102): uma linha por ação, com uma coluna para
+	# teclado/mouse e outra para o comando; clicar espera a tecla/botão novo daquela coluna.
 	var controls: GridContainer = _grid()
+	controls.columns = 3
+	controls.add_child(Control.new())
+	for header: String in ["Teclado/Mouse", "Comando"]:
+		var header_label: Label = Label.new()
+		header_label.text = header
+		header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		header_label.add_theme_color_override(&"font_color", UiPalette.WOOD)
+		controls.add_child(header_label)
 	for action: String in SettingsManager.CONTROL_ACTIONS:
-		var bind_button: Button = Button.new()
-		bind_button.custom_minimum_size = Vector2(0, 36)
-		bind_button.focus_mode = Control.FOCUS_ALL
-		bind_button.pressed.connect(start_capture.bind(action))
-		control_buttons[action] = bind_button
-		_row(controls, SettingsManager.ACTION_LABELS[action], bind_button)
+		var label: Label = Label.new()
+		label.text = SettingsManager.ACTION_LABELS[action]
+		controls.add_child(label)
+		for column: String in [COLUMN_KEYBOARD, COLUMN_PAD]:
+			var bind_button: Button = Button.new()
+			bind_button.custom_minimum_size = Vector2(150, 36)
+			bind_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			bind_button.focus_mode = Control.FOCUS_ALL
+			bind_button.clip_text = true
+			bind_button.pressed.connect(start_capture.bind(action, column))
+			if column == COLUMN_PAD:
+				pad_buttons[action] = bind_button
+			else:
+				control_buttons[action] = bind_button
+			controls.add_child(bind_button)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -527,6 +552,8 @@ func _on_apply_pressed() -> void:
 		_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
 		confirm_panel.visible = true
 		tabs.visible = false
+		UiFocus.link_row([revert_button, keep_button])
+		keep_button.grab_focus()
 		sm.begin_video_trial(video)
 	else:
 		sm.set_section(SettingsManager.VIDEO, video)
@@ -551,6 +578,8 @@ func _on_defaults_pressed() -> void:
 			_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
 			confirm_panel.visible = true
 			tabs.visible = false
+			UiFocus.link_row([revert_button, keep_button])
+			keep_button.grab_focus()
 			sm.begin_video_trial(defaults)
 		else:
 			sm.restore_defaults(SettingsManager.VIDEO)
@@ -602,6 +631,22 @@ func focus_first() -> void:
 		return
 	UiFocus.focus_first(tabs.get_current_tab_control(), [defaults_button, back_button, apply_button])
 	UiFocus.link_row([defaults_button, back_button, apply_button])
+	if tabs.current_tab == TAB_CONTROLS:
+		_link_controls_focus()
+
+
+## Aba Controles: cima/baixo dentro de cada coluna, esquerda/direita entre as duas da linha.
+func _link_controls_focus() -> void:
+	var keyboard: Array = []
+	var pad: Array = []
+	for action: String in SettingsManager.CONTROL_ACTIONS:
+		keyboard.append(control_buttons[action])
+		pad.append(pad_buttons[action])
+		UiFocus.link_row([control_buttons[action], pad_buttons[action]])
+	keyboard.append(apply_button)
+	pad.append(apply_button)
+	UiFocus.link_chain(pad)
+	UiFocus.link_chain(keyboard)
 
 
 ## LB/RB (ou Ctrl+Tab) trocam de aba quando nada mais está na frente (#102).
@@ -666,6 +711,7 @@ func _on_video_trial_finished(kept: bool) -> void:
 	confirm_panel.visible = false
 	tabs.visible = true
 	refresh()
+	focus_first.call_deferred()
 	if kept and is_visible_in_tree():
 		show_saved_notice()
 
@@ -678,24 +724,37 @@ func _refresh_controls() -> void:
 		return
 	for action: String in control_buttons.keys():
 		var button: Button = control_buttons[action]
-		button.text = CAPTURE_TEXT if action == capturing else SettingsManager.binding_label(sm.get_binding(action))
+		var waiting: bool = action == capturing and capture_column == COLUMN_KEYBOARD
+		button.text = CAPTURE_TEXT if waiting else SettingsManager.binding_label(sm.get_binding(action))
+	for action: String in pad_buttons.keys():
+		var pad_button: Button = pad_buttons[action]
+		var waiting_pad: bool = action == capturing and capture_column == COLUMN_PAD
+		pad_button.text = CAPTURE_PAD_TEXT if waiting_pad else SettingsManager.binding_label(sm.get_pad_binding(action))
 
 
-## Clicou na ação: a próxima tecla ou botão do mouse vira o binding dela. Esc cancela.
-func start_capture(action: String) -> void:
+## Clicou na ação: a próxima tecla/botão do mouse (coluna do teclado) ou o próximo botão/eixo
+## do comando (coluna do comando) vira o binding dela. Esc (e B, no comando) cancela.
+func start_capture(action: String, column: String = COLUMN_KEYBOARD) -> void:
 	capturing = action
+	capture_column = column
 	_conflict_binding = {}
 	conflict_panel.visible = false
 	_refresh_controls()
 
 
 func _end_capture() -> void:
+	var action: String = capturing
+	var column: String = capture_column
 	capturing = ""
 	_conflict_binding = {}
 	if conflict_panel != null:
 		conflict_panel.visible = false
 		tabs.visible = true
 	_refresh_controls()
+	# Comando/teclado: o foco volta ao botão da ação que estava esperando.
+	var buttons: Dictionary = pad_buttons if column == COLUMN_PAD else control_buttons
+	if not action.is_empty() and buttons.has(action) and (buttons[action] as Control).is_visible_in_tree():
+		(buttons[action] as Control).grab_focus.call_deferred()
 
 
 func _input(event: InputEvent) -> void:
@@ -703,16 +762,28 @@ func _input(event: InputEvent) -> void:
 		return
 	var key: InputEventKey = event as InputEventKey
 	var mouse: InputEventMouseButton = event as InputEventMouseButton
+	var joy_button: InputEventJoypadButton = event as InputEventJoypadButton
+	var joy_motion: InputEventJoypadMotion = event as InputEventJoypadMotion
 	if key != null and (not key.pressed or key.echo):
 		return
 	if mouse != null and not mouse.pressed:
 		return
-	if key == null and mouse == null:
+	if joy_button != null and not joy_button.pressed:
+		return
+	# Eixo: só conta com |valor| > 0.5 (soltar ou deriva não viram binding).
+	if joy_motion != null and SettingsManager.binding_from_event(joy_motion).is_empty():
+		return
+	if key == null and mouse == null and joy_button == null and joy_motion == null:
 		return
 	get_viewport().set_input_as_handled()
-	if key != null and (key.physical_keycode == KEY_ESCAPE or key.keycode == KEY_ESCAPE):
+	var cancel_key: bool = key != null and (key.physical_keycode == KEY_ESCAPE or key.keycode == KEY_ESCAPE)
+	var cancel_pad: bool = joy_button != null and joy_button.button_index == JOY_BUTTON_B
+	if cancel_key or cancel_pad:
 		_end_capture()
 		return
+	var pad_event: bool = joy_button != null or joy_motion != null
+	if pad_event != (capture_column == COLUMN_PAD):
+		return  # o dispositivo da outra coluna não vale aqui
 	capture_binding(SettingsManager.binding_from_event(event))
 
 
@@ -730,6 +801,8 @@ func capture_binding(binding: Dictionary) -> void:
 	conflict_label.text = "«%s» já está em %s.\nTrocar as duas ações?" % [SettingsManager.binding_label(binding), SettingsManager.ACTION_LABELS[other]]
 	conflict_panel.visible = true
 	tabs.visible = false
+	UiFocus.link_row([conflict_cancel_button, swap_button])
+	conflict_cancel_button.grab_focus()
 
 
 func _on_swap_pressed() -> void:
