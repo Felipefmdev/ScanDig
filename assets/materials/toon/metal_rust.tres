@@ -1,4 +1,4 @@
-[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://bmuprjgtsv740"]
 
 [ext_resource type="Shader" path="res://world/shaders/toon.gdshader" id="1_shader"]
 [ext_resource type="Material" path="res://assets/materials/toon/outline.tres" id="2_outline"]
