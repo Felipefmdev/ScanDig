@@ -88,8 +88,8 @@ func test_capture_pad_axis() -> void:
 	assert_eq(_menu.capturing, "", "cancelar sai da captura")
 	_menu.start_capture("slot_1", SettingsMenu.COLUMN_PAD)
 	_menu._input(_axis(JOY_AXIS_TRIGGER_LEFT, -0.0))
-	_menu._input(_joy(JOY_BUTTON_DPAD_UP))
-	assert_eq(sm.get_pad_binding("slot_1"), {"type": "joy_button", "code": JOY_BUTTON_DPAD_UP}, "↑ livre vira o espaço 1")
+	_menu._input(_joy(JOY_BUTTON_DPAD_DOWN))
+	assert_eq(sm.get_pad_binding("slot_1"), {"type": "joy_button", "code": JOY_BUTTON_DPAD_DOWN}, "↓ livre vira o espaço 1")
 
 
 func test_b_and_esc_cancel_capture() -> void:
@@ -126,7 +126,7 @@ func test_keyboard_column_ignores_pad() -> void:
 func test_restore_defaults_restores_both_columns() -> void:
 	var sm: SettingsManager = SettingsManager.instance
 	sm.set_binding("jump", {"type": "key", "code": KEY_K})
-	sm.set_binding("jump", {"type": "joy_button", "code": JOY_BUTTON_DPAD_UP})
+	sm.set_binding("jump", {"type": "joy_button", "code": JOY_BUTTON_DPAD_DOWN})
 	_menu.defaults_button.pressed.emit()
 	assert_eq(sm.get_binding("jump"), {"type": "key", "code": KEY_SPACE})
 	assert_eq(sm.get_pad_binding("jump"), {"type": "joy_button", "code": JOY_BUTTON_A})
