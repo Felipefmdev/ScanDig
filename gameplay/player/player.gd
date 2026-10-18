@@ -340,6 +340,7 @@ var _last_marker_type: int = 0
 const WHEELBARROW_SCRIPT: Script = preload("res://gameplay/objects/wheelbarrow/wheelbarrow.gd")
 var pushing_wheelbarrow: Node3D = null
 var _target_wheelbarrow: Node3D = null
+var _target_crow_nest: Node3D = null
 
 # Contador de Sessão: total já entregue na base
 var session_money: int = 0
@@ -2681,6 +2682,15 @@ func _interact() -> void:
 		start_pushing_wheelbarrow(_target_wheelbarrow)
 		return
 
+	# Ninho de corvo (#106): Vasculha o ninho para recuperar achados roubados
+	if _target_crow_nest != null and is_instance_valid(_target_crow_nest):
+		var recovered: int = int(_target_crow_nest.call("search_nest", self))
+		if recovered > 0:
+			_show_temporary_message("🪺 Você recuperou %d %s do ninho de corvo!" % [recovered, "achado" if recovered == 1 else "achados"], UiPalette.GOLD, 2.2)
+		else:
+			_show_temporary_message("O ninho de corvo está vazio no momento.", Color(0.85, 0.85, 0.85), 1.5)
+		return
+
 	if carried_player != null:
 		var sp: SellPoint = _get_sell_point_in_range()
 		if sp != null:
@@ -2881,14 +2891,39 @@ func _find_target_wheelbarrow() -> Node3D:
 	return best
 
 
+func _find_target_crow_nest() -> Node3D:
+	if not is_inside_tree() or camera == null:
+		return null
+	var from: Vector3 = camera.global_position
+	var fwd: Vector3 = -camera.global_transform.basis.z
+	var best: Node3D = null
+	var best_dist: float = 3.6
+	for n: Node in get_tree().get_nodes_in_group(&"crow_nests"):
+		var nest: Node3D = n as Node3D
+		if nest == null or not is_instance_valid(nest):
+			continue
+		var to_nest: Vector3 = nest.global_position + Vector3.UP * 0.3 - from
+		var dist: float = to_nest.length()
+		if dist > best_dist:
+			continue
+		if fwd.dot(to_nest / dist) < 0.50:
+			continue
+		best = nest
+		best_dist = dist
+	return best
+
+
 func _update_interaction_target() -> void:
 	var target_wb: Node3D = pushing_wheelbarrow if pushing_wheelbarrow != null else _find_target_wheelbarrow()
 	_target_wheelbarrow = target_wb
 
+	var target_nest: Node3D = null if (_target_wheelbarrow != null or pushing_wheelbarrow != null) else _find_target_crow_nest()
+	_target_crow_nest = target_nest
+
 	var downed_p: Player = _find_target_downed_player()
 	_target_downed_player = downed_p
 
-	var offer: ShopOffer = null if (_target_downed_player != null or carried_player != null or pushing_wheelbarrow != null) else _find_target_offer()
+	var offer: ShopOffer = null if (_target_downed_player != null or carried_player != null or pushing_wheelbarrow != null or _target_crow_nest != null) else _find_target_offer()
 	if offer != _target_offer:
 		if _target_offer != null and is_instance_valid(_target_offer):
 			_target_offer.set_highlighted(false)
@@ -2896,7 +2931,7 @@ func _update_interaction_target() -> void:
 		if _target_offer != null:
 			_target_offer.set_highlighted(true)
 
-	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null or pushing_wheelbarrow != null) else _find_target_pickup()
+	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null or pushing_wheelbarrow != null or _target_crow_nest != null) else _find_target_pickup()
 	if target != _target_pickup:
 		if _target_pickup != null and is_instance_valid(_target_pickup):
 			_target_pickup.set_highlighted(false)
@@ -2940,6 +2975,12 @@ func _update_interaction_target() -> void:
 			interact_prompt.text = "[E] Empurrar carrinho | [R] Guardar item (%d/%d)" % [wb_cargo, wb_max]
 		else:
 			interact_prompt.text = "[E] Empurrar carrinho de mão (%d/%d)" % [wb_cargo, wb_max]
+	elif _target_crow_nest != null and is_instance_valid(_target_crow_nest):
+		var count: int = int(_target_crow_nest.call("get_item_count"))
+		if count > 0:
+			interact_prompt.text = "[E] Vasculhar ninho de corvo (%d %s)" % [count, "achado" if count == 1 else "achados"]
+		else:
+			interact_prompt.text = "[E] Ninho de corvo (vazio)"
 	elif _target_offer != null:
 		var full: String = "  — mochila cheia!" if inventory.is_full() else ""
 		interact_prompt.text = _target_offer.get_prompt() + full

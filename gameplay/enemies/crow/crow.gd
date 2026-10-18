@@ -37,9 +37,19 @@ const SPIRAL_END_RADIUS: float = 1.0
 const SPIRAL_HIT_RADIUS: float = 1.5
 
 
+const CROW_GROUND_STEAL_RADIUS: float = 32.0
+const CROW_NEST_SCRIPT: Script = preload("res://gameplay/enemies/crow/crow_nest.gd")
+
+var target_nest: Node3D = null
+var _stolen_visual: Node3D = null
+
+
 func _ready() -> void:
 	super._ready()
 	_refresh_key()
+	_refresh_stolen()
+	if has_simulation_authority():
+		_ensure_nest()
 
 
 func setup_network() -> void:
@@ -47,7 +57,43 @@ func setup_network() -> void:
 	_add_synced_property(".:carries_key")
 
 
-## Bica em vez de roubar.
+func _ensure_nest() -> void:
+	if not is_inside_tree():
+		return
+	if CROW_NEST_SCRIPT.call("get_nearest_nest", get_tree(), global_position) == null:
+		var parent_scene: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+		if parent_scene != null:
+			CROW_NEST_SCRIPT.call("ensure_nest_in_scene", parent_scene, Vector3(8.5, 0.1, -14.0))
+
+
+## Procura achados soltos no chão em raio amplo (#106).
+func find_ground_loot(near: Vector3) -> ItemPickup:
+	var best: ItemPickup = null
+	var best_d: float = CROW_GROUND_STEAL_RADIUS
+	for n: Node in get_tree().get_nodes_in_group(ItemPickup.GROUP):
+		var p: ItemPickup = n as ItemPickup
+		if p == null or not is_instance_valid(p) or p.is_queued_for_deletion() or p.carried == null:
+			continue
+		if p.carried.is_tool():
+			continue
+		var d: float = p.global_position.distance_to(near)
+		if d < best_d:
+			best = p
+			best_d = d
+	return best
+
+
+func _process_circle(delta: float) -> void:
+	if has_simulation_authority() and _ground_target == null:
+		var loose: ItemPickup = find_ground_loot(global_position)
+		if loose != null and _circle_left <= 1.5:
+			_ground_target = loose
+			_circle_left = randf_range(circle_time_min, circle_time_max)
+			SFX.play_at(SFX.SEAGULL_CAW, global_position, 1.5)
+	super._process_circle(delta)
+
+
+## Bica em vez de roubar quando ataca o jogador.
 func _grab(target: Node3D) -> void:
 	_on_loot_reply(null, target)
 
@@ -98,14 +144,103 @@ func _warning_for_state() -> void:
 		_dive_warning.hide_warning()
 
 
-## Quem leva chave nunca foge (nem com o repelente: só se afasta e volta).
+## Início de fuga: com achado roubado, foge em direção ao ninho (#106).
 func _start_escape(away_from: Vector3) -> void:
 	if carries_key:
 		_dives = 0
 		_circle_left = randf_range(circle_time_min, circle_time_max)
 		_enter_state(State.CIRCLE)
 		return
+	if stolen != null:
+		target_nest = CROW_NEST_SCRIPT.call("get_nearest_nest", get_tree(), global_position) as Node3D
+		if target_nest == null:
+			var parent_scene: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+			if parent_scene != null:
+				target_nest = CROW_NEST_SCRIPT.call("ensure_nest_in_scene", parent_scene, global_position + Vector3(8.0, 0.0, -8.0)) as Node3D
+		_dives = 0
+		_leave_timer = despawn_after * 2.0
+		_refresh_stolen()
+		_enter_state(State.ESCAPE)
+		return
 	super._start_escape(away_from)
+
+
+## Fuga: voa baixo em direção ao ninho (#106), permitindo que jogadores o persigam ou atinjam com estilingue.
+func _process_escape(delta: float) -> void:
+	if target_nest != null and is_instance_valid(target_nest) and stolen != null:
+		var perch: Vector3 = target_nest.call("get_perch_point")
+		var target_height: float = clampf(perch.y + 1.2, 1.8, 3.8)
+		var dest: Vector3 = Vector3(perch.x, target_height, perch.z)
+		_fly_towards(dest, escape_speed * 0.85, delta, 4.0)
+
+		if global_position.distance_to(perch) <= 1.4:
+			target_nest.call("store_item", stolen)
+			stolen = null
+			has_stolen = false
+			target_nest = null
+			_refresh_stolen()
+			SFX.play_at(SFX.SEAGULL_CAW, global_position, 2.5)
+			_circle_left = randf_range(circle_time_min, circle_time_max)
+			_enter_state(State.CIRCLE)
+			return
+		return
+	super._process_escape(delta)
+
+
+## Ao sofrer dano (estilingue, pá, etc.), larga o achado imediatamente no chão (#106).
+func take_damage(amount: float, from: Vector3 = Vector3.INF) -> void:
+	if has_simulation_authority() and stolen != null:
+		_drop_stolen_item()
+	super.take_damage(amount, from)
+
+
+func _drop_stolen_item() -> void:
+	if stolen == null:
+		return
+	var item_to_drop: CarriedItem = stolen
+	stolen = null
+	has_stolen = false
+	target_nest = null
+	_refresh_stolen()
+	var p: Node = get_parent() if get_parent() != null else self
+	var drop_pos: Vector3 = global_position + Vector3.DOWN * 0.35
+	var impulse: Vector3 = Vector3(velocity.x * 0.15, 2.2, velocity.z * 0.15)
+	ItemPickup.spawn(p, item_to_drop, drop_pos, impulse)
+	SFX.play_at(SFX.ITEM_IMPACT_STONE, drop_pos, -2.0)
+	SFX.play_at(SFX.SEAGULL_CAW, global_position, 4.0)
+	_leave_timer = despawn_after
+	_escape_dir = (Vector3.UP * 0.7 + Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))).normalized()
+	_enter_state(State.ESCAPE)
+
+
+func _show_loot() -> void:
+	_refresh_stolen()
+
+
+const ITEM_MODELS_SCRIPT: Script = preload("res://items/item_models.gd")
+
+
+func _refresh_stolen() -> void:
+	if _stolen_visual != null:
+		_stolen_visual.queue_free()
+		_stolen_visual = null
+	if not has_stolen and stolen == null:
+		return
+	var model: Node3D = null
+	if stolen != null and stolen.item != null and not stolen.item.id.is_empty():
+		model = ITEM_MODELS_SCRIPT.call("build", stolen.item.id, stolen.is_rare_variant) as Node3D
+	if model != null:
+		model.position = Vector3(0.0, -0.06, -0.42)
+		model.scale = Vector3(0.65, 0.65, 0.65)
+		_stolen_visual = model
+		add_child(_stolen_visual)
+	else:
+		var st: SurfaceTool = SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var g: Color = Color(1.0, 0.82, 0.22)
+		LowPolyMesh.box(st, Vector3(0.0, -0.06, -0.42), Vector3(0.09, 0.09, 0.09), Basis.IDENTITY, g)
+		_stolen_visual = LowPolyMesh.commit(st, "StolenLoot", ToonKit.vertex_material(true, true))
+		add_child(_stolen_visual)
 
 
 func _refresh_key() -> void:
