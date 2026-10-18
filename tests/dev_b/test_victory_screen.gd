@@ -229,3 +229,32 @@ func test_intact_items_row() -> void:
 	assert_eq(screen.intact_value.get_index(), screen.items_value.get_index() + 2, "logo depois de Peças do museu")
 	assert_eq(grid.get_child(screen.intact_value.get_index() - 1).get("text"), "Peças intactas")
 	gs.intact_items = before
+
+
+# --- Final da ilha (#115) --------------------------------------------------------
+
+func test_subtitle_tells_the_island_ending() -> void:
+	var text: String = VictoryScreen.SUBTITLE_TEXT
+	assert_string_contains(text, "Colosso do Tesouro")
+	assert_string_contains(text, "Ídolo de Ouro")
+	assert_string_contains(text, "Museu")
+	assert_string_contains(text, "mapa do tesouro está completo")
+	assert_false(text.contains("Dorme"), "o the_sleeper não é mais o final")
+
+
+func test_map_fragments_row() -> void:
+	var gs: GameState = GameState.instance
+	var screen: VictoryScreen = _screen()
+	var frags: Array[String] = [GameState.MAP_FRAGMENT_IDS[0], GameState.MAP_FRAGMENT_IDS[1], GameState.MAP_FRAGMENT_IDS[2]]
+	gs.map_fragments = frags
+	gs._host_report_boss_defeated("gold_colossus")
+	assert_true(VictoryScreen.is_open())
+	assert_eq(screen.fragments_value.text, "3 / %d" % GameState.MAP_FRAGMENT_IDS.size(), "linha Fragmentos do mapa")
+	assert_eq(GameState.MAP_FRAGMENT_IDS.size(), 8)
+	var grid: GridContainer = screen.fragments_value.get_parent() as GridContainer
+	assert_eq(grid.get_child(screen.fragments_value.get_index() - 1).get("text"), "Fragmentos do mapa")
+	assert_eq(screen.fragments_value.get_index(), screen.intact_value.get_index() + 2, "depois de Peças intactas")
+	var all_frags: Array[String] = GameState.MAP_FRAGMENT_IDS.duplicate()
+	gs.map_fragments = all_frags
+	screen.refresh()
+	assert_eq(screen.fragments_value.text, "8 / 8")

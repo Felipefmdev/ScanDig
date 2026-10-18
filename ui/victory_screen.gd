@@ -1,9 +1,11 @@
 class_name VictoryScreen
 extends CanvasLayer
 
-## Tela "Jogo concluído" (#81). Abre só na vitória ao vivo (GameState.game_victory: the_sleeper
-## vencido nesta sessão). Carregar um save concluído, entrar no meio ou reconectar não abre.
-## Mostra Peças do museu, Peças intactas (#93), Segredos e Diário e tem os botões "Continuar explorando" e "Créditos" (o mesmo
+## Tela "Jogo concluído" (#81). Abre só na vitória ao vivo (GameState.game_victory: o chefe final
+## GameState.FINAL_BOSS_ID, o Colosso do Tesouro da Ilha, vencido nesta sessão; #115). Carregar um
+## save concluído, entrar no meio ou reconectar não abre.
+## Mostra Peças do museu, Peças intactas (#93), Fragmentos do mapa (#115), Segredos e Diário e tem
+## os botões "Continuar explorando" e "Créditos" (o mesmo
 ## cartão troca para os créditos; "Voltar" ou Esc volta às contagens). Enquanto está aberta,
 ## o player não se mexe (is_settings_open) e o menu de pausa não abre. Fecha na troca de cena.
 ## Autoload CoreVictoryScreen, camada 46: acima da pausa (45), abaixo da SessionUI (50) para o
@@ -12,7 +14,7 @@ extends CanvasLayer
 signal open_changed(open: bool)
 
 const TITLE_TEXT: String = "Jogo concluído"
-const SUBTITLE_TEXT: String = "O Que Dorme foi vencido. O museu continua aberto:\nainda há peças, segredos e bichos por achar."
+const SUBTITLE_TEXT: String = "O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.\nLeve o Ídolo de Ouro, o tesouro principal, ao Museu.\nAinda há peças, segredos e bichos por achar."
 const CREDITS_TITLE: String = "— CRÉDITOS —"
 ## Fonte única dos créditos (veio do overlay do gameplay/environment/crater_altar.gd).
 const CREDITS_TEXT: String = "Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral\nBroca (Dev_Player) — Controlo 1ª Pessoa, Ferramentas, Terrenos e Segredos\nSonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes\nDev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo\nFelipe — Concepção, Arte Low-Poly Toon e Direção Criativa"
@@ -23,6 +25,7 @@ var root_control: Control = null
 var card: PanelContainer = null
 var items_value: Label = null
 var intact_value: Label = null
+var fragments_value: Label = null
 var secrets_value: Label = null
 var creatures_value: Label = null
 var continue_button: Button = null
@@ -153,6 +156,7 @@ func refresh() -> void:
 	items_value.text = "%d / %d" % [gs.discovered_items.size(), gs.get_total_catalog_items()]
 	var intact: Variant = gs.get(&"intact_items")
 	intact_value.text = "%d / %d" % [(intact as Array).size() if intact is Array else 0, gs.get_total_catalog_items()]
+	fragments_value.text = "%d / %d" % [gs.map_fragments.size(), GameState.MAP_FRAGMENT_IDS.size()]
 	secrets_value.text = "%d / %d" % [gs.found_secrets.size(), GameState.SECRETS.size()]
 	creatures_value.text = "%d / %d" % [gs.seen_creatures.size(), GameState.CREATURES.size()]
 
@@ -210,6 +214,7 @@ func _build() -> void:
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	items_value = _count_row(grid, "Peças do museu")
 	intact_value = _count_row(grid, "Peças intactas")
+	fragments_value = _count_row(grid, "Fragmentos do mapa")
 	secrets_value = _count_row(grid, "Segredos")
 	creatures_value = _count_row(grid, "Diário de campo")
 	box.add_child(grid)

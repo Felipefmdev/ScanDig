@@ -212,6 +212,7 @@ func _run() -> void:
 		won["found_secrets"] = GameState.SECRETS.slice(0, 7)
 		won["seen_creatures"] = ["crab", "hermit_crab", "seagull", "mole", "bat"]
 		won["intact_items"] = ["alianca_ouro", "bussola"]
+		won["map_fragments"] = GameState.MAP_FRAGMENT_IDS.slice(0, 5)
 		GameState.instance.load_snapshot(won)
 		GameState.instance._host_report_boss_defeated("gold_colossus")
 		# Sobras das capturas anteriores (toast do segredo do snapshot acima, barra de chefe).
