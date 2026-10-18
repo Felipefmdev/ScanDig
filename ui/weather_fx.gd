@@ -27,6 +27,8 @@ const ENV_TARGETS: Dictionary = {
 	WeatherManager.KIND_ASHSTORM: {"fog_add": 0.015, "fog_color": Color(0.5, 0.3, 0.18), "sky_affect": 0.7,
 		"saturation": 0.85, "brightness": 0.8},
 }
+## À noite (#109) as partículas sem sombreamento brilhariam no escuro: a cor é multiplicada por isto.
+const NIGHT_PARTICLE_TINT: Color = Color(0.45, 0.5, 0.65, 1.0)
 ## Altura das partículas acima da câmera e meia-largura da caixa de emissão (m).
 const EMIT_HEIGHT: float = 5.0
 const EMIT_HALF_SIZE: float = 6.0
@@ -203,6 +205,12 @@ func _build_particles(kind: String) -> void:
 			particles.initial_velocity_max = 1.2
 			particles.color = Color(0.55, 0.5, 0.46, 0.9)
 			particles.color_ramp = _ash_ramp()
+	if SessionManager.is_night():
+		particles.color *= NIGHT_PARTICLE_TINT
+		if particles.color_ramp != null:
+			particles.color_ramp = particles.color_ramp.duplicate() as Gradient
+			for i: int in particles.color_ramp.get_point_count():
+				particles.color_ramp.set_color(i, particles.color_ramp.get_color(i) * NIGHT_PARTICLE_TINT)
 	quad.material = mat
 	particles.mesh = quad
 	particles.preprocess = particles.lifetime
@@ -290,11 +298,14 @@ func _apply_env_amount(amount: float) -> void:
 		return
 	var t: Dictionary = ENV_TARGETS[_kind]
 	var a: float = amount * (1.0 if strong else WEAK_ENV_RATIO)
-	_env_copy.fog_density = float(_base["fog_density"]) + float(t["fog_add"]) * a
+	# Teto da névoa somada (a do mapa + a da noite #109 + a do clima).
+	_env_copy.fog_density = minf(float(_base["fog_density"]) + float(t["fog_add"]) * a, NightMode.MAX_FOG_DENSITY)
 	_env_copy.fog_light_color = (_base["fog_color"] as Color).lerp(t["fog_color"] as Color, a)
 	_env_copy.fog_sky_affect = lerpf(float(_base["sky_affect"]), maxf(float(t["sky_affect"]), float(_base["sky_affect"])), a)
 	_env_copy.adjustment_saturation = lerpf(float(_base["saturation"]), float(t["saturation"]), a)
-	_env_copy.adjustment_brightness = lerpf(float(_base["brightness"]), float(t["brightness"]), a)
+	# À noite (#109) o brilho do clima é relativo ao da noite (a nevasca não clareia o escuro).
+	var brightness: float = float(t["brightness"]) * (float(_base["brightness"]) if SessionManager.is_night() else 1.0)
+	_env_copy.adjustment_brightness = lerpf(float(_base["brightness"]), brightness, a)
 
 
 ## Fim do evento (ou troca de cena): o WorldEnvironment volta a ter o recurso original.

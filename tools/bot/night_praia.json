@@ -1,0 +1,24 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"dump_every": 20,
+	"steps": [
+		{"t": 1.0, "start_expedition": "praia", "night": true, "timeout": 30},
+		{"sleep": 4.0},
+		{"t": 6.1, "dump": "01_noite"},
+		{"t": 6.5, "give": "lanterna_magnesio"},
+		{"t": 7.0, "use_item": "lanterna_magnesio", "for": 0.2},
+		{"t": 8.5, "goto_spot": "nearest", "walk": true, "timeout": 40},
+		{"t": 9.0, "dig_spot": true, "mode": "fast", "timeout": 30},
+		{"t": 9.5, "pickup": true, "radius": 4, "timeout": 8},
+		{"t": 10.0, "call": "CoreWeather", "method": "force_weather"},
+		{"sleep": 6.0},
+		{"t": 16.6, "dump": "03_noite_chuva"},
+		{"t": 17.0, "goto_spot": "nearest", "walk": true, "timeout": 40},
+		{"t": 17.5, "dig_spot": true, "mode": "smart", "timeout": 30},
+		{"t": 18.0, "pickup": true, "radius": 4, "timeout": 8},
+		{"t": 18.5, "fight": 15, "radius": 14},
+		{"sleep": 2.0},
+		{"t": 19.0, "dump": "04_fim"},
+		{"t": 19.5, "quit": true}
+	]
+}

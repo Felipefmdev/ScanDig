@@ -155,6 +155,11 @@ void light() {
 	tone = mix(tone, band_mid, smoothstep(threshold_mid - 0.01, threshold_mid + 0.01, lit));
 	tone = mix(tone, band_lit, smoothstep(threshold_lit - 0.01, threshold_lit + 0.01, lit));
 	vec3 tint = mix(shadow_tint.rgb, vec3(1.0), clamp((tone - band_shadow) / max(band_lit - band_shadow, 0.001), 0.0, 1.0));
+	// Luz local (lanterna, tenda, explosão): a banda de sombra só vale dentro do alcance dela;
+	// sem isto, cada célula do cluster que a luz toca ficava clara (blocos quadrados no chão).
+	if (!LIGHT_IS_DIRECTIONAL) {
+		tone *= clamp(ATTENUATION * 4.0, 0.0, 1.0);
+	}
 	DIFFUSE_LIGHT += LIGHT_COLOR * tone * tint / PI;
 	if (specular_amount > 0.0) {
 		float rv = dot(reflect(-LIGHT, NORMAL), VIEW);

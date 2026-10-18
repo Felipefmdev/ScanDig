@@ -1,5 +1,6 @@
 ## Teste headless (#99), host do par weather_net_*: o clima do host chega ao cliente na sala e a
-## quem entra no meio do evento; os clientes nunca agendam. Ordem:
+## quem entra no meio do evento; os clientes nunca agendam. A expedição é noturna (#109): a noite
+## vai no RPC de entrada e no sync de quem entra no meio, e soma com o clima. Ordem:
 ##   "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://core/tests/weather_net_host.gd
 ##   (3 s depois) ... --script res://core/tests/weather_net_client.gd
 ##   (quando o host imprimir "HOST weather_active") ... --script res://core/tests/weather_net_client.gd -- --late
@@ -22,7 +23,7 @@ func _run() -> void:
 	SaveManager.instance.use_test_save_dir("weather_net_host")
 	print("HOST host_game=", NetworkManager.instance.host_game(PORT))
 	root.multiplayer.peer_connected.connect(func(_id: int) -> void: _joins += 1)
-	SessionManager.instance.request_start_expedition("praia")
+	SessionManager.instance.request_start_expedition("praia", true)
 	var t: float = 0.0
 	while _joins < 1 and t < 15.0:
 		await _w(0.5); t += 0.5
@@ -36,6 +37,8 @@ func _run() -> void:
 	_check(client_id != 0, "cliente não carregou a Praia")
 	var weather: WeatherManager = WeatherManager.instance
 	_check(weather.get_state()["map_id"] == "praia", "ciclo começou na expedição: %s" % weather.get_state())
+	_check(SessionManager.is_night(), "host: expedição noturna")
+	_check(NightFx.instance.is_active(), "host: ambiente noturno")
 	weather.force_weather()
 	print("HOST weather_warning kind=", weather.current_kind(), " phase=", weather.phase())
 	await _w(WeatherManager.FORCE_WARNING_S + 1.0)

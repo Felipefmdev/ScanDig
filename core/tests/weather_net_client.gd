@@ -1,6 +1,7 @@
 ## Teste headless (#99), cliente do par weather_net_* (ver weather_net_host.gd). Sem argumento:
 ## está na Praia quando o host força a chuva (recebe aviso e depois ativo). Com "-- --late": entra
-## com o evento já ativo (recebe o estado atual ao carregar o mapa). Nenhum dos dois agenda.
+## com o evento já ativo (recebe o estado atual ao carregar o mapa). Nenhum dos dois agenda. Os
+## dois recebem a noite (#109): pelo RPC de entrada ou, o atrasado, pelo sync da cena.
 extends SceneTree
 const PORT: int = 7813
 var _late: bool = false
@@ -39,6 +40,11 @@ func _run() -> void:
 	_check(weather.current_kind() == WeatherManager.KIND_RAIN, "tipo=%s" % weather.current_kind())
 	_check(not weather._running, "cliente agendando")
 	_check(weather.dig_speed_mult() > 1.0 and weather.detector_noise() > 0.0, "modificadores da chuva no cliente")
+	print(tag, " night=", SessionManager.is_night(), " night_fx=", NightFx.instance.is_active())
+	_check(SessionManager.is_night(), "cliente recebeu a noite")
+	_check(NightFx.instance.is_active(), "ambiente noturno no cliente")
+	var env: Environment = WeatherFx.instance.current_environment_copy()
+	_check(env != null and env.fog_density <= NightMode.MAX_FOG_DENSITY, "névoa noite + chuva com teto")
 	if _late:
 		_check(not _phases.has("rain:warning"), "atrasado viu o aviso")
 		_check(_phases.has("rain:active"), "atrasado não recebeu o estado ativo")
