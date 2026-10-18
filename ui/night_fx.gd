@@ -9,7 +9,8 @@ extends Node
 ## de antes; nada é gravado em .tres. O clima (WeatherFx) duplica a cópia noturna, então os dois
 ## somam.
 ## À noite a Lanterna de Magnésio na mão acende uma luz em cone e o visor do detector ilumina a
-## mão e o chão em volta (luzes presas ao jogador local; somem de dia).
+## mão e o chão em volta (luzes presas ao jogador local; somem de dia). No HUD, um chip "Noite"
+## discreto entra na fila de chips do topo (HUD/TopChips).
 ## Autoload CoreNightFx; config em NightMode.NIGHT_BY_MAP / NIGHT_LOOK.
 
 const LANTERN_TOOL: StringName = &"lanterna_magnesio"
@@ -30,6 +31,7 @@ static var instance: NightFx = null
 var environment_root: Node = null
 var lantern_light: SpotLight3D = null
 var detector_glow: OmniLight3D = null
+var night_chip: UiChip = null
 
 var _map_id: String = ""
 var _cfg: Dictionary = {}
@@ -201,6 +203,7 @@ func _update_local_player() -> void:
 		return
 	_update_lantern(player)
 	_update_detector_glow(player)
+	_update_chip(player)
 
 
 func _local_player() -> Player:
@@ -246,11 +249,26 @@ func _update_detector_glow(player: Player) -> void:
 	detector_glow.visible = detector.is_visible_in_tree()
 
 
+func _update_chip(player: Player) -> void:
+	if night_chip != null and is_instance_valid(night_chip):
+		return
+	var chips: Node = player.get_node_or_null(^"HUD/TopChips")
+	if chips == null:
+		return
+	night_chip = UiChip.new()
+	night_chip.name = "NightChip"
+	night_chip.icon_name = "moon"
+	night_chip.label.text = "Noite"
+	night_chip.tooltip_text = "Expedição noturna"
+	chips.add_child(night_chip)
+
+
 func _free_lights() -> void:
-	for node: Node in [lantern_light, detector_glow]:
+	for node: Node in [lantern_light, detector_glow, night_chip]:
 		if node != null and is_instance_valid(node):
 			if node.get_parent() != null:
 				node.get_parent().remove_child(node)
 			node.queue_free()
 	lantern_light = null
 	detector_glow = null
+	night_chip = null

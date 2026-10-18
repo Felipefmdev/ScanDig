@@ -375,6 +375,8 @@ func _show_next_toast() -> void:
 func _show_summary(summary: Dictionary) -> void:
 	var day: int = int(summary.get("day", 0))
 	var map_name: String = str(summary.get("map_name", summary.get("map_id", "")))
+	if bool(summary.get("night", false)):
+		map_name += " (noite)"
 	summary_title_label.text = "Resumo do Dia %d — %s" % [day, map_name]
 	summary_list.clear()
 	var entries: Array = []

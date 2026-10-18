@@ -56,6 +56,8 @@ const SHAPES: Dictionary = {
 	"door": "<path d=\"M5 21 V4 Q5 3 6 3 H15 Q16 3 16 4 V21\" fill=\"#8A5A34\" {s}/>"
 		+ "<path d=\"M3 21 H21\" {s}/><circle cx=\"13\" cy=\"12.5\" r=\"1.1\" fill=\"#E0A82E\"/>"
 		+ "<path d=\"M18 9 L21 12 L18 15 M21 12 H15.5\" fill=\"none\" {s}/>",
+	"moon": "<path d=\"M15.5 3.5 A8.8 8.8 0 1 0 20.5 16 A7 7 0 1 1 15.5 3.5 Z\" fill=\"#F2D27A\" {s}/>"
+		+ "<circle cx=\"9\" cy=\"10\" r=\"1.2\" fill=\"#D9B456\"/><circle cx=\"11\" cy=\"16\" r=\"0.9\" fill=\"#D9B456\"/>",
 	"lock": "<path d=\"M8 10 V7.5 Q8 3.5 12 3.5 Q16 3.5 16 7.5 V10\" fill=\"none\" {s}/>"
 		+ "<rect x=\"5\" y=\"10\" width=\"14\" height=\"10.5\" rx=\"2\" fill=\"#E0A82E\" {s}/><circle cx=\"12\" cy=\"15\" r=\"1.5\" fill=\"#2B2118\"/>",
 }

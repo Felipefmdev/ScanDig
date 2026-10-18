@@ -89,6 +89,11 @@ const MAP_LOCKED_COLOR: Color = UiPalette.METAL
 ## Sem MuseumView na cena (a Base aberta sozinha, nos testes), o botão some.
 var view_museum_btn: Button = null
 
+## Expedição noturna (#109): "Noite" na mesa, por mapa (só os desbloqueados com config em
+## NightMode.NIGHT_BY_MAP). A escolha fica guardada por mapa enquanto a Base existe.
+var night_check: CheckButton = null
+var _night_by_map: Dictionary = {}
+
 ## A Base cabe na tela (ui_scale 1.3 em 960x540 incluso): cada aba rola num ScrollContainer (com o
 ## nome da aba; o conteúdo vira o filho "Page") e a altura das abas é a da maior, limitada ao que
 ## cabe entre o topo da Base e a borda de baixo.
@@ -258,6 +263,7 @@ func _setup_expeditions() -> void:
 		unlock_map_btn.pressed.connect(_on_unlock_map_pressed)
 	if depart_btn != null:
 		depart_btn.pressed.connect(_on_depart_pressed)
+		_build_night_check()
 	if _session != null:
 		for sig: StringName in [&"expedition_started", &"expedition_ended", &"scene_changing"]:
 			if _session.has_signal(sig):
@@ -370,6 +376,7 @@ func _get_depart_block_reason(map: MapData) -> String:
 
 func _refresh_expedition_buttons() -> void:
 	_refresh_unlock_button()
+	_refresh_night_check()
 	_refresh_depart_button()
 	_refresh_map_status_label()
 
@@ -463,6 +470,8 @@ func _refresh_depart_button() -> void:
 	depart_btn.disabled = not reason.is_empty()
 	depart_btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 	depart_btn.text = "Partir para %s" % _map_name(map) if map != null else "Partir"
+	if map != null and is_night_selected():
+		depart_btn.text += " (noite)"
 
 
 func _on_depart_pressed() -> void:
@@ -472,8 +481,51 @@ func _on_depart_pressed() -> void:
 		_set_expedition_feedback(reason)
 		return
 	depart_btn.disabled = true
-	_set_expedition_feedback("Preparando expedição para %s..." % _map_name(map))
-	_session_call(&"request_start_expedition", [map.id])
+	var night: bool = is_night_selected()
+	_set_expedition_feedback("Preparando expedição %spara %s..." % ["noturna " if night else "", _map_name(map)])
+	_session_call(&"request_start_expedition", [map.id, night])
+
+
+func _build_night_check() -> void:
+	night_check = CheckButton.new()
+	night_check.name = "NightCheck"
+	night_check.text = "Noite"
+	night_check.icon = UiIcons.get_icon("moon", 48)
+	night_check.add_theme_constant_override(&"icon_max_width", 20)
+	night_check.tooltip_text = "Expedição noturna: mais achados raros e criaturas noturnas, mas pouca visão. A Lanterna de Magnésio e o visor do detector iluminam."
+	night_check.focus_mode = Control.FOCUS_ALL
+	night_check.toggled.connect(_on_night_toggled)
+	var page: Node = depart_btn.get_parent()
+	page.add_child(night_check)
+	page.move_child(night_check, depart_btn.get_index())
+
+
+## A noite vale para o mapa selecionado se ele está desbloqueado e tem config de noite.
+func _night_available(map: MapData) -> bool:
+	if map == null or not NightMode.is_available(map.id):
+		return false
+	return bool(_get_map_status(map).get("unlocked", false))
+
+
+func is_night_selected() -> bool:
+	var map: MapData = _get_selected_map()
+	return _night_available(map) and bool(_night_by_map.get(map.id, false))
+
+
+func _refresh_night_check() -> void:
+	if night_check == null:
+		return
+	var map: MapData = _get_selected_map()
+	night_check.visible = _night_available(map)
+	night_check.disabled = not _is_host()
+	night_check.set_pressed_no_signal(night_check.visible and bool(_night_by_map.get(map.id, false)))
+
+
+func _on_night_toggled(on: bool) -> void:
+	var map: MapData = _get_selected_map()
+	if map != null:
+		_night_by_map[map.id] = on
+	_refresh_depart_button()
 
 
 func _set_expedition_feedback(msg: String) -> void:
