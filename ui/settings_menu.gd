@@ -63,6 +63,8 @@ var invert_y_check: CheckBox = null
 var fov_slider: HSlider = null
 var fov_value: Label = null
 var bobbing_check: CheckBox = null
+var aim_assist_check: CheckBox = null
+var weather_effects_check: CheckBox = null
 var show_fps_check: CheckBox = null
 var show_hints_check: CheckBox = null
 var review_hints_button: Button = null
@@ -298,6 +300,10 @@ func _build() -> void:
 	fov_slider.value_changed.connect(func(v: float) -> void: fov_value.text = "%d°" % int(v))
 	bobbing_check = _checkbox()
 	_row(gameplay, "Balanço da câmera ao andar", bobbing_check)
+	aim_assist_check = _checkbox()
+	_row(gameplay, "Mira assistida no controle", aim_assist_check)
+	weather_effects_check = _checkbox()
+	_row(gameplay, "Efeitos intensos de clima", weather_effects_check)
 	show_fps_check = _checkbox()
 	_row(gameplay, "Mostrar FPS", show_fps_check)
 	show_hints_check = _checkbox()
@@ -480,6 +486,8 @@ func refresh() -> void:
 	fov_slider.value = float(gameplay["fov"])
 	fov_value.text = "%d°" % int(fov_slider.value)
 	bobbing_check.button_pressed = bool(gameplay["view_bobbing"])
+	aim_assist_check.button_pressed = bool(gameplay.get("controller_aim_assist", true))
+	weather_effects_check.button_pressed = bool(gameplay.get("weather_effects", true))
 	show_fps_check.button_pressed = bool(gameplay["show_fps"])
 	show_hints_check.button_pressed = bool(gameplay["show_hints"])
 	hud_text_slider.value = roundf(float(gameplay["hud_text_scale"]) * 100.0)
@@ -494,6 +502,8 @@ func pending_gameplay() -> Dictionary:
 		"pad_look_sensitivity": pad_look_slider.value,
 		"fov": fov_slider.value,
 		"view_bobbing": bobbing_check.button_pressed,
+		"controller_aim_assist": aim_assist_check.button_pressed,
+		"weather_effects": weather_effects_check.button_pressed,
 		"show_fps": show_fps_check.button_pressed,
 		"show_hints": show_hints_check.button_pressed,
 		"hud_text_scale": hud_text_slider.value / 100.0,

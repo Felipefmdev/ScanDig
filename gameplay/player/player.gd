@@ -282,6 +282,7 @@ var _target_pickup: ItemPickup = null
 var _target_offer: ShopOffer = null
 var _use_cooldown: float = 0.0
 var _tool_view_rest: Vector3 = Vector3.ZERO
+var _tool_view_rest_rot: Vector3 = Vector3.ZERO
 ## tool_id -> modelo no ToolView (só um visível: o da ferramenta selecionada).
 var _held_models: Dictionary = {}
 var _held_museum_item: Node3D = null
@@ -406,6 +407,7 @@ func _ready() -> void:
 
 	if tool_view != null:
 		_tool_view_rest = tool_view.position
+		_tool_view_rest_rot = tool_view.rotation
 		_setup_held_models()
 	if GameState.instance != null:
 		GameState.instance.money_changed.connect(_on_team_money_changed)
@@ -447,6 +449,7 @@ func _ensure_default_input_mappings() -> void:
 	_add_key_if_empty("sprint", KEY_SHIFT)
 	_add_key_if_empty("interact", KEY_E)
 	_add_key_if_empty("drop", KEY_Q)
+	_add_key_if_empty("inspect", KEY_R)
 	_add_key_if_empty("slot_1", KEY_1)
 	_add_key_if_empty("slot_2", KEY_2)
 	_add_key_if_empty("slot_3", KEY_3)
@@ -1203,6 +1206,7 @@ func _on_is_downed_changed(downed: bool) -> void:
 		if not is_in_group(DOWNED_GROUP):
 			add_to_group(DOWNED_GROUP)
 		if is_local():
+			set_inspecting(false)
 			_downed_orbit_yaw = rotation.y
 			_downed_orbit_pitch = deg_to_rad(-30.0)
 			_downed_orbit_dist = DOWNED_ORBIT_DEFAULT_DIST
@@ -1376,7 +1380,7 @@ func revive_player(target: Player) -> void:
 
 
 func request_carry_player(target: Player) -> void:
-	if target == null or is_downed or carried_player != null:
+	if target == null or is_downed or carried_player != null or not target.is_downed:
 		return
 	if not _is_multiplayer_active():
 		_perform_carry(self, target)
@@ -1592,7 +1596,7 @@ func _perform_revive(reviver: Player, target: Player) -> void:
 
 
 func _is_multiplayer_active() -> bool:
-	return multiplayer != null and multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED
+	return multiplayer != null and multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer) and multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED
 
 
 func _get_player_name(p: Player) -> String:
@@ -1889,6 +1893,9 @@ func _setup_extra_hud() -> void:
 	give_up_bar.add_theme_stylebox_override(&"fill", give_up_fill)
 	give_up_bar.visible = false
 	hud.add_child(give_up_bar)
+	inspect_card = ITEM_INSPECT_CARD_SCRIPT.new()
+	inspect_card.visible = false
+	hud.add_child(inspect_card)
 
 
 func _update_extra_hud() -> void:
@@ -2031,6 +2038,8 @@ func _setup_settings() -> void:
 func _on_core_settings_changed(section: String, values: Dictionary) -> void:
 	if section == SettingsManager.GAMEPLAY:
 		apply_settings(values)
+	elif section == SettingsManager.CONTROLS:
+		refresh_inspect_card()
 
 
 ## Menu de pausa aberto: sem olhar, mover, atacar nem cavar (em coop o jogo segue).
@@ -2116,6 +2125,215 @@ func update_tool_sway(delta: float) -> void:
 	tool_sway.position = Vector3(_sway_offset.x, _sway_offset.y + breathe - equip * 0.12 + charge * 0.03, charge * 0.12) + bob
 	var k: float = deg_to_rad(tool_sway_rot_deg) / maxf(tool_sway_max, 0.0001)
 	tool_sway.rotation = Vector3(-_sway_offset.y * k + equip * 0.5, _sway_offset.x * k, -_sway_offset.x * k * 0.6)
+	if is_inspecting:
+		_inspect_time += delta
+		var insp_pos: Vector3 = Vector3(-0.08, 0.06 + sin(_inspect_time * 1.5) * 0.015, 0.08)
+		var insp_rot: Vector3 = Vector3(
+			0.24 + sin(_inspect_time * 1.2) * 0.18,
+			sin(_inspect_time * 0.95) * 0.65,
+			sin(_inspect_time * 1.1) * 0.2
+		)
+		tool_sway.position += insp_pos
+		tool_sway.rotation += insp_rot
+		if tool_view != null:
+			tool_view.rotation = _tool_view_rest_rot + Vector3(
+				sin(_inspect_time * 1.1) * 0.16,
+				_inspect_time * 0.9,
+				sin(_inspect_time * 0.85) * 0.14
+			)
+
+
+# ---------------------------------------------------------------------------
+# Inspeção de item na mão (#88)
+# ---------------------------------------------------------------------------
+
+const ITEM_INSPECT_CARD_SCRIPT: Script = preload("res://gameplay/player/item_inspect_card.gd")
+var is_inspecting: bool = false
+var inspect_card: ItemInspectCard = null
+var _inspect_time: float = 0.0
+
+
+func set_inspecting(active: bool) -> void:
+	if is_downed and active:
+		return
+	is_inspecting = active
+	if not active:
+		_inspect_time = 0.0
+		if tool_view != null:
+			tool_view.rotation = _tool_view_rest_rot
+		if shovel_rig != null and (dig_animator == null or not dig_animator.is_playing()):
+			shovel_rig.visible = false
+		update_tool_sway(0.0)
+	if inspect_card != null:
+		inspect_card.visible = active
+	if active:
+		refresh_inspect_card()
+
+
+func toggle_inspect() -> void:
+	set_inspecting(not is_inspecting)
+
+
+func get_action_key_label(action: String) -> String:
+	if SettingsManager.instance != null:
+		var b: Dictionary = SettingsManager.instance.get_binding(action)
+		if not b.is_empty():
+			return SettingsManager.binding_label(b)
+	var fallback: Dictionary = SettingsManager.DEFAULT_BINDINGS.get(action, {})
+	if not fallback.is_empty():
+		return SettingsManager.binding_label(fallback)
+	return action.to_upper()
+
+
+func refresh_inspect_card() -> void:
+	if inspect_card == null:
+		return
+	var c: CarriedItem = inventory.get_selected() if inventory != null else null
+	var k_use: String = get_action_key_label("use_tool")
+	var k_dig: String = get_action_key_label("careful_dig")
+	var k_atk: String = get_action_key_label("attack")
+	var k_drop: String = get_action_key_label("drop")
+	var k_int: String = get_action_key_label("interact")
+	var k_insp: String = get_action_key_label("inspect")
+
+	if c == null:
+		if is_inspecting and shovel_rig != null and (dig_animator == null or not dig_animator.is_playing()):
+			shovel_rig.visible = true
+		var dmg_red: int = int(round((1.0 - get_dig_damage_multiplier()) * 100.0))
+		var title: String = "Pá de Escavação (Nível %d)" % maxi(shovel_level, 1)
+		var subtitle: String = "Ferramenta Base • Prospeção e Defesa"
+		var desc: String = "Pá regulamentar da expedição ScanDig. Remove camadas de solo sobre sinais detetados e serve de defesa corpo a corpo contra criaturas."
+		var stats: String = "Dano corpo a corpo: %d  |  Proteção ao achado: +%d%%" % [int(get_attack_damage()), dmg_red]
+		var ctrls: PackedStringArray = PackedStringArray([
+			"[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa" % [k_dig, k_dig],
+			"[%s] Golpear com a pá" % k_atk,
+			"[%s] Interagir / Apanhar" % k_int,
+			"[%s] Fechar inspeção" % k_insp,
+		])
+		inspect_card.set_card_content(title, subtitle, desc, stats, ctrls, UiPalette.GREEN_BOTTLE)
+		return
+
+	if shovel_rig != null and (dig_animator == null or not dig_animator.is_playing()):
+		shovel_rig.visible = false
+
+	if c.tool_id == &"detector":
+		var det_lvl: int = GameState.instance.get_upgrade_level("detector") if GameState.instance != null else 1
+		var title_d: String = "%s (Nível %d)" % [c.tool_name if not c.tool_name.is_empty() else "Detetor de Metais", maxi(det_lvl, 1)]
+		var subtitle_d: String = "Equipamento de Sondagem • ScanDig"
+		var desc_d: String = "Sonda eletromagnética de campo. Emite bipes mais rápidos e agudos e acende o visor conforme te aproximas de um achado enterrado."
+		var stats_d: String = "Estado: Inteiro (equipamento permanente)"
+		var ctrls_d: PackedStringArray = PackedStringArray([
+			"[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa" % [k_dig, k_dig],
+			"[%s] Golpear com a pá" % k_atk,
+			"[%s] Largar / Arremessar" % k_drop,
+			"[%s] Fechar inspeção" % k_insp,
+		])
+		inspect_card.set_card_content(title_d, subtitle_d, desc_d, stats_d, ctrls_d, UiPalette.GREEN_BOTTLE)
+		return
+
+	if c.is_tool() and c.tool_data != null:
+		var td: ToolData = c.tool_data
+		var title_t: String = td.display_name if not td.display_name.is_empty() else c.get_display_name()
+		var desc_t: String = td.description if not td.description.is_empty() else "Equipamento de expedição."
+		if td.category == ToolData.Category.FOOD:
+			var sub_f: String = "Provisão de Campo • Alimento"
+			var stats_f: String = "Recupera: +%d Vida  |  +%d Saciedade" % [int(td.heal_amount), int(td.hunger_restore)]
+			if c.charges > 0:
+				stats_f += "  |  Doses: x%d" % c.charges
+			if td.nausea_chance > 0.0:
+				stats_f += "\n⚠ Alimento cru (%d%% risco de enjoo)" % int(round(td.nausea_chance * 100.0))
+			var ctrls_f: PackedStringArray = PackedStringArray([
+				"[Segurar %s] Comer (%0.1fs)" % [k_use, EAT_TIME],
+				"[%s] Largar / Arremessar" % k_drop,
+				"[%s] Cavar com a pá" % k_dig,
+				"[%s] Fechar inspeção" % k_insp,
+			])
+			inspect_card.set_card_content(title_t, sub_f, desc_t, stats_f, ctrls_f, UiPalette.GREEN_BOTTLE)
+			return
+
+		var sub_w: String = "Arma de Expedição" if td.category == ToolData.Category.WEAPON else "Consumível de Campo"
+		var stats_w: String = ""
+		var stats_col: Color = UiPalette.GREEN_BOTTLE
+		if c.wear >= 0 and td.durability > 0:
+			var pct_w: int = int(ceilf(c.wear_ratio() * 100.0))
+			stats_w = "Estado / Desgaste: %d/%d usos (%d%%)" % [c.wear, td.durability, pct_w]
+			if pct_w <= 25:
+				stats_col = UiPalette.RED_BURNT
+			elif pct_w <= 50:
+				stats_col = UiPalette.ORANGE
+		elif c.charges >= 0:
+			stats_w = "Cargas restantes: x%d" % c.charges
+		else:
+			stats_w = "Estado: Pronto a usar"
+		var ctrls_w: PackedStringArray = PackedStringArray()
+		if c.tool_id in [TOOL_FORCADO, TOOL_HARPOON, TOOL_PULSE]:
+			ctrls_w.append("[%s] ou [%s] Usar / Disparar" % [k_use, k_atk])
+		else:
+			ctrls_w.append("[%s] Usar ferramenta" % k_use)
+			ctrls_w.append("[%s] Golpear com a pá" % k_atk)
+		ctrls_w.append("[%s] Cavar rápido" % k_dig)
+		ctrls_w.append("[%s] Largar / Arremessar" % k_drop)
+		ctrls_w.append("[%s] Fechar inspeção" % k_insp)
+		inspect_card.set_card_content(title_t, sub_w, desc_t, stats_w, ctrls_w, stats_col)
+		return
+
+	if c.item != null:
+		var it: ItemData = c.item
+		var title_i: String = c.get_display_name()
+		var cat_str: String = _get_category_name(it.category)
+		var mat_str: String = _get_material_name(it.material_type)
+		var size_str: String = _get_size_name(it.size_category)
+		var sub_i: String = "Achado do Museu • %s (%s, %s)" % [cat_str, mat_str, size_str]
+		var frag_pct: int = int(round(it.fragility * 100.0))
+		var desc_i: String = "Artefato catalogado de %s (porte %s, profundidade típica %d cm, fragilidade %d%%). Entregue na base para avaliação e exposição no Museu." % [
+			mat_str.to_lower(), size_str.to_lower(), it.depth_cm, frag_pct
+		]
+		var integ_pct: int = int(round(c.integrity * 100.0))
+		var cond_str: String = "✨ Intacto (Selo de Coleção)" if c.is_clean else ("💔 Rachado (%d%% integridade)" % integ_pct if c.integrity < 0.995 else "Conservado (%d%%)" % integ_pct)
+		var rare_str: String = "  |  ✦ Variante Rara" if c.is_rare_variant else ""
+		var stats_i: String = "Valor no Museu: %s (Base: %s)\nEstado: %s%s" % [
+			MoneyFormat.money(c.final_value),
+			MoneyFormat.money(it.base_value),
+			cond_str,
+			rare_str,
+		]
+		var col_i: Color = UiPalette.GREEN_BOTTLE if (c.is_clean or c.integrity >= 0.8) else UiPalette.ORANGE
+		var ctrls_i: PackedStringArray = PackedStringArray([
+			"[Segurar %s] Carregar arremesso / Largar" % k_drop,
+			"[%s] Entregar na base" % k_int,
+			"[%s] Cavar rápido" % k_dig,
+			"[%s] Golpear com a pá" % k_atk,
+			"[%s] Fechar inspeção" % k_insp,
+		])
+		inspect_card.set_card_content(title_i, sub_i, desc_i, stats_i, ctrls_i, col_i)
+
+
+func _get_material_name(mat: int) -> String:
+	match mat:
+		ItemData.MaterialType.FERRO:
+			return "Ferro"
+		ItemData.MaterialType.ALUMINIO:
+			return "Alumínio"
+		ItemData.MaterialType.PRATA:
+			return "Prata"
+		ItemData.MaterialType.OURO:
+			return "Ouro"
+		ItemData.MaterialType.DESCONHECIDO:
+			return "Liga Desconhecida"
+	return "Metal"
+
+
+func _get_size_name(sz: int) -> String:
+	match sz:
+		ItemData.SizeCategory.PEQUENO:
+			return "Pequeno"
+		ItemData.SizeCategory.MEDIO:
+			return "Médio"
+		ItemData.SizeCategory.GRANDE:
+			return "Grande"
+		ItemData.SizeCategory.COLOSSAL:
+			return "Colossal"
+	return "Pequeno"
 
 
 ## Achados intactos (#93): um golpe sacode a mochila; achados frágeis racham (fragility × golpe).
@@ -2154,6 +2372,8 @@ func _handle_inventory_actions() -> void:
 		var action: StringName = StringName("slot_%d" % (i + 1))
 		if InputMap.has_action(action) and Input.is_action_just_pressed(action):
 			inventory.select(i)
+	if InputMap.has_action("inspect") and Input.is_action_just_pressed("inspect"):
+		toggle_inspect()
 	if Input.is_action_just_pressed("interact"):
 		_interact()
 	if InputMap.has_action("drop"):
@@ -2415,11 +2635,15 @@ func _on_inventory_changed() -> void:
 		_show_temporary_message("🎒 Achado pesado: não dá para correr.", UiPalette.ORANGE, 1.6)
 	_update_session_hud()
 	_update_tool_in_hand()
+	if is_inspecting:
+		refresh_inspect_card()
 	carrying_loot = _count_deliverable() > 0
 
 
 func _on_selected_slot_changed(_index: int) -> void:
 	_update_tool_in_hand()
+	if is_inspecting:
+		refresh_inspect_card()
 	var sel: CarriedItem = inventory.get_selected()
 	if sel != null and sel.tool_id == TOOL_DYNAMITE:
 		show_hint("dynamite")

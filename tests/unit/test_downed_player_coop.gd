@@ -45,6 +45,7 @@ func test_solo_player_death_respawns_normally() -> void:
 
 func test_downed_state_on_death_in_coop() -> void:
 	var p: Player = _spawn("1")
+	var _mate: Player = _spawn("2", Vector3(5, 0, 0))
 	p.allow_downed = true
 	watch_signals(p)
 
@@ -68,6 +69,7 @@ func test_downed_state_on_death_in_coop() -> void:
 
 func test_downed_player_cannot_move_or_act() -> void:
 	var p: Player = _spawn("1")
+	var _mate: Player = _spawn("2", Vector3(5, 0, 0))
 	p.allow_downed = true
 	p.enter_downed()
 
@@ -268,6 +270,7 @@ func test_downed_orbital_camera_rotates_and_zooms_without_affecting_carrier() ->
 
 func test_downed_give_up_hold_progress_and_emergency_rescue_to_base() -> void:
 	var p: Player = _spawn("1", Vector3(0, 0, 0))
+	var _mate: Player = _spawn("2", Vector3(5, 0, 0))
 	p.allow_downed = true
 	# Afasta o jogador da base e adiciona um item na mochila antes de cair
 	p.global_position = Vector3(25.0, 0.0, -18.0)
@@ -304,6 +307,7 @@ func test_downed_give_up_hold_progress_and_emergency_rescue_to_base() -> void:
 func test_downed_camera_and_hud_cleanup_on_revive() -> void:
 	var _sp: SellPoint = _create_sell_point(Vector3(0, 0, 0), 4.0)
 	var p: Player = _spawn("1", Vector3(1, 0, 0))
+	var _mate: Player = _spawn("2", Vector3(5, 0, 0))
 	p.allow_downed = true
 	p.enter_downed()
 	p.apply_mouse_look(Vector2(80.0, -40.0))
