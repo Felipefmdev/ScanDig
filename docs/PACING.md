@@ -12,10 +12,13 @@ com testes reais e atualizem a tabela.
 | 3. Ruínas | 90–110 min | Guardião de pedra, Morcegos | Guardião Ancestral | R$ 8.000 + chefe do Campo |
 | 4. Geleira Eterna | 90–110 min | A definir (Dev A) | Mamute Congelado (`frozen_mammoth`) | R$ 70.000 + detector Nv.5 + chefe das Ruínas (`ancient_guardian`) |
 | 5. Cratera | 90–120 min | Criaturas "estranhas" | O Que Dorme Lá Em Baixo | R$ 190.000 + detector Nv.6 + chefe da Geleira (`frozen_mammoth`) |
-| Final / museu 100% | +30–60 min | — | — | Opcional (completistas) |
+| 6. Ilha do Tesouro (final) | 30–45 min (**alvo**) | Caranguejo, Ermitão, Cobra | Colosso do Tesouro (`gold_colossus`, o final, #115) | Os 8 fragmentos do mapa (#103) |
+| Museu 100% | +30–60 min | — | — | Opcional (completistas), depois do final |
 
-Ordem (#49): Praia → Campo → Ruínas → **Geleira** → Cratera. Soma: 6 h 50 min a 8 h 40 min
-sem o final; 7 h 20 min a 9 h 40 min com ele. **Provisório** até a medição pelo bot (#46).
+Ordem (#49, #103): Praia → Campo → Ruínas → **Geleira** → Cratera → **Ilha do Tesouro**. Soma:
+6 h 50 min a 8 h 40 min nos 5 sítios; **7 h 20 min a 9 h 25 min com a Ilha** (o jogo acaba no
+Colosso do Tesouro). O museu 100 % é opcional e fica fora da conta. **Provisório** até a medição
+pelo bot (#46) e por humanos.
 
 Regra geral: **cada mapa novo paga ~3x mais por item**, mas os upgrades e o mapa seguinte
 custam ~4x mais. Assim o tempo por mapa cresce devagar e o jogador sente-se mais rico.
@@ -287,6 +290,14 @@ desbloqueio do seguinte) a dividir pela renda medida.
 | Ruínas | det 3, moch 3, pá 1 | 1.336 | 2,3 | ~573 | 7,5 | 75.000 | ~56 min | 90–110 min |
 | Geleira | det 4, moch 4, pá 2 | 2.849 | 2,8 | ~1.124 | 7 | 236.000 | ~83 min | 90–110 min |
 | Cratera | det 5, moch 5, pá 2, pin 1 | 2.552 | 1,4 | ~1.986 | 14 | 190.000 | ~74 min | 90–120 min |
+| Ilha do Tesouro | det 4, pá 3, moch 2 | 4.191 | 2,8 (apanhados: 5,2) | ~1.655 | 4 em 10 min | — (não há o que comprar a seguir) | **sem medição** | 30–45 min (alvo) |
+
+**Ilha do Tesouro (#115, 2026-10-17):** `tools/bot/pacing_ilha_tesouro.json` em headless, **sem**
+`--fixed-fps` (10 min reais = 601 s): R$ 42.014 ganhos, 52 itens apanhados (inclui os tesouros à
+vista do `TreasureHoard`), 28 vendidos por R$ 46.352, 39 spots, 4 mortes, ameaça máx. 3,
+0 SCRIPT ERROR. O roteiro não tem meta (corre até o timeout) e o chefe final não entra nele,
+por isso o tempo da Ilha continua **alvo** (30–45 min: chegar, apanhar o tesouro à vista, vencer o
+Colosso), não medição.
 
 **Total de bot após #64: ~5 h 10 min** de escavação (~310 min), mais ~2–4 min por chefe e missões,
 perfazendo o alvo de 7–9 horas para um jogador humano. A distribuição dos tempos está agora perfeitamente

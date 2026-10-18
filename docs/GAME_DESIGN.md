@@ -1,4 +1,4 @@
-# ScanDig — Design do jogo completo (5 mapas, 7 a 9 horas)
+# ScanDig — Design do jogo completo (6 mapas, 7 a 9 horas)
 
 Documento mestre do Dev A (aprovado pelo Felipe em 2026-10-15). O `docs/PACING.md` continua a ser
 a fonte dos números de economia; este documento define **o que existe em cada mapa**.
@@ -6,8 +6,17 @@ Tudo o que está aqui é o alvo: afinem com o bot e com testes humanos e atualiz
 
 ## 1. Regras gerais
 
-- **5 mapas**, cada um único: inimigos próprios, itens próprios, chefe com uma mecânica diferente,
-  cenário com que se interage.
+- **Premissa: o Mapa do Tesouro (#103).** Um mapa antigo foi partido em **8 fragmentos** e enterrado
+  nos 5 sítios de escavação (Praia 1, Campo 1, Ruínas 2, Geleira 2, Cratera 2). Saem de missões
+  de NPC, chefes, segredos e escavações fundas raras (`GameState.MAP_FRAGMENTS`; as `hint` aparecem
+  no painel da base e nas falas dos NPCs, `line_map_hint`). Com os 8, o barco no cais da Praia leva
+  a equipa à **Ilha do Tesouro**, o 6.º mapa e o final.
+- **6 mapas**: 5 sítios de escavação, cada um único (inimigos próprios, itens próprios, chefe com
+  uma mecânica diferente, cenário com que se interage), e a Ilha do Tesouro no fim.
+- **Final (#115):** vencer o **Colosso do Tesouro** (`gold_colossus`, `GameState.FINAL_BOSS_ID`) na
+  Ilha. Ele solta o tesouro principal, o **Ídolo de Ouro** (`idolo_ouro`), que vai para o Museu, e
+  abre a tela "Jogo concluído" com os créditos. O Que Dorme Lá Em Baixo é o chefe da Cratera e dá o
+  último fragmento.
 - **Duração total 7–9 h** (história principal ~7,5 h + missões e segredos ~1 h). Ninguém precisa de
   fazer 100 % para acabar.
 - **Armas:** cada mapa tem uma banca. A banca vende **todas as armas dos mapas anteriores + 1 arma
@@ -36,7 +45,7 @@ Referências: `caranguejo.jpg`, `pa.jpg`, `kit_medico.jpg`, `repelente.jpg`, `es
   ruído de manchas/ferrugem por parâmetro, e um material de contorno (casco invertido, `next_pass`)
   aplicado aos modelos próprios. Os modelos Kenney recebem o mesmo material por override quando der.
 
-## 3. Os 5 mapas
+## 3. Os 6 mapas
 
 | # | Mapa | Tempo | Inimigos | Chefe principal | Chefe escondido | Arma exclusiva | Desbloqueio |
 | :- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -45,8 +54,9 @@ Referências: `caranguejo.jpg`, `pa.jpg`, `kit_medico.jpg`, `repelente.jpg`, `es
 | 3 | Ruínas | 90–100 min | Guardião de pedra, Morcego | Guardião Ancestral (pontos fracos que acendem, placas) | Múmia do Ídolo | **Lanterna de Magnésio** (flash em cone que atordoa; morcegos fogem) | R$ 8.000 + Toupeira Gigante |
 | 4 | **Geleira Eterna** (novo) | 90–100 min | Lobo do gelo, Pinguim-ladrão, Morsa | Mamute Congelado (gelo que racha, avalanche) | Yeti da Gruta | **Arpão de Corda** (puxa inimigos e itens) | R$ 70.000 + Guardião Ancestral |
 | 5 | Cratera | 100–120 min | Criaturas estranhas (rastejantes, flutuantes) | O Que Dorme Lá Em Baixo (fases no fundo da cratera) | O Eco | **Pulso Magnético** (empurra criaturas, puxa metal) | R$ 190.000 + Mamute Congelado |
+| 6 | **Ilha do Tesouro** (final) | 30–45 min (alvo) | Caranguejo, Ermitão, Cobra | **Colosso do Tesouro** (disfarçado de pilha de ouro; murro no chão, jorro de moedas) | — | — (banca com as armas anteriores) | Os 8 fragmentos do mapa (barco no cais da Praia) |
 
-Total da história ≈ 7–8 h; com missões e segredos ≈ 8–9 h.
+Total da história ≈ 7–8 h com a Ilha; com missões e segredos ≈ 8–9 h (alvo 7–9 h no total).
 
 ## 4. Conteúdo por mapa
 
@@ -93,7 +103,7 @@ Total da história ≈ 7–8 h; com missões e segredos ≈ 8–9 h.
 - **Chefe escondido:** Yeti da Gruta: seguir as pegadas que só aparecem com a aurora.
 - **Easter eggs:** um boneco de neve com cenoura de ouro; um pinguim com chapéu de festa.
 
-### 5. Cratera (final)
+### 5. Cratera
 - **Banca:** armas anteriores + **Pulso Magnético**.
 - **NPC:** Dra. Vega (estação de pesquisa). Missão "Sinal no fundo": calibrar 3 antenas → evento
   **rounds** finais: ondas de criaturas enquanto a antena transmite. Recompensa: dinheiro + Cristal Eco.
@@ -102,8 +112,20 @@ Total da história ≈ 7–8 h; com missões e segredos ≈ 8–9 h.
 - **Relíquias escondidas:** dentro de um geodo, no topo de um pilar (gravidade baixa), atrás de uma
   cortina de cristal.
 - **Chefe escondido:** O Eco: tocar os cristais com a sequência do Cristal Eco.
-- **Final:** vencer O Que Dorme Lá Em Baixo mostra os créditos e abre o "modo museu completo".
+- **Chefe principal:** O Que Dorme Lá Em Baixo. Vencê-lo dá o último fragmento do mapa
+  (`cratera_frag_2`); já não é o final (#115).
 - **Easter eggs:** uma sonda espacial com bandeira; um disco de vinil "Greatest Hits of Earth".
+
+### 6. Ilha do Tesouro (final)
+- **Chegada:** com os 8 fragmentos, o barco no cais da Praia zarpa para a ilha (`IslandBoat`).
+- **Banca:** as armas dos mapas anteriores (sem arma exclusiva).
+- **Tesouros à vista:** pilhas, baús e ídolos espalham achados de topo apanháveis sem cavar
+  (`TreasureHoard`); os spots do detector dão achados de ouro e jade (`items/maps/ilha_tesouro.tres`,
+  detector Nv.6).
+- **Chefe final:** o maior tesouro, no planalto do monte, é o **Colosso do Tesouro** disfarçado.
+  Mexer no tesouro certo (ou desenterrar demais) acorda-o. Vencido, solta o **Ídolo de Ouro** e
+  abre a tela "Jogo concluído" (contagens, fragmentos 8 / 8 e créditos). Depois disso o jogo
+  continua aberto para completar o museu.
 
 ## 5. Sistemas a construir (Dev A)
 
