@@ -176,6 +176,13 @@ const DUG_FOOD_IDS: Array[String] = [
 ]
 ## Ferramentas de que cada jogador só leva uma (em coop há um detetor por jogador no spawn).
 const UNIQUE_TOOLS: Array[StringName] = [&"detector"]
+## Mira assistida no comando para estilingue e arpão (How to Fish, #90).
+const AIM_ASSIST_RANGE: float = 60.0
+const AIM_ASSIST_ACQUIRE_RAD: float = deg_to_rad(18.0)
+const AIM_ASSIST_BREAK_RAD: float = deg_to_rad(40.0)
+const AIM_ASSIST_MAX_SPEED_RAD: float = deg_to_rad(120.0)
+const AIM_ASSIST_SHARPNESS: float = 10.0
+const AIM_ASSIST_SCAN_INTERVAL: float = 0.1
 const REPELLENT_COLOR: Color = Color(0.45, 1.0, 0.35, 0.85)
 const SHOVEL_COOLDOWN_REDUCTION_PER_LEVEL: float = 0.25
 const SHOVEL_DAMAGE_REDUCTION_PER_LEVEL: float = 0.15
@@ -316,6 +323,9 @@ var _dig_is_careful: bool = false
 ## Cliente: request_pickup pendente até este instante (evita pedidos repetidos com E).
 var _pickup_pending_until: int = 0
 const PICKUP_REQUEST_TIMEOUT_MS: int = 2000
+## Alvo e temporizador da mira assistida no comando (#90).
+var _aim_assist_target: Node3D = null
+var _aim_assist_scan_timer: float = 0.0
 
 # Contador de Sessão: total já entregue na base
 var session_money: int = 0
@@ -560,6 +570,164 @@ func apply_mouse_look(relative: Vector2) -> void:
 	head.rotation.x = clampf(head.rotation.x, deg_to_rad(-80.0), deg_to_rad(80.0))
 
 
+## Mira assistida ativa (#90): só jogador local, vivo, não caído, sem menu, com comando,
+## opção ligada no SettingsManager e estilingue ou arpão na mão. Rato nunca.
+func is_aim_assist_active() -> bool:
+	if not is_local() or not is_alive() or is_downed or is_settings_open():
+		return false
+	if SettingsManager.instance != null and not bool(SettingsManager.instance.get_value(SettingsManager.GAMEPLAY, "controller_aim_assist")):
+		return false
+	if not InputDevice.using_gamepad():
+		return false
+	var c: CarriedItem = inventory.get_selected() if inventory != null else null
+	if c == null or (c.tool_id != TOOL_SLINGSHOT and c.tool_id != TOOL_HARPOON):
+		return false
+	return true
+
+
+func get_aim_assist_target() -> Node3D:
+	return _aim_assist_target
+
+
+func set_aim_assist_target(target: Node3D) -> void:
+	_aim_assist_target = target
+
+
+func update_aim_assist(delta: float) -> void:
+	_update_aim_assist(delta)
+
+
+func _is_aim_target_valid(target: Node3D) -> bool:
+	if target == null or not is_instance_valid(target) or not target.is_inside_tree():
+		return false
+	if target.has_method("is_alive") and not target.call("is_alive"):
+		return false
+	if "health" in target and float(target.get("health")) <= 0.0:
+		return false
+	if camera == null:
+		return false
+	var cam_pos: Vector3 = camera.global_position
+	var target_pos: Vector3 = _get_target_center(target)
+	var to_target: Vector3 = target_pos - cam_pos
+	var dist: float = to_target.length()
+	if dist > AIM_ASSIST_RANGE or dist < 0.2:
+		return false
+	var dir: Vector3 = to_target / dist
+	var cam_fwd: Vector3 = -camera.global_transform.basis.z
+	if cam_fwd.angle_to(dir) > AIM_ASSIST_BREAK_RAD:
+		return false
+	if not _has_line_of_sight(cam_pos, target_pos, target):
+		return false
+	return true
+
+
+func _find_best_aim_target() -> Node3D:
+	if not is_inside_tree() or camera == null:
+		return null
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var enemies: Array[Node] = tree.get_nodes_in_group("enemies")
+	if enemies.is_empty():
+		return null
+	var cam_pos: Vector3 = camera.global_position
+	var cam_fwd: Vector3 = -camera.global_transform.basis.z
+	var best_target: Node3D = null
+	var best_angle: float = AIM_ASSIST_ACQUIRE_RAD
+	for node: Node in enemies:
+		if not (node is Node3D) or not is_instance_valid(node) or not node.is_inside_tree():
+			continue
+		var enemy: Node3D = node as Node3D
+		if enemy.has_method("is_alive") and not enemy.call("is_alive"):
+			continue
+		if "health" in enemy and float(enemy.get("health")) <= 0.0:
+			continue
+		var target_pos: Vector3 = _get_target_center(enemy)
+		var to_target: Vector3 = target_pos - cam_pos
+		var dist: float = to_target.length()
+		if dist > AIM_ASSIST_RANGE or dist < 0.2:
+			continue
+		var dir: Vector3 = to_target / dist
+		var angle: float = cam_fwd.angle_to(dir)
+		if angle <= best_angle:
+			if _has_line_of_sight(cam_pos, target_pos, enemy):
+				best_angle = angle
+				best_target = enemy
+	return best_target
+
+
+func _get_target_center(target: Node3D) -> Vector3:
+	if target == null:
+		return Vector3.ZERO
+	if target.has_method("get_aim_target_position"):
+		return target.call("get_aim_target_position")
+	return target.global_position + Vector3(0.0, 0.5, 0.0)
+
+
+func _has_line_of_sight(from: Vector3, to: Vector3, target: Node3D) -> bool:
+	if not is_inside_tree():
+		return true
+	var w3d: World3D = get_world_3d()
+	if w3d == null or w3d.direct_space_state == null:
+		return true
+	var exclude: Array[RID] = [get_rid()]
+	if target is CollisionObject3D:
+		exclude.append((target as CollisionObject3D).get_rid())
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from, to, GROUND_MASK, exclude)
+	var hit: Dictionary = w3d.direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return true
+	var col: Object = hit.get("collider")
+	if col == target or (col is Node and target.is_ancestor_of(col)):
+		return true
+	return false
+
+
+func _update_aim_assist(delta: float) -> void:
+	if not is_aim_assist_active():
+		_aim_assist_target = null
+		_aim_assist_scan_timer = 0.0
+		return
+	if camera == null or head == null:
+		return
+	_aim_assist_scan_timer -= delta
+	if _aim_assist_target != null:
+		if not _is_aim_target_valid(_aim_assist_target):
+			_aim_assist_target = null
+	if _aim_assist_target == null or _aim_assist_scan_timer <= 0.0:
+		_aim_assist_scan_timer = AIM_ASSIST_SCAN_INTERVAL
+		var best: Node3D = _find_best_aim_target()
+		if best != null:
+			_aim_assist_target = best
+	if _aim_assist_target == null:
+		return
+
+	var cam_pos: Vector3 = camera.global_position
+	var target_pos: Vector3 = _get_target_center(_aim_assist_target)
+	var to_target: Vector3 = target_pos - cam_pos
+	var dist: float = to_target.length()
+	if dist < 0.001:
+		return
+	var dir: Vector3 = to_target / dist
+
+	var local_dir: Vector3 = camera.global_transform.basis.inverse() * dir
+	var yaw_err: float = atan2(local_dir.x, -local_dir.z)
+	var pitch_err: float = atan2(local_dir.y, -local_dir.z)
+
+	var max_rot: float = AIM_ASSIST_MAX_SPEED_RAD * delta
+	var yaw_step: float = clampf(yaw_err * AIM_ASSIST_SHARPNESS * delta, -max_rot, max_rot)
+	var pitch_step: float = clampf(pitch_err * AIM_ASSIST_SHARPNESS * delta, -max_rot, max_rot)
+
+	if absf(yaw_step) > absf(yaw_err):
+		yaw_step = yaw_err
+	if absf(pitch_step) > absf(pitch_err):
+		pitch_step = pitch_err
+
+	rotate_y(-yaw_step)
+	head.rotate_x(pitch_step)
+	head.rotation.x = clampf(head.rotation.x, deg_to_rad(-80.0), deg_to_rad(80.0))
+
+
 func _physics_process(delta: float) -> void:
 	if is_downed:
 		if is_local() and not is_settings_open():
@@ -653,6 +821,7 @@ func _process(_delta: float) -> void:
 		_update_downed_orbit_camera()
 		_update_downed_hud()
 		return
+	_update_aim_assist(_delta)
 	update_tool_sway(_delta)
 	_update_extra_hud()
 	_update_interaction_target()
@@ -2202,12 +2371,12 @@ func refresh_inspect_card() -> void:
 		var dmg_red: int = int(round((1.0 - get_dig_damage_multiplier()) * 100.0))
 		var title: String = "Pá de Escavação (Nível %d)" % maxi(shovel_level, 1)
 		var subtitle: String = "Ferramenta Base • Prospeção e Defesa"
-		var desc: String = "Pá regulamentar da expedição ScanDig. Remove camadas de solo sobre sinais detetados e serve de defesa corpo a corpo contra criaturas."
+		var desc: String = "Pá regulamentar da expedição ScanDig. Remove camadas de solo sobre sinais detectados e serve de defesa corpo a corpo contra criaturas."
 		var stats: String = "Dano corpo a corpo: %d  |  Proteção ao achado: +%d%%" % [int(get_attack_damage()), dmg_red]
 		var ctrls: PackedStringArray = PackedStringArray([
 			"[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa" % [k_dig, k_dig],
 			"[%s] Golpear com a pá" % k_atk,
-			"[%s] Interagir / Apanhar" % k_int,
+			"[%s] Interagir / Pegar" % k_int,
 			"[%s] Fechar inspeção" % k_insp,
 		])
 		inspect_card.set_card_content(title, subtitle, desc, stats, ctrls, UiPalette.GREEN_BOTTLE)
@@ -2218,9 +2387,9 @@ func refresh_inspect_card() -> void:
 
 	if c.tool_id == &"detector":
 		var det_lvl: int = GameState.instance.get_upgrade_level("detector") if GameState.instance != null else 1
-		var title_d: String = "%s (Nível %d)" % [c.tool_name if not c.tool_name.is_empty() else "Detetor de Metais", maxi(det_lvl, 1)]
+		var title_d: String = "%s (Nível %d)" % [c.tool_name if not c.tool_name.is_empty() else "Detector de Metais", maxi(det_lvl, 1)]
 		var subtitle_d: String = "Equipamento de Sondagem • ScanDig"
-		var desc_d: String = "Sonda eletromagnética de campo. Emite bipes mais rápidos e agudos e acende o visor conforme te aproximas de um achado enterrado."
+		var desc_d: String = "Sonda eletromagnética de campo. Emite bipes mais rápidos e agudos e acende o visor conforme se aproxima de um achado enterrado."
 		var stats_d: String = "Estado: Inteiro (equipamento permanente)"
 		var ctrls_d: PackedStringArray = PackedStringArray([
 			"[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa" % [k_dig, k_dig],
