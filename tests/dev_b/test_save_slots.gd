@@ -75,8 +75,11 @@ func test_migration_copies_legacy_to_slot_one_without_loss() -> void:
 	var gs: GameState = GameState.instance
 	assert_eq(gs.team_money, 4321)
 	assert_eq(gs.current_day, 7)
+	# Os campos do save antigo voltam iguais (campos novos podem ser derivados pelo GameState,
+	# ex.: map_fragments dos chefes já vencidos).
 	for key: String in SaveManager.LIST_FIELDS:
-		assert_eq(Array(gs.get(key)), Array(data[key]), "campo %s preservado" % key)
+		if data.has(key):
+			assert_eq(Array(gs.get(key)), Array(data[key]), "campo %s preservado" % key)
 	assert_eq(int(gs.upgrade_levels.get("detector", 0)), 1)
 	var summary: Dictionary = save.get_slot_summary(1)
 	assert_eq(int(summary["saved_at"]), 1760000000, "saved_at preservado")
