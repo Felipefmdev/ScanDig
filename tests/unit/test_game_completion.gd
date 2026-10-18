@@ -111,4 +111,4 @@ func test_base_station_ui_reflects_game_completed() -> void:
 
 	assert_string_contains(ui.secrets_label.text, "Jogo concluído", "secrets_label avisa jogo concluído")
 	assert_string_contains(ui.secrets_label.text, "Modo Museu completo", "secrets_label menciona Modo Museu completo")
-	assert_eq(ui.tab_container.get_tab_title(1), "Museu de Achados ★", "aba do museu exibe estrela de conclusão")
+	assert_eq(ui.tab_container.get_tab_title(1), "Museu ★", "aba do museu exibe estrela de conclusão (rótulo curto)")

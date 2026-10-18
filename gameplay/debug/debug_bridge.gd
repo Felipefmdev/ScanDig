@@ -1570,12 +1570,13 @@ func _start_expedition(map_id: String, timeout: float) -> void:
 
 # --- UI (#62): os mesmos sinais que um clique do jogador ----------------------
 
-## Muda o TabContainer visível que tem uma aba com este título.
+## Muda o TabContainer visível que tem uma aba com este título (ou nome do nó: a Base usa
+## rótulos curtos e o nome completo fica no nó).
 func _ui_tab(title: String) -> void:
 	for tc: Node in _find_all(get_tree().root, func(n: Node) -> bool: return n is TabContainer and (n as Control).is_visible_in_tree()):
 		var t: TabContainer = tc as TabContainer
 		for i: int in t.get_tab_count():
-			if t.get_tab_title(i) == title:
+			if t.get_tab_title(i) == title or String(t.get_tab_control(i).name) == title:
 				t.current_tab = i
 				_log("  aba '%s'" % title)
 				return

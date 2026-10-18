@@ -59,6 +59,17 @@ var _unlock_timer: SceneTreeTimer = null
 
 # Mapa do Tesouro (#112): aba criada em runtime (sem mexer na cena).
 const TREASURE_TAB_TITLE: String = "Mapa do Tesouro"
+## Rótulos curtos das abas (nome do nó -> rótulo): com os 5 nomes completos a TabBar passava
+## da largura da Base e aparecia a seta, com a Loja fora da vista. O nome do nó (usado nos
+## caminhos do _resolve_node e no ui_tab dos bots) fica igual e vira a dica (tooltip) da aba.
+const TAB_SHORT_TITLES: Dictionary = {
+	"Loja de Equipamentos": "Loja",
+	"Museu de Achados": "Museu",
+	"Expedições": "Expedições",
+	"Diário": "Diário",
+	TREASURE_TAB_TITLE: "Mapa",
+}
+const MUSEUM_DONE_MARK: String = " ★"
 const TREASURE_MAX_HINTS: int = 3
 var _treasure_count_label: Label = null
 var _treasure_scroll: TreasureMapScroll = null
@@ -86,6 +97,7 @@ func _ready() -> void:
 	# A loja já usa o CoreSession (nome dos mapas) no primeiro refresh.
 	_session = get_node_or_null(SESSION_PATH)
 	_build_treasure_tab()
+	_apply_tab_titles()
 	_resolve_game_state()
 	_setup_expeditions()
 	if tab_container != null:
@@ -93,6 +105,18 @@ func _ready() -> void:
 		tab_container.tab_changed.connect(func(_tab: int) -> void: _sync_hidden_tab_widths())
 		_sync_hidden_tab_widths.call_deferred()
 		_focus_initial.call_deferred()
+
+
+## Rótulos curtos + nome completo na dica de cada aba.
+func _apply_tab_titles() -> void:
+	if tab_container == null:
+		return
+	var bar: TabBar = tab_container.get_tab_bar()
+	for i: int in tab_container.get_tab_count():
+		var page_name: String = tab_container.get_tab_control(i).name
+		if TAB_SHORT_TITLES.has(page_name):
+			tab_container.set_tab_title(i, TAB_SHORT_TITLES[page_name])
+			bar.set_tab_tooltip(i, page_name)
 
 
 ## Comando/teclado (#102): a base abre com o foco na aba atual (no coop o menu de rede pega o
@@ -641,10 +665,10 @@ func _refresh_museum_display() -> void:
 		museum_item_list.add_item(museum_line(item, discovered.has(item.id), intact))
 
 	if tab_container != null and tab_container.get_tab_count() > 1:
+		var museum_title: String = TAB_SHORT_TITLES.get(String(tab_container.get_tab_control(1).name), "Museu")
 		if _game_state != null and _game_state.game_completed:
-			tab_container.set_tab_title(1, "Museu de Achados ★")
-		else:
-			tab_container.set_tab_title(1, "Museu de Achados")
+			museum_title += MUSEUM_DONE_MARK
+		tab_container.set_tab_title(1, museum_title)
 	if museum_feedback_label != null and museum_feedback_label.text.is_empty() and _game_state != null and _game_state.game_completed:
 		museum_feedback_label.text = "🏆 Jogo concluído — Modo Museu completo ativo!"
 
