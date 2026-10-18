@@ -56,6 +56,12 @@ const SHOP_ICONS: Dictionary = {"detector": "detector", "pinpointer": "pinpointe
 const SHOP_ICON_SIDE: float = 32.0
 const SHOP_PIP_SIZE: Vector2 = Vector2(14, 8)
 const SHOP_BUY_WIDTH: float = 128.0
+## Estados do botão Comprar fora de compra (#122): papel claro com borda e texto na cor do motivo,
+## em vez do bege apagado do disabled, que parecia quebrado.
+const SHOP_NO_MONEY_TEXT: String = "Sem saldo"
+const SHOP_STATE_NO_MONEY: Color = UiPalette.RED_BURNT
+const SHOP_STATE_MAX: Color = UiPalette.GREEN_BOTTLE
+const SHOP_STATE_LOCKED: Color = UiPalette.METAL
 const WAITING_GAME_STATE_TOOLTIP: String = "Aguardando conexão com o estado do jogo..."
 ## Tempo máximo aguardando purchase_result antes de liberar os botões novamente.
 const PURCHASE_TIMEOUT_SEC: float = 5.0
@@ -95,8 +101,8 @@ var night_check: CheckButton = null
 var _night_by_map: Dictionary = {}
 
 ## A Base cabe na tela (ui_scale 1.3 em 960x540 incluso): cada aba rola num ScrollContainer (com o
-## nome da aba; o conteúdo vira o filho "Page") e a altura das abas é a da maior, limitada ao que
-## cabe entre o topo da Base e a borda de baixo.
+## nome da aba; o conteúdo vira o filho "Page") e a altura das abas é a do conteúdo da aba atual
+## (#122: sem o vazio embaixo da Loja), limitada ao que cabe entre o topo da Base e a borda de baixo.
 const BOTTOM_MARGIN: float = 12.0
 const MIN_PAGE_HEIGHT: float = 120.0
 var _page_scrolls: Array[ScrollContainer] = []
@@ -123,11 +129,15 @@ func _ready() -> void:
 	_build_treasure_tab()
 	_wrap_pages_in_scroll()
 	_apply_tab_titles()
+	# Borda de foco só navegando por teclado/comando; com o mouse, nada aceso (#122).
+	UiFocus.follow_pointer(get_node_or_null(^"PanelContainer") as Control)
 	_resolve_game_state()
 	_setup_expeditions()
 	if tab_container != null:
 		tab_container.resized.connect(_sync_hidden_tab_widths)
-		tab_container.tab_changed.connect(func(_tab: int) -> void: _sync_hidden_tab_widths())
+		tab_container.tab_changed.connect(func(_tab: int) -> void:
+			_sync_hidden_tab_widths()
+			_queue_fit_height())
 		_sync_hidden_tab_widths.call_deferred()
 		_focus_initial.call_deferred()
 		get_viewport().size_changed.connect(_queue_fit_height)
@@ -231,16 +241,17 @@ func _queue_fit_height() -> void:
 		_fit_height.call_deferred()
 
 
-## Altura das abas = a da maior, sem passar da borda de baixo da tela.
+## Altura das abas = a do conteúdo da aba atual, sem passar da borda de baixo da tela.
 func _fit_height() -> void:
 	_fit_queued = false
 	var panel: Control = get_node_or_null(^"PanelContainer") as Control
 	if _page_scrolls.is_empty() or panel == null or not is_inside_tree():
 		return
 	_sync_hidden_tab_widths()
-	var content_h: float = 0.0
-	for scroll: ScrollContainer in _page_scrolls:
-		content_h = maxf(content_h, (scroll.get_child(0) as Control).get_combined_minimum_size().y)
+	var current: ScrollContainer = tab_container.get_current_tab_control() as ScrollContainer
+	if current == null or current.get_child_count() == 0:
+		current = _page_scrolls[0]
+	var content_h: float = (current.get_child(0) as Control).get_combined_minimum_size().y
 	var current_h: float = _page_scrolls[0].custom_minimum_size.y
 	var overhead: float = panel.get_combined_minimum_size().y - current_h
 	var avail: float = get_viewport().get_visible_rect().size.y - panel.global_position.y - BOTTOM_MARGIN - overhead
@@ -773,6 +784,7 @@ func _refresh_shop_buttons() -> void:
 			btn.text = "Máximo"
 			btn.tooltip_text = "%s já está no nível máximo." % display_name
 			btn.disabled = true
+			_set_shop_state(btn, SHOP_STATE_MAX)
 			continue
 		var reason: String = _get_upgrade_block_reason(upgrade_id, cost)
 		var required_map: String = _get_next_upgrade_required_map(upgrade_id)
@@ -781,9 +793,12 @@ func _refresh_shop_buttons() -> void:
 			btn.text = "🔒 %s" % UiFormat.money(cost)
 			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 			btn.disabled = true
+			_set_shop_state(btn, SHOP_STATE_LOCKED)
 			continue
 		_set_shop_row(upgrade_id, display_name, level, max_level, detail)
-		btn.text = "Comprar\n%s" % UiFormat.money(cost)
+		var no_money: bool = not reason.is_empty() and _game_state.team_money < cost
+		btn.text = "%s\n%s" % [SHOP_NO_MONEY_TEXT if no_money else "Comprar", UiFormat.money(cost)]
+		_set_shop_state(btn, SHOP_STATE_NO_MONEY if no_money else Color.TRANSPARENT)
 		if not reason.is_empty():
 			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
 		elif upgrade_id == "detector":
@@ -794,6 +809,26 @@ func _refresh_shop_buttons() -> void:
 		else:
 			btn.tooltip_text = ""
 		btn.disabled = _pending_purchase or not reason.is_empty()
+
+
+## Botão Comprar parado num estado (sem saldo, máximo, bloqueado): papel claro, borda e texto na
+## cor `color`. Color.TRANSPARENT volta ao PrimaryButton do theme (comprável ou processando).
+func _set_shop_state(btn: Button, color: Color) -> void:
+	if color.a <= 0.0:
+		btn.remove_theme_stylebox_override(&"disabled")
+		btn.remove_theme_color_override(&"font_disabled_color")
+		return
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = UiPalette.PAPER_LIGHT
+	style.border_color = color
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(3)
+	style.content_margin_left = 6.0
+	style.content_margin_right = 6.0
+	style.content_margin_top = 2.0
+	style.content_margin_bottom = 2.0
+	btn.add_theme_stylebox_override(&"disabled", style)
+	btn.add_theme_color_override(&"font_disabled_color", color)
 
 
 ## Motivo do core para não comprar o próximo nível; core antigo: só checa o saldo.

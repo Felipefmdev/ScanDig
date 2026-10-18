@@ -276,7 +276,8 @@ func _check_layout(base: BaseStationUI, menu: MultiplayerMenu, hud: Node) -> voi
 				"%s Base aba %s: %s dentro da tela" % [where, tabs.get_tab_title(i), r])
 			_check(r.size.y <= base_panel.get_combined_minimum_size().y + 0.5, "%s Base aba %s: altura do conteúdo (%.0f), sem esticar" % [where, tabs.get_tab_title(i), r.size.y])
 			_buttons_fit(base_panel, "%s Base aba %s" % [where, tabs.get_tab_title(i)])
-		_check(heights.max() - heights.min() < 0.5, "%s: Base não muda de altura entre abas %s" % [where, heights])
+		# #122: a altura segue o conteúdo da aba atual (sem o vazio embaixo da Loja).
+		_check(heights.max() - heights.min() > 0.5, "%s: Base com a altura de cada aba %s" % [where, heights])
 		tabs.current_tab = 0
 		await _wait(2)
 

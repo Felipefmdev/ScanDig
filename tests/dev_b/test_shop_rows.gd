@@ -50,8 +50,49 @@ func test_buy_button_disabled_without_money() -> void:
 	GameState.instance.load_snapshot({"team_money": 0})
 	var ui: BaseStationUI = _base()
 	ui._refresh_shop_buttons()
-	assert_true(ui.buy_shovel_btn.disabled, "sem saldo: cinza")
+	assert_true(ui.buy_shovel_btn.disabled, "sem saldo: desativado")
 	assert_string_contains(ui.buy_shovel_btn.text, UiFormat.money(GameState.instance.get_next_upgrade_cost("shovel")), "o preço continua visível")
+
+
+## #122 (E6): sem saldo é um estado claro (papel claro, "Sem saldo" e preço em RED_BURNT), não o
+## bege apagado; com saldo volta ao PrimaryButton; máximo em verde.
+func test_no_money_state_is_explicit() -> void:
+	GameState.instance.load_snapshot({"team_money": 0, "upgrade_levels": {"backpack": 5}})
+	var ui: BaseStationUI = _base()
+	ui._refresh_shop_buttons()
+	var btn: Button = ui.buy_shovel_btn
+	assert_true(btn.text.begins_with(BaseStationUI.SHOP_NO_MONEY_TEXT + "
+"), "texto: %s" % btn.text)
+	assert_eq(btn.get_theme_color(&"font_disabled_color"), UiPalette.RED_BURNT, "preço em vermelho")
+	var style: StyleBoxFlat = btn.get_theme_stylebox(&"disabled") as StyleBoxFlat
+	assert_true(style != null and style.bg_color == UiPalette.PAPER_LIGHT and style.border_color == UiPalette.RED_BURNT, "papel claro com borda vermelha")
+	assert_eq(ui.buy_backpack_btn.get_theme_color(&"font_disabled_color"), UiPalette.GREEN_BOTTLE, "máximo em verde")
+	GameState.instance.load_snapshot({"team_money": 100000})
+	ui._refresh_shop_buttons()
+	assert_false(btn.disabled)
+	assert_true(btn.text.begins_with("Comprar
+"))
+	assert_false(btn.has_theme_stylebox_override(&"disabled"), "comprável: volta ao theme")
+
+
+## #122 (E6): sem o vazio embaixo da lista (a altura vem da aba atual) e a borda de foco só fora
+## do mouse.
+func test_shop_height_by_content_and_focus_only_with_keyboard() -> void:
+	InputDevice.instance.set_using_pointer(true)
+	var ui: BaseStationUI = _base()
+	ui.tab_container.current_tab = 0
+	await wait_frames(4)
+	var scroll: ScrollContainer = ui.tab_container.get_tab_control(0) as ScrollContainer
+	var content_h: float = ui.get_page(0).get_combined_minimum_size().y
+	assert_almost_eq(scroll.custom_minimum_size.y, content_h, 1.0, "altura da Loja = conteúdo")
+	ui.tab_container.current_tab = 1
+	await wait_frames(4)
+	assert_almost_eq(scroll.custom_minimum_size.y, ui.get_page(1).get_combined_minimum_size().y, 1.0, "outra aba: altura dela")
+	var btn: Button = ui.buy_detector_btn
+	assert_eq(btn.get_theme_stylebox(&"focus").get_class(), "StyleBoxEmpty", "mouse: sem borda de foco")
+	InputDevice.instance.set_using_pointer(false)
+	assert_ne(btn.get_theme_stylebox(&"focus").get_class(), "StyleBoxEmpty", "teclado: borda de foco")
+	InputDevice.instance.set_using_pointer(true)
 
 
 func test_lobby_panel_uses_chips() -> void:
