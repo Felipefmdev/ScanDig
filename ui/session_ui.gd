@@ -2,8 +2,8 @@ class_name SessionUI
 extends CanvasLayer
 
 ## Overlay global do fluxo de sessão (autoload "CoreSessionUI").
-## Tela de carregamento, barra de expedição (mapa/dia + "Voltar à base" para o host
-## e "Sair da sessão" online), avisos de missão/segredo, resumo do dia e aviso de
+## Tela de carregamento, barra de expedição (mapa/dia + "Sair da sessão" online; o
+## "Voltar à base" fica no menu de pausa, #122), avisos de missão/segredo, resumo do dia e aviso de
 ## queda do host. Acessa o
 ## SessionManager de forma dinâmica (autoload "CoreSession") para funcionar mesmo
 ## antes dele existir.
@@ -24,7 +24,6 @@ const REQUIRED_NODES: Array[String] = [
 	"LoadingLabel",
 	"ExpeditionBar",
 	"ExpeditionInfoLabel",
-	"ReturnButton",
 	"LeaveButton",
 	"SummaryPanel",
 	"SummaryTitleLabel",
@@ -45,7 +44,6 @@ var loading_screen: Control = null
 var loading_label: Label = null
 var expedition_bar: Control = null
 var expedition_info_label: Label = null
-var return_button: Button = null
 var leave_button: Button = null
 var summary_panel: Control = null
 var summary_title_label: Label = null
@@ -96,7 +94,6 @@ func _ready() -> void:
 	leave_confirm_panel.visible = false
 	expedition_bar.visible = false
 	toast_panel.visible = false
-	return_button.pressed.connect(_on_return_pressed)
 	leave_button.pressed.connect(_on_leave_pressed)
 	leave_confirm_button.pressed.connect(_on_leave_confirm_pressed)
 	leave_cancel_button.pressed.connect(_on_leave_cancel_pressed)
@@ -123,7 +120,6 @@ func _bind_nodes() -> bool:
 	loading_label = get_node_or_null(^"%LoadingLabel") as Label
 	expedition_bar = get_node_or_null(^"%ExpeditionBar") as Control
 	expedition_info_label = get_node_or_null(^"%ExpeditionInfoLabel") as Label
-	return_button = get_node_or_null(^"%ReturnButton") as Button
 	leave_button = get_node_or_null(^"%LeaveButton") as Button
 	summary_panel = get_node_or_null(^"%SummaryPanel") as Control
 	summary_title_label = get_node_or_null(^"%SummaryTitleLabel") as Label
@@ -193,7 +189,7 @@ func _refresh_expedition_bar() -> void:
 	var in_expedition: bool = bool(_session_call(&"is_in_expedition", false))
 	expedition_bar.visible = in_expedition and not loading_screen.visible
 	var can_leave: bool = in_expedition and _is_online()
-	# Solo/offline: "Voltar à base" é o caminho; online, host e clientes podem sair.
+	# Solo/offline: "Voltar à base" (pausa) é o caminho; online, host e clientes podem sair.
 	leave_button.visible = can_leave
 	if not can_leave and leave_confirm_panel.visible:
 		leave_confirm_panel.visible = false
@@ -206,16 +202,15 @@ func _refresh_expedition_bar() -> void:
 		map_name = map.display_name if not map.display_name.is_empty() else map.id
 	var day: int = GameState.instance.current_day if GameState.instance != null else 1
 	expedition_info_label.text = "%s  •  Dia %d" % [map_name, day]
-	return_button.visible = _is_host()
-	return_button.disabled = false
 	leave_button.disabled = false
 
 
-func _on_return_pressed() -> void:
-	if not _is_host():
-		return
-	return_button.disabled = true
+## "Voltar à base" do menu de pausa (#122): só o host, em expedição. Retorna se pediu.
+func request_return_to_base() -> bool:
+	if not _is_host() or not bool(_session_call(&"is_in_expedition", false)):
+		return false
 	_session_call(&"request_end_expedition")
+	return true
 
 
 func _on_leave_pressed() -> void:

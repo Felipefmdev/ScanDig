@@ -297,12 +297,12 @@ func _on_settings_pressed() -> void:
 	settings_menu.focus_first()
 
 
-## Mesmo fluxo do ReturnButton do SessionUI (pede ao SessionManager o fim da expedição).
+## Pede ao SessionUI o fim da expedição (a barra não tem mais o botão, #122).
 func _on_return_pressed() -> void:
 	close()
 	var ui: SessionUI = SessionUI.instance
-	if ui != null and ui.return_button != null:
-		ui.return_button.pressed.emit()
+	if ui != null:
+		ui.request_return_to_base()
 
 
 ## Mesmo fluxo do LeaveButton do SessionUI (abre a confirmação dele).

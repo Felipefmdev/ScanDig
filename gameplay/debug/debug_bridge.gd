@@ -28,7 +28,7 @@ const CONDITION_VARS: PackedStringArray = [
 ## (estado da missão 0..4: OFFER, ACTIVE, READY, EVENT, DONE).
 const CONDITION_PREFIXES: PackedStringArray = ["flag_", "quest_"]
 ## Métodos que o passo "call" pode chamar (atalhos de debug para testar segredos e eventos).
-const DEBUG_CALL_METHODS: PackedStringArray = ["force_low_tide", "wake_immediately", "start", "trigger", "force_weather"]
+const DEBUG_CALL_METHODS: PackedStringArray = ["force_low_tide", "wake_immediately", "start", "trigger", "force_weather", "request_return_to_base"]
 const DIG_MODES: PackedStringArray = ["fast", "careful", "smart"]
 ## Distância "infinita" usada pelas variáveis nearest_spot/sell_dist quando não há alvo.
 const NO_TARGET_DISTANCE: float = 9999.0

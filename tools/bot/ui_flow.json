@@ -96,7 +96,8 @@
 		},
 		{
 			"t": 0,
-			"ui_press": "ReturnButton"
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
 		},
 		{
 			"wait_until": "in_expedition==0",
@@ -153,7 +154,8 @@
 		},
 		{
 			"t": 0,
-			"ui_press": "ReturnButton"
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
 		},
 		{
 			"wait_until": "in_expedition==0",
@@ -210,7 +212,8 @@
 		},
 		{
 			"t": 0,
-			"ui_press": "ReturnButton"
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
 		},
 		{
 			"wait_until": "in_expedition==0",
@@ -267,7 +270,8 @@
 		},
 		{
 			"t": 0,
-			"ui_press": "ReturnButton"
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
 		},
 		{
 			"wait_until": "in_expedition==0",
@@ -324,7 +328,8 @@
 		},
 		{
 			"t": 0,
-			"ui_press": "ReturnButton"
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
 		},
 		{
 			"wait_until": "in_expedition==0",

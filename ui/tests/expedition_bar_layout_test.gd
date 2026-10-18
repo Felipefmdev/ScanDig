@@ -46,8 +46,7 @@ func _run() -> void:
 	var session: Node = root.get_node(^"CoreSession")
 	session.set("_current_map", load("res://items/maps/praia.tres"))
 	ui._refresh_expedition_bar()
-	# Pior caso: host online, com os dois botões.
-	ui.return_button.visible = true
+	# Pior caso: host online, com o botão de sair (o "Voltar à base" fica na pausa, #122).
 	ui.leave_button.visible = true
 	await _wait(5)
 

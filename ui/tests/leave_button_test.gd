@@ -126,8 +126,8 @@ func _run() -> void:
 	await _wait_until(func() -> bool: return _scene_name() == "MapPraia" and sui.expedition_bar.visible, 10.0)
 	_check(sui.expedition_bar.visible, "solo: barra visível")
 	_check(not bar_leave.visible, "solo: sair da barra oculto")
-	_check(sui.return_button.visible, "solo: voltar à base visível")
-	sm.request_end_expedition()
+	_check(not sui.expedition_bar.has_node(^"Margin/VBox/ReturnButton"), "solo: barra sem voltar à base (fica na pausa)")
+	_check(sui.request_return_to_base(), "solo: voltar à base pelo SessionUI")
 	var solo_back: bool = await _wait_until(func() -> bool: return _scene_name() == "LobbyBase" and not sm.is_in_expedition(), 5.0)
 	_check(solo_back, "solo: voltou ao lobby: %s" % _scene_name())
 
