@@ -30,10 +30,11 @@ func test_player_hud_theme_and_variations() -> void:
 	assert_not_null(hotbar.theme, "Hotbar deve ter theme definido")
 
 	assert_eq(threat_bar.theme_type_variation, &"ThreatBar", "ThreatBar deve usar variação ThreatBar")
-	assert_false(threat_bar.has_theme_stylebox_override("background"), "ThreatBar não deve ter override de background")
+	# #122: o trilho é o escuro translúcido do HUD sem cartão (PlayerHudStyle), legível na areia/neve.
+	assert_true(threat_bar.get_theme_stylebox("background") is StyleBoxFlat and (threat_bar.get_theme_stylebox("background") as StyleBoxFlat).bg_color.is_equal_approx(PlayerHudStyle.TRACK_COLOR), "ThreatBar com o trilho do HUD")
 
 	assert_eq(health_bar.theme_type_variation, &"", "HealthBar deve usar ProgressBar padrão")
-	assert_false(health_bar.has_theme_stylebox_override("background"), "HealthBar não deve ter override de background")
+	assert_true(health_bar.get_theme_stylebox("background") is StyleBoxFlat and (health_bar.get_theme_stylebox("background") as StyleBoxFlat).bg_color.is_equal_approx(PlayerHudStyle.TRACK_COLOR), "HealthBar com o trilho do HUD")
 	assert_false(health_bar.has_theme_stylebox_override("fill"), "HealthBar não deve ter override de fill")
 
 	assert_true(session_label.get_theme_color("font_outline_color").is_equal_approx(UiPalette.INK), "SessionInfoLabel deve usar contorno INK")
