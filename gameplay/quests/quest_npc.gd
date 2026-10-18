@@ -38,6 +38,9 @@ enum QuestState { OFFER, ACTIVE, READY, EVENT, DONE }
 @export_multiline var line_win: String = ""
 @export_multiline var line_done: String = ""
 @export_multiline var line_holding: String = ""
+## Dica do Mapa do Tesouro (#115). Depois da missão (DONE), enquanto faltar algum fragmento,
+## alterna com line_done a cada conversa (a dica primeiro); com o mapa completo, só line_done.
+@export_multiline var line_map_hint: String = ""
 
 const HOLDING_DETECT_RANGE: float = 4.0
 const HOLDING_REACT_COOLDOWN: float = 10.0
@@ -64,6 +67,8 @@ var _talk_time: float = 0.0
 var _holding_cooldown_left: float = 0.0
 var _was_holding_in_range: bool = false
 var _last_held_item_id: String = ""
+## Conversas no DONE enquanto falta fragmento (só no host, que decide as falas).
+var _done_talks: int = 0
 
 
 func _ready() -> void:
@@ -287,7 +292,8 @@ func _on_interact(peer_id: int) -> void:
 		QuestState.EVENT:
 			say_to(peer_id, line_event, 3.0)
 		QuestState.DONE:
-			say_to(peer_id, line_done, 4.0)
+			var hint: bool = _map_hint_turn()
+			say_to(peer_id, line_map_hint if hint else line_done, 6.0 if hint else 4.0)
 	super._on_interact(peer_id)
 
 
@@ -331,6 +337,15 @@ func _refresh_marker() -> void:
 			_marker.visible = true
 		_:
 			_marker.visible = false
+
+
+## Vez da line_map_hint no DONE: alterna com line_done (a dica primeiro) até a equipa juntar
+## os fragmentos todos do Mapa do Tesouro.
+func _map_hint_turn() -> bool:
+	if line_map_hint.is_empty() or GameState.instance == null or GameState.instance.has_all_map_fragments():
+		return false
+	_done_talks += 1
+	return _done_talks % 2 == 1
 
 
 func _objective_done() -> bool:
