@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://b8netmenuscandig01"]
 
 [ext_resource type="Script" path="res://ui/multiplayer_menu.gd" id="1_net_menu"]
-[ext_resource type="Theme" path="res://ui/theme/scandig_theme.tres" id="2_scandig_theme"]
+[ext_resource type="Theme" uid="uid://dt4byoe88efie" path="res://ui/theme/scandig_theme.tres" id="2_scandig_theme"]
 
 [node name="MultiplayerMenu" type="Control"]
 layout_mode = 3

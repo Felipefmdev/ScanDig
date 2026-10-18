@@ -1,12 +1,12 @@
 [gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://ui/title_screen.gd" id="1_title"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/barrel.glb" id="2_barrel"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/chest.glb" id="3_chest"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/crate.glb" id="4_crate"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/palm-detailed-bend.glb" id="5_palm"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/boat-row-small.glb" id="6_boat"]
-[ext_resource type="PackedScene" path="res://assets/models/kenney_pirate/grass-patch.glb" id="7_grass"]
+[ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="2_barrel"]
+[ext_resource type="PackedScene" uid="uid://3q1pqo6818cx" path="res://assets/models/kenney_pirate/chest.glb" id="3_chest"]
+[ext_resource type="PackedScene" uid="uid://tpyunr7h3idb" path="res://assets/models/kenney_pirate/crate.glb" id="4_crate"]
+[ext_resource type="PackedScene" uid="uid://bmdkrjdxm4gxs" path="res://assets/models/kenney_pirate/palm-detailed-bend.glb" id="5_palm"]
+[ext_resource type="PackedScene" uid="uid://cv33lw4gpdbbx" path="res://assets/models/kenney_pirate/boat-row-small.glb" id="6_boat"]
+[ext_resource type="PackedScene" uid="uid://b7y2o841epna3" path="res://assets/models/kenney_pirate/grass-patch.glb" id="7_grass"]
 [ext_resource type="Environment" uid="uid://d17jqai7gcjjd" path="res://world/environment_praia.tres" id="8_env"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sand"]

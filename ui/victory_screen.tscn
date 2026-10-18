@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/victory_screen.gd" id="1_victory_screen"]
-[ext_resource type="Theme" path="res://ui/theme/scandig_theme.tres" id="2_scandig_theme"]
+[ext_resource type="Theme" uid="uid://dt4byoe88efie" path="res://ui/theme/scandig_theme.tres" id="2_scandig_theme"]
 
 [node name="VictoryScreen" type="CanvasLayer"]
 process_mode = 3

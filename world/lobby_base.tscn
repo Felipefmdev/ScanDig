@@ -1,8 +1,8 @@
 [gd_scene load_steps=11 format=3 uid="uid://dwiinrcl0r4yi"]
 
-[ext_resource type="PackedScene" uid="uid://cunl1wbc8gk2w" path="res://ui/hud.tscn" id="4_hud"]
-[ext_resource type="PackedScene" uid="uid://bbtor7gnehadw" path="res://ui/multiplayer_menu.tscn" id="5_netmenu"]
-[ext_resource type="PackedScene" uid="uid://ci3ueg3kurhk3" path="res://ui/base_station_ui.tscn" id="6_baseui"]
+[ext_resource type="PackedScene" uid="uid://c6hudscandig01" path="res://ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" uid="uid://b8netmenuscandig01" path="res://ui/multiplayer_menu.tscn" id="5_netmenu"]
+[ext_resource type="PackedScene" uid="uid://d3basestationscandig01" path="res://ui/base_station_ui.tscn" id="6_baseui"]
 [ext_resource type="Script" path="res://world/museum_display.gd" id="7_museum"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_lobby"]
