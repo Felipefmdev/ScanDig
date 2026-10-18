@@ -91,6 +91,19 @@ static func action_label(action: String) -> String:
 	return SettingsManager.binding_label(first if not first.is_empty() else other)
 
 
+## Prompts antigos escritos com a tecla ("[E] Apanhar"): o literal vira o botão/tecla atual.
+const LEGACY_KEY_TOKENS: Dictionary = {"[E]": "interact", "[Q]": "drop", "[F]": "attack"}
+
+
+## "[E] Apanhar", "[Q] Largar"... e "{ação}": tudo com o rótulo do dispositivo em uso. Com o
+## teclado nos padrões o texto fica igual.
+static func fill_key_prompts(text: String) -> String:
+	for token: String in LEGACY_KEY_TOKENS.keys():
+		if text.contains(token):
+			text = text.replace(token, "[%s]" % action_label(str(LEGACY_KEY_TOKENS[token])))
+	return fill_action_labels(text)
+
+
 ## Troca "{ação}" (ex.: "{drop}", "{interact}") pelo action_label de cada ação conhecida.
 static func fill_action_labels(text: String) -> String:
 	if not text.contains("{"):

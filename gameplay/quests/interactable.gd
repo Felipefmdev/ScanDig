@@ -56,6 +56,8 @@ func _ready() -> void:
 	_prompt_label.position = focus_offset + Vector3.UP * 0.45
 	_prompt_label.visible = false
 	add_child(_prompt_label)
+	if InputDevice.instance != null:
+		InputDevice.instance.device_changed.connect(_on_input_device_changed)
 	_say_label = _make_label(SAY_COLOR, Color(1.0, 0.98, 0.92), 30)
 	_say_label.name = "Say"
 	_say_label.pixel_size = 0.003
@@ -175,7 +177,7 @@ func _on_interact(peer_id: int) -> void:
 ## Todos os peers: o estado mudou (atualizar o visual aqui; chamar super).
 func _on_state_applied() -> void:
 	if _focused:
-		_prompt_label.text = get_prompt()
+		_prompt_label.text = _prompt_text()
 	state_changed.emit(state)
 
 
@@ -279,9 +281,19 @@ static func player_has_own_target(player: Node) -> bool:
 	return false
 
 
+## "[E] ..." com a tecla configurada ou o botão do comando (#102).
+func _prompt_text() -> String:
+	return InputDevice.fill_key_prompts(get_prompt())
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	if _focused:
+		_prompt_label.text = _prompt_text()
+
+
 func _set_focused(on: bool) -> void:
 	_focused = on
-	_prompt_label.text = get_prompt()
+	_prompt_label.text = _prompt_text()
 	_prompt_label.visible = on and not _say_label.visible
 
 

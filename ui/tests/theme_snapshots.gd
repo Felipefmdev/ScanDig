@@ -245,8 +245,42 @@ func _run() -> void:
 	fake.queue_free()
 	boss_hud.queue_free()
 	GameState.instance.reset_state()
+	await _pad_shots()
 	await _title_shots()
 	quit()
+
+
+## Controle (#102): aba Controles com as duas colunas, foco visível no menu de pausa com o
+## comando ativo e uma dica com o botão do comando ("Segure [B]…").
+func _pad_shots() -> void:
+	var pause: PauseMenu = PauseMenu.instance
+	if pause == null or InputDevice.instance == null:
+		return
+	InputDevice.instance.set_using_gamepad(true)
+	if pause.open():
+		await _shot("pausa_foco_comando")
+		pause.settings_button.pressed.emit()
+		pause.settings_menu.tabs.current_tab = SettingsMenu.TAB_CONTROLS
+		await _shot("config_controles_comando")
+		print("RECT controles ", _rect(pause.settings_menu))
+		pause.settings_menu.tabs.current_tab = 0
+		pause.close()
+	var player: Player = (load("res://gameplay/player/player.tscn") as PackedScene).instantiate() as Player
+	current_scene.add_child(player)
+	for i in range(5):
+		await process_frame
+	var hints: Script = load("res://gameplay/player/player_hints.gd")
+	hints.reset_all()
+	# Sem os painéis do lobby (a dica aparece em expedição, sem eles por cima).
+	var ui_layer: CanvasLayer = current_scene.get_node_or_null(^"UILayer") as CanvasLayer
+	if ui_layer != null:
+		ui_layer.visible = false
+	player.show_hint("throw")
+	await _shot("dica_comando")
+	if ui_layer != null:
+		ui_layer.visible = true
+	player.queue_free()
+	InputDevice.instance.set_using_gamepad(false)
 
 
 ## Tela inicial e slots (#100): sem save, com save, seletor (1 com ★, 1 ocupado, 1 vazio) e a

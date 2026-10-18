@@ -57,7 +57,7 @@ static func take(id: String) -> String:
 	cfg.load(hints_path())
 	cfg.set_value(SECTION, id, true)
 	cfg.save(hints_path())
-	return str(TEXTS[id]).replace("{drop}", _drop_label())
+	return fill(str(TEXTS[id]))
 
 
 ## "Rever dicas" (Configurações > Jogabilidade): todas voltam a aparecer uma vez.
@@ -66,8 +66,7 @@ static func reset_all() -> void:
 		DirAccess.remove_absolute(hints_path())
 
 
-## Tecla atual de soltar/arremessar (Configurações > Controles); "Q" sem o CoreSettings.
-static func _drop_label() -> String:
-	if SettingsManager.instance == null:
-		return "Q"
-	return SettingsManager.binding_label(SettingsManager.instance.get_binding("drop"))
+## "{drop}" e qualquer "{ação}" viram a tecla ou o botão do comando em uso (#102,
+## InputDevice.action_label); sem o CoreSettings, os padrões do teclado ("Q").
+static func fill(text: String) -> String:
+	return InputDevice.fill_action_labels(text)

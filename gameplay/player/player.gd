@@ -847,7 +847,8 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 
 
 func _show_temporary_message(text: String, color: Color = Color.WHITE, duration: float = 2.0) -> void:
-	_push_message(text, color, duration, MESSAGE_FONT_SIZE, 8)
+	# "[E]"/"[Q]" viram a tecla configurada ou o botão do comando (#102).
+	_push_message(InputDevice.fill_key_prompts(text), color, duration, MESSAGE_FONT_SIZE, 8)
 
 
 ## Mete uma mensagem na pilha do HUD. A mesma mensagem repetida só renova o tempo (ex.: cavar
@@ -1336,14 +1337,8 @@ func give_up_downed() -> void:
 
 
 func _get_interact_key_label() -> String:
-	if InputMap.has_action("interact"):
-		for ev: InputEvent in InputMap.action_get_events("interact"):
-			if ev is InputEventKey:
-				var ek: InputEventKey = ev as InputEventKey
-				var code: Key = ek.keycode if ek.keycode != KEY_NONE else ek.physical_keycode
-				if code != KEY_NONE:
-					return OS.get_keycode_string(code).to_upper()
-	return "E"
+	# Tecla configurada ou, no comando, o botão (#102).
+	return InputDevice.action_label("interact")
 
 
 func _update_downed_hud() -> void:
@@ -1809,7 +1804,29 @@ func show_hint(id: String) -> bool:
 	if text.is_empty():
 		return false
 	_show_temporary_message(text, Color(0.75, 0.9, 1.0), 4.5)
+	# Trocou de teclado para o comando (ou o contrário) com a dica na tela: refaz o texto (#102).
+	_hint_template = str(HINTS.TEXTS[id])
+	_hint_text = text
+	if InputDevice.instance != null and not InputDevice.instance.device_changed.is_connected(_on_input_device_changed):
+		InputDevice.instance.device_changed.connect(_on_input_device_changed)
 	return true
+
+
+var _hint_template: String = ""
+var _hint_text: String = ""
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	if _hint_text.is_empty() or message_stack == null:
+		return
+	var updated: String = HINTS.fill(_hint_template)
+	for child: Node in message_stack.get_children():
+		var label: Label = child as Label
+		if label != null and not label.is_queued_for_deletion() and label.text == _hint_text:
+			label.text = updated
+			_hint_text = updated
+			return
+	_hint_text = ""
 
 
 ## HUD extra (estudo How to Fish): carga do arremesso e cronómetro do chefe.
@@ -2382,6 +2399,8 @@ func _update_interaction_target() -> void:
 		interact_prompt.text = "[E] Apanhar %s%s%s" % [aimed.get_display_name(), value, suffix]
 	else:
 		interact_prompt.text = ""
+	# "[E]"/"[Q]" viram a tecla configurada ou o botão do comando (#102); refeito a cada frame.
+	interact_prompt.text = InputDevice.fill_key_prompts(interact_prompt.text)
 
 
 func _on_inventory_changed() -> void:
