@@ -46,7 +46,7 @@ func _resolve_game_state() -> void:
 
 func update_money(new_amount: int) -> void:
 	if money_label != null:
-		money_label.text = "Equipe  %s" % UiFormat.money(new_amount)
+		money_label.text = "Dinheiro  %s" % UiFormat.money(new_amount)
 
 
 func update_detector(level: int) -> void:

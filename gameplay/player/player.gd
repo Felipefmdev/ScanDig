@@ -1219,7 +1219,7 @@ func _update_session_hud() -> void:
 	if bag_info_label != null:
 		bag_info_label.text = "%d/%d  •  %s" % [inventory.get_count(), inventory.capacity, MoneyFormat.money(inventory.get_total_value())]
 	if GameState.instance != null:
-		session_info_label.text = "Equipe  %s" % MoneyFormat.money(GameState.instance.team_money)
+		session_info_label.text = "Dinheiro  %s" % MoneyFormat.money(GameState.instance.team_money)
 	else:
 		session_info_label.text = "Entregue  %s" % MoneyFormat.money(session_money)
 

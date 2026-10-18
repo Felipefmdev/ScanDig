@@ -63,6 +63,6 @@ func test_lobby_panel_uses_chips() -> void:
 		assert_not_null(chip, chip_name)
 		if chip != null:
 			assert_not_null(chip.icon_rect.texture, "%s com ícone" % chip_name)
-	assert_eq(hud.money_label.text, "Equipe  " + UiFormat.money(777))
+	assert_eq(hud.money_label.text, "Dinheiro  " + UiFormat.money(777))
 	assert_string_contains(hud.detector_label.text, "Detector")
 	assert_string_contains(hud.museum_label.text, "Museu")

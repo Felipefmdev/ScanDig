@@ -62,7 +62,7 @@ func _same_color(c: Control, item: String, type: String) -> bool:
 
 
 func _check_scenes(base: BaseStationUI, menu: MultiplayerMenu, hud: Node, ui: SessionUI) -> void:
-	# HUD do lobby (#119): Equipe / Detector / Museu em UiChip (papel claro, texto de tinta).
+	# HUD do lobby (#119): Dinheiro / Detector / Museu em UiChip (papel claro, texto de tinta).
 	var money_chip: UiChip = hud.get_node("%MoneyChip") as UiChip
 	_check(money_chip != null and money_chip.icon_rect.texture != null, "HUD: chip do dinheiro com ícone")
 	_check(money_chip != null and money_chip.label.get_theme_color("font_color").is_equal_approx(UiPalette.INK), "HUD: texto do chip em INK")

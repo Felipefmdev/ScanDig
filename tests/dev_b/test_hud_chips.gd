@@ -25,7 +25,7 @@ func test_top_chips_show_bag_and_team_money() -> void:
 	assert_eq(player.session_info_label, money.label, "session_info_label é o texto do chip do dinheiro")
 	GameState.instance.load_snapshot({"team_money": 5400})
 	player._update_session_hud()
-	assert_eq(money.label.text, "Equipe  " + MoneyFormat.money(5400))
+	assert_eq(money.label.text, "Dinheiro  " + MoneyFormat.money(5400))
 	assert_string_contains(bag.label.text, "%d/%d" % [player.inventory.get_count(), player.inventory.capacity])
 	assert_false(money.label.text.contains("💰") or bag.label.text.contains("🎒"), "sem emojis")
 	GameState.instance.reset_state()

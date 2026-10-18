@@ -3,7 +3,7 @@ extends PanelContainer
 
 ## Chip de informação (#119): ícone de UiIcons + texto num papel claro com contorno de tinta,
 ## no estilo dos painéis. Usado no HUD do topo (mochila e dinheiro) e no painel da base
-## (Equipe / Detector / Museu). Os filhos são criados no _init, então caminhos como
+## (Dinheiro / Detector / Museu). Os filhos são criados no _init, então caminhos como
 ## "MoneyChip/Box/Label" já existem no _ready de quem instancia a cena.
 
 const ICON_SIDE: int = 22
