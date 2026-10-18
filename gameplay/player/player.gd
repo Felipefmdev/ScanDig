@@ -326,6 +326,16 @@ const PICKUP_REQUEST_TIMEOUT_MS: int = 2000
 ## Alvo e temporizador da mira assistida no comando (#90).
 var _aim_assist_target: Node3D = null
 var _aim_assist_scan_timer: float = 0.0
+## Marcadores no coop (#107): bandeirinha sinal aqui / perigo / ajuda.
+const COOP_MARKER_FLAG_SCRIPT: Script = preload("res://gameplay/player/coop_marker_flag.gd")
+const COOP_MARKER_WHEEL_SCRIPT: Script = preload("res://gameplay/player/coop_marker_wheel.gd")
+const COOP_MARKER_HUD_SCRIPT: Script = preload("res://gameplay/player/coop_marker_hud.gd")
+var marker_hud: Control = null
+var marker_wheel: Control = null
+var _marker_pressed: bool = false
+var _marker_press_time: float = 0.0
+var _wheel_mouse_offset: Vector2 = Vector2.ZERO
+var _last_marker_type: int = 0
 
 # Contador de Sessão: total já entregue na base
 var session_money: int = 0
@@ -460,6 +470,7 @@ func _ensure_default_input_mappings() -> void:
 	_add_key_if_empty("interact", KEY_E)
 	_add_key_if_empty("drop", KEY_Q)
 	_add_key_if_empty("inspect", KEY_R)
+	_add_key_if_empty("marker", KEY_T)
 	_add_key_if_empty("slot_1", KEY_1)
 	_add_key_if_empty("slot_2", KEY_2)
 	_add_key_if_empty("slot_3", KEY_3)
@@ -493,12 +504,46 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion \
 			or event is InputEventJoypadButton or event is InputEventJoypadMotion:
 		_last_input_ms = Time.get_ticks_msec()
+
+	# Interceptação do menu radial de marcadores (#107):
+	if marker_wheel != null and marker_wheel.is_wheel_open():
+		if event is InputEventMouseMotion:
+			_wheel_mouse_offset += (event as InputEventMouseMotion).relative
+			marker_wheel.update_selection_from_input(_wheel_mouse_offset)
+			return
+		if event.is_action_pressed(&"drop") or event.is_action_pressed(&"pause"):
+			_marker_pressed = false
+			marker_wheel.close()
+			get_viewport().set_input_as_handled()
+			return
+
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not is_settings_open():
 		apply_mouse_look((event as InputEventMouseMotion).relative)
 
 	# [Esc] (ação "pause") é do menu de pausa (CorePauseMenu, #77).
 	if is_settings_open():
 		return
+
+	# Marcador no coop (#107): toque rápido planta; segurar abre menu radial
+	if is_local() and is_alive() and not is_downed:
+		if event.is_action_pressed(&"marker"):
+			_marker_pressed = true
+			_marker_press_time = 0.0
+			_wheel_mouse_offset = Vector2.ZERO
+			get_viewport().set_input_as_handled()
+			return
+		elif event.is_action_released(&"marker"):
+			if _marker_pressed:
+				_marker_pressed = false
+				if marker_wheel != null and marker_wheel.is_wheel_open():
+					var chosen_type: int = marker_wheel.get_selected_type()
+					_last_marker_type = chosen_type
+					marker_wheel.close()
+					plant_marker_at_aim(chosen_type)
+				else:
+					plant_marker_at_aim(_last_marker_type)
+				get_viewport().set_input_as_handled()
+				return
 	# Comando (#102): um botão do controle prende o mouse como o clique; LB/Y (← →) trocam o
 	# espaço da mochila como a roda (caído: aproximam e afastam a câmera).
 	if event is InputEventJoypadButton and event.is_pressed() and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
@@ -546,7 +591,7 @@ func _apply_pad_look(delta: float) -> void:
 
 
 func _pad_look_allowed() -> bool:
-	return not is_settings_open() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	return not is_settings_open() and (marker_wheel == null or not marker_wheel.is_wheel_open()) and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 
 
 ## `raw` = vetor cru do analógico (InputDevice.raw_look_input); a zona morta e a curva ficam lá.
@@ -821,6 +866,7 @@ func _process(_delta: float) -> void:
 		_update_downed_orbit_camera()
 		_update_downed_hud()
 		return
+	_handle_marker_process(_delta)
 	_update_aim_assist(_delta)
 	update_tool_sway(_delta)
 	_update_extra_hud()
@@ -2065,6 +2111,18 @@ func _setup_extra_hud() -> void:
 	inspect_card = ITEM_INSPECT_CARD_SCRIPT.new()
 	inspect_card.visible = false
 	hud.add_child(inspect_card)
+
+	marker_hud = COOP_MARKER_HUD_SCRIPT.new()
+	marker_hud.name = "CoopMarkerHud"
+	marker_hud.setup(self)
+	hud.add_child(marker_hud)
+
+	marker_wheel = COOP_MARKER_WHEEL_SCRIPT.new()
+	marker_wheel.name = "CoopMarkerWheel"
+	marker_wheel.marker_selected.connect(func(type: int) -> void:
+		_last_marker_type = type
+	)
+	hud.add_child(marker_wheel)
 
 
 func _update_extra_hud() -> void:
@@ -4082,3 +4140,119 @@ func _build_ink_overlay() -> void:
 		blot.color = Color(0.04, 0.02, 0.07, 0.9)
 		root.add_child(blot)
 	add_child(_ink_layer)
+
+
+## Marcadores no coop (#107):
+func _handle_marker_process(delta: float) -> void:
+	if not is_alive() or is_settings_open():
+		if _marker_pressed:
+			_marker_pressed = false
+		if marker_wheel != null and marker_wheel.is_wheel_open():
+			marker_wheel.close()
+		return
+
+	if _marker_pressed:
+		_marker_press_time += delta
+		if _marker_press_time >= 0.22:
+			if marker_wheel != null and not marker_wheel.is_wheel_open():
+				marker_wheel.open()
+				_wheel_mouse_offset = Vector2.ZERO
+
+	if marker_wheel != null and marker_wheel.is_wheel_open():
+		var stick: Vector2 = InputDevice.raw_look_input()
+		if stick.length_squared() < 0.04:
+			stick = Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_backward")
+		if stick.length_squared() > 0.04:
+			marker_wheel.update_selection_from_input(stick)
+
+
+func plant_marker_at_aim(type: int = -1) -> void:
+	if not is_local() or not is_alive() or is_settings_open():
+		return
+	var marker_type: int = _last_marker_type if type < 0 else type
+	marker_type = clampi(marker_type, 0, 2)
+	var target_pos: Vector3 = get_marker_aim_target()
+	var my_peer_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	var player_name: String = String(name)
+	request_place_marker(target_pos, marker_type, my_peer_id, player_name)
+
+
+func get_marker_aim_target() -> Vector3:
+	if camera == null:
+		return global_position + (-global_transform.basis.z * 3.0)
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	if space == null:
+		return global_position + (-global_transform.basis.z * 3.0)
+	var from: Vector3 = camera.global_position
+	var dir: Vector3 = -camera.global_transform.basis.z
+	var max_dist: float = 65.0
+	var to: Vector3 = from + dir * max_dist
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from, to, GROUND_MASK, [get_rid()])
+	var hit: Dictionary = space.intersect_ray(query)
+	if not hit.is_empty():
+		return hit["position"]
+	var horiz_dir: Vector3 = Vector3(dir.x, 0.0, dir.z).normalized()
+	if horiz_dir.length_squared() < 0.01:
+		horiz_dir = -global_transform.basis.z
+	var fallback_spot: Vector3 = global_position + horiz_dir * 25.0
+	return _find_ground_point(fallback_spot)
+
+
+func request_place_marker(pos: Vector3, type: int, peer_id: int, p_name: String) -> void:
+	if not multiplayer.has_multiplayer_peer():
+		_host_place_marker(pos, type, peer_id, p_name)
+	elif multiplayer.is_server():
+		_host_place_marker(pos, type, peer_id, p_name)
+	else:
+		_rpc_request_place_marker.rpc_id(1, pos, type, peer_id, p_name)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _rpc_request_place_marker(pos: Vector3, type: int, peer_id: int, p_name: String) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		return
+	_host_place_marker(pos, type, peer_id, p_name)
+
+
+func _host_place_marker(pos: Vector3, type: int, peer_id: int, p_name: String) -> void:
+	var safe_type: int = clampi(type, 0, 2)
+	if not is_finite(pos.x) or not is_finite(pos.y) or not is_finite(pos.z):
+		return
+	if multiplayer.has_multiplayer_peer():
+		_rpc_spawn_marker.rpc(pos, safe_type, peer_id, p_name)
+	else:
+		_remove_marker_for_peer(peer_id)
+		_spawn_marker_in_world(pos, safe_type, peer_id, p_name)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _rpc_spawn_marker(pos: Vector3, type: int, peer_id: int, p_name: String) -> void:
+	_remove_marker_for_peer(peer_id)
+	_spawn_marker_in_world(pos, type, peer_id, p_name)
+
+
+func _remove_marker_for_peer(peer_id: int) -> void:
+	if not is_inside_tree():
+		return
+	var markers: Array[Node] = get_tree().get_nodes_in_group(&"coop_markers")
+	for m: Node in markers:
+		if is_instance_valid(m) and m.is_inside_tree():
+			if int(m.get("owner_peer_id")) == peer_id:
+				if m.has_method("fade_out_and_free"):
+					m.call("fade_out_and_free")
+
+
+func _spawn_marker_in_world(pos: Vector3, type: int, peer_id: int, p_name: String) -> Node3D:
+	var flag: Node3D = COOP_MARKER_FLAG_SCRIPT.new(type, peer_id, p_name) as Node3D
+	var root: Node = _get_marker_root()
+	root.add_child(flag)
+	flag.global_position = pos
+	return flag
+
+
+func _get_marker_root() -> Node:
+	if get_tree() != null and get_tree().current_scene != null:
+		return get_tree().current_scene
+	if get_parent() != null:
+		return get_parent()
+	return self

@@ -385,7 +385,7 @@ func _apply_video(values: Dictionary, apply_window: bool) -> void:
 const CONTROL_ACTIONS: Array[String] = [
 	"move_forward", "move_backward", "move_left", "move_right",
 	"look_up", "look_down", "look_left", "look_right", "jump", "sprint",
-	"interact", "use_tool", "careful_dig", "attack", "drop", "inspect", "slot_prev", "slot_next",
+	"interact", "use_tool", "careful_dig", "attack", "drop", "inspect", "marker", "slot_prev", "slot_next",
 	"slot_1", "slot_2", "slot_3", "slot_4", "slot_5", "slot_6", "slot_7", "slot_8", "pause",
 ]
 const ACTION_LABELS: Dictionary = {
@@ -393,7 +393,7 @@ const ACTION_LABELS: Dictionary = {
 	"move_left": "Andar para a esquerda", "move_right": "Andar para a direita",
 	"jump": "Pular", "sprint": "Correr", "interact": "Interagir / pegar",
 	"use_tool": "Usar ferramenta", "careful_dig": "Cavar com cuidado", "attack": "Atacar",
-	"drop": "Soltar / arremessar item", "inspect": "Inspecionar item na mão", "slot_prev": "Espaço anterior da mochila",
+	"drop": "Soltar / arremessar item", "inspect": "Inspecionar item na mão", "marker": "Marcador no coop", "slot_prev": "Espaço anterior da mochila",
 	"slot_next": "Próximo espaço da mochila", "look_up": "Olhar para cima", "look_down": "Olhar para baixo",
 	"look_left": "Olhar para a esquerda", "look_right": "Olhar para a direita",
 	"slot_1": "Espaço 1 da mochila", "slot_2": "Espaço 2 da mochila",
@@ -409,7 +409,7 @@ const DEFAULT_BINDINGS: Dictionary = {
 	"jump": {"type": "key", "code": KEY_SPACE}, "sprint": {"type": "key", "code": KEY_SHIFT},
 	"interact": {"type": "key", "code": KEY_E}, "use_tool": {"type": "mouse", "code": MOUSE_BUTTON_LEFT},
 	"careful_dig": {"type": "mouse", "code": MOUSE_BUTTON_RIGHT}, "attack": {"type": "key", "code": KEY_F},
-	"drop": {"type": "key", "code": KEY_Q}, "inspect": {"type": "key", "code": KEY_R},
+	"drop": {"type": "key", "code": KEY_Q}, "inspect": {"type": "key", "code": KEY_R}, "marker": {"type": "key", "code": KEY_T},
 	"slot_1": {"type": "key", "code": KEY_1}, "slot_2": {"type": "key", "code": KEY_2},
 	"slot_3": {"type": "key", "code": KEY_3}, "slot_4": {"type": "key", "code": KEY_4},
 	"slot_5": {"type": "key", "code": KEY_5}, "slot_6": {"type": "key", "code": KEY_6},
@@ -436,6 +436,7 @@ const DEFAULT_PAD_BINDINGS: Dictionary = {
 	"careful_dig": {"type": "joy_axis", "code": JOY_AXIS_TRIGGER_LEFT, "sign": 1},
 	"attack": {"type": "joy_button", "code": JOY_BUTTON_RIGHT_SHOULDER},
 	"drop": {"type": "joy_button", "code": JOY_BUTTON_B},
+	"marker": {"type": "joy_button", "code": JOY_BUTTON_DPAD_UP},
 	"slot_prev": {"type": "joy_button", "code": JOY_BUTTON_LEFT_SHOULDER},
 	"slot_next": {"type": "joy_button", "code": JOY_BUTTON_Y},
 	"pause": {"type": "joy_button", "code": JOY_BUTTON_START},
