@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="MapData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="MapData" load_steps=7 format=3 uid="uid://bb6x6wti1d755"]
 
 [ext_resource type="Script" path="res://items/map_data.gd" id="1_map"]
 [ext_resource type="Script" path="res://items/item_data.gd" id="2_item"]

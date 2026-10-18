@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3 uid="uid://c54p0jdtphl1p"]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
 [ext_resource type="PackedScene" path="res://gameplay/weapons/medkit/medkit_world.tscn" id="2_world"]

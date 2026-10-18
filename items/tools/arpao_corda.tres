@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="ToolData" load_steps=3 format=3 uid="uid://8yhj4ld0mre0"]
 
 [ext_resource type="Script" path="res://items/tool_data.gd" id="1_tool"]
 [ext_resource type="PackedScene" path="res://gameplay/weapons/harpoon/harpoon_world.tscn" id="2_world"]
