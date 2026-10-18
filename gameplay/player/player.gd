@@ -483,7 +483,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	# [Esc] (ação "pause") é do menu de pausa (CorePauseMenu, #77).
 	if is_settings_open():
 		return
+	# Comando (#102): um botão do controle prende o mouse como o clique; LB/Y (← →) trocam o
+	# espaço da mochila como a roda (caído: aproximam e afastam a câmera).
+	if event is InputEventJoypadButton and event.is_pressed() and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	var pad_slot: int = _pad_slot_step(event)
 	if is_downed:
+		if pad_slot != 0:
+			zoom_downed_orbit(DOWNED_ORBIT_ZOOM_STEP * float(pad_slot))
 		if event is InputEventMouseButton and event.is_pressed():
 			if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -493,6 +500,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif mb_downed.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				zoom_downed_orbit(DOWNED_ORBIT_ZOOM_STEP)
 		return
+	if pad_slot != 0:
+		inventory.cycle(pad_slot)
 	if event is InputEventMouseButton and event.is_pressed():
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -501,6 +510,37 @@ func _unhandled_input(event: InputEvent) -> void:
 			inventory.cycle(-1)
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			inventory.cycle(1)
+
+
+## slot_next = +1, slot_prev = -1 (comando, #102), 0 para o resto.
+func _pad_slot_step(event: InputEvent) -> int:
+	if InputMap.has_action(&"slot_next") and event.is_action_pressed(&"slot_next"):
+		return 1
+	if InputMap.has_action(&"slot_prev") and event.is_action_pressed(&"slot_prev"):
+		return -1
+	return 0
+
+
+## Olhar com o analógico direito (#102): vira o mesmo "relative" do mouse e passa por
+## apply_mouse_look (inverter Y e a órbita de caído valem igual). Mesmas travas do mouse: menu
+## aberto ou mouse solto não olham.
+func _apply_pad_look(delta: float) -> void:
+	if _pad_look_allowed():
+		_pad_look_step(delta, InputDevice.raw_look_input())
+
+
+func _pad_look_allowed() -> bool:
+	return not is_settings_open() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+
+
+## `raw` = vetor cru do analógico (InputDevice.raw_look_input); a zona morta e a curva ficam lá.
+func _pad_look_step(delta: float, raw: Vector2) -> void:
+	var degrees: float = 180.0
+	if SettingsManager.instance != null:
+		degrees = float(SettingsManager.instance.get_value(SettingsManager.GAMEPLAY, "pad_look_sensitivity"))
+	var relative: Vector2 = InputDevice.pad_look_relative(raw, delta, degrees, mouse_sensitivity)
+	if relative != Vector2.ZERO:
+		apply_mouse_look(relative)
 
 
 ## Olhar com o mouse; invert_y inverte o eixo vertical (Jogabilidade, #77).
@@ -602,6 +642,7 @@ func _process(_delta: float) -> void:
 	if not is_local():
 		avatar.set_pitch(head.rotation.x)
 		return
+	_apply_pad_look(_delta)
 	if is_downed:
 		_update_downed_orbit_camera()
 		_update_downed_hud()

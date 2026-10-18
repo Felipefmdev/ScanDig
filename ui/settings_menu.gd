@@ -60,6 +60,8 @@ var show_fps_check: CheckBox = null
 var show_hints_check: CheckBox = null
 var review_hints_button: Button = null
 var hud_text_slider: HSlider = null
+var pad_look_slider: HSlider = null
+var pad_look_value: Label = null
 var hud_text_value: Label = null
 var language_option: OptionButton = null
 var buttons_row: HBoxContainer = null
@@ -256,6 +258,12 @@ func _build() -> void:
 	sensitivity_slider = sens_row[0]
 	sensitivity_value = sens_row[1]
 	sensitivity_slider.value_changed.connect(func(v: float) -> void: sensitivity_value.text = "%d %%" % int(v))
+	# Comando (#102): graus por segundo com o analógico direito no fim.
+	var pad_row: Array = _slider_row(gameplay, "Sensibilidade do controle",
+		SettingsManager.PAD_LOOK_SENSITIVITY_RANGE.x, SettingsManager.PAD_LOOK_SENSITIVITY_RANGE.y, 10.0)
+	pad_look_slider = pad_row[0]
+	pad_look_value = pad_row[1]
+	pad_look_slider.value_changed.connect(func(v: float) -> void: pad_look_value.text = "%d°/s" % int(v))
 	invert_y_check = _checkbox()
 	_row(gameplay, "Inverter eixo Y", invert_y_check)
 	var fov_row: Array = _slider_row(gameplay, "Campo de visão", SettingsManager.FOV_RANGE.x, SettingsManager.FOV_RANGE.y, 1.0)
@@ -441,6 +449,8 @@ func refresh() -> void:
 	sensitivity_slider.value = roundf(float(gameplay["mouse_sensitivity"]) / SENSITIVITY_UNIT * 100.0)
 	sensitivity_value.text = "%d %%" % int(sensitivity_slider.value)
 	invert_y_check.button_pressed = bool(gameplay["invert_y"])
+	pad_look_slider.value = float(gameplay["pad_look_sensitivity"])
+	pad_look_value.text = "%d°/s" % int(pad_look_slider.value)
 	fov_slider.value = float(gameplay["fov"])
 	fov_value.text = "%d°" % int(fov_slider.value)
 	bobbing_check.button_pressed = bool(gameplay["view_bobbing"])
@@ -455,6 +465,7 @@ func pending_gameplay() -> Dictionary:
 	return {
 		"mouse_sensitivity": sensitivity_slider.value / 100.0 * SENSITIVITY_UNIT,
 		"invert_y": invert_y_check.button_pressed,
+		"pad_look_sensitivity": pad_look_slider.value,
 		"fov": fov_slider.value,
 		"view_bobbing": bobbing_check.button_pressed,
 		"show_fps": show_fps_check.button_pressed,
