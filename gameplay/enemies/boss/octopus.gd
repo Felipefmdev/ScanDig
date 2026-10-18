@@ -206,7 +206,7 @@ func _process(delta: float) -> void:
 	_animate_planks(delta)
 	if state == State.DYING and _dead:
 		_state_time += delta
-		_process_dying()
+		_process_dying(delta)
 	elif not has_simulation_authority():
 		_health_bar.value = health
 		_state_time += delta
@@ -318,10 +318,10 @@ func _do_slam_damage() -> void:
 				_deal_damage(pl, slam_damage)
 
 
-func _process_dying() -> void:
+func _process_dying(delta: float) -> void:
 	var t: float = clampf(_state_time / 2.5, 0.0, 1.0)
 	global_position.y = _surface_y - 3.0 * t * t
-	if _state_time >= 1.0 and _state_time - get_process_delta_time() < 1.0:
+	if _state_time >= 1.0 and _state_time - delta < 1.0:
 		_drop_trophy()
 	if _state_time >= 2.6:
 		spawn_particles(global_position + Vector3.UP * 1.5, death_color, 40, 4.0)

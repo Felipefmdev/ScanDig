@@ -248,7 +248,7 @@ func _process(delta: float) -> void:
 	_animate(delta)
 	if state == State.DYING and _dead:
 		_state_time += delta
-		_process_dying()
+		_process_dying(delta)
 	elif not has_simulation_authority():
 		_state_time += delta
 		_hud.set_health(health)
@@ -453,10 +453,10 @@ func _on_died() -> void:
 	set_physics_process(false)
 
 
-func _process_dying() -> void:
+func _process_dying(delta: float) -> void:
 	var t: float = clampf(_state_time / 1.6, 0.0, 1.0)
 	_body_root.rotation.x = lerpf(0.0, -1.4, t * t)
-	if _state_time >= 1.0 and _state_time - get_process_delta_time() < 1.0:
+	if _state_time >= 1.0 and _state_time - delta < 1.0:
 		_hud.visible = false
 		spawn_particles(global_position + Vector3.UP * 1.0, STRAW, 40, 4.0)
 		if has_simulation_authority():
