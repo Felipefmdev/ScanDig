@@ -187,3 +187,23 @@ func test_settings_and_escape_return_to_main() -> void:
 	ev.pressed = true
 	title._unhandled_input(ev)
 	assert_true(title.main_card.visible, "Esc volta ao cartão principal")
+
+
+## Polimento (#119): versão do projeto no canto, faixa da premissa, ícone em cada botão,
+## leve escala no foco e o logo balançando.
+func test_title_polish_version_tagline_icons_and_motion() -> void:
+	assert_eq(str(ProjectSettings.get_setting("application/config/version", "")), "0.1.0", "versão no project.godot")
+	var title: TitleScreen = _title()
+	assert_eq(title.version_label.text, "v0.1.0")
+	assert_eq(title.tagline_label.text, TitleScreen.TAGLINE)
+	for button: Button in [title.continue_button, title.new_game_button, title.load_button, title.coop_button, title.settings_button, title.quit_button]:
+		assert_not_null(button.icon, "ícone em %s" % button.text)
+	title.load_button.grab_focus()
+	await wait_seconds(0.2)
+	assert_almost_eq(title.load_button.scale.x, TitleScreen.BUTTON_FOCUS_SCALE, 0.001, "foco cresce o botão")
+	title.coop_button.grab_focus()
+	await wait_seconds(0.2)
+	assert_almost_eq(title.load_button.scale.x, 1.0, 0.001, "sem foco volta")
+	var start: float = title.logo_label.rotation
+	await wait_seconds(0.3)
+	assert_ne(title.logo_label.rotation, start, "logo balança")

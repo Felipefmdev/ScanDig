@@ -8,6 +8,13 @@ extends Node3D
 ## capturas) a tela é pulada e a base abre como antes.
 
 const ORBIT_SPEED: float = 0.05
+const TAGLINE: String = "Detecção de metais e escavação cooperativa"
+const DEFAULT_VERSION: String = "0.1.0"
+## Hover/foco dos botões: leve escala a partir do centro.
+const BUTTON_FOCUS_SCALE: float = 1.04
+## Logo: balanço lento (graus) e respiração da escala.
+const LOGO_SWAY_DEG: float = 2.0
+const LOGO_SWAY_SECONDS: float = 2.6
 const NEW_GAME_CONFIRM: String = "Começar um jogo novo no slot %d?\nO progresso atual dele vai para o backup."
 const DELETE_CONFIRM: String = "Apagar o slot %d? Isso não pode ser desfeito."
 const SLOT_TITLES: Dictionary = {
@@ -43,6 +50,9 @@ var confirm_label: Label = null
 var confirm_ok_button: Button = null
 var confirm_cancel_button: Button = null
 var message_label: Label = null
+var logo_label: Label = null
+var tagline_label: Label = null
+var version_label: Label = null
 var settings_menu: SettingsMenu = null
 ## "load" | "new" | "coop": o que clicar num slot faz.
 var slot_mode: String = "load"
@@ -291,23 +301,54 @@ func _build() -> void:
 	center.add_child(stack)
 
 	var title: Label = Label.new()
+	title.name = "Logo"
 	title.text = "ScanDig"
 	title.theme_type_variation = &"TitleLabel"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override(&"font_size", 64)
+	title.add_theme_font_size_override(&"font_size", 72)
 	title.add_theme_color_override(&"font_color", UiPalette.PAPER_LIGHT)
 	title.add_theme_color_override(&"font_outline_color", UiPalette.WOOD_DARK)
-	title.add_theme_constant_override(&"outline_size", 12)
+	title.add_theme_constant_override(&"outline_size", 14)
+	title.add_theme_color_override(&"font_shadow_color", UiPalette.SHADOW)
+	title.add_theme_constant_override(&"shadow_offset_x", 3)
+	title.add_theme_constant_override(&"shadow_offset_y", 5)
 	stack.add_child(title)
+	logo_label = title
+	_animate_logo(title)
+
+	# Faixa de madeira com a premissa, logo abaixo do logo.
+	var ribbon: PanelContainer = PanelContainer.new()
+	ribbon.name = "Tagline"
+	ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var ribbon_style: StyleBoxFlat = StyleBoxFlat.new()
+	ribbon_style.bg_color = UiPalette.WOOD
+	ribbon_style.border_color = UiPalette.INK
+	ribbon_style.set_border_width_all(2)
+	ribbon_style.set_corner_radius_all(6)
+	ribbon_style.shadow_color = UiPalette.SHADOW
+	ribbon_style.shadow_size = 2
+	ribbon_style.shadow_offset = Vector2(2, 3)
+	ribbon_style.content_margin_left = 16.0
+	ribbon_style.content_margin_right = 16.0
+	ribbon_style.content_margin_top = 4.0
+	ribbon_style.content_margin_bottom = 4.0
+	ribbon.add_theme_stylebox_override(&"panel", ribbon_style)
+	tagline_label = Label.new()
+	tagline_label.text = TAGLINE
+	tagline_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tagline_label.add_theme_font_size_override(&"font_size", 18)
+	tagline_label.add_theme_color_override(&"font_color", UiPalette.PAPER_LIGHT)
+	ribbon.add_child(tagline_label)
+	stack.add_child(ribbon)
 
 	var box: VBoxContainer = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
-	continue_button = _button("Continuar", &"PrimaryButton")
-	new_game_button = _button("Novo jogo")
-	load_button = _button("Carregar")
-	coop_button = _button("Multiplayer")
-	settings_button = _button("Configurações")
-	quit_button = _button("Sair", &"DangerButton")
+	continue_button = _button("Continuar", &"PrimaryButton", "play")
+	new_game_button = _button("Novo jogo", &"", "new")
+	load_button = _button("Carregar", &"", "load")
+	coop_button = _button("Multiplayer", &"", "multiplayer")
+	settings_button = _button("Configurações", &"", "gear")
+	quit_button = _button("Sair", &"DangerButton", "door")
 	for button: Button in [continue_button, new_game_button, load_button, coop_button, settings_button, quit_button]:
 		box.add_child(button)
 	main_card = _card(box)
@@ -376,6 +417,21 @@ func _build() -> void:
 	settings_menu = SettingsMenu.new()
 	settings_menu.visible = false
 	stack.add_child(settings_menu)
+
+	version_label = Label.new()
+	version_label.name = "Version"
+	version_label.text = "v" + game_version()
+	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	version_label.add_theme_font_size_override(&"font_size", 14)
+	version_label.add_theme_color_override(&"font_color", UiPalette.PAPER_LIGHT)
+	version_label.add_theme_color_override(&"font_outline_color", UiPalette.WOOD_DARK)
+	version_label.add_theme_constant_override(&"outline_size", 6)
+	version_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	version_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	version_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	version_label.offset_right = -14.0
+	version_label.offset_bottom = -10.0
+	root_control.add_child(version_label)
 	settings_menu.closed.connect(show_main)
 
 	continue_button.pressed.connect(_on_continue_pressed)
@@ -386,7 +442,7 @@ func _build() -> void:
 	quit_button.pressed.connect(func() -> void: get_tree().quit())
 
 
-func _button(text: String, variation: StringName = &"") -> Button:
+func _button(text: String, variation: StringName = &"", icon_name: String = "") -> Button:
 	var button: Button = Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(320, 48)
@@ -394,7 +450,44 @@ func _button(text: String, variation: StringName = &"") -> Button:
 	button.focus_mode = Control.FOCUS_ALL
 	if not variation.is_empty():
 		button.theme_type_variation = variation
+	if not icon_name.is_empty():
+		button.icon = UiIcons.get_icon(icon_name, 48)
+		button.expand_icon = false
+		button.add_theme_constant_override(&"icon_max_width", 24)
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		_add_focus_scale(button)
 	return button
+
+
+## Hover e foco (mouse, teclado ou controle) crescem o botão um pouco; o contorno de foco do
+## tema continua lá.
+func _add_focus_scale(button: Button) -> void:
+	var grow: Callable = func(on: bool) -> void:
+		button.pivot_offset = button.size * 0.5
+		var target: Vector2 = Vector2.ONE * (BUTTON_FOCUS_SCALE if on else 1.0)
+		if not button.is_inside_tree():
+			button.scale = target
+			return
+		var tween: Tween = button.create_tween()
+		tween.tween_property(button, "scale", target, 0.08)
+	button.mouse_entered.connect(grow.bind(true))
+	button.focus_entered.connect(grow.bind(true))
+	button.mouse_exited.connect(func() -> void: grow.call(button.has_focus()))
+	button.focus_exited.connect(grow.bind(false))
+
+
+## Balanço lento do logo (rotação em volta do centro), em loop.
+func _animate_logo(logo: Label) -> void:
+	logo.resized.connect(func() -> void: logo.pivot_offset = logo.size * 0.5)
+	var tween: Tween = logo.create_tween().set_loops().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(logo, "rotation", deg_to_rad(LOGO_SWAY_DEG), LOGO_SWAY_SECONDS)
+	tween.tween_property(logo, "rotation", deg_to_rad(-LOGO_SWAY_DEG), LOGO_SWAY_SECONDS)
+
+
+## "0.1.0" de application/config/version (o mesmo do .exe).
+static func game_version() -> String:
+	var version: String = str(ProjectSettings.get_setting("application/config/version", ""))
+	return version if not version.is_empty() else DEFAULT_VERSION
 
 
 func _card(child: Control) -> PanelContainer:
