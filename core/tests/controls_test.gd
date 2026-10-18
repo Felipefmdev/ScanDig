@@ -31,7 +31,7 @@ func _map_bindings(action: String) -> Array:
 	var out: Array = []
 	for ev: InputEvent in InputMap.action_get_events(action):
 		var b: Dictionary = SettingsManager.binding_from_event(ev)
-		if not b.is_empty():
+		if not b.is_empty() and not SettingsManager.is_pad_binding(b):
 			out.append(b)
 	return out
 
@@ -55,7 +55,9 @@ func _run() -> void:
 
 	# 1. Padrões no InputMap já no início (antes do player), inclusive a ação nova "pause".
 	for action: String in SettingsManager.CONTROL_ACTIONS:
-		_check(_map_bindings(action) == [SettingsManager.DEFAULT_BINDINGS[action]], "%s no padrão: %s" % [action, str(_map_bindings(action))])
+		# Ações só de comando (#102: olhar, espaço anterior/próximo) não têm tecla padrão.
+		var expected: Array = [SettingsManager.DEFAULT_BINDINGS[action]] if SettingsManager.DEFAULT_BINDINGS.has(action) else []
+		_check(_map_bindings(action) == expected, "%s no padrão: %s" % [action, str(_map_bindings(action))])
 	_check(InputMap.has_action("pause") and _map_bindings("pause") == [_key(KEY_ESCAPE)], "pause = Esc")
 
 	# 2. Remapear: aplica no InputMap e grava, preservando o [player].
