@@ -492,7 +492,7 @@ func _process_dying(_delta: float) -> void:
 	var t: float = clampf(_state_time / 1.8, 0.0, 1.0)
 	body_root.rotation.z = lerpf(0.0, 1.4, t * t)
 	body_root.position.y = -0.5 * t
-	if _state_time >= 1.8 and _state_time - get_process_delta_time() < 1.8:
+	if _state_time >= 1.8 and _state_time - _delta < 1.8:
 		hud.visible = false
 		boss_defeated.emit(BOSS_ID)
 	if _state_time >= 3.0:
