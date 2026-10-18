@@ -3,7 +3,7 @@
 ## sem ele: "SKIP noray offline". Porta 7799. Grava o save: faça backup.
 extends SceneTree
 const PORT: int = 7799
-const CODE_FILE: String = "user://net_room_code.txt"
+const CODE_FILE: String = "user://test_saves/net_room_code.txt"
 var _fails: int = 0
 var scene_ready_pairs: Array[String] = []
 func _w(s: float) -> void:
@@ -46,6 +46,7 @@ func _run() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("hold="):
 			hold = arg.trim_prefix("hold=").to_float()
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(CODE_FILE.get_base_dir()))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(CODE_FILE))
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _w(1.0)

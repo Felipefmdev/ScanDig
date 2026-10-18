@@ -1,12 +1,12 @@
 # Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://core/tests/settings_file_test.gd
 ## #76: o user://scandig_settings.cfg tem dois escritores (SettingsManager, com as opções do
 ## player em [gameplay] desde o #77, e o nome/[online] do NetworkManager). Gravar um não pode
-## apagar o outro. O arquivo real do jogador é copiado e
-## restaurado no fim.
+## apagar o outro. Sob --script os dois gravam o cfg de teste (SettingsManager.TEST_PATH), nunca
+## o do jogador; o arquivo é copiado e restaurado no fim.
 extends SceneTree
 
-const PATH: String = "user://scandig_settings.cfg"
-const BACKUP: String = "user://scandig_settings.cfg.testbak"
+const PATH: String = SettingsManager.TEST_PATH
+const BACKUP: String = "user://test_saves/settings_test.cfg.testbak"
 const PLAYER_SETTINGS: Script = preload("res://gameplay/player/player_settings.gd")
 
 var _fails: int = 0

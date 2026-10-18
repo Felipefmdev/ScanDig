@@ -30,6 +30,8 @@ const LEGACY_FILE_NAME: String = "scandig_save.legacy.json"
 const SAVE_VERSION: int = 4
 ## Pasta dos saves isolados dos testes (use_test_save_dir).
 const TEST_SAVES_DIR: String = "user://test_saves"
+## Caminho base sob GUT/--script/bot, antes de use_test_save_dir/set_save_path.
+const TEST_SAVE_FILE_PATH: String = "user://test_saves/scandig_save.json"
 const MSG_CORRUPT: String = "O save estava corrompido e foi salvo como backup. Começando um jogo novo."
 const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar."
 ## Campos que o apply_snapshot só aceita como Array.
@@ -72,6 +74,11 @@ func _ready() -> void:
 		migrate_legacy_save()
 		var last: int = last_used_slot()
 		_activate_slot(last if last > 0 else 1)
+	else:
+		# Nem o caminho base fica na pasta real: sem use_test_save_dir, vai para test_saves/.
+		DirAccess.make_dir_recursive_absolute(TEST_SAVES_DIR)
+		save_path = TEST_SAVE_FILE_PATH
+		_base_path = TEST_SAVE_FILE_PATH
 	_reset_session_flags()
 	var net: NetworkManager = NetworkManager.instance
 	if net == null:

@@ -112,6 +112,6 @@ func _run() -> void:
 	_check(str(_read().get_value("player", "name", "")) == "Murilo", "nome continua depois de restaurar")
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
-	sm.settings_path = SettingsManager.DEFAULT_PATH
+	sm.settings_path = SettingsManager.default_path()
 	print("RESULT fails=%d" % _fails)
 	quit(_fails)

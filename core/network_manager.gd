@@ -27,11 +27,10 @@ const DEFAULT_PORT: int = 7777
 const MAX_PLAYERS: int = 4
 const NAME_MAX_LENGTH: int = 16
 const JOIN_TIMEOUT_SEC: float = 10.0
-const SETTINGS_PATH: String = "user://scandig_settings.cfg"
 const HOST_PEER_ID: int = 1
 ## Tempo máximo que a saída da sessão espera a thread do UPnP terminar.
 const UPNP_STOP_TIMEOUT_MSEC: int = 3000
-## Servidor de salas (noray). Troque em [online] no SETTINGS_PATH (noray_address,
+## Servidor de salas (noray). Troque em [online] do cfg das opções (noray_address,
 ## noray_port, noray_registrar_port) ou com "--noray=host:porta" nos argumentos.
 const NORAY_DEFAULT_ADDRESS: String = "127.0.0.1"
 const NORAY_DEFAULT_PORT: int = 8890
@@ -51,7 +50,7 @@ static var instance: NetworkManager = null
 ## {peer_id: {"peer_id": int, "name": String}}. No host é a lista oficial; nos clientes vem do _rpc_sync_players.
 var connected_players: Dictionary = {}
 var enet_peer: ENetMultiplayerPeer = null
-## Carregado do SETTINGS_PATH no _ready.
+## Carregado do cfg das opções (_settings_path) no _ready.
 var local_player_name: String = ""
 ## Preenchido quando o UPnP dá certo; "" senão.
 var public_ip: String = ""
@@ -70,7 +69,7 @@ var _stale_upnp_threads: Array[Thread] = []
 ## No _exit_tree a limpeza não emite sinais: quem ouve pode já estar fora da árvore.
 var _shutting_down: bool = false
 
-## Sala online: endereço do noray (padrão, [online] do SETTINGS_PATH ou --noray=).
+## Sala online: endereço do noray (padrão, [online] do cfg das opções ou --noray=).
 var noray_address: String = NORAY_DEFAULT_ADDRESS
 var noray_port: int = NORAY_DEFAULT_PORT
 var noray_registrar_port: int = NORAY_DEFAULT_REGISTRAR_PORT
@@ -693,9 +692,15 @@ static func _is_private_ipv4(address: String) -> bool:
 	return a == 10 or (a == 172 and b >= 16 and b <= 31) or (a == 192 and b == 168)
 
 
+## O mesmo cfg do SettingsManager (o de teste sob GUT/--script; o real nunca é gravado nos testes).
+func _settings_path() -> String:
+	var sm: SettingsManager = SettingsManager.instance
+	return sm.settings_path if sm != null else SettingsManager.default_path()
+
+
 func _load_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	if config.load(SETTINGS_PATH) == OK:
+	if config.load(_settings_path()) == OK:
 		local_player_name = sanitize_player_name(str(config.get_value("player", "name", "")))
 		noray_address = str(config.get_value("online", "noray_address", noray_address))
 		noray_port = int(config.get_value("online", "noray_port", noray_port))
@@ -716,8 +721,9 @@ func _read_online_args() -> void:
 
 func _save_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	config.load(SETTINGS_PATH)
+	var path: String = _settings_path()
+	config.load(path)
 	config.set_value("player", "name", local_player_name)
-	var error: Error = config.save(SETTINGS_PATH)
+	var error: Error = config.save(path)
 	if error != OK:
-		push_warning("NetworkManager: falha ao gravar %s (erro %d)." % [SETTINGS_PATH, error])
+		push_warning("NetworkManager: falha ao gravar %s (erro %d)." % [path, error])

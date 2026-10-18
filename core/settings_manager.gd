@@ -11,6 +11,8 @@ signal settings_changed(section: String, values: Dictionary)
 signal video_trial_finished(kept: bool)
 
 const DEFAULT_PATH: String = "user://scandig_settings.cfg"
+## Sob GUT/--script o arquivo real do jogador nunca é gravado: tudo vai para este (default_path()).
+const TEST_PATH: String = "user://test_saves/settings_test.cfg"
 const VIDEO: String = "video"
 const AUDIO: String = "audio"
 const CONTROLS: String = "controls"
@@ -86,7 +88,7 @@ const QUALITY_PRESETS: Dictionary = {
 
 static var instance: SettingsManager = null
 
-var settings_path: String = DEFAULT_PATH
+var settings_path: String = default_path()
 var _values: Dictionary = {}
 var _trial_previous: Dictionary = {}
 var _trial_token: int = 0
@@ -117,9 +119,18 @@ func _ready() -> void:
 
 static func _running_tests() -> bool:
 	for arg: String in OS.get_cmdline_args():
-		if arg == "--script" or arg.contains("gut_cmdln"):
+		if arg == "--script" or arg == "-s" or arg.contains("gut_cmdln"):
 			return true
 	return false
+
+
+## O cfg do jogador, ou o de teste (user://test_saves/) sob GUT/--script. Os testes que trocam
+## settings_path voltam para este, nunca para DEFAULT_PATH.
+static func default_path() -> String:
+	if _running_tests():
+		DirAccess.make_dir_recursive_absolute(TEST_PATH.get_base_dir())
+		return TEST_PATH
+	return DEFAULT_PATH
 
 
 # --- Leitura -------------------------------------------------------------------

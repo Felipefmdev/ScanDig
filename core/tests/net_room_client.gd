@@ -2,7 +2,7 @@
 ## Par: core/tests/net_room_host.gd (suba o host antes). Entra pelo código, na Praia, no
 ## meio da expedição (#30). Sem o noray: "SKIP noray offline".
 extends SceneTree
-const CODE_FILE: String = "user://net_room_code.txt"
+const CODE_FILE: String = "user://test_saves/net_room_code.txt"
 var summary: Dictionary = {}
 var _fails: int = 0
 func _w(s: float) -> void:

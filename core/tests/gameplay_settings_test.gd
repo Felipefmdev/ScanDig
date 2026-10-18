@@ -89,6 +89,6 @@ func _run() -> void:
 	_check(sm.get_section(SettingsManager.GAMEPLAY) == SettingsManager.DEFAULTS[SettingsManager.GAMEPLAY], "sem arquivo: padrões")
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
-	sm.settings_path = SettingsManager.DEFAULT_PATH
+	sm.settings_path = SettingsManager.default_path()
 	print("RESULT fails=%d" % _fails)
 	quit(_fails)

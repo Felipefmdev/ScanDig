@@ -1,10 +1,11 @@
 # Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://ui/tests/lobby_names_test.gd
 # Host sozinho na porta 7798, sem UPnP real (o upnp_finished é emitido à mão).
-# O menu grava o nome em user://scandig_settings.cfg: o teste guarda e restaura o arquivo.
+# O menu grava o nome no cfg de teste (SettingsManager.TEST_PATH, nunca o do jogador): o teste
+# guarda e restaura o arquivo.
 extends SceneTree
 
 const PORT: int = 7798
-const SETTINGS_PATH: String = "user://scandig_settings.cfg"
+const SETTINGS_PATH: String = SettingsManager.TEST_PATH
 
 var _fails: int = 0
 
@@ -98,7 +99,7 @@ func _run() -> void:
 
 	# 8. Restaura o nome.
 	net.set_local_player_name(name_backup, false)
-	# Devolve o scandig_settings.cfg do jogador byte a byte.
+	# Devolve o cfg de teste byte a byte.
 	if had_settings:
 		var f: FileAccess = FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 		f.store_buffer(settings_backup)

@@ -34,7 +34,7 @@ func _initialize() -> void:
 func _finish() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS_PATH))
 	if SettingsManager.instance != null:
-		SettingsManager.instance.settings_path = SettingsManager.DEFAULT_PATH
+		SettingsManager.instance.settings_path = SettingsManager.default_path()
 	print("RESULT fails=%d" % _fails)
 	quit(_fails)
 

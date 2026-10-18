@@ -106,6 +106,6 @@ func _run() -> void:
 	_check(not cfg.has_section("controls") and str(cfg.get_value("player", "name", "")) == "Murilo", "sem [controls] no arquivo; nome continua")
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
-	sm.settings_path = SettingsManager.DEFAULT_PATH
+	sm.settings_path = SettingsManager.default_path()
 	print("RESULT fails=%d" % _fails)
 	quit(_fails)
