@@ -32,6 +32,7 @@ CoreWeatherFx="*res://ui/weather_fx.gd"
 CoreNightFx="*res://ui/night_fx.gd"
 CoreWeatherUI="*res://ui/weather_hud.gd"
 CoreUISounds="*res://ui/ui_sounds.gd"
+CoreAmbience="*res://core/ambience_manager.gd"
 DebugBridge="*res://gameplay/debug/debug_bridge.gd"
 
 [display]
