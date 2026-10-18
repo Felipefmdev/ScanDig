@@ -100,6 +100,9 @@ func _ready() -> void:
 	# começa oculto. Modo vazio (bots, testes, lobby aberto direto) = como sempre.
 	if SessionManager.launch_mode == SessionManager.LAUNCH_SOLO:
 		visible = false
+	elif SessionManager.launch_mode == SessionManager.LAUNCH_COOP and host_online_button != null:
+		# Comando/teclado (#102): no coop o foco começa em "Criar sala online".
+		_focus_for_pad.call_deferred()
 
 	_resolve_network_manager()
 	_setup_name_field()
@@ -107,6 +110,13 @@ func _ready() -> void:
 	_connect_progress_sources.call_deferred()
 	_hide_share()
 	_refresh_session_buttons()
+
+
+## Comando/teclado (#102): cima/baixo entre os controles visíveis e foco em "Criar sala online".
+func _focus_for_pad() -> void:
+	UiFocus.link_chain(UiFocus.focusables(self))
+	if host_online_button.is_visible_in_tree():
+		host_online_button.grab_focus()
 
 
 func _resolve_network_manager() -> void:

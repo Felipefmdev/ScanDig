@@ -71,7 +71,9 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed(&"pause", false, true):
+	# B/Esc (ui_cancel) com o menu aberto faz o mesmo que a pausa: volta uma camada (#102).
+	var cancel: bool = _open and event.is_action_pressed(&"ui_cancel", false, true)
+	if not event.is_action_pressed(&"pause", false, true) and not cancel:
 		return
 	if _open and settings_menu.visible:
 		settings_menu.call(&"_on_back_pressed")
@@ -138,6 +140,8 @@ func open() -> bool:
 	quit_panel.visible = false
 	card.visible = true
 	root_control.visible = true
+	_link_card_focus()
+	continue_button.grab_focus()
 	_previous_mouse_mode = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# O cartão da expedição (SessionUI, camada 50) ficaria por cima do escurecimento e clicável.
@@ -179,7 +183,8 @@ func _button(text: String, variation: StringName = &"") -> Button:
 	var button: Button = Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(320, 48)
-	button.focus_mode = Control.FOCUS_NONE
+	# Comando e teclado navegam (#102).
+	button.focus_mode = Control.FOCUS_ALL
 	if not variation.is_empty():
 		button.theme_type_variation = variation
 	return button
@@ -250,10 +255,17 @@ func _build() -> void:
 	settings_menu.closed.connect(_show_card)
 
 
+## Cima/baixo entre os botões visíveis do cartão e da confirmação (#102).
+func _link_card_focus() -> void:
+	UiFocus.link_chain([continue_button, settings_button, return_button, leave_button, main_menu_button, quit_button])
+
+
 func _show_card() -> void:
 	settings_menu.visible = false
 	quit_panel.visible = false
 	card.visible = true
+	if continue_button.is_visible_in_tree():
+		continue_button.grab_focus()
 
 
 # --- Botões --------------------------------------------------------------------
@@ -282,6 +294,7 @@ func _on_settings_pressed() -> void:
 	card.visible = false
 	settings_menu.refresh()
 	settings_menu.visible = true
+	settings_menu.focus_first()
 
 
 ## Mesmo fluxo do ReturnButton do SessionUI (pede ao SessionManager o fim da expedição).
@@ -306,6 +319,8 @@ func _on_quit_pressed() -> void:
 	quit_yes_button.text = "Sair"
 	card.visible = false
 	quit_panel.visible = true
+	UiFocus.link_chain([quit_yes_button, quit_no_button])
+	quit_no_button.grab_focus()
 
 
 ## Mesma confirmação do Sair do jogo, com o texto do caso (base, expedição ou coop).
@@ -320,6 +335,8 @@ func _on_main_menu_pressed() -> void:
 	quit_yes_button.text = "Ir para o menu"
 	card.visible = false
 	quit_panel.visible = true
+	UiFocus.link_chain([quit_yes_button, quit_no_button])
+	quit_no_button.grab_focus()
 
 
 func _on_confirm_yes() -> void:

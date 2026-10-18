@@ -17,6 +17,9 @@ func before_each() -> void:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
 	HINTS.set_hints_path(HINTS_PATH)
+	# Rótulos de teclado (outro teste pode ter deixado o comando como dispositivo ativo).
+	if InputDevice.instance != null:
+		InputDevice.instance.set_using_gamepad(false)
 	var sm: SettingsManager = SettingsManager.instance
 	if sm != null:
 		_orig_settings_path = sm.settings_path

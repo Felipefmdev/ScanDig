@@ -89,7 +89,7 @@ func _on_state_synced() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _open or not event.is_action_pressed(&"pause", false, true):
+	if not _open or not (event.is_action_pressed(&"pause", false, true) or event.is_action_pressed(&"ui_cancel", false, true)):
 		return
 	if credits_view.visible:
 		show_summary()
@@ -110,6 +110,8 @@ func open() -> void:
 	show_summary()
 	_open = true
 	root_control.visible = true
+	UiFocus.link_chain([continue_button, credits_button])
+	continue_button.grab_focus()
 	_previous_mouse_mode = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# O cartão da expedição (SessionUI, camada 50) ficaria por cima do escurecimento e clicável.
@@ -132,11 +134,15 @@ func close() -> void:
 func show_credits() -> void:
 	summary_view.visible = false
 	credits_view.visible = true
+	if credits_back_button.is_visible_in_tree():
+		credits_back_button.grab_focus()
 
 
 func show_summary() -> void:
 	credits_view.visible = false
 	summary_view.visible = true
+	if credits_button.is_visible_in_tree():
+		credits_button.grab_focus()
 
 
 ## Contagens do GameState na hora em que abre.
@@ -213,14 +219,14 @@ func _build() -> void:
 	continue_button.theme_type_variation = &"PrimaryButton"
 	continue_button.custom_minimum_size = Vector2(320, 48)
 	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	continue_button.focus_mode = Control.FOCUS_NONE
+	continue_button.focus_mode = Control.FOCUS_ALL
 	continue_button.pressed.connect(close)
 	box.add_child(continue_button)
 	credits_button = Button.new()
 	credits_button.text = "Créditos"
 	credits_button.custom_minimum_size = Vector2(320, 44)
 	credits_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	credits_button.focus_mode = Control.FOCUS_NONE
+	credits_button.focus_mode = Control.FOCUS_ALL
 	credits_button.pressed.connect(show_credits)
 	box.add_child(credits_button)
 
@@ -251,7 +257,7 @@ func _build_credits() -> VBoxContainer:
 	credits_back_button.theme_type_variation = &"PrimaryButton"
 	credits_back_button.custom_minimum_size = Vector2(320, 48)
 	credits_back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	credits_back_button.focus_mode = Control.FOCUS_NONE
+	credits_back_button.focus_mode = Control.FOCUS_ALL
 	credits_back_button.pressed.connect(show_summary)
 	box.add_child(credits_back_button)
 	return box

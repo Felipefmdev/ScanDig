@@ -85,6 +85,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
 	_fit_title_row()
+	tabs.tab_changed.connect(func(_tab: int) -> void: focus_first.call_deferred())
 	var sm: SettingsManager = SettingsManager.instance
 	if sm != null:
 		sm.video_trial_finished.connect(_on_video_trial_finished)
@@ -120,7 +121,7 @@ func _row(grid: GridContainer, text: String, control: Control) -> void:
 
 func _option(items: Array) -> OptionButton:
 	var option: OptionButton = OptionButton.new()
-	option.focus_mode = Control.FOCUS_NONE
+	option.focus_mode = Control.FOCUS_ALL
 	for item: Variant in items:
 		option.add_item(str(item))
 	return option
@@ -135,7 +136,7 @@ func _slider_row(grid: GridContainer, text: String, min_value: float, max_value:
 	slider.step = step
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	slider.focus_mode = Control.FOCUS_NONE
+	slider.focus_mode = Control.FOCUS_ALL
 	var value: Label = Label.new()
 	value.custom_minimum_size = Vector2(64, 0)
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -149,7 +150,7 @@ func _slider_row(grid: GridContainer, text: String, min_value: float, max_value:
 func _checkbox() -> CheckBox:
 	var check: CheckBox = CheckBox.new()
 	check.text = "Desligado"
-	check.focus_mode = Control.FOCUS_NONE
+	check.focus_mode = Control.FOCUS_ALL
 	check.toggled.connect(func(on: bool) -> void: check.text = "Ligado" if on else "Desligado")
 	return check
 
@@ -236,7 +237,7 @@ func _build() -> void:
 	for action: String in SettingsManager.CONTROL_ACTIONS:
 		var bind_button: Button = Button.new()
 		bind_button.custom_minimum_size = Vector2(0, 36)
-		bind_button.focus_mode = Control.FOCUS_NONE
+		bind_button.focus_mode = Control.FOCUS_ALL
 		bind_button.pressed.connect(start_capture.bind(action))
 		control_buttons[action] = bind_button
 		_row(controls, SettingsManager.ACTION_LABELS[action], bind_button)
@@ -280,7 +281,7 @@ func _build() -> void:
 	review_hints_button = Button.new()
 	review_hints_button.text = "Rever dicas"
 	review_hints_button.custom_minimum_size = Vector2(0, 36)
-	review_hints_button.focus_mode = Control.FOCUS_NONE
+	review_hints_button.focus_mode = Control.FOCUS_ALL
 	review_hints_button.pressed.connect(_on_review_hints_pressed)
 	_row(gameplay, "Dicas já vistas", review_hints_button)
 	var hud_row: Array = _slider_row(gameplay, "Tamanho do texto do HUD",
@@ -316,7 +317,7 @@ func _build() -> void:
 	for button: Button in [defaults_button, back_button, apply_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.focus_mode = Control.FOCUS_NONE
+		button.focus_mode = Control.FOCUS_ALL
 		buttons.add_child(button)
 	box.add_child(buttons)
 	defaults_button.pressed.connect(_on_defaults_pressed)
@@ -342,7 +343,7 @@ func _build() -> void:
 	for button: Button in [revert_button, keep_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.focus_mode = Control.FOCUS_NONE
+		button.focus_mode = Control.FOCUS_ALL
 		confirm_buttons.add_child(button)
 	confirm_box.add_child(confirm_buttons)
 	confirm_panel.add_child(_margin(confirm_box, 18))
@@ -367,7 +368,7 @@ func _build() -> void:
 	for button: Button in [conflict_cancel_button, swap_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.focus_mode = Control.FOCUS_NONE
+		button.focus_mode = Control.FOCUS_ALL
 		conflict_buttons.add_child(button)
 	conflict_box.add_child(conflict_buttons)
 	conflict_panel.add_child(_margin(conflict_box, 18))
@@ -392,7 +393,7 @@ func _build() -> void:
 	for button: Button in [discard_cancel_button, discard_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.focus_mode = Control.FOCUS_NONE
+		button.focus_mode = Control.FOCUS_ALL
 		discard_buttons.add_child(button)
 	discard_box.add_child(discard_buttons)
 	discard_panel.add_child(_margin(discard_box, 18))
@@ -569,6 +570,8 @@ func _on_back_pressed() -> void:
 		discard_panel.visible = true
 		tabs.visible = false
 		buttons_row.visible = false
+		UiFocus.link_row([discard_cancel_button, discard_button])
+		discard_cancel_button.grab_focus()
 		return
 	discard()
 
@@ -589,6 +592,26 @@ func _hide_discard() -> void:
 	discard_panel.visible = false
 	buttons_row.visible = true
 	tabs.visible = not confirm_panel.visible and not conflict_panel.visible
+	if tabs.visible and is_visible_in_tree():
+		focus_first()
+
+
+## Comando/teclado (#102): encadeia a aba atual com a linha de botões e foca o primeiro controle.
+func focus_first() -> void:
+	if not is_visible_in_tree():
+		return
+	UiFocus.focus_first(tabs.get_current_tab_control(), [defaults_button, back_button, apply_button])
+	UiFocus.link_row([defaults_button, back_button, apply_button])
+
+
+## LB/RB (ou Ctrl+Tab) trocam de aba quando nada mais está na frente (#102).
+func _unhandled_input(event: InputEvent) -> void:
+	if not is_visible_in_tree() or not capturing.is_empty() or not tabs.visible:
+		return
+	var step: int = UiFocus.tab_step(event)
+	if step != 0:
+		UiFocus.step_tab(tabs, step, [defaults_button, back_button, apply_button])
+		get_viewport().set_input_as_handled()
 
 
 ## Aviso curto por cima do painel ("Configurações salvas", "Dicas reativadas"); some sozinho.

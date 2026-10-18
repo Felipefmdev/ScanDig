@@ -92,6 +92,24 @@ func _ready() -> void:
 		tab_container.resized.connect(_sync_hidden_tab_widths)
 		tab_container.tab_changed.connect(func(_tab: int) -> void: _sync_hidden_tab_widths())
 		_sync_hidden_tab_widths.call_deferred()
+		_focus_initial.call_deferred()
+
+
+## Comando/teclado (#102): a base abre com o foco na aba atual (no coop o menu de rede pega o
+## foco primeiro). LB/RB (ou Ctrl+Tab) trocam de aba, se nenhum menu estiver por cima.
+func _focus_initial() -> void:
+	if SessionManager.launch_mode == SessionManager.LAUNCH_COOP or not is_visible_in_tree():
+		return
+	UiFocus.focus_first(tab_container.get_current_tab_control())
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if tab_container == null or not is_visible_in_tree() or PauseMenu.is_open() or VictoryScreen.is_open():
+		return
+	var step: int = UiFocus.tab_step(event)
+	if step != 0:
+		UiFocus.step_tab(tab_container, step)
+		get_viewport().set_input_as_handled()
 
 
 ## Layout: a Base tem a altura da maior aba (use_hidden_tabs_for_min_size). O TabContainer

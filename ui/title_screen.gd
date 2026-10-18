@@ -140,6 +140,7 @@ func show_settings() -> void:
 	main_card.visible = false
 	settings_menu.refresh()
 	settings_menu.visible = true
+	settings_menu.focus_first()
 
 
 ## Continuar só aparece com um save válido; o foco vai para o primeiro botão visível.
