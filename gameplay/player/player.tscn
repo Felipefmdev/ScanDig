@@ -71,7 +71,7 @@ is_left = true
 pose = 1
 
 [node name="ToolView" type="Node3D" parent="Head/Camera3D"]
-transform = Transform3D(0.984808, -0.173648, 0, 0.17101, 0.969846, 0.173648, -0.0301537, -0.17101, 0.984808, 0.24, -0.25, -0.5)
+transform = Transform3D(0.984808, -0.173648, 0, 0.17101, 0.969846, 0.173648, -0.0301537, -0.17101, 0.984808, 0.39, -0.29, -0.5)
 visible = false
 
 [node name="Slingshot" type="Node3D" parent="Head/Camera3D/ToolView"]
@@ -82,7 +82,7 @@ transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, -0.02, 0)
 script = ExtResource("7_hand_model")
 
 [node name="Hand" type="Node3D" parent="Head/Camera3D"]
-transform = Transform3D(0.992546, 0.0427358, -0.114175, 0, 0.936672, 0.350207, 0.121869, -0.347596, 0.929688, 0.24, -0.22, -0.42)
+transform = Transform3D(0.992546, 0.0427358, -0.114175, 0, 0.936672, 0.350207, 0.121869, -0.347596, 0.929688, 0.39, -0.26, -0.42)
 
 [node name="MetalDetector" parent="Head/Camera3D/Hand" instance=ExtResource("2_detector")]
 
