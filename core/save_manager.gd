@@ -33,7 +33,7 @@ const TEST_SAVES_DIR: String = "user://test_saves"
 const MSG_CORRUPT: String = "O save estava corrompido e foi guardado como backup. Começando um jogo novo."
 const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar."
 ## Campos que o apply_snapshot só aceita como Array.
-const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "map_fragments"]
+const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments"]
 ## Campos numéricos opcionais (team_money é obrigatório e conferido à parte).
 const NUMBER_FIELDS: Array[String] = ["current_day", "equipped_detector_level", "saved_at"]
 
@@ -380,6 +380,7 @@ func save_game(target_state: GameState = null) -> Error:
 		"found_secrets": Array(state.found_secrets),
 		"seen_creatures": Array(state.seen_creatures),
 		"intact_items": Array(state.intact_items),
+		"rare_items": Array(state.rare_items),
 		"map_fragments": Array(state.map_fragments),
 		"game_completed": state.game_completed,
 	}
@@ -583,6 +584,9 @@ func _upgrade_save_data(source: Dictionary) -> Dictionary:
 	# Achados intactos (#93): saves anteriores começam sem coleção.
 	if not save_data.has("intact_items"):
 		save_data["intact_items"] = []
+	# Doações raras (#111): saves anteriores não sabem quais foram; a vitrine as mostra comuns.
+	if not save_data.has("rare_items"):
+		save_data["rare_items"] = []
 	if not save_data.has("map_fragments"):
 		save_data["map_fragments"] = []
 	# Conclusão do jogo (#81/#115): sempre pelos chefes vencidos, nunca pelo bool gravado. Saves

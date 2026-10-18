@@ -41,7 +41,7 @@ func deliver(items: Array[CarriedItem]) -> int:
 		if not can_deliver(c):
 			continue
 		var val: int = get_item_delivery_value(c)
-		DiscoveryBridge.report_item_found(c.item, val)
+		DiscoveryBridge.report_item_found(c.item, val, c.is_rare_variant)
 		if c.is_clean and GameState.instance != null:
 			GameState.instance.request_report_intact(c.item.id)
 		total += val

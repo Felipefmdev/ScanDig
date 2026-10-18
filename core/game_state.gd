@@ -144,6 +144,8 @@ var found_secrets: Array[String] = []
 var seen_creatures: Array[String] = []
 ## Coleção de peças entregues intactas (#93): uma entrada por item do catálogo.
 var intact_items: Array[String] = []
+## Peças doadas ao museu na variante rara (#111): vitrine em pedestal. Só a primeira doação conta.
+var rare_items: Array[String] = []
 ## Fragmentos do Mapa do Tesouro já encontrados (#112), ids de MAP_FRAGMENT_IDS.
 var map_fragments: Array[String] = []
 var game_completed: bool = false
@@ -347,8 +349,9 @@ func get_item_display_name(item_id: String) -> String:
 
 ## Regra "vender vs. doar": item inédito vai para o museu (recompensa de
 ## MUSEUM_REWARD_RATIO do valor); item repetido é vendido pelo valor final.
-func request_report_discovery(item_id: String, final_value: int) -> void:
-	_send_to_host(&"_host_report_discovery", [item_id, final_value])
+## `is_rare`: o achado é a variante rara (CarriedItem.is_rare_variant); vale só se for doado.
+func request_report_discovery(item_id: String, final_value: int, is_rare: bool = false) -> void:
+	_send_to_host(&"_host_report_discovery", [item_id, final_value, is_rare])
 
 
 func request_sell_item(item_id: String, final_value: int) -> void:
@@ -356,7 +359,7 @@ func request_sell_item(item_id: String, final_value: int) -> void:
 
 
 func request_donate_item(item_id: String) -> void:
-	_send_to_host(&"_host_donate_item", [item_id, -1])
+	_send_to_host(&"_host_donate_item", [item_id, -1, false])
 
 
 func request_buy_upgrade(upgrade_id: String) -> void:
@@ -405,13 +408,13 @@ func _send_to_host(method: StringName, args: Array) -> void:
 # --- Execução no host ---------------------------------------------------------
 
 @rpc("any_peer", "call_remote", "reliable")
-func _host_report_discovery(item_id: String, final_value: int) -> void:
+func _host_report_discovery(item_id: String, final_value: int, is_rare: bool = false) -> void:
 	if not is_authority() or _load_item(item_id) == null:
 		return
 	if discovered_items.has(item_id):
 		_host_sell_item(item_id, final_value)
 	else:
-		_host_donate_item(item_id, final_value)
+		_host_donate_item(item_id, final_value, is_rare)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -432,7 +435,7 @@ func _host_sell_item(item_id: String, final_value: int) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _host_donate_item(item_id: String, final_value: int) -> void:
+func _host_donate_item(item_id: String, final_value: int, is_rare: bool = false) -> void:
 	if not is_authority():
 		return
 	var item_data: ItemData = _load_item(item_id)
@@ -441,6 +444,8 @@ func _host_donate_item(item_id: String, final_value: int) -> void:
 	var base: int = item_data.base_value if final_value < 0 else clampi(final_value, 0, get_max_item_value(item_data))
 	var reward: int = int(round(float(base) * MUSEUM_REWARD_RATIO))
 	discovered_items.append(item_id)
+	if is_rare and not rare_items.has(item_id):
+		rare_items.append(item_id)
 	team_money += reward
 	_broadcast_snapshot()
 	_notify_donated(item_id, reward)
@@ -693,6 +698,7 @@ func get_snapshot() -> Dictionary:
 		"found_secrets": Array(found_secrets),
 		"seen_creatures": Array(seen_creatures),
 		"intact_items": Array(intact_items),
+		"rare_items": Array(rare_items),
 		"map_fragments": Array(map_fragments),
 		"game_completed": game_completed,
 	}
@@ -731,6 +737,8 @@ func apply_snapshot(data: Dictionary) -> void:
 	game_completed = defeated_bosses.has(FINAL_BOSS_ID)
 	if data.get("intact_items") is Array:
 		intact_items = _to_id_list(data["intact_items"])
+	if data.get("rare_items") is Array:
+		rare_items = _to_id_list(data["rare_items"])
 	var new_fragments: Array[String] = []
 	if data.get("map_fragments") is Array:
 		var frags: Array[String] = []
@@ -875,6 +883,7 @@ func reset_state() -> void:
 	found_secrets.clear()
 	seen_creatures.clear()
 	intact_items.clear()
+	rare_items.clear()
 	map_fragments.clear()
 	game_completed = false
 	_broadcast_snapshot()
