@@ -1,10 +1,10 @@
 class_name WeatherHud
 extends CanvasLayer
 
-## Aviso e ícone do clima (#99), só na tela local. No "warning" mostra o aviso ("Chuva
-## chegando…"); no fim, "O tempo abriu". Enquanto o evento está ativo, mostra um chip com o
-## clima no canto superior direito, logo abaixo da barra de Ameaça do Subsolo (fora do HUD do
-## jogador, da barra de expedição e do radar). Estilo do tema: ToastPanel / ToastLabel.
+## Aviso do clima (#99), só na tela local: um pop-up no "warning" ("Chuva chegando…") e outro
+## no fim ("O tempo abriu"), sem selo fixo durante o evento. Fica no canto superior direito,
+## logo abaixo da barra de Ameaça do Subsolo (fora do HUD do jogador, da barra de expedição e
+## do radar). Estilo do tema: ToastPanel / ToastLabel.
 ## O texto acompanha o tamanho do texto do HUD (grupo settings_hud_text).
 ## Autoload CoreWeatherUI; escuta CoreWeather.weather_changed.
 
@@ -14,24 +14,17 @@ const WARNING_TEXTS: Dictionary = {
 	WeatherManager.KIND_BLIZZARD: "Nevasca chegando…",
 	WeatherManager.KIND_ASHSTORM: "Tempestade de cinzas chegando…",
 }
-const ICON_TEXTS: Dictionary = {
-	WeatherManager.KIND_RAIN: "☂ Chuva",
-	WeatherManager.KIND_BLIZZARD: "❄ Nevasca",
-	WeatherManager.KIND_ASHSTORM: "▲ Cinzas",
-}
 const CLEAR_TEXT: String = "O tempo abriu"
 const TOAST_SECONDS: float = 3.5
 ## Canto superior direito, abaixo da barra de Ameaça (em unidades da tela base).
 const MARGIN_RIGHT: float = 24.0
-const ICON_TOP: float = 76.0
+const TOAST_TOP: float = 76.0
 const STACK_GAP: float = 8.0
 
 static var instance: WeatherHud = null
 
 var root_control: Control = null
 var stack: VBoxContainer = null
-var icon_panel: PanelContainer = null
-var icon_label: Label = null
 var toast_panel: PanelContainer = null
 var toast_label: Label = null
 var _toast_token: int = 0
@@ -71,20 +64,15 @@ func _build() -> void:
 	stack.add_theme_constant_override("separation", int(STACK_GAP))
 	stack.anchor_left = 1.0
 	stack.anchor_right = 1.0
-	stack.offset_top = ICON_TOP
+	stack.offset_top = TOAST_TOP
 	stack.offset_right = -MARGIN_RIGHT
 	stack.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	root_control.add_child(stack)
 
-	icon_panel = _chip()
-	icon_label = icon_panel.get_child(0) as Label
-	icon_panel.name = "WeatherIcon"
-	stack.add_child(icon_panel)
 	toast_panel = _chip()
 	toast_label = toast_panel.get_child(0) as Label
 	toast_panel.name = "WeatherToast"
 	stack.add_child(toast_panel)
-	icon_panel.visible = false
 	toast_panel.visible = false
 
 
@@ -103,13 +91,10 @@ func _chip() -> PanelContainer:
 func _on_weather_changed(kind: String, phase: String) -> void:
 	match phase:
 		WeatherManager.PHASE_WARNING:
-			icon_panel.visible = false
 			show_toast(str(WARNING_TEXTS.get(kind, "")))
 		WeatherManager.PHASE_ACTIVE:
-			icon_label.text = str(ICON_TEXTS.get(kind, ""))
-			icon_panel.visible = not icon_label.text.is_empty()
+			pass
 		_:
-			icon_panel.visible = false
 			# kind vazio = troca de cena / fim da expedição: sem aviso.
 			if kind.is_empty():
 				hide_toast()

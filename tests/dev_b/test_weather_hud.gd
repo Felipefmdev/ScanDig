@@ -63,7 +63,7 @@ func test_menu_option_applies_and_reduces_particles_live() -> void:
 	assert_eq(fx.particles.amount, full, "religado: volta ao cheio ao vivo")
 
 
-func test_hud_warning_icon_and_clear_toast() -> void:
+func test_hud_only_start_and_end_toasts() -> void:
 	var hud: WeatherHud = WeatherHud.instance
 	assert_not_null(hud, "autoload CoreWeatherUI")
 	assert_true(hud.root_control.is_in_group(SettingsManager.HUD_TEXT_GROUP), "segue o tamanho do texto do HUD")
@@ -72,14 +72,13 @@ func test_hud_warning_icon_and_clear_toast() -> void:
 	core.force_weather()
 	assert_true(hud.toast_panel.visible, "aviso no warning")
 	assert_eq(hud.toast_label.text, "Nevasca chegando…")
-	assert_false(hud.icon_panel.visible, "sem ícone antes de começar")
+	assert_null(hud.root_control.find_child("WeatherIcon", true, false), "sem selo de clima no canto")
+	assert_eq(hud.stack.get_child_count(), 1, "só o aviso pop-up")
 	core.tick(WeatherManager.FORCE_WARNING_S)
 	assert_true(core.is_active())
-	assert_true(hud.icon_panel.visible, "ícone com o evento ativo")
-	assert_string_contains(hud.icon_label.text, "Nevasca")
+	assert_eq(hud.toast_label.text, "Nevasca chegando…", "o evento começar não troca o aviso por um selo")
 	core.tick(core.time_left())
-	assert_false(hud.icon_panel.visible, "fim: some o ícone")
-	assert_true(hud.toast_panel.visible)
+	assert_true(hud.toast_panel.visible, "fim: aviso pop-up")
 	assert_eq(hud.toast_label.text, WeatherHud.CLEAR_TEXT)
 	core.force_event(WeatherManager.KIND_ASHSTORM, 30.0)
 	core.stop()
@@ -93,9 +92,9 @@ func test_hud_sits_top_right_below_threat_bar() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var view: Rect2 = hud.root_control.get_viewport_rect()
-	for panel: Control in [hud.icon_panel, hud.toast_panel]:
+	for panel: Control in [hud.toast_panel]:
 		var rect: Rect2 = panel.get_global_rect()
 		assert_true(view.encloses(rect), "dentro da tela: %s" % rect)
 		assert_gt(rect.position.x, view.size.x * 0.5, "metade direita")
-		assert_gte(rect.position.y, WeatherHud.ICON_TOP - 0.5, "abaixo da barra de Ameaça")
+		assert_gte(rect.position.y, WeatherHud.TOAST_TOP - 0.5, "abaixo da barra de Ameaça")
 		assert_lt(rect.end.y, view.size.y * 0.4, "longe da barra de expedição (canto inferior direito)")

@@ -239,7 +239,7 @@ func _run() -> void:
 		print("RECT créditos ", _rect(VictoryScreen.instance.card))
 		VictoryScreen.instance.close()
 
-	# Clima (#99): aviso e ícone no canto superior direito, com o cartão da expedição (Praia)
+	# Clima (#99): só o aviso no canto superior direito, com o cartão da expedição (Praia)
 	# e sem os painéis do lobby (em expedição eles não existem).
 	if WeatherHud.instance != null and WeatherManager.instance != null:
 		var ui_layer: CanvasLayer = current_scene.get_node_or_null(^"UILayer") as CanvasLayer
@@ -248,7 +248,7 @@ func _run() -> void:
 		WeatherManager.instance.force_event(WeatherManager.KIND_RAIN, 30.0)
 		WeatherHud.instance.show_toast(WeatherHud.WARNING_TEXTS[WeatherManager.KIND_RAIN])
 		await _shot("clima_aviso_icone")
-		print("RECT clima ícone ", _rect(WeatherHud.instance.icon_panel), " aviso ", _rect(WeatherHud.instance.toast_panel))
+		print("RECT clima aviso ", _rect(WeatherHud.instance.toast_panel))
 		WeatherManager.instance.stop()
 		if ui_layer != null:
 			ui_layer.visible = true
