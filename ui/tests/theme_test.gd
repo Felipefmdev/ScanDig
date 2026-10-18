@@ -94,7 +94,7 @@ func _check_scenes(base: BaseStationUI, menu: MultiplayerMenu, hud: Node, ui: Se
 	_check(_same_box(base.item_select_box, "normal", "OptionButton"), "Base: OptionButton do theme")
 	_check(BaseStationUI.MAP_LOCKED_COLOR.is_equal_approx(UiPalette.METAL), "Base: mapa bloqueado em METAL")
 
-	_check(_same_box(ui.expedition_bar as PanelContainer, "panel", "PanelContainer"), "SessionUI: ExpeditionBar do theme")
+	_check(ui.expedition_bar.get_theme_stylebox(&"panel") is StyleBoxEmpty, "SessionUI: ExpeditionBar sem cartão (#122)")
 	_check(_same_box(ui.leave_button, "normal", "DangerButton"), "SessionUI: sair como DangerButton")
 	_check(_same_box(ui.toast_panel, "panel", "ToastPanel"), "SessionUI: aviso com ToastPanel")
 	_check(_same_color(ui.toast_label, "font_color", "ToastLabel"), "SessionUI: texto do aviso do theme")

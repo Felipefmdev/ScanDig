@@ -1,8 +1,8 @@
 extends GutTest
 
-## HUD do topo com chips (#119): mochila e dinheiro viram dois UiChip com ícone; a barra de
-## Ameaça e o painel de vida/fome ganham moldura de papel (irmã atrás do painel, seguindo o
-## retângulo) e ícones no lugar dos emojis.
+## HUD do topo com chips (#119): mochila e dinheiro viram dois UiChip com ícone (discretos no
+## jogo, #122); a barra de Ameaça e o painel de vida/fome ficam sem cartão, com ícones no lugar
+## dos emojis e texto contornado (#122).
 
 const PLAYER_SCENE: PackedScene = preload("res://gameplay/player/player.tscn")
 
@@ -31,38 +31,26 @@ func test_top_chips_show_bag_and_team_money() -> void:
 	GameState.instance.reset_state()
 
 
-func test_threat_and_health_have_frames_and_icons() -> void:
+func test_threat_and_health_have_no_card_and_outlined_text() -> void:
+	# #122 (E3): sem cartão/moldura atrás; ícone + texto claro com contorno e sombra + trilho escuro.
 	var player: Player = _player()
 	await get_tree().process_frame
 	for panel_name: String in ["ThreatPanel", "HealthPanel"]:
-		var panel: Control = player.get_node("HUD/" + panel_name) as Control
-		var frame: Panel = player.get_node_or_null("HUD/%sFrame" % panel_name) as Panel
-		assert_not_null(frame, "moldura de %s" % panel_name)
-		if frame == null:
-			continue
-		assert_lt(frame.get_index(), panel.get_index(), "moldura desenhada atrás")
-		assert_true(frame.get_rect().encloses(panel.get_rect()), "moldura envolve %s" % panel_name)
-		assert_eq(frame.visible, panel.visible, "segue a visibilidade")
+		assert_null(player.get_node_or_null("HUD/%sFrame" % panel_name), "sem moldura em %s" % panel_name)
 	for path: String in ["HUD/ThreatPanel/ThreatTitle", "HUD/HealthPanel/HealthLabel", "HUD/HealthPanel/HungerLabel"]:
 		var label: Label = player.get_node(path) as Label
 		var icon: TextureRect = label.get_node_or_null(^"Icon") as TextureRect
 		assert_true(icon != null and icon.texture != null, "ícone em %s" % path)
+		assert_eq(label.get_theme_color(&"font_color"), UiPalette.PAPER_LIGHT, "texto claro em %s" % path)
+		assert_eq(label.get_theme_constant(&"outline_size"), PlayerHudStyle.OUTLINE_SIZE, "contorno em %s" % path)
+		assert_gt(label.get_theme_constant(&"shadow_offset_y"), 0, "sombra em %s" % path)
+	for path: String in ["HUD/ThreatPanel/ThreatBar", "HUD/HealthPanel/HealthBar", "HUD/HealthPanel/HungerBar"]:
+		var track: StyleBoxFlat = (player.get_node(path) as ProgressBar).get_theme_stylebox(&"background") as StyleBoxFlat
+		assert_true(track != null and track.bg_color.is_equal_approx(PlayerHudStyle.TRACK_COLOR), "trilho escuro em %s" % path)
+	var bag: UiChip = player.get_node("HUD/TopChips/BagChip") as UiChip
+	var chip_style: StyleBoxFlat = bag.get_theme_stylebox(&"panel") as StyleBoxFlat
+	assert_true(chip_style.bg_color.a < 0.9 and chip_style.shadow_size == 0, "chips do topo discretos")
 	var health: Label = player.get_node("HUD/HealthPanel/HealthLabel") as Label
 	assert_false(health.text.contains("❤"), "vida sem emoji: %s" % health.text)
 	assert_string_contains(health.text, "%d/%d" % [int(player.health), int(player.max_health)])
 
-
-func test_frame_follows_panel_rect() -> void:
-	var holder: Control = Control.new()
-	add_child_autofree(holder)
-	var panel: VBoxContainer = VBoxContainer.new()
-	panel.name = "Box"
-	holder.add_child(panel)
-	var frame: Panel = PlayerHudStyle.add_frame(panel)
-	panel.position = Vector2(40, 30)
-	panel.size = Vector2(100, 50)
-	assert_eq(frame.position, Vector2(40, 30) - PlayerHudStyle.FRAME_MARGIN)
-	assert_eq(frame.size, Vector2(100, 50) + PlayerHudStyle.FRAME_MARGIN * 2.0)
-	panel.visible = false
-	assert_false(frame.visible)
-	assert_eq(PlayerHudStyle.add_frame(panel), frame, "não duplica")

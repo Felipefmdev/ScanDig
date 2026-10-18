@@ -60,6 +60,9 @@ const SHAPES: Dictionary = {
 		+ "<circle cx=\"9\" cy=\"10\" r=\"1.2\" fill=\"#D9B456\"/><circle cx=\"11\" cy=\"16\" r=\"0.9\" fill=\"#D9B456\"/>",
 	"lock": "<path d=\"M8 10 V7.5 Q8 3.5 12 3.5 Q16 3.5 16 7.5 V10\" fill=\"none\" {s}/>"
 		+ "<rect x=\"5\" y=\"10\" width=\"14\" height=\"10.5\" rx=\"2\" fill=\"#E0A82E\" {s}/><circle cx=\"12\" cy=\"15\" r=\"1.5\" fill=\"#2B2118\"/>",
+	"map": "<path d=\"M3 6 L9 4 L15 6 L21 4 V18 L15 20 L9 18 L3 20 Z\" fill=\"#E8DCC0\" {s}/>"
+		+ "<path d=\"M9 4 V18 M15 6 V20\" fill=\"none\" {s}/>"
+		+ "<path d=\"M11 13 L13 11 M11 11 L13 13\" fill=\"none\" stroke=\"#C8463A\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>",
 }
 
 static var _cache: Dictionary = {}

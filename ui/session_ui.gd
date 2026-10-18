@@ -94,6 +94,12 @@ func _ready() -> void:
 	leave_confirm_panel.visible = false
 	expedition_bar.visible = false
 	toast_panel.visible = false
+	# Mapa/dia sem cartão, como o resto do HUD de jogo (#122); o botão de sair segue do theme.
+	expedition_bar.add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
+	PlayerHudStyle.iconize(expedition_info_label, "map")
+	# Encostado à direita, no canto: a largura vem do texto (sem reticências).
+	expedition_info_label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	expedition_info_label.size_flags_horizontal = Control.SIZE_SHRINK_END
 	leave_button.pressed.connect(_on_leave_pressed)
 	leave_confirm_button.pressed.connect(_on_leave_confirm_pressed)
 	leave_cancel_button.pressed.connect(_on_leave_cancel_pressed)
