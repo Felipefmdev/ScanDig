@@ -144,7 +144,7 @@ func host_game(port: int = DEFAULT_PORT) -> Error:
 	if error != OK:
 		push_error("NetworkManager: Falha ao iniciar servidor na porta %d. Código de erro: %d" % [port, error])
 		enet_peer = null
-		connection_error.emit("Não foi possível hospedar: a porta %d já está em uso." % port)
+		connection_error.emit(I18n.t("Não foi possível hospedar: a porta %d já está em uso.") % port)
 		return error
 
 	var mp: MultiplayerAPI = _get_multiplayer_api()
@@ -168,7 +168,7 @@ func join_game(ip_address: String, port: int = DEFAULT_PORT) -> Error:
 	if target_ip.is_empty():
 		target_ip = "127.0.0.1"
 	if not target_ip.is_valid_ip_address():
-		connection_error.emit("Endereço inválido: %s" % target_ip)
+		connection_error.emit(I18n.t("Endereço inválido: %s") % target_ip)
 		return ERR_INVALID_PARAMETER
 
 	_cleanup_peer()
@@ -266,7 +266,7 @@ func _open_host_room(port: int, oid: String) -> void:
 	var code: String = RoomCode.normalize(oid)
 	if not RoomCode.is_valid(code):
 		push_error("NetworkManager: o noray devolveu o código '%s'; configure NORAY_OID_LENGTH=%d e NORAY_OID_CHARSET=%s." % [oid, RoomCode.LENGTH, RoomCode.CHARSET])
-		_fail_online("Servidor de salas mal configurado: código com %d caracteres (esperado %d)." % [oid.length(), RoomCode.LENGTH])
+		_fail_online(I18n.t("Servidor de salas mal configurado: código com %d caracteres (esperado %d).") % [oid.length(), RoomCode.LENGTH])
 		return
 	if host_game(port) != OK:
 		# host_game já emitiu connection_error.
@@ -533,13 +533,13 @@ func _upnp_worker(port: int, release: Semaphore) -> void:
 	var discover_result: int = int(upnp.call("discover"))
 	var gateway: Object = upnp.call("get_gateway") if discover_result == UPNP.UPNP_RESULT_SUCCESS else null
 	if gateway == null or not bool(gateway.call("is_valid_gateway")):
-		message = "UPnP indisponível: abra a porta %d (UDP) no roteador ou jogue na mesma rede." % port
+		message = I18n.t("UPnP indisponível: abra a porta %d (UDP) no roteador ou jogue na mesma rede.") % port
 	elif int(upnp.call("add_port_mapping", port, port, "ScanDig", "UDP")) != UPNP.UPNP_RESULT_SUCCESS:
-		message = "O roteador recusou abrir a porta %d (UPnP). Abra manualmente (UDP)." % port
+		message = I18n.t("O roteador recusou abrir a porta %d (UPnP). Abra manualmente (UDP).") % port
 	else:
 		success = true
 		ip = str(upnp.call("query_external_address"))
-		message = "Porta %d aberta no roteador. Passe o IP %s aos amigos." % [port, ip]
+		message = I18n.t("Porta %d aberta no roteador. Passe o IP %s aos amigos.") % [port, ip]
 	_upnp_mutex.lock()
 	var cancelled: bool = _upnp_cancelled
 	_upnp_mutex.unlock()
@@ -639,7 +639,7 @@ func _on_join_timeout() -> void:
 		return
 	_cleanup_peer()
 	connection_failed.emit()
-	connection_error.emit("O host não respondeu em %d s. Confira o IP e se a porta está aberta." % int(JOIN_TIMEOUT_SEC))
+	connection_error.emit(I18n.t("O host não respondeu em %d s. Confira o IP e se a porta está aberta.") % int(JOIN_TIMEOUT_SEC))
 
 
 func _on_server_disconnected() -> void:
@@ -673,7 +673,7 @@ func _default_player_name(peer_id: int) -> String:
 	if not ids.has(peer_id):
 		ids.append(peer_id)
 	ids.sort()
-	return "Jogador %d" % (ids.find(peer_id) + 1)
+	return I18n.t("Jogador %d") % (ids.find(peer_id) + 1)
 
 
 func _is_online() -> bool:

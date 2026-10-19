@@ -9,7 +9,7 @@ extends RefCounted
 const NBSP: String = " "
 
 
-## 3200 -> "3.200"; -1234567 -> "-1.234.567".
+## 3200 -> "3.200"; -1234567 -> "-1.234.567". Em inglês (#131) o milhar é com vírgula: "3,200".
 static func thousands(amount: int) -> String:
 	var digits: String = str(absi(amount))
 	var groups: Array[String] = []
@@ -17,7 +17,7 @@ static func thousands(amount: int) -> String:
 		groups.push_front(digits.right(3))
 		digits = digits.left(digits.length() - 3)
 	groups.push_front(digits)
-	return ("-" if amount < 0 else "") + ".".join(groups)
+	return ("-" if amount < 0 else "") + ("," if I18n.is_english() else ".").join(groups)
 
 
 ## 3200 -> "R$ 3.200" (com NBSP).

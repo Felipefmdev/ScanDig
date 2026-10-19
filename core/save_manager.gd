@@ -522,13 +522,13 @@ func _read_save(path: String = "") -> Dictionary:
 	result["status"] = ReadStatus.CORRUPT
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		result["error"] = "Não foi possível abrir o arquivo (erro %d)." % FileAccess.get_open_error()
+		result["error"] = I18n.t("Não foi possível abrir o arquivo (erro %d).") % FileAccess.get_open_error()
 		return result
 	var content: String = file.get_as_text()
 	file.close()
 	var json: JSON = JSON.new()
 	if json.parse(content) != OK:
-		result["error"] = "JSON inválido na linha %d: %s." % [json.get_error_line(), json.get_error_message()]
+		result["error"] = I18n.t("JSON inválido na linha %d: %s.") % [json.get_error_line(), json.get_error_message()]
 		return result
 	if not (json.data is Dictionary):
 		result["error"] = "A raiz do save não é um objeto."
@@ -541,7 +541,7 @@ func _read_save(path: String = "") -> Dictionary:
 	result["version"] = int(version_value)
 	if int(version_value) > SAVE_VERSION:
 		result["status"] = ReadStatus.NEWER
-		result["error"] = "Save da versão %d, mais nova que a suportada (%d)." % [int(version_value), SAVE_VERSION]
+		result["error"] = I18n.t("Save da versão %d, mais nova que a suportada (%d).") % [int(version_value), SAVE_VERSION]
 		return result
 	var field_error: String = _validate_fields(data)
 	if not field_error.is_empty():
@@ -558,10 +558,10 @@ func _validate_fields(data: Dictionary) -> String:
 		return "Campo 'team_money' ausente ou inválido."
 	for key: String in NUMBER_FIELDS:
 		if data.has(key) and not _is_number(data[key]):
-			return "Campo '%s' inválido." % key
+			return I18n.t("Campo '%s' inválido.") % key
 	for key: String in LIST_FIELDS:
 		if data.has(key) and not (data[key] is Array):
-			return "Campo '%s' não é uma lista." % key
+			return I18n.t("Campo '%s' não é uma lista.") % key
 	if data.has("upgrade_levels") and not (data["upgrade_levels"] is Dictionary):
 		return "Campo 'upgrade_levels' inválido."
 	if data.has("game_completed") and not (data["game_completed"] is bool):

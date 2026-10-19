@@ -164,11 +164,11 @@ func get_map_status(map_id: String) -> Dictionary:
 
 	var reason: String = ""
 	if not unlocked:
-		reason = block_reason if not block_reason.is_empty() else "Desbloqueie por %s." % MoneyFormat.money(map_data.unlock_cost)
+		reason = block_reason if not block_reason.is_empty() else I18n.t("Desbloqueie por %s.") % MoneyFormat.money(map_data.unlock_cost)
 	elif not has_scene:
 		reason = "Em breve."
 	elif not playable:
-		reason = "Requer detector nível %d." % map_data.required_detector_level
+		reason = I18n.t("Requer detector nível %d.") % map_data.required_detector_level
 
 	status["display_name"] = map_data.display_name
 	status["unlocked"] = unlocked

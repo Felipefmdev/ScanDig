@@ -206,23 +206,24 @@ func get_next_upgrade_required_map(upgrade_id: String) -> String:
 	return str(required_maps[level]) if level < required_maps.size() else ""
 
 
-## "" se dá para comprar o próximo nível agora; senão o motivo, pronto para a UI.
+## "" se dá para comprar o próximo nível agora; senão o motivo, pronto para a UI (no idioma
+## atual, #131: cada peer calcula o seu).
 func get_upgrade_block_reason(upgrade_id: String) -> String:
 	if not UPGRADES.has(upgrade_id):
-		return "Upgrade desconhecido."
-	var upgrade_name: String = str(UPGRADES[upgrade_id]["name"])
+		return I18n.t("Upgrade desconhecido.")
+	var upgrade_name: String = I18n.t(str(UPGRADES[upgrade_id]["name"]))
 	var cost: int = get_next_upgrade_cost(upgrade_id)
 	if cost < 0:
-		return "%s já está no nível máximo." % upgrade_name
+		return I18n.t("%s já está no nível máximo.") % upgrade_name
 	var required_map: String = get_next_upgrade_required_map(upgrade_id)
 	if not required_map.is_empty() and not is_map_unlocked(required_map):
 		var map_data: MapData = _load_map(required_map)
 		if map_data == null:
 			push_warning("GameState: mapa '%s' exigido por '%s' não existe em %s." % [required_map, upgrade_id, MAPS_DIR])
-			return "Desbloqueie %s primeiro." % required_map
-		return "Desbloqueie %s primeiro." % map_data.display_name
+			return I18n.t("Desbloqueie %s primeiro.") % required_map
+		return I18n.t("Desbloqueie %s primeiro.") % I18n.t(map_data.display_name)
 	if team_money < cost:
-		return "Saldo insuficiente para %s (Custo: %s)." % [upgrade_name, MoneyFormat.money(cost)]
+		return I18n.t("Saldo insuficiente para %s (Custo: %s).") % [upgrade_name, MoneyFormat.money(cost)]
 	return ""
 
 
@@ -313,22 +314,22 @@ func is_game_completed() -> bool:
 	return game_completed
 
 
-## "" se pode desbloquear agora; senão o motivo, em português, pronto para a UI.
+## "" se pode desbloquear agora; senão o motivo, no idioma atual, pronto para a UI.
 func get_map_unlock_block_reason(map_id: String) -> String:
 	var map_data: MapData = _load_map(map_id)
 	if map_data == null:
-		return "Mapa desconhecido."
+		return I18n.t("Mapa desconhecido.")
 	if is_map_unlocked(map_id):
-		return "%s já está desbloqueado." % map_data.display_name
+		return I18n.t("%s já está desbloqueado.") % I18n.t(map_data.display_name)
 	if map_data.requires_map_fragments:
-		return "Complete o Mapa do Tesouro (%d/%d fragmentos) para navegar até %s no barco da Praia." % [
-			map_fragments.size(), MAP_FRAGMENT_IDS.size(), map_data.display_name]
+		return I18n.t("Complete o Mapa do Tesouro (%d/%d fragmentos) para navegar até %s no barco da Praia.") % [
+			map_fragments.size(), MAP_FRAGMENT_IDS.size(), I18n.t(map_data.display_name)]
 	if MAP_UNLOCK_BOSSES.has(map_id):
 		var boss: Dictionary = MAP_UNLOCK_BOSSES[map_id]
 		if not is_boss_defeated(str(boss["boss_id"])):
 			return _boss_block_reason(map_id, str(boss["boss_name"]))
 	if team_money < map_data.unlock_cost:
-		return "Saldo insuficiente para desbloquear %s (%s)." % [map_data.display_name, MoneyFormat.money(map_data.unlock_cost)]
+		return I18n.t("Saldo insuficiente para desbloquear %s (%s).") % [I18n.t(map_data.display_name), MoneyFormat.money(map_data.unlock_cost)]
 	return ""
 
 
@@ -338,8 +339,8 @@ func _boss_block_reason(map_id: String, boss_name: String) -> String:
 	var index: int = SessionManager.MAP_ORDER.find(map_id)
 	var previous: MapData = _load_map(SessionManager.MAP_ORDER[index - 1]) if index > 0 else null
 	if previous == null:
-		return "Vença o chefe %s para liberar." % boss_name
-	return "Vença o chefe %s (%s) para liberar." % [boss_name, previous.display_name]
+		return I18n.t("Vença o chefe %s para liberar.") % I18n.t(boss_name)
+	return I18n.t("Vença o chefe %s (%s) para liberar.") % [I18n.t(boss_name), I18n.t(previous.display_name)]
 
 
 func get_item_display_name(item_id: String) -> String:
@@ -469,7 +470,7 @@ func _host_buy_upgrade(upgrade_id: String) -> void:
 		team_money -= get_next_upgrade_cost(upgrade_id)
 		upgrade_levels[upgrade_id] = get_upgrade_level(upgrade_id) + 1
 		success = true
-		message = "Compra realizada: %s (nível %d)!" % [UPGRADES[upgrade_id]["name"], get_upgrade_level(upgrade_id)]
+		message = I18n.t("Compra realizada: %s (nível %d)!") % [I18n.t(UPGRADES[upgrade_id]["name"]), get_upgrade_level(upgrade_id)]
 		_broadcast_snapshot()
 
 	if sender == multiplayer.get_unique_id():
@@ -490,13 +491,13 @@ func _host_purchase_item(item_id: String) -> void:
 	var message: String = ""
 	var tool: ToolData = get_tool_data(item_id)
 	if tool == null or tool.price <= 0:
-		message = "Produto indisponível."
+		message = I18n.t("Produto indisponível.")
 	elif team_money < tool.price:
-		message = "Saldo insuficiente para %s (%s)." % [tool.display_name, MoneyFormat.money(tool.price)]
+		message = I18n.t("Saldo insuficiente para %s (%s).") % [I18n.t(tool.display_name), MoneyFormat.money(tool.price)]
 	else:
 		team_money -= tool.price
 		success = true
-		message = "Comprado: %s" % tool.display_name
+		message = I18n.t("Comprado: %s") % I18n.t(tool.display_name)
 		_broadcast_snapshot()
 
 	if sender == multiplayer.get_unique_id():
@@ -520,7 +521,7 @@ func _host_unlock_map(map_id: String) -> void:
 		team_money -= map_data.unlock_cost
 		unlocked_maps.append(map_id)
 		success = true
-		message = "%s desbloqueado!" % map_data.display_name
+		message = I18n.t("%s desbloqueado!") % I18n.t(map_data.display_name)
 		_broadcast_snapshot()
 
 	if sender == multiplayer.get_unique_id():
