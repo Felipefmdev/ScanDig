@@ -24,7 +24,7 @@ jobs:
 
       - name: Download Godot ${{ env.GODOT_VERSION }} (win64)
         run: |
-          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_win64.exe.zip"
+          curl -sSL --retry 5 --retry-all-errors --retry-delay 5 -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_win64.exe.zip"
           7z x -y -bso0 godot.zip
           # O wrapper de console acha o executável GUI pelo nome sem "_console".
           mv "Godot_v${GODOT_VERSION}-stable_win64.exe" godot.exe
@@ -43,7 +43,7 @@ jobs:
         run: |
           T="$(cygpath -u "$APPDATA")/Godot/export_templates/4.3.stable"
           mkdir -p "$T"
-          curl -sSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          curl -sSL --retry 5 --retry-all-errors --retry-delay 5 -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           7z e -y -bso0 templates.tpz -o"$(cygpath -w "$T")" templates/version.txt             templates/windows_release_x86_64.exe templates/windows_release_x86_64_console.exe             templates/windows_debug_x86_64.exe templates/windows_debug_x86_64_console.exe
           rm templates.tpz
           ls -la "$T"
@@ -51,7 +51,7 @@ jobs:
       # rcedit (versão fixa, conferida por SHA-256) apontado no editor_settings do runner.
       - name: rcedit
         run: |
-          curl -sSL -o rcedit-x64.exe "https://github.com/electron/rcedit/releases/download/${RCEDIT_VERSION}/rcedit-x64.exe"
+          curl -sSL --retry 5 --retry-all-errors --retry-delay 5 -o rcedit-x64.exe "https://github.com/electron/rcedit/releases/download/${RCEDIT_VERSION}/rcedit-x64.exe"
           echo "${RCEDIT_SHA256}  rcedit-x64.exe" | sha256sum -c -
           RCEDIT="$(cygpath -m "$PWD/rcedit-x64.exe")"
           APPD="$(cygpath -u "$APPDATA")"
