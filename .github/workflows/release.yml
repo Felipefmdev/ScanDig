@@ -1,0 +1,85 @@
+name: Release
+
+# Release do Windows (#138), passo a passo em docs/BUILD.md ("Lançar uma versão").
+# - push de tag v* (ex.: v0.2.0, igual ao config/version do project.godot): build + CHANGELOG
+#   + GitHub Release em DRAFT com o zip e as notas. Publicar o draft é à mão, no GitHub.
+# - workflow_dispatch: dry_run (padrão true) só gera o zip (ScanDig-windows) e o CHANGELOG
+#   (release-notes) como artifacts, sem release. Com dry_run=false cria o draft da tag
+#   v<config/version>; o GitHub só cria a tag quando o draft for publicado.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Só gerar o zip e o CHANGELOG (sem criar release)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-windows.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      # Histórico e tags completos para achar a tag anterior.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version and tag
+        id: version
+        run: |
+          VERSION="$(sed -n 's/^config\/version="\(.*\)"/\1/p' project.godot)"
+          TAG="v$VERSION"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
+            echo "::error::tag $GITHUB_REF_NAME diferente da versão do project.godot ($TAG)"
+            exit 1
+          fi
+          bash tools/sync_version.sh --check
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Versão $VERSION, tag $TAG, dry_run=$DRY_RUN"
+
+      - name: Changelog
+        run: |
+          bash tools/changelog.sh "$GITHUB_SHA" > CHANGELOG.md
+          cat CHANGELOG.md >> "$GITHUB_STEP_SUMMARY"
+          wc -l CHANGELOG.md
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ScanDig-windows
+
+      - name: Release notes artifact (dry-run)
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: CHANGELOG.md
+          retention-days: 14
+          if-no-files-found: error
+
+      # Draft: ninguém vê até alguém publicar no GitHub. Se o draft da tag já existe, falha.
+      - name: Draft GitHub Release
+        if: env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          ls -la ScanDig-windows.zip
+          gh release create "$TAG" ScanDig-windows.zip \
+            --draft --verify-tag="$([ "$GITHUB_REF_TYPE" = tag ] && echo true || echo false)" \
+            --target "$GITHUB_SHA" --title "ScanDig $TAG" --notes-file CHANGELOG.md
