@@ -1,0 +1,2409 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{
+			"t": 0.3,
+			"set_state": {
+				"unlocked_maps": [
+					"praia",
+					"campo",
+					"ruinas",
+					"geleira",
+					"cratera"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole",
+					"ancient_guardian",
+					"frozen_mammoth"
+				],
+				"upgrade_levels": {
+					"detector": 5,
+					"backpack": 2,
+					"shovel": 2
+				},
+				"team_money": 5000,
+				"map_fragments": [
+					"praia_frag_1",
+					"campo_frag_1"
+				]
+			}
+		},
+		{
+			"t": 3.0,
+			"dump": "00_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "praia",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-23,
+						-23,
+						23,
+						23
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "01_praia_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "01_praia_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "campo",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "02_campo_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "02_campo_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "ruinas",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "03_ruinas_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "03_ruinas_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "geleira",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "04_geleira_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "04_geleira_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "cratera",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "05_cratera_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "05_cratera_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "praia",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"t": 0,
+			"call": "CoreWeather",
+			"method": "force_weather"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-23,
+						-23,
+						23,
+						23
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "06_praia_noite_clima_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "06_praia_noite_clima_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "campo",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "07_campo_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "07_campo_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "ruinas",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "08_ruinas_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "08_ruinas_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "geleira",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"t": 0,
+			"call": "CoreWeather",
+			"method": "force_weather"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "09_geleira_dia_clima_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "09_geleira_dia_clima_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "cratera",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "10_cratera_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_cratera_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "praia",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-23,
+						-23,
+						23,
+						23
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "11_praia_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "11_praia_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "campo",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"t": 0,
+			"call": "CoreWeather",
+			"method": "force_weather"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "12_campo_noite_clima_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "12_campo_noite_clima_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "ruinas",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "13_ruinas_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "13_ruinas_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "geleira",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "14_geleira_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "14_geleira_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "cratera",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"t": 0,
+			"call": "CoreWeather",
+			"method": "force_weather"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "15_cratera_dia_clima_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "15_cratera_dia_clima_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "praia",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-23,
+						-23,
+						23,
+						23
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "16_praia_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "16_praia_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "campo",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "17_campo_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "17_campo_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "ruinas",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "18_ruinas_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "18_ruinas_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "geleira",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "19_geleira_dia_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "19_geleira_dia_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "cratera",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "20_cratera_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "20_cratera_noite_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "praia",
+			"timeout": 60
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"t": 0,
+			"call": "CoreWeather",
+			"method": "force_weather"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-23,
+						-23,
+						23,
+						23
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "21_praia_dia_clima_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "21_praia_dia_clima_base"
+		},
+		{
+			"t": 0,
+			"start_expedition": "campo",
+			"timeout": 60,
+			"night": true
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"pickup": true,
+			"radius": 8,
+			"timeout": 8,
+			"if": "pickup_dist<=8"
+		},
+		{
+			"loop": [
+				{
+					"explore": 10,
+					"bounds": [
+						-25,
+						-25,
+						25,
+						25
+					],
+					"stop_near_spot": 13,
+					"timeout": 8,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot>13"
+					]
+				},
+				{
+					"goto_spot": "nearest",
+					"walk": true,
+					"radius": 13,
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=13"
+					]
+				},
+				{
+					"dig_spot": true,
+					"mode": "fast",
+					"timeout": 15,
+					"if": [
+						"free_slots>=1",
+						"nearest_spot<=1.8"
+					]
+				},
+				{
+					"pickup": true,
+					"radius": 6,
+					"timeout": 6,
+					"if": [
+						"free_slots>=1",
+						"pickup_dist<=6"
+					]
+				}
+			],
+			"until": "deliverable>=2",
+			"timeout": 30
+		},
+		{
+			"t": 0,
+			"goto_sell": true,
+			"timeout": 40,
+			"if": "deliverable>=1"
+		},
+		{
+			"t": 0,
+			"sell": true,
+			"timeout": 5,
+			"if": [
+				"deliverable>=1",
+				"sell_dist<=2"
+			]
+		},
+		{
+			"t": 0,
+			"dump": "22_campo_noite_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "22_campo_noite_base"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}

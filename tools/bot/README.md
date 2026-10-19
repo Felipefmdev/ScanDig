@@ -130,3 +130,17 @@ python tools/bot/qa_report.py                                # só refaz a tabel
 `qa_victory`. O `run_qa.sh` guarda o `user://` antes e repõe-no no fim. `BOT_RESOLUTION=1920x1080`
 muda a janela de qualquer `run_bot.sh`. O passo `call` aceita também `toggle`/`open`/`close`
 (`CorePauseMenu`, `CoreVictoryScreen`).
+
+## Resistência (R5, #142)
+
+```bash
+python tools/bot/soak_gen.py [idas]                          # (re)gera tools/bot/soak_20.json (padrão 22)
+tools/bot/run_soak.sh "<godot console exe>" [--headless]     # janela 1920x1080 ou headless
+python tools/bot/soak_report.py [run_dir] --label <rótulo>   # tabela + docs/qa/soak_<rótulo>.svg
+```
+
+Idas seguidas pela Base (Praia, Campo, Ruínas, Geleira, Cratera; sem a Ilha), alternando dia/noite e
+clima forçado, com cavar, apanhar, vender e voltar. Dumps `<ida>_cena` e `<ida>_base`; todo dump traz
+`perf`: `mem_static`, `objects`, `resources`, `fps_avg`/`fps_min` (janelas de 1 s desde a última
+expedição carregada pelo bot) e `load_s` (pedido → mapa pronto). Guarda e repõe o `user://`.
+Resultados em `docs/QA_REPORT.md` (seção Resistência).
