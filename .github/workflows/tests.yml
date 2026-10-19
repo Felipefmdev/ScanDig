@@ -1,7 +1,7 @@
 name: Tests
 
 # Job de testes (#144), reutilizado pelo CI (ci.yml) e pelo release (release.yml): import,
-# parse das cenas, GUT e testes headless do Dev B.
+# parse das cenas, warnings do GDScript em core/ e ui/, GUT e testes headless do Dev B.
 
 on:
   workflow_call:
@@ -33,6 +33,12 @@ jobs:
             ./godot --headless --path . --quit-after 60 "res://$scene" 2>&1 | tee run.log
             if grep -q "SCRIPT ERROR" run.log; then echo "Script error in $scene"; exit 1; fi
           done
+
+      # Warnings do GDScript em core/ e ui/ (#144), os mesmos do editor, pelo LSP do editor headless
+      # (tools/gd_warnings.py). O --check-only não serve: só acusa erro de parse, nunca warning.
+      - name: GDScript warnings (core/, ui/)
+        timeout-minutes: 5
+        run: python3 tools/gd_warnings.py ./godot core ui
 
       # Um teste GUT que não compila é ignorado em silêncio ("does not extend GutTest"):
       # qualquer SCRIPT ERROR ou Parse Error no log derruba o passo.

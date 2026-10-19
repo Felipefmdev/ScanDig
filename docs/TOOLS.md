@@ -8,6 +8,7 @@ Lista curada para Godot 4.3 com foco num jogo 3D low-poly cooperativo. ✅ = já
 | :--- | :--- | :--- |
 | ✅ **GUT 9.3.0** (testes, MIT) | Testes automáticos de GDScript | `addons/gut/`, testes em `tests/`, config em `.gutconfig.json` |
 | ✅ **CI no GitHub Actions** | Cada push importa o projeto, abre as cenas à procura de erros de script e corre os testes | `.github/workflows/ci.yml` |
+| ✅ **`tools/gd_warnings.py`** | Warnings do GDScript (os do painel do editor) pelo LSP do editor headless; sai com 1 se houver algum. O CI roda em `core/` e `ui/` | `python3 tools/gd_warnings.py <godot> [pastas ou .gd]` (padrão `core ui`) |
 | ✅ `tools/run_tests.sh` | Correr os testes localmente | `tools/run_tests.sh "<caminho do Godot console>"` |
 | ✅ `.gitattributes` + `.editorconfig` | Fim dos avisos CRLF/LF; tabs em GDScript em todos os editores | raiz |
 | ✅ **Kenney Pirate Kit** (CC0) | Cenário da Praia | `assets/models/kenney_pirate/` |

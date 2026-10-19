@@ -125,8 +125,8 @@ Variável usada nos exemplos: `G=/c/Godot/Godot_v4.3-stable_win64_console.exe`.
 
 - **Guardas que já pegam erro comum:** textos e i18n (§5), `test_user_files_isolated.gd` (teste nunca grava no `user://` real: sob GUT/`--script` o save vai para `user://test_saves/`), `test_build_version.gd` (versão do `project.godot` = export).
 - Antes de **cada** push: GUT + headless verdes, de novo depois de qualquer rebase. Se o Felipe criou `class_name` novo, atualize o cache antes (`$G --headless --path . --editor --quit-after 200`), senão tudo falha com `Could not find type`.
-- Warnings do GDScript ficam em zero em `core/`, `ui/` e `tests/dev_b/` com os níveis padrão da Godot (nenhum desligado no projeto). O `--check-only` só mostra erro; para ver os warnings, use o editor (ou o LSP dele em headless).
-- **CI** (`.github/workflows/ci.yml`): job `tests` (`tests.yml`, o mesmo que o release roda antes do build: import, carga das cenas, GUT e headless; qualquer `SCRIPT ERROR`/`Parse Error` no log derruba) e, em push no `main`, `export-windows` (`build-windows.yml`). Release em draft: `release.yml`. Passo a passo em `BUILD.md`.
+- Warnings do GDScript ficam em zero em `core/`, `ui/` e `tests/dev_b/` com os níveis padrão da Godot (nenhum desligado no projeto). O `--check-only` só mostra erro; os warnings saem do editor ou de `python tools/gd_warnings.py "$G" [pastas]` (LSP do editor headless; padrão `core ui`), e o CI falha com qualquer warning em `core/` ou `ui/`.
+- **CI** (`.github/workflows/ci.yml`): job `tests` (`tests.yml`, o mesmo que o release roda antes do build: import, carga das cenas, warnings de `core/`/`ui/`, GUT e headless; qualquer `SCRIPT ERROR`/`Parse Error` no log derruba) e, em push no `main`, `export-windows` (`build-windows.yml`). Release em draft: `release.yml`. Passo a passo em `BUILD.md`.
 
 ## 9. Convenções
 
