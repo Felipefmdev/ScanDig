@@ -177,14 +177,16 @@ func is_tool() -> bool:
 	return tool_id != &""
 
 
+## Nome no idioma atual (#131): o display_name em PT-BR é a chave da tradução.
 func get_display_name() -> String:
 	if is_tool():
+		var tname: String = I18n.t(tool_name)
 		if wear >= 0:
-			return "%s [%d%%]" % [tool_name, int(ceilf(wear_ratio() * 100.0))]
-		return tool_name if charges < 0 else "%s (x%d)" % [tool_name, charges]
+			return "%s [%d%%]" % [tname, int(ceilf(wear_ratio() * 100.0))]
+		return tname if charges < 0 else "%s (x%d)" % [tname, charges]
 	if item == null:
-		return "Artefato Misterioso"
-	var dname: String = ("✦ " + item.display_name) if is_rare_variant else item.display_name
+		return I18n.t("Artefato Misterioso")
+	var dname: String = ("✦ " + I18n.t(item.display_name)) if is_rare_variant else I18n.t(item.display_name)
 	if is_clean:
 		return "✨ " + dname
 	return dname
