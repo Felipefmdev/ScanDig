@@ -48,6 +48,46 @@ func test_language_option_switches_live_and_saves() -> void:
 	assert_eq(menu.title_label.atr(menu.title_label.text), "Configurações")
 
 
+## A Base aberta refaz as linhas montadas por código; as abas (auto_translate) cabem sem setas
+## em inglês também com a interface a 130 %.
+func test_base_station_refreshes_and_tabs_fit_in_english() -> void:
+	GameState.instance.reset_state()
+	var ui: BaseStationUI = (load("res://ui/base_station_ui.tscn") as PackedScene).instantiate() as BaseStationUI
+	add_child_autofree(ui)
+	await wait_frames(3)
+	assert_string_starts_with(ui.secrets_label.text, "Segredos —")
+	_sm.set_language("en")
+	assert_string_starts_with(ui.secrets_label.text, "Secrets —", "segredos refeitos na troca")
+	assert_string_contains(ui.journal_info_label.text, "Field Notebook")
+	var bar: TabBar = ui.tab_container.get_tab_bar()
+	assert_eq(bar.atr(bar.get_tab_title(0)), "Shop", "aba Loja pelo auto_translate")
+	for scale: float in [1.0, 1.3]:
+		get_tree().root.content_scale_factor = scale
+		await wait_frames(3)
+		var total: float = 0.0
+		for i: int in bar.tab_count:
+			total += bar.get_tab_rect(i).size.x
+		assert_lt(total, bar.size.x, "abas em inglês cabem (escala %.1f): %.0f < %.0f" % [scale, total, bar.size.x])
+		assert_false(bar.get_offset_buttons_visible(), "sem setas em inglês (escala %.1f)" % scale)
+	get_tree().root.content_scale_factor = 1.0
+	_sm.set_language("pt_BR")
+	assert_string_starts_with(ui.secrets_label.text, "Segredos —", "de volta ao PT-BR")
+	GameState.instance.reset_state()
+
+
+## Mensagem com número que vai pela rede (I18n.fmt): cada um traduz no seu idioma.
+func test_packed_messages_and_money_follow_the_language() -> void:
+	var packed: String = I18n.fmt("⏳ O chefe está se cansando: %d s para fugir!", [30])
+	assert_eq(I18n.t(packed), "⏳ O chefe está se cansando: 30 s para fugir!")
+	assert_eq(I18n.t(I18n.fmt("Comprado: %s", ["Dinamite"])), "Comprado: Dinamite")
+	assert_eq(MoneyFormat.money(3200), "R$" + MoneyFormat.NBSP + "3.200")
+	_sm.set_language("en")
+	assert_eq(I18n.t(packed), "⏳ The boss is tiring: 30 s until it flees!")
+	assert_eq(I18n.t(I18n.fmt("Comprado: %s", ["Dinamite"])), "Bought: Dynamite", "texto nos argumentos também")
+	assert_eq(MoneyFormat.money(3200), "R$" + MoneyFormat.NBSP + "3,200", "milhar com vírgula em inglês")
+	assert_eq(InputDevice.fill_key_prompts("[E] Pegar a chave"), "[E] Pick up the key", "prompt traduzido, tecla mantida")
+
+
 func test_saved_language_is_applied_on_load() -> void:
 	var cfg: ConfigFile = ConfigFile.new()
 	cfg.set_value(SettingsManager.GENERAL, "language", "en")

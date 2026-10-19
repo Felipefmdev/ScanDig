@@ -502,3 +502,528 @@ Clima forçado (F3),Clima forçado (F3),Weather forced (F3)
 Clima encerrado (F3),Clima encerrado (F3),Weather ended (F3)
 Só o host (F3),Só o host (F3),Host only (F3)
 Sem clima neste mapa (F3),Sem clima neste mapa (F3),No weather on this map (F3)
+⛏ TOUPEIRA GIGANTE,⛏ TOUPEIRA GIGANTE,⛏ GIANT MOLE
+👑 CARANGUEJO-REI,👑 CARANGUEJO-REI,👑 KING CRAB
+Forcado,Forcado,Pitchfork
+Arpão de Corda,Arpão de Corda,Rope Harpoon
+Pulso Magnético,Pulso Magnético,Magnetic Pulse
+Liga Desconhecida,Liga Desconhecida,Unknown Alloy
+Ameaça do Subsolo,Ameaça do Subsolo,Underground Threat
+❤ Vida: 100 / 100,❤ Vida: 100 / 100,❤ Health: 100 / 100
+Dona Lurdes,Dona Lurdes,Mrs. Lurdes
+"Ai, ainda bem que você chegou! Os corvos levaram as três chaves do celeiro... Toque o sino perto do palheiro para chamar eles e pegue as chaves que eles soltarem!","Ai, ainda bem que você chegou! Os corvos levaram as três chaves do celeiro... Toque o sino perto do palheiro para chamar eles e pegue as chaves que eles soltarem!","Oh, thank goodness you're here! The crows took the three barn keys... Ring the bell by the haystack to call them and grab the keys they drop!"
+Toque o sino para chamar os corvos. Cada um que você derrubar solta uma chave!,Toque o sino para chamar os corvos. Cada um que você derrubar solta uma chave!,Ring the bell to call the crows. Each one you knock down drops a key!
+"As três chaves! Traga pra mim, querido!","As três chaves! Traga pra mim, querido!","All three keys! Bring them to me, dear!"
+"Obrigada! ... Está ouvindo isso? É o Corvo-Rei, o chefe deles, em cima da lavoura! Pega ele!","Obrigada! ... Está ouvindo isso? É o Corvo-Rei, o chefe deles, em cima da lavoura! Pega ele!","Thank you! ... Do you hear that? It's the Crow King, their boss, over the crops! Get him!"
+Ele só desce quando ataca: espere ele pousar e acerte com a pá!,Ele só desce quando ataca: espere ele pousar e acerte com a pá!,He only comes down to attack: wait for him to land and hit him with the shovel!
+Ele fugiu... Fale comigo outra vez.,Ele fugiu... Fale comigo outra vez.,He got away... Talk to me again.
+Você mostrou quem manda! Tome o Sino de Bronze do meu avô: é para o museu.,Você mostrou quem manda! Tome o Sino de Bronze do meu avô: é para o museu.,You showed him who's boss! Take my grandfather's Bronze Bell: it's for the museum.
+Obrigada! E o poço... dizem que quem joga uma moeda lá dentro ouve um segredo.,Obrigada! E o poço... dizem que quem joga uma moeda lá dentro ouve um segredo.,Thank you! And the well... they say whoever tosses a coin in hears a secret.
+"Essa chave na sua mão... você achou! Traga aqui, querido!","Essa chave na sua mão... você achou! Traga aqui, querido!","That key in your hand... you found it! Bring it here, dear!"
+Meu avô falava de um mapa antigo rasgado em pedaços. Tem um pedaço aqui no Campo: algo grande anda cavando túneis debaixo do círculo de pedras.,Meu avô falava de um mapa antigo rasgado em pedaços. Tem um pedaço aqui no Campo: algo grande anda cavando túneis debaixo do círculo de pedras.,My grandfather told of an old map torn to pieces. There's a piece here in the Fields: something big is digging tunnels under the stone circle.
+[E] Tocar o sino,[E] Tocar o sino,[E] Ring the bell
+DLÃO! DLÃO! Os corvos vêm aí!,DLÃO! DLÃO! Os corvos vêm aí!,DONG! DONG! Here come the crows!
+[E] Pegar a chave,[E] Pegar a chave,[E] Pick up the key
+[E] Jogar uma moeda no poço,[E] Jogar uma moeda no poço,[E] Toss a coin into the well
+"Uma voz sobe do fundo do poço: “O sol nasce no leste, sobe pelo norte e se põe no oeste; depois dá a volta por baixo da terra. As oito pedras querem a mesma volta.”","Uma voz sobe do fundo do poço: “O sol nasce no leste, sobe pelo norte e se põe no oeste; depois dá a volta por baixo da terra. As oito pedras querem a mesma volta.”","A voice rises from the bottom of the well: “The sun rises in the east, climbs through the north and sets in the west; then it goes around under the earth. The eight stones want the same turn.”"
+[E] Puxar o balde,[E] Puxar o balde,[E] Pull up the bucket
+"No fundo do balde, entre a lama... um anel!","No fundo do balde, entre a lama... um anel!","At the bottom of the bucket, in the mud... a ring!"
+[E] Rolar o fardo,[E] Rolar o fardo,[E] Roll the bale
+O fardo rola... e tinha alguma coisa escondida atrás dele!,O fardo rola... e tinha alguma coisa escondida atrás dele!,The bale rolls... and something was hidden behind it!
+[E] Pegar o que estava escondido,[E] Pegar o que estava escondido,[E] Take what was hidden
+Uma relíquia escondida!,Uma relíquia escondida!,A hidden relic!
+[E] Puxar a pedra solta,[E] Puxar a pedra solta,[E] Pull the loose stone
+Atrás da pedra solta havia um buraco no muro... e uma fíbula antiga!,Atrás da pedra solta havia um buraco no muro... e uma fíbula antiga!,Behind the loose stone there was a hole in the wall... and an ancient fibula!
+"Lá embaixo, na plantação... um círculo perfeito! Quem será que fez?","Lá embaixo, na plantação... um círculo perfeito! Quem será que fez?","Down there, in the field... a perfect circle! Who could have made it?"
+[E] Fazer carinho na ovelha,[E] Fazer carinho na ovelha,[E] Pet the sheep
+Bééé!,Bééé!,Baaa!
+CORVOS LADRÕES,CORVOS LADRÕES,THIEVING CROWS
+Chaves: %d/%d,Chaves: %d/%d,Keys: %d/%d
+As runas se apagam todas...,As runas se apagam todas...,The runes all go dark...
+As oito pedras ardem! A noite cai sobre a lavoura...,As oito pedras ardem! A noite cai sobre a lavoura...,The eight stones blaze! Night falls over the crops...
+Dra. Vega,Dra. Vega,Dr. Vega
+"Saudações, explorador! Sou a Dra. Vega, astrofísica chefe desta estação na cratera. Estou captando um sinal pulsante misterioso vindo do fundo da fenda... mas preciso que você calibre as 3 antenas de retransmissão espalhadas pela borda da cratera!","Saudações, explorador! Sou a Dra. Vega, astrofísica chefe desta estação na cratera. Estou captando um sinal pulsante misterioso vindo do fundo da fenda... mas preciso que você calibre as 3 antenas de retransmissão espalhadas pela borda da cratera!","Greetings, explorer! I'm Dr. Vega, chief astrophysicist of this crater station. I'm picking up a mysterious pulsing signal from the bottom of the rift... but I need you to calibrate the 3 relay antennas around the crater rim!"
+"Precisamos das 3 antenas calibradas: uma a leste junto aos monólitos, outra a norte nos pilares de cristal e a terceira a oeste perto da fenda.","Precisamos das 3 antenas calibradas: uma a leste junto aos monólitos, outra a norte nos pilares de cristal e a terceira a oeste perto da fenda.","We need all 3 antennas calibrated: one to the east by the monoliths, another to the north at the crystal pillars and the third to the west near the rift."
+Excelente trabalho! As três antenas estão sincronizadas em fase! Vou iniciar a transmissão para decifrar a frequência profunda. Atenção aos sensores: as criaturas da cratera estão vindo para cá!,Excelente trabalho! As três antenas estão sincronizadas em fase! Vou iniciar a transmissão para decifrar a frequência profunda. Atenção aos sensores: as criaturas da cratera estão vindo para cá!,Excellent work! All three antennas are in phase! I'll start the transmission to decode the deep frequency. Watch the sensors: the crater creatures are coming this way!
+Iniciando a transmissão! Defenda a antena da estação contra as hordas alienígenas!,Iniciando a transmissão! Defenda a antena da estação contra as hordas alienígenas!,Starting the transmission! Defend the station antenna from the alien hordes!
+A transmissão está na metade! Não deixe os rastejadores e flutuadores destruírem o transmissor!,A transmissão está na metade! Não deixe os rastejadores e flutuadores destruírem o transmissor!,The transmission is halfway! Don't let the crawlers and floaters destroy the transmitter!
+O sinal foi interrompido pelas criaturas alienígenas... Reagrupe-se e me avise quando estiver pronto para uma nova tentativa.,O sinal foi interrompido pelas criaturas alienígenas... Reagrupe-se e me avise quando estiver pronto para uma nova tentativa.,The alien creatures cut off the signal... Regroup and let me know when you're ready to try again.
+Sinal decifrado com sucesso! A fenda respondeu com este espécime ressonante... Tome este Cristal do Eco e a recompensa pelo seu esforço heroico!,Sinal decifrado com sucesso! A fenda respondeu com este espécime ressonante... Tome este Cristal do Eco e a recompensa pelo seu esforço heroico!,Signal decoded! The rift answered with this resonant specimen... Take this Echo Crystal and the reward for your heroic effort!
+O sinal da cratera foi mapeado. Tome cuidado com os cristais ressonantes... sinto que vibram em harmonia com algo muito antigo nas profundezas.,O sinal da cratera foi mapeado. Tome cuidado com os cristais ressonantes... sinto que vibram em harmonia com algo muito antigo nas profundezas.,The crater signal has been mapped. Be careful with the resonant crystals... I feel they vibrate in harmony with something very old in the depths.
+Meus sensores estão disparando com esse cristal na sua mão! Traga aqui!,Meus sensores estão disparando com esse cristal na sua mão! Traga aqui!,My sensors are going off with that crystal in your hand! Bring it here!
+"O sinal vinha de um pedaço de mapa! A última peça está com o que dorme no altar da Cratera. Com o mapa inteiro, a ilha que ele mostra deixa de ser lenda.","O sinal vinha de um pedaço de mapa! A última peça está com o que dorme no altar da Cratera. Com o mapa inteiro, a ilha que ele mostra deixa de ser lenda.","The signal came from a piece of a map! The last piece is held by what sleeps on the Crater altar. With the whole map, the island it shows is no longer a legend."
+[E] Calibrar Antena Alfa,[E] Calibrar Antena Alfa,[E] Calibrate Antenna Alpha
+Frequência da Antena Alfa calibrada com sucesso!,Frequência da Antena Alfa calibrada com sucesso!,Antenna Alpha frequency calibrated!
+[E] Calibrar Antena Beta,[E] Calibrar Antena Beta,[E] Calibrate Antenna Beta
+Frequência da Antena Beta sincronizada!,Frequência da Antena Beta sincronizada!,Antenna Beta frequency synchronized!
+[E] Calibrar Antena Gama,[E] Calibrar Antena Gama,[E] Calibrate Antenna Gamma
+Frequência da Antena Gama alinhada!,Frequência da Antena Gama alinhada!,Antenna Gamma frequency aligned!
+[E] Ressoar Cristal Violeta,[E] Ressoar Cristal Violeta,[E] Resonate Violet Crystal
+*VOMMM* Uma vibração profunda em tom baixo ressoa pela cratera!,*VOMMM* Uma vibração profunda em tom baixo ressoa pela cratera!,"*VOMMM* A deep, low vibration resonates through the crater!"
+[E] Ressoar Cristal Ciano,[E] Ressoar Cristal Ciano,[E] Resonate Cyan Crystal
+*TIING* Uma nota harmônica aguda reverbera no ar rarefeito!,*TIING* Uma nota harmônica aguda reverbera no ar rarefeito!,*TIING* A high harmonic note echoes through the thin air!
+[E] Ressoar Cristal Âmbar,[E] Ressoar Cristal Âmbar,[E] Resonate Amber Crystal
+*ZUUUM* Uma ressonância eletromagnética vibra o solo!,*ZUUUM* Uma ressonância eletromagnética vibra o solo!,*ZUUUM* An electromagnetic resonance shakes the ground!
+[E] Quebrar a rocha de meteorito com a pá,[E] Quebrar a rocha de meteorito com a pá,[E] Break the meteorite rock with the shovel
+CRACK! A rocha extraterrestre se parte em valiosos Fragmentos de Meteorito!,CRACK! A rocha extraterrestre se parte em valiosos Fragmentos de Meteorito!,CRACK! The alien rock splits into valuable Meteorite Fragments!
+[E] Quebrar geodo com a pá,[E] Quebrar geodo com a pá,[E] Break the geode with the shovel
+CRACK! O geodo se abre revelando um Geodo Estrelar cintilante!,CRACK! O geodo se abre revelando um Geodo Estrelar cintilante!,CRACK! The geode opens to reveal a sparkling Star Geode!
+[E] Pegar o Orbe Vibrante no topo do pilar,[E] Pegar o Orbe Vibrante no topo do pilar,[E] Take the Vibrant Orb on top of the pillar
+No topo do pilar desafiando a gravidade... o lendário Orbe Vibrante!,No topo do pilar desafiando a gravidade... o lendário Orbe Vibrante!,On top of the gravity-defying pillar... the legendary Vibrant Orb!
+[E] Desbastar cortina de cristal com a pá,[E] Desbastar cortina de cristal com a pá,[E] Chip away the crystal curtain with the shovel
+"CRASH! A cortina de cristais se quebra, revelando uma alcova secreta!","CRASH! A cortina de cristais se quebra, revelando uma alcova secreta!","CRASH! The crystal curtain shatters, revealing a secret alcove!"
+[E] Pegar a Engrenagem Alienígena,[E] Pegar a Engrenagem Alienígena,[E] Take the Alien Gear
+Na alcova atrás dos cristais... uma misteriosa Engrenagem Alienígena!,Na alcova atrás dos cristais... uma misteriosa Engrenagem Alienígena!,In the alcove behind the crystals... a mysterious Alien Gear!
+[E] Inspecionar sonda espacial terrestre,[E] Inspecionar sonda espacial terrestre,[E] Inspect the Earth space probe
+Uma velha sonda de exploração terrestre caída com uma pequena bandeira desgastada pelo tempo!,Uma velha sonda de exploração terrestre caída com uma pequena bandeira desgastada pelo tempo!,"An old crashed Earth exploration probe with a small, time-worn flag!"
+[E] Tocar disco dourado,[E] Tocar disco dourado,[E] Play the golden record
+Um disco fonográfico dourado intitulado 'Greatest Hits of Earth'! Uma melodia nostálgica ecoa pelos alto-falantes.,Um disco fonográfico dourado intitulado 'Greatest Hits of Earth'! Uma melodia nostálgica ecoa pelos alto-falantes.,A golden phonograph record titled 'Greatest Hits of Earth'! A nostalgic tune echoes from the speakers.
+Antenas calibradas: %d/%d,Antenas calibradas: %d/%d,Antennas calibrated: %d/%d
+TRANSMISSÃO DO SINAL,TRANSMISSÃO DO SINAL,SIGNAL TRANSMISSION
+Estação da Dra. Vega,Estação da Dra. Vega,Dr. Vega's Station
+A ressonância perde o tom e some no vácuo... Tente outra vez.,A ressonância perde o tom e some no vácuo... Tente outra vez.,The resonance loses its pitch and fades into the void... Try again.
+Os três cristais vibram em harmonia perfeita! O solo treme... O Eco despertou!,Os três cristais vibram em harmonia perfeita! O solo treme... O Eco despertou!,The three crystals vibrate in perfect harmony! The ground shakes... The Echo has awakened!
+Velho Björn,Velho Björn,Old Björn
+"Brrr... Que vento cortante! Sou o velho Björn, o último sobrevivente da grande expedição. Perdi meu diário de bordo e o trenó de carga em algum lugar do gelo. Encontre os dois para eu saber onde meus companheiros foram parar!","Brrr... Que vento cortante! Sou o velho Björn, o último sobrevivente da grande expedição. Perdi meu diário de bordo e o trenó de carga em algum lugar do gelo. Encontre os dois para eu saber onde meus companheiros foram parar!","Brrr... What a biting wind! I'm old Björn, the last survivor of the great expedition. I lost my logbook and the cargo sled somewhere on the ice. Find them both so I can learn where my companions ended up!"
+Procure meu diário de navegação e o trenó de suprimentos: um deve estar soterrado na neve e o outro preso perto da passagem do arco.,Procure meu diário de navegação e o trenó de suprimentos: um deve estar soterrado na neve e o outro preso perto da passagem do arco.,Look for my logbook and the supply sled: one must be buried in the snow and the other stuck near the arch pass.
+"Pelos deuses do norte, você recuperou as anotações e o trenó! Mas olhe para o lago... A Morsa Anciã acordou furiosa com o barulho no gelo!","Pelos deuses do norte, você recuperou as anotações e o trenó! Mas olhe para o lago... A Morsa Anciã acordou furiosa com o barulho no gelo!","By the northern gods, you recovered the notes and the sled! But look at the lake... the Elder Walrus woke up furious at the noise on the ice!"
+Defenda o lago gelado da Morsa Anciã! Não deixe ela quebrar a geleira toda!,Defenda o lago gelado da Morsa Anciã! Não deixe ela quebrar a geleira toda!,Defend the frozen lake from the Elder Walrus! Don't let her break the whole glacier!
+Aguente firme contra a Morsa Anciã no lago gelado!,Aguente firme contra a Morsa Anciã no lago gelado!,Hold on against the Elder Walrus on the frozen lake!
+A morsa foi implacável no gelo fino... Descanse perto da lareira e fale comigo quando estiver pronto.,A morsa foi implacável no gelo fino... Descanse perto da lareira e fale comigo quando estiver pronto.,The walrus was relentless on the thin ice... Rest by the fireplace and talk to me when you're ready.
+"Você derrotou a besta dos mares gelados! Como prometido, tome esta recompensa e minha fiel Bússola Antiga da Expedição!","Você derrotou a besta dos mares gelados! Como prometido, tome esta recompensa e minha fiel Bússola Antiga da Expedição!","You defeated the beast of the frozen seas! As promised, take this reward and my trusty Old Expedition Compass!"
+Obrigado por ajudar um velho explorador. Esquente-se na lareira sempre que precisar curar as feridas.,Obrigado por ajudar um velho explorador. Esquente-se na lareira sempre que precisar curar as feridas.,Thank you for helping an old explorer. Warm up by the fireplace whenever you need to heal your wounds.
+"Pelos deuses do norte, você está com a relíquia da expedição na mão! Traga aqui!","Pelos deuses do norte, você está com a relíquia da expedição na mão! Traga aqui!","By the northern gods, you have the expedition relic in your hand! Bring it here!"
+"A expedição seguia um mapa rasgado. Um pedaço ficou bem fundo no gelo: cave fundo na Geleira, que um achado raro pode trazer mais do que parece.","A expedição seguia um mapa rasgado. Um pedaço ficou bem fundo no gelo: cave fundo na Geleira, que um achado raro pode trazer mais do que parece.","The expedition followed a torn map. One piece stayed deep in the ice: dig deep in the Glacier, for a rare find may hold more than it seems."
+[E] Pegar o Diário da Expedição,[E] Pegar o Diário da Expedição,[E] Take the Expedition Logbook
+Você encontrou o diário de bordo do Velho Björn meio congelado na neve!,Você encontrou o diário de bordo do Velho Björn meio congelado na neve!,You found Old Björn's logbook half frozen in the snow!
+[E] Inspecionar trenó de suprimentos,[E] Inspecionar trenó de suprimentos,[E] Inspect the supply sled
+O trenó quebrado da expedição com as caixas de ferramentas preservadas!,O trenó quebrado da expedição com as caixas de ferramentas preservadas!,The expedition's broken sled with its toolboxes intact!
+[E] Pisar no gelo fino,[E] Pisar no gelo fino,[E] Step on the thin ice
+CRACK! O gelo fino racha com um estalo ensurdecedor!,CRACK! O gelo fino racha com um estalo ensurdecedor!,CRACK! The thin ice cracks with a deafening snap!
+[E] Bater na estalactite,[E] Bater na estalactite,[E] Hit the stalactite
+CRASH! A estalactite se solta e se desfaz em estilhaços no chão!,CRASH! A estalactite se solta e se desfaz em estilhaços no chão!,CRASH! The stalactite breaks loose and shatters on the ground!
+[E] Seguir pegadas iluminadas pela aurora,[E] Seguir pegadas iluminadas pela aurora,[E] Follow the aurora-lit footprints
+A luz da aurora revela pegadas colossais na neve fresca... Um rugido ecoa do interior da gruta!,A luz da aurora revela pegadas colossais na neve fresca... Um rugido ecoa do interior da gruta!,The aurora light reveals colossal footprints in the fresh snow... A roar echoes from inside the cave!
+[E] Quebrar o bloco de gelo com a pá,[E] Quebrar o bloco de gelo com a pá,[E] Break the ice block with the shovel
+"CRACK! O gelo se quebra, revelando um fóssil pré-histórico intacto!","CRACK! O gelo se quebra, revelando um fóssil pré-histórico intacto!","CRACK! The ice breaks, revealing an intact prehistoric fossil!"
+[E] Puxar machado do fundo do lago,[E] Puxar machado do fundo do lago,[E] Pull the axe from the bottom of the lake
+Você fisgou das profundezas do lago o temível Machado Viking Ancestral!,Você fisgou das profundezas do lago o temível Machado Viking Ancestral!,You hooked the fearsome Ancestral Viking Axe from the depths of the lake!
+[E] Pegar a relíquia do iglu,[E] Pegar a relíquia do iglu,[E] Take the igloo relic
+Dentro do iglu abandonado... uma Bússola Congelada!,Dentro do iglu abandonado... uma Bússola Congelada!,Inside the abandoned igloo... a Frozen Compass!
+[E] Admirar nariz de cenoura de ouro,[E] Admirar nariz de cenoura de ouro,[E] Admire the golden carrot nose
+Um boneco de neve com um nariz feito de ouro maciço! Quem será que esculpiu isso aqui?,Um boneco de neve com um nariz feito de ouro maciço! Quem será que esculpiu isso aqui?,A snowman with a nose made of solid gold! Who could have sculpted this here?
+[E] Cumprimentar pinguim festivo,[E] Cumprimentar pinguim festivo,[E] Greet the party penguin
+Um pinguim usando um chapéu de festa pontudo! Ele parece feliz por nos ver.,Um pinguim usando um chapéu de festa pontudo! Ele parece feliz por nos ver.,A penguin wearing a pointy party hat! He seems happy to see us.
+Pistas da expedição: %d/%d,Pistas da expedição: %d/%d,Expedition clues: %d/%d
+[E] Mexer no tesouro,[E] Mexer no tesouro,[E] Rummage through the treasure
+[E] Zarpar para a Ilha do Tesouro,[E] Zarpar para a Ilha do Tesouro,[E] Set sail for Treasure Island
+Zé,Zé,Zé
+"Ahoy! Sou o Pescador Zé. Perdi meu anzol de ouro no baixio, à beira-mar em frente à doca... Você encontra pra mim? Seu detector apita!","Ahoy! Sou o Pescador Zé. Perdi meu anzol de ouro no baixio, à beira-mar em frente à doca... Você encontra pra mim? Seu detector apita!","Ahoy! I'm Zé the Fisherman. I lost my golden hook in the shallows, by the shore in front of the dock... Can you find it for me? Your detector beeps!"
+"O anzol caiu no baixio, ali à beira da água em frente à doca. Cave onde o detector apitar!","O anzol caiu no baixio, ali à beira da água em frente à doca. Cave onde o detector apitar!","The hook fell in the shallows, right by the water in front of the dock. Dig where the detector beeps!"
+Esse brilho... é o meu anzol! Traga aqui no barco!,Esse brilho... é o meu anzol! Traga aqui no barco!,That shine... it's my hook! Bring it to the boat!
+"Meu anzol de ouro! Obrigado! ... Ai, a areia está se mexendo... é a MARÉ VERMELHA! Defenda meu barco!","Meu anzol de ouro! Obrigado! ... Ai, a areia está se mexendo... é a MARÉ VERMELHA! Defenda meu barco!","My golden hook! Thank you! ... Uh-oh, the sand is moving... it's the RED TIDE! Defend my boat!"
+Não deixe os caranguejos chegarem ao barco!,Não deixe os caranguejos chegarem ao barco!,Don't let the crabs reach the boat!
+Destruíram meu barco... Fale comigo quando estiver pronto e tentamos outra vez!,Destruíram meu barco... Fale comigo quando estiver pronto e tentamos outra vez!,They wrecked my boat... Talk to me when you're ready and we'll try again!
+Você conseguiu! Tome minha Concha Dourada: leve ao museu!,Você conseguiu! Tome minha Concha Dourada: leve ao museu!,You did it! Take my Golden Shell: bring it to the museum!
+"Obrigado, amigo! E se ouvir as conchas cantando... cuidado com o naufrágio.","Obrigado, amigo! E se ouvir as conchas cantando... cuidado com o naufrágio.","Thanks, friend! And if you hear the shells singing... beware of the shipwreck."
+"Olha esse brilho na sua mão! É isso mesmo, traga aqui no barco!","Olha esse brilho na sua mão! É isso mesmo, traga aqui no barco!","Look at that shine in your hand! That's it, bring it to the boat!"
+Aquele papel velho do barco é um pedaço de um mapa antigo! Dizem que há mais pedaços enterrados por aí... junte todos e veja para onde apontam.,Aquele papel velho do barco é um pedaço de um mapa antigo! Dizem que há mais pedaços enterrados por aí... junte todos e veja para onde apontam.,That old paper on the boat is a piece of an ancient map! They say more pieces are buried around... gather them all and see where they point.
+[E] Tocar a concha dourada,[E] Tocar a concha dourada,[E] Play the golden shell
+[E] Tocar a concha rosa,[E] Tocar a concha rosa,[E] Play the pink shell
+[E] Tocar a concha azul,[E] Tocar a concha azul,[E] Play the blue shell
+[E] Ler a mensagem da garrafa,[E] Ler a mensagem da garrafa,[E] Read the message in the bottle
+"Diário do Capitão, dia 3: o polvo dorme no casco do navio. Só a canção das conchas o acorda: primeiro a ROSA...","Diário do Capitão, dia 3: o polvo dorme no casco do navio. Só a canção das conchas o acorda: primeiro a ROSA...","Captain's log, day 3: the octopus sleeps in the ship's hull. Only the song of the shells wakes it: first the PINK..."
+"...depois a AZUL, e por fim a DOURADA. Que ninguém as toque nesta ordem, ou o polvo acorda!","...depois a AZUL, e por fim a DOURADA. Que ninguém as toque nesta ordem, ou o polvo acorda!","...then the BLUE, and finally the GOLDEN. Let no one play them in this order, or the octopus wakes up!"
+[E] Pegar o anzol de ouro,[E] Pegar o anzol de ouro,[E] Pick up the golden hook
+"Você pegou o anzol de ouro! Leve ao Pescador Zé, no barco.","Você pegou o anzol de ouro! Leve ao Pescador Zé, no barco.","You picked up the golden hook! Take it to Zé the Fisherman, on the boat."
+[E] Empurrar a pedra,[E] Empurrar a pedra,[E] Push the stone
+Uff! Tem alguma coisa brilhando debaixo da pedra...,Uff! Tem alguma coisa brilhando debaixo da pedra...,Oof! Something is shining under the stone...
+[E] Pegar o que brilha,[E] Pegar o que brilha,[E] Take the shiny thing
+[E] Cavar o castelo de areia,[E] Cavar o castelo de areia,[E] Dig into the sandcastle
+Uma moeda de chocolate! Quem será que enterrou isso aqui?,Uma moeda de chocolate! Quem será que enterrou isso aqui?,A chocolate coin! Who could have buried this here?
+[E] Pegar a garrafa,[E] Pegar a garrafa,[E] Pick up the bottle
+A maré baixa deixou uma garrafa com um mapa antigo!,A maré baixa deixou uma garrafa com um mapa antigo!,The low tide left a bottle with an old map!
+[E] Abrir o baú do naufrágio,[E] Abrir o baú do naufrágio,[E] Open the shipwreck chest
+O polvo guardava isto: uma bússola antiga!,O polvo guardava isto: uma bússola antiga!,The octopus was guarding this: an old compass!
+[E] Apertar o pato,[E] Apertar o pato,[E] Squeeze the duck
+Quack!,Quack!,Quack!
+MARÉ VERMELHA,MARÉ VERMELHA,RED TIDE
+Barco do Zé,Barco do Zé,Zé's Boat
+A canção desafina... recomece.,A canção desafina... recomece.,The song goes off-key... start over.
+O mar treme... algo acorda no naufrágio!,O mar treme... algo acorda no naufrágio!,The sea trembles... something wakes in the shipwreck!
+Arqueóloga Inês,Arqueóloga Inês,Inês the Archaeologist
+"Olá! Sou a Inês. Estou tentando abrir a câmara selada na sala do trono, mas preciso de 3 tábuas com glifos espalhadas pelas ruínas para decifrar os selos. Você consegue achar as tábuas?","Olá! Sou a Inês. Estou tentando abrir a câmara selada na sala do trono, mas preciso de 3 tábuas com glifos espalhadas pelas ruínas para decifrar os selos. Você consegue achar as tábuas?","Hello! I'm Inês. I'm trying to open the sealed chamber in the throne room, but I need 3 glyph tablets scattered around the ruins to decipher the seals. Can you find the tablets?"
+"Procure as três tábuas com glifos: estão escondidas pelo pátio, entre a selva e junto à entrada da cripta.","Procure as três tábuas com glifos: estão escondidas pelo pátio, entre a selva e junto à entrada da cripta.","Look for the three glyph tablets: they're hidden around the courtyard, in the jungle and by the crypt entrance."
+"Incrível, você reuniu as três tábuas! Consegui decifrar o encantamento! Mas prepare-se: os guardiões de pedra vão despertar para defender a sala do trono!","Incrível, você reuniu as três tábuas! Consegui decifrar o encantamento! Mas prepare-se: os guardiões de pedra vão despertar para defender a sala do trono!","Amazing, you gathered all three tablets! I deciphered the enchantment! But get ready: the stone guardians will awaken to defend the throne room!"
+O ritual começou! Vá até a sala do trono e derrote as quatro ondas de guardiões de pedra!,O ritual começou! Vá até a sala do trono e derrote as quatro ondas de guardiões de pedra!,The ritual has begun! Go to the throne room and defeat the four waves of stone guardians!
+Aguente firme na sala do trono! Vença as quatro ondas de guardiões de pedra!,Aguente firme na sala do trono! Vença as quatro ondas de guardiões de pedra!,Hold on in the throne room! Beat the four waves of stone guardians!
+Os guardiões foram fortes demais... Fale comigo quando quiser tentar novamente.,Os guardiões foram fortes demais... Fale comigo quando quiser tentar novamente.,The guardians were too strong... Talk to me when you want to try again.
+Você conseguiu quebrar o selo! Tome o Ídolo de Jade sagrado da câmara como agradecimento. Dizem que colocar o ídolo no pedestal da cripta desperta algo ancestral...,Você conseguiu quebrar o selo! Tome o Ídolo de Jade sagrado da câmara como agradecimento. Dizem que colocar o ídolo no pedestal da cripta desperta algo ancestral...,You broke the seal! Take the chamber's sacred Jade Idol as thanks. They say placing the idol on the crypt pedestal awakens something ancient...
+Obrigada pela sua ajuda na escavação! Tome cuidado na cripta com esse ídolo...,Obrigada pela sua ajuda na escavação! Tome cuidado na cripta com esse ídolo...,Thanks for your help with the dig! Be careful in the crypt with that idol...
+"Esse artefato de jade na sua mão! É autêntico, traga aqui para eu ver!","Esse artefato de jade na sua mão! É autêntico, traga aqui para eu ver!","That jade artifact in your hand! It's authentic, bring it here so I can see!"
+"Este mapa é mais antigo do que as próprias Ruínas! E tem outro pedaço por aqui: bata nas paredes, uma delas soa oca.","Este mapa é mais antigo do que as próprias Ruínas! E tem outro pedaço por aqui: bata nas paredes, uma delas soa oca.","This map is older than the Ruins themselves! And there's another piece around here: knock on the walls, one of them sounds hollow."
+[E] Coletar tábua com glifo,[E] Coletar tábua com glifo,[E] Collect glyph tablet
+Primeira tábua com glifos coletada!,Primeira tábua com glifos coletada!,First glyph tablet collected!
+Segunda tábua com glifos coletada!,Segunda tábua com glifos coletada!,Second glyph tablet collected!
+Terceira tábua com glifos coletada! Já temos as três.,Terceira tábua com glifos coletada! Já temos as três.,Third glyph tablet collected! We have all three now.
+[E] Quebrar a parede com a pá,[E] Quebrar a parede com a pá,[E] Break the wall with the shovel
+CRASH! A parede falsa se quebra sob os golpes da pá!,CRASH! A parede falsa se quebra sob os golpes da pá!,CRASH! The false wall breaks under the shovel blows!
+[E] Pegar a Máscara de Ouro,[E] Pegar a Máscara de Ouro,[E] Take the Golden Mask
+Atrás dos escombros da parede... a lendária Máscara de Ouro!,Atrás dos escombros da parede... a lendária Máscara de Ouro!,Behind the rubble of the wall... the legendary Golden Mask!
+[E] Pegar o Cálice de Prata,[E] Pegar o Cálice de Prata,[E] Take the Silver Chalice
+No alto do nicho de pedra... um Cálice de Prata intocado pelo tempo!,No alto do nicho de pedra... um Cálice de Prata intocado pelo tempo!,High in the stone niche... a Silver Chalice untouched by time!
+[E] Retirar Adaga Cerimonial do altar,[E] Retirar Adaga Cerimonial do altar,[E] Take the Ceremonial Dagger from the altar
+A Adaga Cerimonial sagrada retirada do altar das tochas!,A Adaga Cerimonial sagrada retirada do altar das tochas!,"The sacred Ceremonial Dagger, taken from the torch altar!"
+[E] Colocar o Ídolo de Jade no pedestal,[E] Colocar o Ídolo de Jade no pedestal,[E] Place the Jade Idol on the pedestal
+O Ídolo de Jade encaixa no pedestal com um clique seco... Um rugido ancestral ecoa da cripta!,O Ídolo de Jade encaixa no pedestal com um clique seco... Um rugido ancestral ecoa da cripta!,The Jade Idol clicks into the pedestal... An ancient roar echoes from the crypt!
+[E] Examinar pintura rupestre,[E] Examinar pintura rupestre,[E] Examine the cave painting
+Uma pintura rupestre milenar na pedra... mas aquilo na mão da figura é um detector de metais?!,Uma pintura rupestre milenar na pedra... mas aquilo na mão da figura é um detector de metais?!,An age-old cave painting on the stone... but is that a metal detector in the figure's hand?!
+[E] Examinar esqueleto,[E] Examinar esqueleto,[E] Examine the skeleton
+Um esqueleto antigo com um chapéu de explorador colonial... Não fomos os primeiros a chegar aqui!,Um esqueleto antigo com um chapéu de explorador colonial... Não fomos os primeiros a chegar aqui!,An old skeleton wearing a colonial explorer's hat... We weren't the first to get here!
+Tábuas com glifos: %d/%d,Tábuas com glifos: %d/%d,Glyph tablets: %d/%d
+A CÂMARA SELADA,A CÂMARA SELADA,THE SEALED CHAMBER
+Adaga Cerimonial,Adaga Cerimonial,Ceremonial Dagger
+Aliança de Ouro,Aliança de Ouro,Gold Wedding Ring
+Anel do Poço,Anel do Poço,Well Ring
+Anel de Sinete,Anel de Sinete,Signet Ring
+Bússola Antiga da Expedição,Bússola Antiga da Expedição,Old Expedition Compass
+Bússola Congelada,Bússola Congelada,Frozen Compass
+Bússola do Naufrágio,Bússola do Naufrágio,Shipwreck Compass
+Caixa de Música Bizarra,Caixa de Música Bizarra,Bizarre Music Box
+Cálice de Prata,Cálice de Prata,Silver Chalice
+Cenoura de Ouro,Cenoura de Ouro,Golden Carrot
+Chave Enferrujada,Chave Enferrujada,Rusty Key
+Colher de Prata,Colher de Prata,Silver Spoon
+Concha Dourada,Concha Dourada,Golden Shell
+Coroa do Caranguejo-Rei,Coroa do Caranguejo-Rei,King Crab's Crown
+Crampon Enferrujado,Crampon Enferrujado,Rusty Crampon
+Cristal do Eco,Cristal do Eco,Echo Crystal
+Cronômetro do Explorador,Cronômetro do Explorador,Explorer's Chronometer
+Dente de Mamute de Gelo,Dente de Mamute de Gelo,Ice Mammoth Tooth
+Engrenagem Alienígena,Engrenagem Alienígena,Alien Gear
+Escaravelho de Jade,Escaravelho de Jade,Jade Scarab
+Ferradura Velha,Ferradura Velha,Old Horseshoe
+Fíbula Romana,Fíbula Romana,Roman Fibula
+Fivela de Prata,Fivela de Prata,Silver Buckle
+Fóssil no Gelo Milenar,Fóssil no Gelo Milenar,Fossil in Ancient Ice
+Fragmento de Meteorito,Fragmento de Meteorito,Meteorite Fragment
+Garra da Toupeira Gigante,Garra da Toupeira Gigante,Giant Mole Claw
+Geodo Estrelar,Geodo Estrelar,Star Geode
+Ídolo de Jade,Ídolo de Jade,Jade Idol
+Ídolo de Ouro,Ídolo de Ouro,Golden Idol
+Lanterna do Espantalho,Lanterna do Espantalho,Scarecrow's Lantern
+Lanterna da Expedição Perdida,Lanterna da Expedição Perdida,Lost Expedition Lantern
+Lata Enferrujada,Lata Enferrujada,Rusty Can
+Ligaduras da Múmia,Ligaduras da Múmia,Mummy Wrappings
+Machado Viking Ancestral,Machado Viking Ancestral,Ancestral Viking Axe
+Mapa na Garrafa,Mapa na Garrafa,Map in a Bottle
+Máscara de Ouro,Máscara de Ouro,Golden Mask
+Medalha Militar,Medalha Militar,Military Medal
+Medalha da Expedição Polar,Medalha da Expedição Polar,Polar Expedition Medal
+Medalhão da Sereia,Medalhão da Sereia,Mermaid Medallion
+Moeda Antiga,Moeda Antiga,Ancient Coin
+Moeda Celta,Moeda Celta,Celtic Coin
+Moeda de Chocolate,Moeda de Chocolate,Chocolate Coin
+Núcleo Adormecido,Núcleo Adormecido,Dormant Core
+Núcleo do Guardião,Núcleo do Guardião,Guardian Core
+Olho do Polvo,Olho do Polvo,Octopus Eye
+Orbe Vibrante,Orbe Vibrante,Vibrant Orb
+Pena do Corvo-Rei,Pena do Corvo-Rei,Crow King's Feather
+Ponta de Lança,Ponta de Lança,Spearhead
+Relógio de Bolso Antigo,Relógio de Bolso Antigo,Antique Pocket Watch
+Relógio de Ouro,Relógio de Ouro,Gold Watch
+Sino de Bronze,Sino de Bronze,Bronze Bell
+Campo Antigo,Campo Antigo,Old Fields
+Geleira Eterna,Geleira Eterna,Eternal Glacier
+Armadilha de Rede,Armadilha de Rede,Net Trap
+Coloque no chão: prende o primeiro inimigo 5 s e causa 15 de dano.,Coloque no chão: prende o primeiro inimigo 5 s e causa 15 de dano.,Place it on the ground: traps the first enemy for 5 s and deals 15 damage.
+Puxa inimigos e itens. Banca da Geleira Eterna.,Puxa inimigos e itens. Banca da Geleira Eterna.,Pulls enemies and items. Eternal Glacier stall.
+Batata Esquecida,Batata Esquecida,Forgotten Potato
+Sobrou de alguma colheita. Recupera 25 de vida e mata a fome.,Sobrou de alguma colheita. Recupera 25 de vida e mata a fome.,Left over from some harvest. Restores 25 health and ends hunger.
+Carne Crua,Carne Crua,Raw Meat
+Do bicho que você acabou de derrotar. Mata pouco a fome e pode enjoar. Estraga rápido no chão.,Do bicho que você acabou de derrotar. Mata pouco a fome e pode enjoar. Estraga rápido no chão.,From the critter you just defeated. Barely eases hunger and may make you sick. Spoils quickly on the ground.
+Cogumelo da Cripta,Cogumelo da Cripta,Crypt Mushroom
+Cresce no escuro entre as pedras. Recupera 20 de vida e mata a fome.,Cresce no escuro entre as pedras. Recupera 20 de vida e mata a fome.,Grows in the dark between the stones. Restores 20 health and ends hunger.
+Dinamite,Dinamite,Dynamite
+"3 bananas. Clique para lançar: explode em 2 s, derruba bichos, arremessa tudo (até você) e desenterra o que estiver perto, trincando os achados. Faz MUITO barulho.","3 bananas. Clique para lançar: explode em 2 s, derruba bichos, arremessa tudo (até você) e desenterra o que estiver perto, trincando os achados. Faz MUITO barulho.","3 sticks. Click to throw: explodes in 2 s, knocks critters down, flings everything (even you) and digs up whatever is nearby, cracking the finds. Makes A LOT of noise."
+Estilingue,Estilingue,Slingshot
+Arma à distância. Atira pedras (20 de dano). Recarga 0.8 s.,Arma à distância. Atira pedras (20 de dano). Recarga 0.8 s.,Ranged weapon. Shoots stones (20 damage). Reload 0.8 s.
+Arma corpo a corpo de alcance: empurra os inimigos. Banca do Campo Antigo.,Arma corpo a corpo de alcance: empurra os inimigos. Banca do Campo Antigo.,Long-reach melee weapon: pushes enemies back. Old Fields stall.
+Kit Médico,Kit Médico,Medkit
+Recupera 40 de vida.,Recupera 40 de vida.,Restores 40 health.
+Lanterna de Magnésio,Lanterna de Magnésio,Magnesium Lantern
+Flash em cone que atordoa; os morcegos fogem. Banca das Ruínas.,Flash em cone que atordoa; os morcegos fogem. Banca das Ruínas.,Cone-shaped flash that stuns; bats flee. Ruins stall.
+Larva Térmica,Larva Térmica,Thermal Larva
+Morna ao toque. Recupera 22 de vida e mata a fome.,Morna ao toque. Recupera 22 de vida e mata a fome.,Warm to the touch. Restores 22 health and ends hunger.
+Líquen Gelado,Líquen Gelado,Frozen Lichen
+Crocante de gelo. Recupera 15 de vida e mata a fome.,Crocante de gelo. Recupera 15 de vida e mata a fome.,Icy and crunchy. Restores 15 health and ends hunger.
+Marisco,Marisco,Clam
+"Concha fechada, ainda fresca. Recupera 18 de vida e mata a fome.","Concha fechada, ainda fresca. Recupera 18 de vida e mata a fome.","Closed shell, still fresh. Restores 18 health and ends hunger."
+Minhoca,Minhoca,Earthworm
+Gorda e mexendo. Recupera 10 de vida e mata a fome.,Gorda e mexendo. Recupera 10 de vida e mata a fome.,Fat and wriggling. Restores 10 health and ends hunger.
+Empurra criaturas e puxa metal. Banca da Cratera.,Empurra criaturas e puxa metal. Banca da Cratera.,Pushes creatures and pulls metal. Crater stall.
+Repelente de Caranguejo,Repelente de Caranguejo,Crab Repellent
+Spray: inimigos a até 8 m fogem e se enterram; baixa a ameaça do subsolo.,Spray: inimigos a até 8 m fogem e se enterram; baixa a ameaça do subsolo.,Spray: enemies within 8 m flee and burrow; lowers the underground threat.
+Tatuíra,Tatuíra,Mole Crab
+Crustáceo pequenino da areia molhada. Recupera 12 de vida e mata a fome.,Crustáceo pequenino da areia molhada. Recupera 12 de vida e mata a fome.,Tiny crustacean from the wet sand. Restores 12 health and ends hunger.
+ENTREGA [E],ENTREGA [E],DROP-OFF [E]
+LOJA,LOJA,SHOP
+O guardião dorme debaixo das lajes... [cavar],O guardião dorme debaixo das lajes... [cavar],The guardian sleeps under the slabs... [dig]
+Detector de Metais,Detector de Metais,Metal Detector
+PIN ✔ CAVE,PIN ✔ CAVE,PIN ✔ DIG
+PIN %s %.1fm,PIN %s %.1fm,PIN %s %.1fm
+Ferro,Ferro,Iron
+Alumínio,Alumínio,Aluminum
+Prata,Prata,Silver
+Ouro,Ouro,Gold
+Desconhecido (?),Desconhecido (?),Unknown (?)
+Novo: %s,Novo: %s,New: %s
+Pequeno,Pequeno,Small
+Médio,Médio,Medium
+Grande,Grande,Large
+Colossal,Colossal,Colossal
+Nv.%d  %dm,Nv.%d  %dm,Lv.%d  %dm
+Sinal ,Sinal ,Signal 
+Mat: ,Mat: ,Mat: 
+Prof: ,Prof: ,Depth: 
+Val: ,Val: ,Val: 
+Tam: ,Tam: ,Size: 
+⏳ O chefe está se cansando: %d s para fugir!,⏳ O chefe está se cansando: %d s para fugir!,⏳ The boss is tiring: %d s until it flees!
+💨 O chefe cansou e fugiu! Acorde ele de novo para tentar outra vez.,💨 O chefe cansou e fugiu! Acorde ele de novo para tentar outra vez.,💨 The boss got tired and fled! Wake it again to try once more.
+GUARDIÃO ANCESTRAL,GUARDIÃO ANCESTRAL,ANCIENT GUARDIAN
+MORSA ANCIÃ,MORSA ANCIÃ,ELDER WALRUS
+Ele acordou!,Ele acordou!,It woke up!
+YETI DA GRUTA,YETI DA GRUTA,CAVE YETI
+CORVO-REI,CORVO-REI,CROW KING
+MAMUTE CONGELADO,MAMUTE CONGELADO,FROZEN MAMMOTH
+TOUPEIRA GIGANTE,TOUPEIRA GIGANTE,GIANT MOLE
+COLOSSO DO TESOURO,COLOSSO DO TESOURO,TREASURE COLOSSUS
+MÚMIA DO ÍDOLO,MÚMIA DO ÍDOLO,IDOL MUMMY
+CARANGUEJO-REI,CARANGUEJO-REI,KING CRAB
+Algo cava debaixo das pedras... [cavar],Algo cava debaixo das pedras... [cavar],Something is digging under the stones... [dig]
+Algo grande dorme aqui... [cavar],Algo grande dorme aqui... [cavar],Something big sleeps here... [dig]
+POLVO DO NAUFRÁGIO,POLVO DO NAUFRÁGIO,SHIPWRECK OCTOPUS
+ESPANTALHO DESPERTO,ESPANTALHO DESPERTO,AWAKENED SCARECROW
+O ECO,O ECO,THE ECHO
+O QUE DORME LÁ EMBAIXO,O QUE DORME LÁ EMBAIXO,WHAT SLEEPS BELOW
+O Dorminhoco aguarda no abismo cósmico... [cavar],O Dorminhoco aguarda no abismo cósmico... [cavar],The Sleeper waits in the cosmic abyss... [dig]
+❄️ Água gélida! Risco de hipotermia!,❄️ Água gélida! Risco de hipotermia!,❄️ Freezing water! Risk of hypothermia!
+⚠️ Atropelado por uma pedra rolando!,⚠️ Atropelado por uma pedra rolando!,⚠️ Run over by a rolling boulder!
+🪨 Rocha instável desabando morro abaixo!,🪨 Rocha instável desabando morro abaixo!,🪨 Unstable rock tumbling downhill!
+[E] Empurrar rocha instável,[E] Empurrar rocha instável,[E] Push the unstable rock
+Um titã ancestral dorme sob o gelo eterno... [cavar],Um titã ancestral dorme sob o gelo eterno... [cavar],An ancient titan sleeps under the eternal ice... [dig]
+Prepare-se... onda %d/%d,Prepare-se... onda %d/%d,Get ready... wave %d/%d
+Onda %d/%d  —  inimigos: %d,Onda %d/%d  —  inimigos: %d,Wave %d/%d  —  enemies: %d
+Vitória!,Vitória!,Victory!
+%s perdido... fale outra vez para tentar de novo,%s perdido... fale outra vez para tentar de novo,%s lost... talk again to try once more
+Sinal aqui,Sinal aqui,Signal here
+Ponto de interesse ou sinal detectado,Ponto de interesse ou sinal detectado,Point of interest or detected signal
+Perigo,Perigo,Danger
+Criatura hostil ou armadilha,Criatura hostil ou armadilha,Hostile creature or trap
+Ajuda,Ajuda,Help
+Preciso de socorro ou reforço,Preciso de socorro ou reforço,I need help or backup
+Marcador,Marcador,Marker
+🔍 FICHA DE CAMPO — SCANDIG,🔍 FICHA DE CAMPO — SCANDIG,🔍 FIELD CARD — SCANDIG
+💀 %s (Caído),💀 %s (Caído),💀 %s (Down)
+💡 Com fome? Cave fora dos sinais: às vezes sai comida. Segure o clique com ela na mão para comer (um golpe interrompe).,💡 Com fome? Cave fora dos sinais: às vezes sai comida. Segure o clique com ela na mão para comer (um golpe interrompe).,💡 Hungry? Dig away from signals: sometimes food turns up. Hold the click with it in hand to eat (a hit interrupts it).
+"💡 Segure [{drop}] para arremessar o item: rápido, ele machuca os bichos.","💡 Segure [{drop}] para arremessar o item: rápido, ele machuca os bichos.","💡 Hold [{drop}] to throw the item: thrown fast, it hurts critters."
+💡 Dinamite: clique para lançar. A explosão também acerta você: afaste-se!,💡 Dinamite: clique para lançar. A explosão também acerta você: afaste-se!,💡 Dynamite: click to throw. The blast hits you too: stand back!
+💡 Gaivotas roubam itens do chão e da mochila. Derrube a gaivota para recuperar.,💡 Gaivotas roubam itens do chão e da mochila. Derrube a gaivota para recuperar.,💡 Seagulls steal items from the ground and your backpack. Knock the seagull down to get them back.
+"💡 As armas se gastam com o uso. Quando quebrarem, compre outra na banca.","💡 As armas se gastam com o uso. Quando quebrarem, compre outra na banca.","💡 Weapons wear out with use. When one breaks, buy another at the stall."
+Opções,Opções,Options
+Voltar ao jogo  [Esc],Voltar ao jogo  [Esc],Back to the game  [Esc]
+Sensibilidade do mouse: %d%%,Sensibilidade do mouse: %d%%,Mouse sensitivity: %d%%
+Campo de visão: %d°,Campo de visão: %d°,Field of view: %d°
+É isso! Traga aqui!,É isso! Traga aqui!,That's it! Bring it here!
+[E] Falar com %s,[E] Falar com %s,[E] Talk to %s
+[E] Interagir,[E] Interagir,[E] Interact
+[E] Tocar na pedra,[E] Tocar na pedra,[E] Touch the stone
+🌌 Gravidade Baixa Ativa! Salto amplificado!,🌌 Gravidade Baixa Ativa! Salto amplificado!,🌌 Low Gravity Active! Boosted jump!
+🔥 Ainda está quente! Espere esfriar.,🔥 Ainda está quente! Espere esfriar.,🔥 Still hot! Wait for it to cool down.
+❄️ A encosta está cedendo! Afaste-se das paredes de gelo!,❄️ A encosta está cedendo! Afaste-se das paredes de gelo!,❄️ The slope is giving way! Get away from the ice walls!
+As moedas tremem e começam a levantar voo... o tesouro está VIVO!,As moedas tremem e começam a levantar voo... o tesouro está VIVO!,The coins tremble and start to take flight... the treasure is ALIVE!
+💰 O Colosso se desfez! O tesouro principal da ilha é de vocês!,💰 O Colosso se desfez! O tesouro principal da ilha é de vocês!,💰 The Colossus fell apart! The island's main treasure is yours!
+O monte de ouro no alto da ilha estremece... alguém está cavando demais.,O monte de ouro no alto da ilha estremece... alguém está cavando demais.,The pile of gold atop the island shudders... someone is digging too much.
+O ouro do monte acordou com o barulho!,O ouro do monte acordou com o barulho!,The gold pile woke up with the noise!
+"O mapa do tesouro ainda tem buracos: %d de %d fragmentos. Sem ele, ninguém encontra a ilha.","O mapa do tesouro ainda tem buracos: %d de %d fragmentos. Sem ele, ninguém encontra a ilha.","The treasure map still has gaps: %d of %d fragments. Without it, nobody can find the island."
+"O mapa está completo, mas o barco ainda não está pronto para a viagem.","O mapa está completo, mas o barco ainda não está pronto para a viagem.","The map is complete, but the boat isn't ready for the voyage yet."
+⛵ Mapa completo! A equipe zarpa para a Ilha do Tesouro...,⛵ Mapa completo! A equipe zarpa para a Ilha do Tesouro...,⛵ Map complete! The team sets sail for Treasure Island...
+🌊 Maré baixa! A faixa molhada ficou descoberta: há coisas para cavar perto do mar.,🌊 Maré baixa! A faixa molhada ficou descoberta: há coisas para cavar perto do mar.,🌊 Low tide! The wet strip is exposed: there are things to dig near the sea.
+🌊 A maré está subindo: os buracos da faixa molhada vão ficar debaixo da água!,🌊 A maré está subindo: os buracos da faixa molhada vão ficar debaixo da água!,🌊 The tide is rising: holes in the wet strip will end up underwater!
+🌊 Maré cheia: o mar cobriu a faixa molhada. As ondas trazem coisas à areia.,🌊 Maré cheia: o mar cobriu a faixa molhada. As ondas trazem coisas à areia.,🌊 High tide: the sea covered the wet strip. The waves wash things onto the sand.
+🗺️ Último fragmento! O Mapa do Tesouro está completo: há uma ilha esperando a equipe.,🗺️ Último fragmento! O Mapa do Tesouro está completo: há uma ilha esperando a equipe.,🗺️ Last fragment! The Treasure Map is complete: an island is waiting for the team.
+🗺️ Fragmento do Mapa do Tesouro (%s)! %d/%d — veja o pergaminho na base.,🗺️ Fragmento do Mapa do Tesouro (%s)! %d/%d — veja o pergaminho na base.,🗺️ Treasure Map fragment (%s)! %d/%d — check the parchment at base.
+Ruinas,Ruinas,Ruins
+CRAB OFF!,CRAB OFF!,CRAB OFF!
+[E] Comprar %s (%s),[E] Comprar %s (%s),[E] Buy %s (%s)
+Mochila cheia! Liberte um slot antes de comprar.,Mochila cheia! Liberte um slot antes de comprar.,Backpack full! Free a slot before buying.
+Loja fechada (sem GameState nesta cena).,Loja fechada (sem GameState nesta cena).,Shop closed (no GameState in this scene).
+Compra em curso...,Compra em curso...,Purchase in progress...
+Sem resposta do anfitrião. Tente de novo.,Sem resposta do anfitrião. Tente de novo.,No response from the host. Try again.
+Tesouro da Ilha,Tesouro da Ilha,Island Treasure
+Só areia...,Só areia...,Just sand...
+Só terra...,Só terra...,Just dirt...
+Nada aqui...,Nada aqui...,Nothing here...
+O chão treme...,O chão treme...,The ground shakes...
+O chão treme... algo se mexe lá embaixo.,O chão treme... algo se mexe lá embaixo.,The ground shakes... something is moving down below.
+O chão treme... O SUBSOLO ACORDOU!,O chão treme... O SUBSOLO ACORDOU!,The ground shakes... THE UNDERGROUND HAS AWAKENED!
+Anfitrião,Anfitrião,Host
+Convidado,Convidado,Guest
+Pulou da tirolesa!,Pulou da tirolesa!,Jumped off the zip line!
+🛒 Guardado no carrinho: %s,🛒 Guardado no carrinho: %s,🛒 Stored in the wheelbarrow: %s
+Artefato Misterioso,Artefato Misterioso,Mysterious Artifact
+✦ RARO ✦,✦ RARO ✦,✦ RARE ✦
+"★ DESCOBERTA: %s [%s]!
+Integridade: %d%% | Valor: %s","★ DESCOBERTA: %s [%s]!
+Integridade: %d%% | Valor: %s","★ DISCOVERY: %s [%s]!
+Integrity: %d%% | Value: %s"
+✔ ESCAVAÇÃO PERFEITA! (+25%),✔ ESCAVAÇÃO PERFEITA! (+25%),✔ PERFECT DIG! (+25%)
+[E] pegar,[E] pegar,[E] pick up
+"💥 CRACK! Você bateu com a pá no objeto!
+Integridade caiu para %d%% (Camada %d/%d)","💥 CRACK! Você bateu com a pá no objeto!
+Integridade caiu para %d%% (Camada %d/%d)","💥 CRACK! You hit the object with the shovel!
+Integrity dropped to %d%% (Layer %d/%d)"
+Escavação Cuidadosa,Escavação Cuidadosa,Careful Dig
+Pá Rápida,Pá Rápida,Quick Shovel
+⛏️ [%s] Escavando terra... (Camada %d/%d),⛏️ [%s] Escavando terra... (Camada %d/%d),⛏️ [%s] Digging... (Layer %d/%d)
+❌ %s nenhum sinal aqui (aproxime-se de um sinal),❌ %s nenhum sinal aqui (aproxime-se de um sinal),❌ %s no signal here (get closer to a signal)
+Entregue  %s,Entregue  %s,Delivered  %s
+Comum,Comum,Common
+Histórico,Histórico,Historic
+Raro,Raro,Rare
+Estranho,Estranho,Strange
+Engasgou com o golpe: parou de comer!,Engasgou com o golpe: parou de comer!,Choked on the hit: you stopped eating!
+💀 Você desmaiou... e acordou de volta no ponto de partida.,💀 Você desmaiou... e acordou de volta no ponto de partida.,💀 You passed out... and woke up back at the starting point.
+A mochila caiu no local da morte (%d itens) — volte para pegar!,A mochila caiu no local da morte (%d itens) — volte para pegar!,Your backpack dropped where you fell (%d items) — go back for it!
+✨ Você foi reanimado na base! De volta à expedição.,✨ Você foi reanimado na base! De volta à expedição.,✨ You were revived at base! Back to the expedition.
+💀 Você foi derrubado! Aguarde socorro ou segure [%s] para resgate de emergência.,💀 Você foi derrubado! Aguarde socorro ou segure [%s] para resgate de emergência.,💀 You were knocked down! Wait for help or hold [%s] for emergency rescue.
+🚨 Resgate de emergência acionado! Você voltou à base de expedição.,🚨 Resgate de emergência acionado! Você voltou à base de expedição.,🚨 Emergency rescue triggered! You are back at the expedition base.
+A mochila ficou onde você caiu (%d itens) — volte para buscar!,A mochila ficou onde você caiu (%d itens) — volte para buscar!,Your backpack stayed where you fell (%d items) — go back and get it!
+🤝 Sendo carregado por %s... | ,🤝 Sendo carregado por %s... | ,🤝 Being carried by %s... | 
+💀 Caído! Aguarde socorro ou ,💀 Caído! Aguarde socorro ou ,💀 Down! Wait for help or 
+%sSegure [%s] para resgate de emergência na base%s,%sSegure [%s] para resgate de emergência na base%s,%sHold [%s] for emergency rescue to base%s
+💫 A equipe toda caiu! Vocês acordaram no ponto de partida (as mochilas ficaram onde caíram).,💫 A equipe toda caiu! Vocês acordaram no ponto de partida (as mochilas ficaram onde caíram).,💫 The whole team went down! You woke up at the starting point (the backpacks stayed where you fell).
+🤝 Carregando %s. Leve até a base!,🤝 Carregando %s. Leve até a base!,🤝 Carrying %s. Take them to base!
+🤝 %s está carregando você!,🤝 %s está carregando você!,🤝 %s is carrying you!
+Você largou o corpo de %s.,Você largou o corpo de %s.,You put %s down.
+✨ Você reanimou %s!,✨ Você reanimou %s!,✨ You revived %s!
+🍽️ Faminto! Cave e coma alguma coisa.,🍽️ Faminto! Cave e coma alguma coisa.,🍽️ Starving! Dig and eat something.
+Fome   %d/%d,Fome   %d/%d,Hunger   %d/%d
+  (com fome!),  (com fome!),  (hungry!)
+   🎒 pesado,   🎒 pesado,   🎒 heavy
+💩 Uma gaivota acertou você em cheio!,💩 Uma gaivota acertou você em cheio!,💩 A seagull got you right on target!
+Vida   %d/%d,Vida   %d/%d,Health   %d/%d
+Pá de Escavação (Nível %d),Pá de Escavação (Nível %d),Digging Shovel (Level %d)
+Ferramenta Base • Prospeção e Defesa,Ferramenta Base • Prospeção e Defesa,Base Tool • Prospecting and Defense
+Pá regulamentar da expedição ScanDig. Remove camadas de solo sobre sinais detectados e serve de defesa corpo a corpo contra criaturas.,Pá regulamentar da expedição ScanDig. Remove camadas de solo sobre sinais detectados e serve de defesa corpo a corpo contra criaturas.,Standard-issue ScanDig expedition shovel. Removes soil layers over detected signals and doubles as melee defense against creatures.
+Dano corpo a corpo: %d  |  Proteção ao achado: +%d%%,Dano corpo a corpo: %d  |  Proteção ao achado: +%d%%,Melee damage: %d  |  Find protection: +%d%%
+[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa,[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa,[%s] Quick dig  |  [Shift + %s] Careful dig
+[%s] Golpear com a pá,[%s] Golpear com a pá,[%s] Swing the shovel
+[%s] Interagir / Pegar,[%s] Interagir / Pegar,[%s] Interact / Pick up
+[%s] Fechar inspeção,[%s] Fechar inspeção,[%s] Close inspection
+%s (Nível %d),%s (Nível %d),%s (Level %d)
+Equipamento de Sondagem • ScanDig,Equipamento de Sondagem • ScanDig,Survey Equipment • ScanDig
+Sonda eletromagnética de campo. Emite bipes mais rápidos e agudos e acende o visor conforme se aproxima de um achado enterrado.,Sonda eletromagnética de campo. Emite bipes mais rápidos e agudos e acende o visor conforme se aproxima de um achado enterrado.,Electromagnetic field probe. Beeps faster and higher and lights up the screen as you get closer to a buried find.
+Estado: Inteiro (equipamento permanente),Estado: Inteiro (equipamento permanente),Condition: Intact (permanent equipment)
+[%s] Largar / Arremessar,[%s] Largar / Arremessar,[%s] Drop / Throw
+Equipamento de expedição.,Equipamento de expedição.,Expedition equipment.
+Provisão de Campo • Alimento,Provisão de Campo • Alimento,Field Ration • Food
+Recupera: +%d Vida  |  +%d Saciedade,Recupera: +%d Vida  |  +%d Saciedade,Restores: +%d Health  |  +%d Fullness
+  |  Doses: x%d,  |  Doses: x%d,  |  Servings: x%d
+⚠ Alimento cru (%d%% risco de enjoo),⚠ Alimento cru (%d%% risco de enjoo),⚠ Raw food (%d%% chance of nausea)
+[Segurar %s] Comer (%0.1fs),[Segurar %s] Comer (%0.1fs),[Hold %s] Eat (%0.1fs)
+[%s] Cavar com a pá,[%s] Cavar com a pá,[%s] Dig with the shovel
+Arma de Expedição,Arma de Expedição,Expedition Weapon
+Consumível de Campo,Consumível de Campo,Field Consumable
+Estado / Desgaste: %d/%d usos (%d%%),Estado / Desgaste: %d/%d usos (%d%%),Condition / Wear: %d/%d uses (%d%%)
+Cargas restantes: x%d,Cargas restantes: x%d,Charges left: x%d
+Estado: Pronto a usar,Estado: Pronto a usar,Condition: Ready to use
+[%s] ou [%s] Usar / Disparar,[%s] ou [%s] Usar / Disparar,[%s] or [%s] Use / Fire
+[%s] Usar ferramenta,[%s] Usar ferramenta,[%s] Use tool
+[%s] Cavar rápido,[%s] Cavar rápido,[%s] Quick dig
+"Achado do Museu • %s (%s, %s)","Achado do Museu • %s (%s, %s)","Museum Find • %s (%s, %s)"
+"Artefato catalogado de %s (porte %s, profundidade típica %d cm, fragilidade %d%%). Entregue na base para avaliação e exposição no Museu.","Artefato catalogado de %s (porte %s, profundidade típica %d cm, fragilidade %d%%). Entregue na base para avaliação e exposição no Museu.","Cataloged %s artifact (%s size, typical depth %d cm, fragility %d%%). Deliver it at base for appraisal and display in the Museum."
+✨ Intacto (Selo de Coleção),✨ Intacto (Selo de Coleção),✨ Intact (Collection Seal)
+💔 Rachado (%d%% integridade),💔 Rachado (%d%% integridade),💔 Cracked (%d%% integrity)
+Conservado (%d%%),Conservado (%d%%),Well kept (%d%%)
+  |  ✦ Variante Rara,  |  ✦ Variante Rara,  |  ✦ Rare Variant
+"Valor no Museu: %s (Base: %s)
+Estado: %s%s","Valor no Museu: %s (Base: %s)
+Estado: %s%s","Museum value: %s (Base: %s)
+Condition: %s%s"
+[Segurar %s] Carregar arremesso / Largar,[Segurar %s] Carregar arremesso / Largar,[Hold %s] Charge throw / Drop
+[%s] Entregar na base,[%s] Entregar na base,[%s] Deliver at base
+Metal,Metal,Metal
+💔 %s rachou com o golpe: já não está intacto.,💔 %s rachou com o golpe: já não está intacto.,💔 %s cracked from the hit: no longer intact.
+"📦 Entregue: carga e mochila, %s","📦 Entregue: carga e mochila, %s","📦 Delivered: cargo and backpack, %s"
+🛒 Carrinho de mão desvirado!,🛒 Carrinho de mão desvirado!,🛒 Wheelbarrow set upright!
+🪺 Você recuperou %d achado do ninho de corvo!,🪺 Você recuperou %d achado do ninho de corvo!,🪺 You recovered %d find from the crow's nest!
+🪺 Você recuperou %d achados do ninho de corvo!,🪺 Você recuperou %d achados do ninho de corvo!,🪺 You recovered %d finds from the crow's nest!
+O ninho de corvo está vazio no momento.,O ninho de corvo está vazio no momento.,The crow's nest is empty right now.
+"📦 Entregue: %d itens, %s","📦 Entregue: %d itens, %s","📦 Delivered: %d items, %s"
+Nada para entregar (as ferramentas ficam na mochila).,Nada para entregar (as ferramentas ficam na mochila).,Nothing to deliver (tools stay in the backpack).
+🎒 Mochila cheia! Entregue na base ou largue um item [Q].,🎒 Mochila cheia! Entregue na base ou largue um item [Q].,🎒 Backpack full! Deliver at base or drop an item [Q].
+Já tem um %s (deixe para outro jogador).,Já tem um %s (deixe para outro jogador).,You already have a %s (leave it for another player).
+🎒 Mochila cheia! O item caiu no chão.,🎒 Mochila cheia! O item caiu no chão.,🎒 Backpack full! The item fell on the ground.
+✋ Pegou: %s%s,✋ Pegou: %s%s,✋ Picked up: %s%s
+Alguém pegou primeiro.,Alguém pegou primeiro.,Someone grabbed it first.
+Slot vazio.,Slot vazio.,Empty slot.
+[E] Entregar carga e mochila na base | [Q] Soltar carrinho,[E] Entregar carga e mochila na base | [Q] Soltar carrinho,[E] Deliver cargo and backpack at base | [Q] Let go of wheelbarrow
+[Q] Soltar carrinho | [R] Guardar item (%d/%d),[Q] Soltar carrinho | [R] Guardar item (%d/%d),[Q] Let go of wheelbarrow | [R] Store item (%d/%d)
+[Q] Soltar carrinho de mão (%d/%d),[Q] Soltar carrinho de mão (%d/%d),[Q] Let go of wheelbarrow (%d/%d)
+[E] Reanimar %s na base | [Q] Largar,[E] Reanimar %s na base | [Q] Largar,[E] Revive %s at base | [Q] Put down
+[Q] Largar corpo de %s,[Q] Largar corpo de %s,[Q] Put %s down
+[E] Reanimar %s,[E] Reanimar %s,[E] Revive %s
+[E] Carregar %s,[E] Carregar %s,[E] Carry %s
+[E] Desvirar carrinho de mão,[E] Desvirar carrinho de mão,[E] Set the wheelbarrow upright
+[E] Empurrar carrinho | [R] Guardar item (%d/%d),[E] Empurrar carrinho | [R] Guardar item (%d/%d),[E] Push wheelbarrow | [R] Store item (%d/%d)
+[E] Empurrar carrinho de mão (%d/%d),[E] Empurrar carrinho de mão (%d/%d),[E] Push wheelbarrow (%d/%d)
+[E] Vasculhar ninho de corvo (%d achado),[E] Vasculhar ninho de corvo (%d achado),[E] Search the crow's nest (%d find)
+[E] Vasculhar ninho de corvo (%d achados),[E] Vasculhar ninho de corvo (%d achados),[E] Search the crow's nest (%d finds)
+[E] Ninho de corvo (vazio),[E] Ninho de corvo (vazio),[E] Crow's nest (empty)
+[E] Descer pela tirolesa,[E] Descer pela tirolesa,[E] Ride the zip line down
+  — mochila cheia!,  — mochila cheia!,  — backpack full!
+"[E] Entregar mochila (%d itens, %s)","[E] Entregar mochila (%d itens, %s)","[E] Deliver backpack (%d items, %s)"
+  — já tem um,  — já tem um,  — you already have one
+[E] Pegar %s%s%s,[E] Pegar %s%s%s,[E] Pick up %s%s%s
+🎒 Achado pesado: não dá para correr.,🎒 Achado pesado: não dá para correr.,🎒 Heavy find: you can't run.
+🎒 Mochila cheia! Liberte um slot antes de comprar.,🎒 Mochila cheia! Liberte um slot antes de comprar.,🎒 Backpack full! Free a slot before buying.
+🐦 Uma gaivota roubou %s!,🐦 Uma gaivota roubou %s!,🐦 A seagull stole %s!
+🔧 %s quebrou de tanto uso! Compre outro na banca.,🔧 %s quebrou de tanto uso! Compre outro na banca.,🔧 %s broke from heavy use! Buy another at the stall.
+🔧 %s está gasto (20%%).,🔧 %s está gasto (20%%).,🔧 %s is worn out (20%%).
+A vida já está cheia.,A vida já está cheia.,Health is already full.
+🩹 +%d de vida,🩹 +%d de vida,🩹 +%d health
+Flash! %d atordoado,Flash! %d atordoado,Flash! %d stunned
+Flash! %d atordoados,Flash! %d atordoados,Flash! %d stunned
+Sem fome agora.,Sem fome agora.,Not hungry right now.
+🤢 %s caiu mal... -%d saciedade,🤢 %s caiu mal... -%d saciedade,🤢 %s didn't sit well... -%d fullness
+"😋 %s: +%d vida, +%d saciedade","😋 %s: +%d vida, +%d saciedade","😋 %s: +%d health, +%d fullness"
+"🪱 Saiu %s, mas a mochila está cheia e escapou.","🪱 Saiu %s, mas a mochila está cheia e escapou.","🪱 Out came %s, but the backpack is full and it got away."
+🪱 Achou: %s! (segure o clique para comer),🪱 Achou: %s! (segure o clique para comer),🪱 Found: %s! (hold the click to eat)
+%s acabou.,%s acabou.,%s is used up.
+⚓ Arpão cravou no gelo!,⚓ Arpão cravou no gelo!,⚓ Harpoon stuck in the ice!
+🪨 Arpão deslodou a rocha instável!,🪨 Arpão deslodou a rocha instável!,🪨 Harpoon dislodged the unstable rock!
+⚡ Este atalho já foi construído!,⚡ Este atalho já foi construído!,⚡ This shortcut is already built!
+⚓ Arpão fixado no poste! Mire no poste oposto para esticar o atalho.,⚓ Arpão fixado no poste! Mire no poste oposto para esticar o atalho.,⚓ Harpoon fixed to the post! Aim at the opposite post to stretch the shortcut.
+⚓ Arpão já fixado neste poste. Mire no poste oposto!,⚓ Arpão já fixado neste poste. Mire no poste oposto!,⚓ Harpoon already fixed to this post. Aim at the opposite post!
+⚡ Tirolesa construída com sucesso! Segure [E] no topo para descer.,⚡ Tirolesa construída com sucesso! Segure [E] no topo para descer.,⚡ Zip line built! Hold [E] at the top to ride down.
+🌉 Ponte de corda esticada! Travessia liberada para pedestres e carrinho.,🌉 Ponte de corda esticada! Travessia liberada para pedestres e carrinho.,🌉 Rope bridge stretched! Crossing open for walkers and the wheelbarrow.
+❌ Estes postes não formam um par de atalho!,❌ Estes postes não formam um par de atalho!,❌ These posts don't form a shortcut pair!
+⚓ Item fisgado pelo arpão!,⚓ Item fisgado pelo arpão!,⚓ Item hooked by the harpoon!
+⚓ Arpão cravado! Inimigo puxado e atordoado! (%d de dano),⚓ Arpão cravado! Inimigo puxado e atordoado! (%d de dano),⚓ Harpoon hit! Enemy pulled and stunned! (%d damage)
+💨 Repelente! %d criatura(s) fugiram. A ameaça baixou.,💨 Repelente! %d criatura(s) fugiram. A ameaça baixou.,💨 Repellent! %d creature(s) fled. The threat dropped.
+Não dá para pousar a rede aqui.,Não dá para pousar a rede aqui.,You can't place the net here.
+🕸️ Armadilha de rede armada.,🕸️ Armadilha de rede armada.,🕸️ Net trap set.
+🌀 Você caiu por um buraco do mundo... de volta ao chão firme.,🌀 Você caiu por um buraco do mundo... de volta ao chão firme.,🌀 You fell through a hole in the world... back on solid ground.
+"⚡ Pulso Magnético! (%d repelidos, %d atraídos)","⚡ Pulso Magnético! (%d repelidos, %d atraídos)","⚡ Magnetic Pulse! (%d repelled, %d pulled)"
+⚡ Pulso Magnético disparado!,⚡ Pulso Magnético disparado!,⚡ Magnetic Pulse fired!
+🐍 Uma cobra se enrolou em você! Sacuda (WASD)!,🐍 Uma cobra se enrolou em você! Sacuda (WASD)!,🐍 A snake wrapped around you! Shake it off (WASD)!
+👑 O Corvo-Rei roubou sua ferramenta! Acerte nele!,👑 O Corvo-Rei roubou sua ferramenta! Acerte nele!,👑 The Crow King stole your tool! Hit him!
+Você se soltou!,Você se soltou!,You broke free!
+🛒 Empurrando carrinho de mão ([Q] para soltar),🛒 Empurrando carrinho de mão ([Q] para soltar),🛒 Pushing the wheelbarrow ([Q] to let go)
+Carrinho de mão solto.,Carrinho de mão solto.,Wheelbarrow released.
+⚠️ Carrinho tombado! A carga foi derramada.,⚠️ Carrinho tombado! A carga foi derramada.,⚠️ Wheelbarrow tipped over! The cargo spilled.
+Não é possível usar a tirolesa empurrando o carrinho!,Não é possível usar a tirolesa empurrando o carrinho!,You can't use the zip line while pushing the wheelbarrow!
+Não é possível usar a tirolesa carregando um parceiro!,Não é possível usar a tirolesa carregando um parceiro!,You can't use the zip line while carrying a partner!
+⚡ Deslizando pela tirolesa! [Espaço] para soltar.,⚡ Deslizando pela tirolesa! [Espaço] para soltar.,⚡ Sliding down the zip line! [Space] to let go.
+Chegada da tirolesa!,Chegada da tirolesa!,End of the zip line!

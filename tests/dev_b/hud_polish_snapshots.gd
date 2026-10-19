@@ -1,8 +1,10 @@
 # Capturas do polimento de UI do lote E (#122, precisa de janela):
-# "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 960x540 --windowed --script res://tests/dev_b/hud_polish_snapshots.gd -- --prefix=960_ [--only=hud,titulo,loja,loja_praia]
+# "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 960x540 --windowed --script res://tests/dev_b/hud_polish_snapshots.gd -- --prefix=960_ [--only=hud,titulo,loja,loja_praia,config] [--lang=en] [--ui_scale=1.3]
 # Grava em .bot_runs/theme/<prefixo>: hud_{praia,geleira}.png (HUD sem cartão e hotbar com slots
-# vazios, olhando para a areia/neve), titulo.png, loja_sem_saldo.png e loja_praia.png (rótulos 3D).
-# Save isolado (use_test_save_dir).
+# vazios, olhando para a areia/neve), titulo.png, loja_sem_saldo.png, loja_praia.png (rótulos 3D) e
+# config_{video,audio,controles,jogabilidade,jogabilidade_fim}.png (Configurações pela pausa, na Base).
+# --lang troca o idioma (#131) e --ui_scale a escala da interface, sem gravar. Save isolado
+# (use_test_save_dir).
 extends SceneTree
 
 const OUT_DIR: String = "res://.bot_runs/theme/"
@@ -28,6 +30,10 @@ func _run() -> void:
 			_prefix = arg.trim_prefix("--prefix=")
 		elif arg.begins_with("--only="):
 			_only = arg.trim_prefix("--only=").split(",")
+		elif arg.begins_with("--lang="):
+			SettingsManager.instance.set_language(arg.trim_prefix("--lang="), false)
+		elif arg.begins_with("--ui_scale="):
+			SettingsManager.instance.set_section(SettingsManager.VIDEO, {"ui_scale": arg.trim_prefix("--ui_scale=").to_float()}, false)
 	SaveManager.instance.use_test_save_dir("hud_polish_snapshots")
 	GameState.instance.reset_state()
 	GameState.instance.load_snapshot({"team_money": 12345, "upgrade_levels": {"backpack": 5}})
@@ -36,6 +42,8 @@ func _run() -> void:
 		await _title()
 	if _wants("loja"):
 		await _base_shop()
+	if _wants("config"):
+		await _settings()
 	if _wants("loja_praia"):
 		await _praia_shop()
 	for map_id: String in (MAPS if _wants("hud") else {}):
@@ -104,6 +112,30 @@ func _base_shop() -> void:
 	await _frames(20)
 	await _save_shot("loja_sem_saldo")
 	GameState.instance.load_snapshot({"team_money": 12345})
+
+
+## Configurações abertas pela pausa, na Base: as quatro abas e o fim da Jogabilidade (Idioma).
+func _settings() -> void:
+	if current_scene == null or not str(current_scene.scene_file_path).contains("lobby_base"):
+		change_scene_to_file("res://world/lobby_base.tscn")
+		await _frames(40)
+	var pause: PauseMenu = PauseMenu.instance
+	if pause == null or not pause.open():
+		print("SHOT config: pausa não abriu")
+		return
+	pause.settings_button.pressed.emit()
+	await _frames(10)
+	var shots: Array[String] = ["config_video", "config_audio", "config_controles", "config_jogabilidade"]
+	for i: int in shots.size():
+		pause.settings_menu.tabs.current_tab = i
+		await _frames(10)
+		await _save_shot(shots[i])
+	(pause.settings_menu.tabs.get_child(3) as ScrollContainer).scroll_vertical = 10000
+	await _frames(10)
+	await _save_shot("config_jogabilidade_fim")
+	pause.settings_menu.discard()
+	pause.close()
+	await _frames(5)
 
 
 ## Rótulos 3D da loja da Praia, vistos de frente a uns metros.

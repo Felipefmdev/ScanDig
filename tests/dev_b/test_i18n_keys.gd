@@ -9,7 +9,7 @@ const SCAN: GDScript = preload("res://tools/i18n/i18n_scan.gd")
 const EN_PATH: String = "res://translations/scandig.en.translation"
 
 var _placeholder: RegEx = RegEx.create_from_string("%[-+ 0-9.]*[sdifxXc%]")
-var _action_tag: RegEx = RegEx.create_from_string("\\{[a-z_0-9]+\\}|\\[[A-Z]\\]|\\[/?[a-z]+(=[^\\]]*)?\\]")
+var _action_tag: RegEx = RegEx.create_from_string("\\{[a-z_0-9]+\\}|\\[[A-Z]\\]|\\[/?(b|i|u|s|color|font_size|center|right|url|img|wave|shake|rainbow|outline_size|outline_color|code|font)(=[^\\]]*)?\\]")
 
 
 func _tokens(regex: RegEx, text: String) -> Array[String]:
@@ -47,6 +47,33 @@ func test_csv_is_well_formed() -> void:
 		if _tokens(_action_tag, key) != _tokens(_action_tag, str(row["en"])):
 			bad.append("{ação}/[E]/BBCode diferentes: %s -> %s" % [key.c_escape(), str(row["en"]).c_escape()])
 	assert_eq(bad, [] as Array[String], "\n".join(bad))
+
+
+## Todo texto visível de gameplay/, ui/, core/, items/ e world/ (literais dos .gd e campos de
+## texto das .tscn/.tres, ver tools/i18n/i18n_scan.gd) é chave com inglês. Texto novo sem
+## tradução: rode tools/i18n/missing.sh e ponha a linha no CSV (ou, se o jogador não vê, em
+## translations/i18n_ignore.txt).
+func test_every_visible_text_has_english() -> void:
+	var rows: Dictionary = SCAN.csv_rows()
+	var texts: Dictionary = SCAN.visible_texts()
+	assert_gt(texts.size(), 500, "varreu os textos do jogo")
+	var missing: Array[String] = []
+	for key: String in texts.keys():
+		if str((rows.get(key, {}) as Dictionary).get("en", "")).is_empty():
+			missing.append("%s  %s" % [(texts[key] as Array)[0], key.c_escape()])
+	assert_eq(missing, [] as Array[String], "%d texto(s) sem inglês (tools/i18n/missing.sh):\n%s" % [missing.size(), "\n".join(missing.slice(0, 40))])
+
+
+## A varredura pega o que precisa: texto com espaço, acento ou pontuação entra; nome de nó, de
+## tipo, caminho, id, SVG e mensagem "Classe: ..." do dev ficam de fora.
+func test_scan_rules() -> void:
+	for text: String in ["Loja", "Pegar a chave", "Espaço", "Mudo", "Vitória!", "%d itens", "Caranguejo-Rei"]:
+		assert_true(SCAN.is_text(text), "texto: %s" % text)
+	for code: String in ["rocks-sand-a", "res://ui/hud.tscn", "Panel/Label", "TabContainer/Expedições/Page",
+			"Spot%d", "VBoxContainer", "FPS", "BossSlot_", "<svg width=\\\"24\\\">", "SaveManager: falhou", "x"]:
+		assert_false(SCAN.is_text(code), "não é texto: %s" % code)
+	var found: Array = SCAN.gd_literals("var a := \"Olá\"\n@export_group(\"Movimento\")\nnode.name = \"Pivot\"\nprint(\"dev\")\nvar b := &\"id\"\n")
+	assert_eq(found, [[1, "Olá"]], "pula anotação, nome de nó, print e StringName")
 
 
 ## O importador da Godot lê o CSV igual ao csv_rows (aspas, quebras de linha): cada chave volta

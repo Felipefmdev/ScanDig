@@ -9,3 +9,61 @@ K7Q-3MX
 missão
 --noray=
 Falha ao salvar o arquivo: código %d
+%d-%d cm
+  ★%dm
+Stars
+Body
+Mesh
+Shovel
+Rock
+Mound
+Leg
+Torso
+Core
+Head
+Arm
+Eyes
+Pumpkin
+Carapace
+Shell
+Key
+Tirolesa da Crista
+Ponte da Fenda Glacial
+Tirolesa do Templo
+Ponte da Cripta
+Wood
+%s %dm
+Name
+Value
+Tool
+dó
+ré
+lá
+[QuestRewards]
+Lobby
+ rabbit
+Icicle
+Debris
+Sticks
+Ends
+Deco
+Meat
+Bone
+Grip
+Coils
+Case
+Iron
+Decals
+Can
+Rims
+Label
+Wraps
+Piece
+Seal
+Pedestal
+Deck
+Back
+Top
+Column
+Cap
+Box
