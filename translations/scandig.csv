@@ -486,6 +486,7 @@ Porta %d aberta no roteador. Passe o IP %s aos amigos.,Porta %d aberta no rotead
 O host não respondeu em %d s. Confira o IP e se a porta está aberta.,O host não respondeu em %d s. Confira o IP e se a porta está aberta.,The host did not answer within %d s. Check the IP and whether the port is open.
 O save estava corrompido e foi salvo como backup. Começando um jogo novo.,O save estava corrompido e foi salvo como backup. Começando um jogo novo.,The save was corrupted and was kept as a backup. Starting a new game.
 Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar.,Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar.,This save is from a newer version of the game. Update ScanDig to continue.
+Não foi possível salvar — verifique o espaço em disco,Não foi possível salvar — verifique o espaço em disco,Could not save — check your free disk space
 Não foi possível abrir o arquivo (erro %d).,Não foi possível abrir o arquivo (erro %d).,Could not open the file (error %d).
 JSON inválido na linha %d: %s.,JSON inválido na linha %d: %s.,Invalid JSON on line %d: %s.
 A raiz do save não é um objeto.,A raiz do save não é um objeto.,The save root is not an object.

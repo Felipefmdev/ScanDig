@@ -15,6 +15,10 @@ const LEAVE_HOST_TEXT: String = "Você é o host: todos os jogadores voltarão �
 ## Tempo de cada aviso de missão/segredo na tela.
 const TOAST_SEC: float = 3.0
 const LEAVE_CLIENT_TEXT: String = "Sair da sessão e voltar à base?\nO que estiver na sua mochila será perdido."
+## Aviso de save_failed do SaveManager (o texto do sinal é do dev, não do jogador).
+const SAVE_FAILED_TEXT: String = "Não foi possível salvar — verifique o espaço em disco"
+## Tempo do aviso de save na tela (mais que o de missão: é um problema a resolver).
+const SAVE_TOAST_SEC: float = 6.0
 
 static var instance: SessionUI = null
 
@@ -58,6 +62,9 @@ var leave_confirm_button: Button = null
 var leave_cancel_button: Button = null
 var toast_panel: Control = null
 var toast_label: Label = null
+## Aviso de save: em qualquer tela (título, base, mapa) e por cima do carregamento.
+var save_toast_panel: PanelContainer = null
+var save_toast_label: Label = null
 
 var _session: Node = null
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
@@ -70,6 +77,7 @@ var _loading_token: int = 0
 var _synced_once: bool = true
 var _toast_queue: Array[String] = []
 var _toast_token: int = 0
+var _save_toast_token: int = 0
 ## Último resumo do dia mostrado (refeito ao trocar o idioma com ele aberto).
 var _last_summary: Dictionary = {}
 
@@ -96,6 +104,7 @@ func _ready() -> void:
 	leave_confirm_panel.visible = false
 	expedition_bar.visible = false
 	toast_panel.visible = false
+	_build_save_toast()
 	# Mapa/dia sem cartão, como o resto do HUD de jogo (#122); o botão de sair segue do theme.
 	expedition_bar.add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
 	PlayerHudStyle.iconize(expedition_info_label, "map")
@@ -156,6 +165,9 @@ func _connect_session() -> void:
 		_connect_if_has(GameState.instance, &"creature_discovered", _on_creature_discovered)
 	if NetworkManager.instance != null:
 		_connect_if_has(NetworkManager.instance, &"session_left", _on_session_left)
+	if SaveManager.instance != null:
+		_connect_if_has(SaveManager.instance, &"save_failed", _on_save_failed)
+		_connect_if_has(SaveManager.instance, &"save_load_failed", _on_save_load_failed)
 	if _session == null:
 		push_warning("SessionUI: CoreSession não encontrado; overlay de sessão inativo.")
 		return
@@ -371,6 +383,63 @@ func _show_next_toast() -> void:
 	if not is_inside_tree() or token != _toast_token:
 		return
 	_show_next_toast()
+
+
+# --- Aviso de save -------------------------------------------------------------
+
+## Mesmo estilo do ToastPanel, logo abaixo dele; último filho para ficar por cima do carregamento.
+## O texto é a chave: o auto_translate do Label acompanha a troca de idioma.
+func _build_save_toast() -> void:
+	save_toast_panel = PanelContainer.new()
+	save_toast_panel.name = "SaveToast"
+	save_toast_panel.theme = toast_panel.theme
+	save_toast_panel.theme_type_variation = &"ToastPanel"
+	save_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	save_toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	save_toast_panel.offset_left = -280.0
+	save_toast_panel.offset_right = 280.0
+	save_toast_panel.offset_top = 180.0
+	save_toast_panel.offset_bottom = 180.0
+	save_toast_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	save_toast_panel.visible = false
+	save_toast_label = Label.new()
+	save_toast_label.theme_type_variation = &"ToastLabel"
+	save_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	save_toast_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	save_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	save_toast_panel.add_child(save_toast_label)
+	add_child(save_toast_panel)
+
+
+func _on_save_failed(_error_message: String) -> void:
+	show_save_toast(SAVE_FAILED_TEXT)
+
+
+## O SaveManager já manda o texto do jogador (MSG_CORRUPT / MSG_NEWER, chaves do CSV).
+func _on_save_load_failed(message: String) -> void:
+	show_save_toast(message)
+
+
+## Mostra o aviso por SAVE_TOAST_SEC; um aviso novo troca o texto e reinicia o tempo.
+func show_save_toast(text: String) -> void:
+	if save_toast_panel == null:
+		return
+	save_toast_label.text = text
+	save_toast_panel.visible = true
+	_save_toast_token += 1
+	var token: int = _save_toast_token
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(SAVE_TOAST_SEC, true, false, true).timeout
+	if is_inside_tree() and token == _save_toast_token:
+		save_toast_panel.visible = false
+
+
+func hide_save_toast() -> void:
+	_save_toast_token += 1
+	if save_toast_panel != null:
+		save_toast_panel.visible = false
 
 
 # --- Resumo do dia ------------------------------------------------------------
