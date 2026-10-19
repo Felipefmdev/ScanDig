@@ -22,6 +22,8 @@ const PALM_NODES: Array[NodePath] = [^"Props/Palm1", ^"Props/Palm2"]
 const PALM_TINT: Color = Color(0.56, 0.5, 0.44)
 const NEW_GAME_CONFIRM: String = "Começar um jogo novo no slot %d?\nO progresso atual dele vai para o backup."
 const DELETE_CONFIRM: String = "Apagar o slot %d? Isso não pode ser desfeito."
+## User arg do bot que mantém a tela inicial (should_skip devolve false).
+const BOT_KEEP_TITLE_ARG: String = "--bot-keep-title"
 const SLOT_TITLES: Dictionary = {
 	"load": "Carregar jogo",
 	"new": "Novo jogo: escolha o slot",
@@ -68,10 +70,13 @@ var _pivot: Node3D = null
 
 ## Bots (--bot=), GUT e testes/capturas (--script / -s) não passam pela tela inicial. --bot= só
 ## vale em build de debug (o DebugBridge também só roda nela): no .exe release é ignorado.
+## --bot-keep-title: o roteiro testa a própria tela inicial (tools/run_bot.sh põe-no sozinho).
 static func should_skip(args: PackedStringArray, user_args: PackedStringArray, debug_build: bool = true) -> bool:
 	for arg: String in args:
 		if arg == "--script" or arg == "-s" or arg.contains("gut_cmdln"):
 			return true
+	if user_args.has(BOT_KEEP_TITLE_ARG):
+		return false
 	for arg: String in user_args:
 		if debug_build and arg.begins_with("--bot="):
 			return true
