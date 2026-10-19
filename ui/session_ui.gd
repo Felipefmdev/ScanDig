@@ -21,6 +21,11 @@ const SAVE_FAILED_TEXT: String = "Não foi possível salvar — verifique o espa
 const SAVE_NEWER_TEXT: String = "Este save é de uma versão mais nova; o progresso não será salvo"
 ## Tempo do aviso de save na tela (mais que o de missão: é um problema a resolver).
 const SAVE_TOAST_SEC: float = 6.0
+## Largura do aviso de save e o mínimo antes de ir para baixo do menu (#137).
+const SAVE_TOAST_WIDTH: float = 560.0
+const SAVE_TOAST_MIN_WIDTH: float = 240.0
+const SAVE_TOAST_TOP: float = 180.0
+const SAVE_TOAST_GAP: float = 8.0
 
 static var instance: SessionUI = null
 
@@ -455,10 +460,7 @@ func _build_save_toast() -> void:
 	save_toast_panel.theme_type_variation = &"ToastPanel"
 	save_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	save_toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	save_toast_panel.offset_left = -280.0
-	save_toast_panel.offset_right = 280.0
-	save_toast_panel.offset_top = 180.0
-	save_toast_panel.offset_bottom = 180.0
+	_reset_save_toast_place()
 	save_toast_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	save_toast_panel.visible = false
 	save_toast_label = Label.new()
@@ -498,6 +500,9 @@ func show_save_toast(text: String) -> void:
 		return
 	save_toast_label.text = text
 	save_toast_panel.visible = true
+	_reset_save_toast_place()
+	# Depois dos outros ouvintes do sinal: o painel do menu já tem o aviso dele.
+	_fit_save_toast.call_deferred()
 	_save_toast_token += 1
 	var token: int = _save_toast_token
 	var tree: SceneTree = get_tree()
@@ -506,6 +511,53 @@ func show_save_toast(text: String) -> void:
 	await tree.create_timer(SAVE_TOAST_SEC, true, false, true).timeout
 	if is_inside_tree() and token == _save_toast_token:
 		save_toast_panel.visible = false
+
+
+func _reset_save_toast_place() -> void:
+	save_toast_panel.offset_left = -SAVE_TOAST_WIDTH * 0.5
+	save_toast_panel.offset_right = SAVE_TOAST_WIDTH * 0.5
+	save_toast_panel.offset_top = SAVE_TOAST_TOP
+	save_toast_panel.offset_bottom = SAVE_TOAST_TOP
+
+
+## No título o MultiplayerMenu mostra o aviso no painel dele (#137): o mesmo texto lá = some o
+## toast (o painel fica com ele, perto de Continuar/Novo jogo); outro texto = o toast vai para o
+## lado livre do menu e, sem largura, para baixo dele. Nunca cobre o painel.
+func _fit_save_toast() -> void:
+	if save_toast_panel == null or not save_toast_panel.visible:
+		return
+	var text: String = save_toast_label.atr(save_toast_label.text)
+	var view: Rect2 = save_toast_panel.get_viewport_rect()
+	for node: Node in get_tree().get_nodes_in_group(MultiplayerMenu.SAVE_NOTICE_GROUP):
+		if not node.has_method(&"get_save_notice_rect"):
+			continue
+		if str(node.call(&"get_save_notice")) == text:
+			hide_save_toast()
+			return
+		var avoid: Rect2 = node.call(&"get_save_notice_rect")
+		if avoid.has_area() and save_toast_rect().intersects(avoid):
+			_place_save_toast_beside(avoid, view)
+
+
+## Retângulo do aviso (o tamanho mínimo vale antes do container ajustar a altura).
+func save_toast_rect() -> Rect2:
+	var rect: Rect2 = save_toast_panel.get_global_rect()
+	rect.size.y = maxf(rect.size.y, save_toast_panel.get_combined_minimum_size().y)
+	return rect
+
+
+func _place_save_toast_beside(avoid: Rect2, view: Rect2) -> void:
+	var center: float = view.size.x * 0.5
+	var left_room: float = avoid.position.x - SAVE_TOAST_GAP * 2.0
+	var right_room: float = view.end.x - avoid.end.x - SAVE_TOAST_GAP * 2.0
+	if maxf(left_room, right_room) >= SAVE_TOAST_MIN_WIDTH:
+		var width: float = minf(SAVE_TOAST_WIDTH, maxf(left_room, right_room))
+		var left: float = avoid.position.x - SAVE_TOAST_GAP - width if left_room >= right_room else avoid.end.x + SAVE_TOAST_GAP
+		save_toast_panel.offset_left = left - center
+		save_toast_panel.offset_right = left + width - center
+	else:
+		save_toast_panel.offset_top = avoid.end.y + SAVE_TOAST_GAP
+		save_toast_panel.offset_bottom = save_toast_panel.offset_top
 
 
 func hide_save_toast() -> void:

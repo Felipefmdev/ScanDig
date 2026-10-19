@@ -46,6 +46,8 @@ const JOIN_STAGE_TEXTS: Dictionary = {
 ## fica recolhido num botão "Multiplayer" e abre por cima ao clicar.
 @export var avoid_path: NodePath
 const AVOID_GAP: float = 8.0
+## Grupo dos painéis que mostram o aviso do save: o toast da SessionUI não repete nem cobre (#137).
+const SAVE_NOTICE_GROUP: StringName = &"save_notice_panels"
 
 var _net_manager: NetworkManager = null
 var _avoid: Control = null
@@ -80,6 +82,7 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
+	add_to_group(SAVE_NOTICE_GROUP)
 	if ip_line_edit != null and ip_line_edit.text.is_empty():
 		ip_line_edit.text = "127.0.0.1"
 
@@ -503,6 +506,22 @@ func _on_new_game_confirmed() -> void:
 func _on_save_load_failed(message: String) -> void:
 	_progress_message = message
 	_refresh_progress_panel()
+
+
+## Aviso do save visível no painel (já traduzido); "" = nenhum.
+func get_save_notice() -> String:
+	if progress_warning_label == null or not progress_warning_label.is_visible_in_tree():
+		return ""
+	return progress_warning_label.text
+
+
+## O que o menu desenha agora (painel e botão "Multiplayer"); vazio se nada.
+func get_save_notice_rect() -> Rect2:
+	var out: Rect2 = Rect2()
+	for c: Control in [_panel, _collapse_button]:
+		if c != null and c.is_visible_in_tree():
+			out = out.merge(c.get_global_rect()) if out.has_area() else c.get_global_rect()
+	return out
 
 
 # --- Sala online (código, #30) ---------------------------------------------------
