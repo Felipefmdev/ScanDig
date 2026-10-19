@@ -10,7 +10,7 @@ extends Node
 ## Autoload CoreWeather (mesmo caminho em todos os peers: /root/CoreWeather).
 
 signal weather_changed(kind: String, phase: String)
-## Atalho de debug (F8): aviso curto para a tela local (WeatherHud mostra).
+## Atalho de debug (F3; o F8 para o jogo rodando pelo editor): aviso curto para a tela local (WeatherHud mostra).
 signal debug_toast(text: String)
 
 const PHASE_NONE: String = "none"
@@ -45,12 +45,12 @@ const EFFECTS_BY_KIND: Dictionary = {
 const FORCE_WARNING_S: float = 3.0
 ## Variação sorteada da intensidade a cada evento (× a do mapa).
 const INTENSITY_JITTER: Vector2 = Vector2(0.85, 1.0)
-## F8 (só build de debug): lido direto do teclado, fora do InputMap e da aba Controles.
-const DEBUG_KEY: Key = KEY_F8
-const DEBUG_FORCED_TEXT: String = "Clima forçado (F8)"
-const DEBUG_ENDED_TEXT: String = "Clima encerrado (F8)"
-const DEBUG_HOST_ONLY_TEXT: String = "Só o host (F8)"
-const DEBUG_NO_WEATHER_TEXT: String = "Sem clima neste mapa (F8)"
+## F3 (só build de debug): lido direto do teclado, fora do InputMap e da aba Controles.
+const DEBUG_KEY: Key = KEY_F3
+const DEBUG_FORCED_TEXT: String = "Clima forçado (F3)"
+const DEBUG_ENDED_TEXT: String = "Clima encerrado (F3)"
+const DEBUG_HOST_ONLY_TEXT: String = "Só o host (F3)"
+const DEBUG_NO_WEATHER_TEXT: String = "Sem clima neste mapa (F3)"
 
 static var instance: WeatherManager = null
 
@@ -62,7 +62,7 @@ var _map_id: String = ""
 ## Host com o ciclo correndo (num mapa com clima).
 var _running: bool = false
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
-## Atalho F8 ligado (os testes trocam; no export release fica desligado e nem lê o teclado).
+## Atalho F3 ligado (os testes trocam; no export release fica desligado e nem lê o teclado).
 var debug_shortcuts: bool = OS.is_debug_build()
 
 
@@ -104,7 +104,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	debug_toast.emit(debug_toggle())
 
 
-## F8: sem evento, força o do mapa; em aviso/ativo, encerra com o fim normal. Devolve o aviso.
+## F3: sem evento, força o do mapa; em aviso/ativo, encerra com o fim normal. Devolve o aviso.
 func debug_toggle() -> String:
 	if not _is_host():
 		return DEBUG_HOST_ONLY_TEXT
@@ -257,7 +257,7 @@ func force_weather() -> void:
 	_set_state(str(config["kind"]), PHASE_WARNING, FORCE_WARNING_S, float(config.get("intensity", 1.0)), true)
 
 
-## Host (F8/testes): encerra já o evento em aviso ou ativo, com o mesmo fim natural (fase
+## Host (F3/testes): encerra já o evento em aviso ou ativo, com o mesmo fim natural (fase
 ## "none" difundida e próximo intervalo sorteado). Sem evento, não faz nada.
 func force_end() -> void:
 	if not _is_host() or _phase == PHASE_NONE:

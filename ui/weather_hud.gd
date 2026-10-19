@@ -27,7 +27,7 @@ var root_control: Control = null
 var stack: VBoxContainer = null
 var toast_panel: PanelContainer = null
 var toast_label: Label = null
-## Aviso do atalho F8 (debug), criado só no primeiro uso, abaixo do aviso do clima.
+## Aviso do atalho F3 (debug), criado só no primeiro uso, abaixo do aviso do clima.
 var debug_panel: PanelContainer = null
 var _toast_token: int = 0
 var _debug_token: int = 0
