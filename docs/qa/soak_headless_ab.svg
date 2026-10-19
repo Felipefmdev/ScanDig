@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="sans-serif" font-size="12">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="64" y="22" font-size="14" font-weight="bold" fill="#1f2937">Resistência (headless_ab): memória e nós na Base × ida</text>
+<rect x="64" y="50" width="632" height="140" fill="none" stroke="#d1d5db"/>
+<text x="58" y="194.0" text-anchor="end" fill="#4b5563">134</text>
+<line x1="64" x2="696" y1="190.0" y2="190.0" stroke="#eef0f3"/>
+<text x="58" y="124.0" text-anchor="end" fill="#4b5563">149</text>
+<line x1="64" x2="696" y1="120.0" y2="120.0" stroke="#eef0f3"/>
+<text x="58" y="54.0" text-anchor="end" fill="#4b5563">164</text>
+<line x1="64" x2="696" y1="50.0" y2="50.0" stroke="#eef0f3"/>
+<text x="70" y="64" fill="#4b5563">MB</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2" points="64.0,173.8 92.7,115.1 121.5,101.5 150.2,90.6 178.9,80.6 207.6,72.9 236.4,70.6 265.1,70.6 293.8,70.4 322.5,69.9 351.3,69.5 380.0,69.4 408.7,67.4 437.5,67.2 466.2,66.8 494.9,67.4 523.6,67.3 552.4,67.2 581.1,67.2 609.8,67.3 638.5,67.0 667.3,66.2 696.0,66.2"/>
+<text x="690" y="64" text-anchor="end" fill="#2563eb">memória estática (MB)</text>
+<rect x="64" y="230" width="632" height="140" fill="none" stroke="#d1d5db"/>
+<text x="58" y="374.0" text-anchor="end" fill="#4b5563">1159</text>
+<line x1="64" x2="696" y1="370.0" y2="370.0" stroke="#eef0f3"/>
+<text x="58" y="304.0" text-anchor="end" fill="#4b5563">1172</text>
+<line x1="64" x2="696" y1="300.0" y2="300.0" stroke="#eef0f3"/>
+<text x="58" y="234.0" text-anchor="end" fill="#4b5563">1186</text>
+<line x1="64" x2="696" y1="230.0" y2="230.0" stroke="#eef0f3"/>
+<text x="70" y="244" fill="#4b5563">nós</text>
+<polyline fill="none" stroke="#059669" stroke-width="2" points="64.0,353.8 92.7,348.7 121.5,343.6 150.2,328.2 178.9,317.9 207.6,302.6 236.4,297.4 265.1,297.4 293.8,292.3 322.5,287.2 351.3,276.9 380.0,276.9 408.7,276.9 437.5,276.9 466.2,266.7 494.9,266.7 523.6,266.7 552.4,261.5 581.1,261.5 609.8,261.5 638.5,251.3 667.3,251.3 696.0,246.2"/>
+<text x="690" y="244" text-anchor="end" fill="#059669">nós na Base</text>
+<text x="64" y="404" fill="#b45309">órfãos na Base por ida: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</text>
+<text x="64.0" y="386" text-anchor="middle" fill="#4b5563">0</text>
+<text x="121.5" y="386" text-anchor="middle" fill="#4b5563">2</text>
+<text x="178.9" y="386" text-anchor="middle" fill="#4b5563">4</text>
+<text x="236.4" y="386" text-anchor="middle" fill="#4b5563">6</text>
+<text x="293.8" y="386" text-anchor="middle" fill="#4b5563">8</text>
+<text x="351.3" y="386" text-anchor="middle" fill="#4b5563">10</text>
+<text x="408.7" y="386" text-anchor="middle" fill="#4b5563">12</text>
+<text x="466.2" y="386" text-anchor="middle" fill="#4b5563">14</text>
+<text x="523.6" y="386" text-anchor="middle" fill="#4b5563">16</text>
+<text x="581.1" y="386" text-anchor="middle" fill="#4b5563">18</text>
+<text x="638.5" y="386" text-anchor="middle" fill="#4b5563">20</text>
+<text x="696.0" y="386" text-anchor="middle" fill="#4b5563">22</text>
+</svg>

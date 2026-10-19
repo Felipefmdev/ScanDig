@@ -197,3 +197,95 @@ Limites: a confirmação de sair da sessão e o aviso de queda do host só apare
 testes GUT (sem rede nova no bot). O B/Esc no título, na Base e no menu de rede não fecha nada (são a
 camada de baixo; na Base o Esc abre a pausa).
 
+
+## Resistência (R5, #142)
+
+Rodada de 2026-10-19 sobre `main` eb47350, mesma máquina do N1 (RTX 4060, build de debug, vsync
+desligado). `tools/bot/soak_20.json` (gerado por `soak_gen.py`) faz **22 idas seguidas** pela Base,
+rodando Praia → Campo → Ruínas → Geleira → Cratera (a Ilha fica de fora), alternando dia/noite e com
+clima forçado em 1 ida de cada 3 (onde houver). Cada ida: apanha o detetor, cava e apanha até ter 2
+achados (≤ 30 s), vende no SellPoint, volta à Base e fecha o resumo. Um dump no fim da cena (FPS
+médio e mínimo da ida em janelas de 1 s, tempo de carga) e outro já na Base (memória e contagens: é
+o patamar comparável entre idas).
+
+```bash
+G=/c/Godot/Godot_v4.3-stable_win64_console.exe
+python tools/bot/soak_gen.py                         # [idas], padrão 22
+bash tools/bot/run_soak.sh "$G"                      # janela 1920x1080, ≈ 13 min
+bash tools/bot/run_soak.sh "$G" --headless           # só memória/nós, ≈ 11 min
+```
+
+Saída: `.bot_runs/soak_20_<data>/`, `.bot_runs/soak_logs/soak_20_<janela|headless>.log` e
+`report_<rótulo>.md`; gráfico em `docs/qa/soak_<rótulo>.svg`. Edição mínima no `debug_bridge.gd`
+(Dev A): os dumps ganham `perf` (`MEMORY_STATIC`, `OBJECT_COUNT`, `OBJECT_RESOURCE_COUNT`, FPS
+méd/mín desde a última expedição e `load_s` = pedido de expedição → mapa pronto).
+
+### Janela 1920x1080
+
+| ida | mapa / fase | carga (s) | FPS méd | FPS mín | memória (MB) | objetos | nós | órfãos | recursos | dinheiro |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0 | Base (início) | — | — | — | 172.1 | 4388 | 1162 | 0 | 297 | 5000 |
+| 1 | praia dia | 1.06 | 514 | 217 | 203.8 | 4755 | 1164 | 4 | 473 | 5002 |
+| 2 | campo noite | 1.22 | 485 | 459 | 207.5 | 4841 | 1166 | 9 | 521 | 5089 |
+| 3 | ruinas dia | 1.14 | 520 | 444 | 209.8 | 4918 | 1169 | 16 | 549 | 5430 |
+| 4 | geleira noite | 1.33 | 510 | 437 | 212.1 | 4997 | 1172 | 24 | 584 | 5929 |
+| 5 | cratera dia | 1.33 | 533 | 467 | 214.0 | 5075 | 1175 | 33 | 613 | 6925 |
+| 6 | praia noite clima | 0.76 | 523 | 482 | 214.6 | 5092 | 1175 | 37 | 615 | 6933 |
+| 7 | campo dia | 1.06 | 510 | 444 | 214.7 | 5111 | 1175 | 42 | 619 | 6987 |
+| 8 | ruinas noite | 1.00 | 521 | 490 | 214.9 | 5146 | 1177 | 49 | 623 | 7485 |
+| 9 | geleira dia clima | 1.06 | 489 | 406 | 215.1 | 5174 | 1177 | 57 | 625 | 8249 |
+| 10 | cratera noite | 1.14 | 509 | 439 | 215.3 | 5209 | 1179 | 66 | 627 | 8893 |
+| 11 | praia dia | 1.04 | 505 | 203 | 215.3 | 5222 | 1179 | 70 | 627 | 8901 |
+| 12 | campo noite clima | 1.36 | 476 | 411 | 215.5 | 5239 | 1179 | 75 | 629 | 8955 |
+| 13 | ruinas dia | 1.27 | 542 | 496 | 215.6 | 5260 | 1179 | 82 | 629 | 9425 |
+| 14 | geleira noite | 1.36 | 508 | 421 | 215.8 | 5286 | 1180 | 90 | 629 | 10422 |
+| 15 | cratera dia clima | 1.41 | 538 | 491 | 215.8 | 5322 | 1180 | 99 | 634 | 10422 |
+| 16 | praia noite | 1.33 | 480 | 213 | 215.9 | 5339 | 1181 | 103 | 634 | 10428 |
+| 17 | campo dia | 1.64 | 508 | 473 | 215.9 | 5355 | 1181 | 108 | 634 | 10598 |
+| 18 | ruinas noite | 1.56 | 508 | 451 | 216.0 | 5376 | 1181 | 115 | 634 | 11279 |
+| 19 | geleira dia | 1.63 | 527 | 423 | 216.2 | 5402 | 1181 | 123 | 636 | 12375 |
+| 20 | cratera noite | 1.70 | 518 | 473 | 216.4 | 5428 | 1181 | 132 | 638 | 12694 |
+| 21 | praia dia clima | 1.61 | 472 | 189 | 216.7 | 5448 | 1181 | 136 | 638 | 12709 |
+
+![memória e nós na Base por ida (janela)](qa/soak_janela.svg)
+
+22 idas. Base início → ida 5 (todos os mapas já visitados) → fim; ritmo por ida depois da ida 5:
+- memória 172.1 → 214.0 → 216.7 MB (+0.16 MB/ida)
+- objetos 4388 → 5075 → 5463 (+22.8/ida)
+- nós 1162 → 1175 → 1181 (+0.4/ida)
+- órfãos 0 → 33 → 141 (+6.4/ida)
+- recursos 297 → 613 → 638 (+1.5/ida)
+- FPS médio por ida 472–542; mínimo (janela de 1 s) 189
+- carga 0.76–1.93 s (média 1.32 s)
+
+### Headless e A/B com as correções do Dev A
+
+Headless (mesmo roteiro, renderer dummy: o FPS não vale) e depois com as correções sugeridas em
+#127 e #128 aplicadas **só localmente** (não entram neste lote; os arquivos são do Felipe):
+
+| | memória ida 5 → 22 | objetos/ida | nós/ida | órfãos ida 22 | carga (1.ª volta → última) | `Lambda capture` no log |
+|---|---|---|---|---|---|---|
+| headless (main) | 159.9 → 161.8 MB | +22.9 | +0.8 | 141 | 1.21–1.62 s → 1.79–2.16 s | 4263 |
+| headless + #127/#128 corrigidos | 159.1 → 160.5 MB | +4.9 | +0.6 | 0 | 1.19–1.39 s → 0.74–0.96 s | 0 |
+
+![memória e nós na Base por ida (headless)](qa/soak_headless.svg)
+![com #127/#128 corrigidos localmente](qa/soak_headless_ab.svg)
+
+### Conclusão
+
+- **Sem vazamento do Dev B.** Depois da 1.ª volta pelos 5 mapas (caches, shaders e recursos de
+  cada mapa carregados uma vez), o que ainda cresce por ida vem de dois lugares:
+  1. **#128 (`ShopOffer`)**: +4/+5/+7/+8/+9 nós órfãos por Praia/Campo/Ruínas/Geleira/Cratera
+     (`Node.print_orphan_nodes()`: só `MeshInstance3D`), 141 em 22 idas, ≈ 3 objetos por órfão
+     (nó + `BoxMesh` + material). Com a correção sugerida: 0 órfãos e objetos +22,9 → +4,9/ida.
+  2. **#127 (`HostSync.on_peer_ready`)**: as ligações ao `CoreSession.peer_scene_ready` sobem ≈ 19
+     por ida (1 → 135 em 7 idas) e cada nova expedição chama todas as lambdas mortas: 4263
+     `Lambda capture ... was freed` em 22 idas e o **tempo de carga sobe** de ≈ 1,0–1,4 s para
+     1,6–2,2 s. Com a correção: carga estável (0,7–1,0 s a partir da 2.ª volta) e 0 erros.
+- O resto (+0,6 nó e ≈ +5 objetos por ida, +0,1 MB/ida) são as peças novas do Museu na Base: cada
+  achado novo que entra no Museu troca o `Empty` do pedestal por `Piece` + `Glow` + `Mesh`. É conteúdo, não vazamento,
+  e para quando o museu enche.
+- **FPS** (janela): média por ida 472–542, sem tendência ao longo das 22 idas. O mínimo de 1 s fica
+  em 400–500, menos na Praia (≈ 190–220 em 4 das 5 idas): um soluço de uma janela de 1 s
+  logo após a carga que não piora com as idas (não é vazamento; o mapa é do Dev A).
+- Memória estática na janela: 172 MB na Base inicial, 214 MB depois da 1.ª volta, 217 MB na ida 22.
