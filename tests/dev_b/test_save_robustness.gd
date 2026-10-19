@@ -245,6 +245,7 @@ func test_newer_version_is_kept_and_blocks_writes() -> void:
 	assert_signal_emitted_with_parameters(save, "save_load_failed", [SaveManager.MSG_NEWER])
 	assert_eq(save.save_game(), ERR_UNAUTHORIZED, "não grava por cima")
 	assert_signal_emitted(save, "save_failed")
+	assert_eq(get_signal_parameters(save, "save_failed_with_reason")[0], SaveManager.FailReason.NEWER_VERSION, "motivo: versão mais nova")
 	assert_eq(FileAccess.get_file_as_string(BASE), original, "o save novo fica intacto")
 	assert_eq(_files_with_prefix("scandig_save.corrupt-").size(), 0, "não vai para a quarentena")
 	assert_eq(save.start_new_game(), OK, "jogo novo é escolha explícita")
@@ -269,6 +270,7 @@ func test_disk_full_or_rename_failure_keeps_previous_save() -> void:
 		watch_signals(faulty)
 		assert_ne(faulty.save_game(GameState.instance), OK, "%s: save_game falha" % fault)
 		assert_signal_emitted(faulty, "save_failed", fault)
+		assert_eq(get_signal_parameters(faulty, "save_failed_with_reason")[0], SaveManager.FailReason.WRITE, "%s: motivo escrita" % fault)
 		assert_eq(FileAccess.get_file_as_string(BASE), original, "%s: save anterior intacto" % fault)
 		assert_eq(_files_with_prefix("scandig_save.json."), [] as Array[String], "%s: sem .tmp/.old sobrando" % fault)
 		faulty.fault = ""

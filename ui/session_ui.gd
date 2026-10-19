@@ -17,6 +17,8 @@ const TOAST_SEC: float = 3.0
 const LEAVE_CLIENT_TEXT: String = "Sair da sessão e voltar à base?\nO que estiver na sua mochila será perdido."
 ## Aviso de save_failed do SaveManager (o texto do sinal é do dev, não do jogador).
 const SAVE_FAILED_TEXT: String = "Não foi possível salvar — verifique o espaço em disco"
+## save_failed por save de versão mais nova (a gravação fica bloqueada).
+const SAVE_NEWER_TEXT: String = "Este save é de uma versão mais nova; o progresso não será salvo"
 ## Tempo do aviso de save na tela (mais que o de missão: é um problema a resolver).
 const SAVE_TOAST_SEC: float = 6.0
 
@@ -220,7 +222,7 @@ func _connect_session() -> void:
 	if NetworkManager.instance != null:
 		_connect_if_has(NetworkManager.instance, &"session_left", _on_session_left)
 	if SaveManager.instance != null:
-		_connect_if_has(SaveManager.instance, &"save_failed", _on_save_failed)
+		_connect_if_has(SaveManager.instance, &"save_failed_with_reason", _on_save_failed)
 		_connect_if_has(SaveManager.instance, &"save_load_failed", _on_save_load_failed)
 	if _session == null:
 		push_warning("SessionUI: CoreSession não encontrado; overlay de sessão inativo.")
@@ -468,8 +470,21 @@ func _build_save_toast() -> void:
 	add_child(save_toast_panel)
 
 
-func _on_save_failed(_error_message: String) -> void:
-	show_save_toast(SAVE_FAILED_TEXT)
+func _on_save_failed(reason: SaveManager.FailReason, _error_message: String) -> void:
+	var text: String = save_failed_text(reason)
+	if not text.is_empty():
+		show_save_toast(text)
+
+
+## Texto do jogador para cada motivo; "" = não é falha para ele (não-host, save não aplicado,
+## sem GameState): o SaveManager já deixou no log.
+static func save_failed_text(reason: SaveManager.FailReason) -> String:
+	match reason:
+		SaveManager.FailReason.WRITE, SaveManager.FailReason.READ:
+			return SAVE_FAILED_TEXT
+		SaveManager.FailReason.NEWER_VERSION:
+			return SAVE_NEWER_TEXT
+	return ""
 
 
 ## O SaveManager já manda o texto do jogador (MSG_CORRUPT / MSG_NEWER, chaves do CSV).

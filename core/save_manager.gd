@@ -15,6 +15,8 @@ extends Node
 signal game_saved()
 signal game_loaded()
 signal save_failed(error_message: String)
+## Igual ao save_failed (emitido logo depois dele), com o motivo: a UI decide o aviso por ele.
+signal save_failed_with_reason(reason: FailReason, error_message: String)
 ## O save não pôde ser usado (corrompido ou de versão mais nova). Texto pronto para a UI.
 signal save_load_failed(message: String)
 signal new_game_started()
@@ -41,6 +43,9 @@ const NUMBER_FIELDS: Array[String] = ["current_day", "equipped_detector_level", 
 
 ## Estado de leitura do arquivo, devolvido por _read_save().
 enum ReadStatus { MISSING, OK, CORRUPT, NEWER }
+## Motivo do save_failed_with_reason. Só WRITE, READ e NEWER_VERSION são falhas para o jogador;
+## os outros são uso fora de hora (não-host, save não aplicado, sem GameState) e ficam no log.
+enum FailReason { WRITE, READ, NEWER_VERSION, NOT_HOST, NOT_APPLIED, NO_STATE }
 
 static var instance: SaveManager = null
 
@@ -258,7 +263,7 @@ func start_new_game() -> Error:
 		if backup_error != OK:
 			var message: String = "SaveManager: não foi possível copiar o save para %s (erro %d); jogo novo cancelado." % [get_backup_path(), backup_error]
 			push_error(message)
-			save_failed.emit(message)
+			_emit_failed(FailReason.WRITE, message)
 			return backup_error
 		DirAccess.remove_absolute(save_path)
 	_write_blocked = false
@@ -403,13 +408,13 @@ func save_game(target_state: GameState = null) -> Error:
 	if state == null:
 		var err_msg: String = "SaveManager: Não foi possível encontrar uma instância de GameState para salvar."
 		push_error(err_msg)
-		save_failed.emit(err_msg)
+		_emit_failed(FailReason.NO_STATE, err_msg)
 		return ERR_DOES_NOT_EXIST
 
 	if not state.is_authority():
 		var not_host_msg: String = "SaveManager: Apenas o host pode salvar o jogo."
 		push_warning(not_host_msg)
-		save_failed.emit(not_host_msg)
+		_emit_failed(FailReason.NOT_HOST, not_host_msg)
 		return ERR_UNAUTHORIZED
 
 	if not _write_blocked and not _progress_applied and has_save_file():
@@ -417,12 +422,12 @@ func save_game(target_state: GameState = null) -> Error:
 		if not _write_blocked:
 			var unapplied_msg: String = "SaveManager: o save em %s ainda não foi carregado; use continue_game() ou start_new_game() antes de gravar." % save_path
 			push_warning(unapplied_msg)
-			save_failed.emit(unapplied_msg)
+			_emit_failed(FailReason.NOT_APPLIED, unapplied_msg)
 			return ERR_UNAVAILABLE
 	if _write_blocked:
 		var blocked_msg: String = "SaveManager: gravação bloqueada; o save é de uma versão mais nova do jogo."
 		push_warning(blocked_msg)
-		save_failed.emit(blocked_msg)
+		_emit_failed(FailReason.NEWER_VERSION, blocked_msg)
 		return ERR_UNAUTHORIZED
 
 	var save_data: Dictionary = {
@@ -450,8 +455,13 @@ func save_game(target_state: GameState = null) -> Error:
 		game_saved.emit()
 		save_state_changed.emit()
 	else:
-		save_failed.emit("Falha ao salvar o arquivo: código %d" % error)
+		_emit_failed(FailReason.WRITE, "Falha ao salvar o arquivo: código %d" % error)
 	return error
+
+
+func _emit_failed(reason: FailReason, message: String) -> void:
+	save_failed.emit(message)
+	save_failed_with_reason.emit(reason, message)
 
 
 ## Carrega o save cru no GameState (os testes usam). A UI usa continue_game().
@@ -460,7 +470,7 @@ func load_game(target_state: GameState = null) -> Error:
 	if state == null:
 		var err_msg: String = "SaveManager: Não foi possível encontrar uma instância de GameState para carregar dados."
 		push_error(err_msg)
-		save_failed.emit(err_msg)
+		_emit_failed(FailReason.NO_STATE, err_msg)
 		return ERR_DOES_NOT_EXIST
 
 	if not has_save_file():
@@ -472,13 +482,13 @@ func load_game(target_state: GameState = null) -> Error:
 	if read["status"] != ReadStatus.OK:
 		var err_msg: String = "SaveManager: Dados de gravação inválidos: %s" % read["error"]
 		push_error(err_msg)
-		save_failed.emit(err_msg)
+		_emit_failed(FailReason.NEWER_VERSION if read["status"] == ReadStatus.NEWER else FailReason.READ, err_msg)
 		return ERR_FILE_UNRECOGNIZED if read["status"] == ReadStatus.NEWER else ERR_INVALID_DATA
 
 	if not state.is_authority():
 		var err_msg: String = "SaveManager: Apenas o host pode carregar o save."
 		push_warning(err_msg)
-		save_failed.emit(err_msg)
+		_emit_failed(FailReason.NOT_HOST, err_msg)
 		return ERR_UNAUTHORIZED
 
 	state.load_snapshot(_upgrade_save_data(read["data"]))
