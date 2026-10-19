@@ -38,6 +38,7 @@ var _steppers: Array[Node3D] = []
 var _mesh_root: Node3D = null
 var _ice_mesh: MeshInstance3D = null
 var _crack_mesh: MeshInstance3D = null
+var _broken_rim_mesh: MeshInstance3D = null
 var _col_shape: CollisionShape3D = null
 var _stepper_area: Area3D = null
 
@@ -172,35 +173,48 @@ func _process_refreeze(delta: float) -> void:
 
 
 func _update_visual_state() -> void:
-	if _mesh_root == null or _ice_mesh == null or _crack_mesh == null:
+	if _mesh_root == null or _ice_mesh == null:
 		return
 
 	match state:
 		STATE_INTACT:
 			_mesh_root.visible = true
 			_mesh_root.position.y = 0.0
-			_crack_mesh.visible = false
+			_ice_mesh.visible = true
+			if _crack_mesh != null:
+				_crack_mesh.visible = false
+			if _broken_rim_mesh != null:
+				_broken_rim_mesh.visible = false
 			var mat: StandardMaterial3D = _ice_mesh.material_override as StandardMaterial3D
 			if mat != null:
-				mat.albedo_color = Color(0.72, 0.88, 0.98, 0.88)
-				mat.roughness = 0.1
+				mat.albedo_color = Color(0.52, 0.76, 0.88, 0.92)
+				mat.roughness = 0.12
 		STATE_CRACKED:
 			_mesh_root.visible = true
 			_mesh_root.position.y = 0.0
-			_crack_mesh.visible = true
-			var crack_mat: StandardMaterial3D = _crack_mesh.material_override as StandardMaterial3D
-			if crack_mat != null:
-				crack_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.6)
+			_ice_mesh.visible = true
+			if _crack_mesh != null:
+				_crack_mesh.visible = true
+				_crack_mesh.mesh = _build_crack_mesh(1.0)
+			if _broken_rim_mesh != null:
+				_broken_rim_mesh.visible = false
 		STATE_SEVERELY_CRACKED:
 			_mesh_root.visible = true
-			_mesh_root.position.y = -0.03
-			_crack_mesh.visible = true
-			var crack_mat: StandardMaterial3D = _crack_mesh.material_override as StandardMaterial3D
-			if crack_mat != null:
-				crack_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.95)
+			_mesh_root.position.y = -0.035
+			_ice_mesh.visible = true
+			if _crack_mesh != null:
+				_crack_mesh.visible = true
+				_crack_mesh.mesh = _build_crack_mesh(1.9)
+			if _broken_rim_mesh != null:
+				_broken_rim_mesh.visible = false
 		STATE_BROKEN:
-			_mesh_root.visible = false
-			_crack_mesh.visible = false
+			_mesh_root.visible = true
+			_mesh_root.position.y = 0.0
+			_ice_mesh.visible = false
+			if _crack_mesh != null:
+				_crack_mesh.visible = false
+			if _broken_rim_mesh != null:
+				_broken_rim_mesh.visible = true
 
 
 func _build_collision() -> void:
@@ -233,61 +247,171 @@ func _build_visuals() -> void:
 
 	var ice_mat: StandardMaterial3D = StandardMaterial3D.new()
 	ice_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	ice_mat.albedo_color = Color(0.72, 0.88, 0.98, 0.88)
+	ice_mat.albedo_color = Color(0.52, 0.76, 0.88, 0.92)
 	ice_mat.roughness = 0.12
 	ice_mat.metallic = 0.05
 	ice_mat.specular = 0.8
 	_ice_mesh.material_override = ice_mat
 	_mesh_root.add_child(_ice_mesh)
 
-	# Linhas/fissuras de trinca no topo da placa
+	# Fissuras/trincas grossas e brancas na superfície do gelo (#108)
 	_crack_mesh = MeshInstance3D.new()
 	_crack_mesh.name = "CrackMesh"
-	var im: ImmediateMesh = _generate_crack_mesh()
-	_crack_mesh.mesh = im
+	_crack_mesh.mesh = _build_crack_mesh(1.0)
 
 	var crack_mat: StandardMaterial3D = StandardMaterial3D.new()
 	crack_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	crack_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	crack_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	crack_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.85)
+	crack_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.98)
 	_crack_mesh.material_override = crack_mat
-	_crack_mesh.position = Vector3(0.0, 0.005, 0.0)
+	_crack_mesh.position = Vector3(0.0, 0.012, 0.0)
 	_mesh_root.add_child(_crack_mesh)
 
+	# Borda de gelo partido e espuma ao romper (#108)
+	_build_broken_rim()
 
-func _generate_crack_mesh() -> ImmediateMesh:
-	var im: ImmediateMesh = ImmediateMesh.new()
-	im.clear_surfaces()
-	im.surface_begin(Mesh.PRIMITIVE_LINES)
+
+func _build_broken_rim() -> void:
+	_broken_rim_mesh = MeshInstance3D.new()
+	_broken_rim_mesh.name = "BrokenRimMesh"
+	_broken_rim_mesh.visible = false
+
+	var st_rim: SurfaceTool = SurfaceTool.new()
+	st_rim.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = floe_id * 31337 + 777
+
+	# Gera anel de pedaços de gelo partido e pontas escarpadas na borda do buraco
+	var num_rim_segments: int = 14
+	var outer_r: float = floe_radius * 0.95
+	for i: int in num_rim_segments:
+		var a1: float = (TAU / float(num_rim_segments)) * float(i)
+		var a2: float = (TAU / float(num_rim_segments)) * float(i + 1)
+
+		var inner_r1: float = outer_r - rng.randf_range(0.25, 0.45)
+		var inner_r2: float = outer_r - rng.randf_range(0.25, 0.45)
+		var tip_r: float = outer_r - rng.randf_range(0.40, 0.65)
+		var a_mid: float = (a1 + a2) * 0.5
+
+		var p_out1: Vector3 = Vector3(cos(a1) * outer_r, 0.0, sin(a1) * outer_r)
+		var p_out2: Vector3 = Vector3(cos(a2) * outer_r, 0.0, sin(a2) * outer_r)
+		var p_in1: Vector3 = Vector3(cos(a1) * inner_r1, -0.04, sin(a1) * inner_r1)
+		var p_in2: Vector3 = Vector3(cos(a2) * inner_r2, -0.04, sin(a2) * inner_r2)
+		var p_tip: Vector3 = Vector3(cos(a_mid) * tip_r, -0.06, sin(a_mid) * tip_r)
+
+		# Borda chanfrada
+		st_rim.set_normal(Vector3.UP)
+		st_rim.set_color(Color(0.85, 0.94, 1.0, 0.95))
+		st_rim.add_vertex(p_out1)
+		st_rim.add_vertex(p_out2)
+		st_rim.add_vertex(p_in2)
+
+		st_rim.set_normal(Vector3.UP)
+		st_rim.set_color(Color(0.85, 0.94, 1.0, 0.95))
+		st_rim.add_vertex(p_out1)
+		st_rim.add_vertex(p_in2)
+		st_rim.add_vertex(p_in1)
+
+		# Caco de gelo fraturado pontiagudo
+		if rng.randf() > 0.30:
+			st_rim.set_normal(Vector3.UP)
+			st_rim.set_color(Color(0.92, 0.97, 1.0, 0.98))
+			st_rim.add_vertex(p_in1)
+			st_rim.add_vertex(p_in2)
+			st_rim.add_vertex(p_tip)
+
+	# Espuma branca e slush ao longo do anel de água
+	for i: int in (num_rim_segments * 2):
+		var ang: float = (TAU / float(num_rim_segments * 2)) * float(i) + rng.randf_range(-0.1, 0.1)
+		var foam_r: float = outer_r - rng.randf_range(0.20, 0.38)
+		var foam_pos: Vector3 = Vector3(cos(ang) * foam_r, -0.045, sin(ang) * foam_r)
+		var sz: float = rng.randf_range(0.08, 0.16)
+		LowPolyMesh.box(st_rim, foam_pos, Vector3(sz, 0.02, sz), Basis.IDENTITY, Color(0.96, 0.98, 1.0, 0.92))
+
+	var rim_mesh_data: ArrayMesh = st_rim.commit()
+	_broken_rim_mesh.mesh = rim_mesh_data
+
+	var rim_mat: StandardMaterial3D = StandardMaterial3D.new()
+	rim_mat.albedo_color = Color(0.88, 0.95, 1.0, 0.95)
+	rim_mat.roughness = 0.2
+	_broken_rim_mesh.material_override = rim_mat
+	_mesh_root.add_child(_broken_rim_mesh)
+
+
+func _build_crack_mesh(severity_multiplier: float = 1.0) -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = floe_id * 1337 + 42
 
-	# 4 a 6 ramificações radiais de fissura a partir do centro
-	var branches: int = 5
+	var branches: int = 5 if severity_multiplier <= 1.0 else 7
+	var crack_width: float = 0.08 * severity_multiplier
+	var crack_color: Color = Color(1.0, 1.0, 1.0, 1.0)
+
 	for b: int in branches:
-		var base_ang: float = (TAU / float(branches)) * float(b) + rng.randf_range(-0.3, 0.3)
-		var p_start: Vector3 = Vector3(rng.randf_range(-0.15, 0.15), 0.0, rng.randf_range(-0.15, 0.15))
+		var base_ang: float = (TAU / float(branches)) * float(b) + rng.randf_range(-0.25, 0.25)
+		var p_start: Vector3 = Vector3(rng.randf_range(-0.1, 0.1), 0.008, rng.randf_range(-0.1, 0.1))
 		var r_steps: int = 3
 		var curr_p: Vector3 = p_start
-		for s: int in r_steps:
-			var step_r: float = (floe_radius * 0.85 / float(r_steps)) * float(s + 1)
-			var cur_ang: float = base_ang + rng.randf_range(-0.35, 0.35)
-			var next_p: Vector3 = Vector3(cos(cur_ang) * step_r, 0.0, sin(cur_ang) * step_r)
-			im.surface_add_vertex(curr_p)
-			im.surface_add_vertex(next_p)
 
-			# Pequena bifurcação lateral
-			if s == 1 and rng.randf() > 0.3:
-				var side_ang: float = cur_ang + rng.randf_range(0.4, 0.8) * (1.0 if rng.randf() > 0.5 else -1.0)
+		for s: int in r_steps:
+			var step_r: float = (floe_radius * 0.88 / float(r_steps)) * float(s + 1)
+			var cur_ang: float = base_ang + rng.randf_range(-0.3, 0.3)
+			var next_p: Vector3 = Vector3(cos(cur_ang) * step_r, 0.008, sin(cur_ang) * step_r)
+
+			_add_crack_quad(st, curr_p, next_p, crack_width, crack_color)
+
+			# Bifurcações secundárias
+			if (s == 1 or (s == 2 and severity_multiplier > 1.0)) and rng.randf() > 0.25:
+				var side_sign: float = 1.0 if rng.randf() > 0.5 else -1.0
+				var side_ang: float = cur_ang + rng.randf_range(0.45, 0.85) * side_sign
 				var side_p: Vector3 = next_p + Vector3(cos(side_ang) * 0.45, 0.0, sin(side_ang) * 0.45)
-				im.surface_add_vertex(next_p)
-				im.surface_add_vertex(side_p)
+				_add_crack_quad(st, next_p, side_p, crack_width * 0.75, crack_color)
 
 			curr_p = next_p
 
-	im.surface_end()
-	return im
+	return st.commit()
+
+
+func _add_crack_quad(st: SurfaceTool, from: Vector3, to: Vector3, width: float, color: Color) -> void:
+	var dir: Vector3 = to - from
+	dir.y = 0.0
+	if dir.is_zero_approx():
+		return
+	var normal_lat: Vector3 = Vector3(-dir.z, 0.0, dir.x).normalized() * (width * 0.5)
+
+	var p1: Vector3 = from - normal_lat
+	var p2: Vector3 = from + normal_lat
+	var p3: Vector3 = to + normal_lat
+	var p4: Vector3 = to - normal_lat
+
+	st.set_normal(Vector3.UP)
+	st.set_color(color)
+	st.add_vertex(p1)
+	st.add_vertex(p2)
+	st.add_vertex(p3)
+
+	st.set_normal(Vector3.UP)
+	st.set_color(color)
+	st.add_vertex(p1)
+	st.add_vertex(p3)
+	st.add_vertex(p4)
+
+	# Face reversa
+	st.set_normal(Vector3.UP)
+	st.set_color(color)
+	st.add_vertex(p1)
+	st.add_vertex(p3)
+	st.add_vertex(p2)
+
+	st.set_normal(Vector3.UP)
+	st.set_color(color)
+	st.add_vertex(p1)
+	st.add_vertex(p4)
+	st.add_vertex(p3)
 
 
 func _build_stepper_area() -> void:

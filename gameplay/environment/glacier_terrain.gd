@@ -134,10 +134,10 @@ static func color_at(x: float, z: float, h: float) -> Color:
 	var n: float = _get_noise().get_noise_2d(z * 2.0 + 40.0, x * 2.0)
 	var c: Color = SNOW_WHITE.lerp(SNOW_SHADE, clampf(0.5 + n * 1.2, 0.0, 1.0))
 
-	# Gelo profundo do lago
+	# Leito do lago (morena subaquática escura em contraste com a água petróleo)
 	var lw: float = lake_weight(x, z)
 	if lw > 0.0:
-		var lake_c: Color = ICE_LAKE.lerp(ICE_DEEP, clampf((1.0 - lw) * 0.8, 0.0, 1.0))
+		var lake_c: Color = Color(0.06, 0.14, 0.20)
 		c = c.lerp(lake_c, lw)
 
 	# Manchas de morena/rocha congelada

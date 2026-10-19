@@ -125,10 +125,11 @@ func _build_water_surface() -> void:
 
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(0.12, 0.28, 0.52, 0.82)
-	mat.roughness = 0.06
-	mat.metallic = 0.1
-	mat.specular = 0.9
+	# Azul-petróleo escuro e semi-transparente (#108): contraste nítido com o gelo e fundo visível
+	mat.albedo_color = Color(0.02, 0.16, 0.25, 0.75)
+	mat.roughness = 0.08
+	mat.metallic = 0.05
+	mat.specular = 0.95
 	_water_mesh.material_override = mat
 	add_child(_water_mesh)
 
@@ -226,8 +227,39 @@ func _spawn_sunken_items() -> void:
 		var item_x: float = CENTER_OFFSET.x + SUNKEN_OFFSETS[i].x
 		var item_z: float = CENTER_OFFSET.y + SUNKEN_OFFSETS[i].y
 		var bed_y: float = GlacierTerrain.height_at(item_x, item_z)
-		var spawn_pos: Vector3 = Vector3(item_x, bed_y + 0.10, item_z)
+		var spawn_pos: Vector3 = Vector3(item_x, bed_y + 0.12, item_z)
 
 		var pickup: ItemPickup = ItemPickup.spawn(self, carried, spawn_pos)
 		if pickup != null:
+			pickup.freeze = true
+			pickup.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
+			_add_sunken_item_glow(pickup)
 			sunken_pickups.append(pickup)
+
+
+func _add_sunken_item_glow(pickup: ItemPickup) -> void:
+	# Luz subaquática difusa no item afundado (#108)
+	var light: OmniLight3D = OmniLight3D.new()
+	light.name = "SunkenGlowLight"
+	light.light_color = Color(0.35, 0.85, 1.0)
+	light.light_energy = 0.95
+	light.omni_range = 2.4
+	light.shadow_enabled = false
+	pickup.add_child(light)
+
+	# Brilho cintilante visível através da água semi-transparente (#108)
+	var glow_mesh: MeshInstance3D = MeshInstance3D.new()
+	glow_mesh.name = "SunkenHalo"
+	var q: QuadMesh = QuadMesh.new()
+	q.size = Vector2(0.55, 0.55)
+	glow_mesh.mesh = q
+	glow_mesh.position = Vector3(0.0, 0.08, 0.0)
+	glow_mesh.rotation.x = -PI * 0.5 # deitado sobre o fundo
+
+	var glow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	glow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	glow_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glow_mat.albedo_color = Color(0.3, 0.8, 1.0, 0.55)
+	glow_mesh.material_override = glow_mat
+	pickup.add_child(glow_mesh)
