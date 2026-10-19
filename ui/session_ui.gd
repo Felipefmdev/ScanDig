@@ -70,6 +70,8 @@ var _loading_token: int = 0
 var _synced_once: bool = true
 var _toast_queue: Array[String] = []
 var _toast_token: int = 0
+## Último resumo do dia mostrado (refeito ao trocar o idioma com ele aberto).
+var _last_summary: Dictionary = {}
 
 
 func _enter_tree() -> void:
@@ -202,12 +204,12 @@ func _refresh_expedition_bar() -> void:
 		_update_mouse()
 	if not in_expedition:
 		return
-	var map_name: String = "Mapa desconhecido"
+	var map_name: String = tr("Mapa desconhecido")
 	var map: MapData = _session_call(&"get_current_map") as MapData
 	if map != null:
-		map_name = map.display_name if not map.display_name.is_empty() else map.id
+		map_name = tr(map.display_name) if not map.display_name.is_empty() else map.id
 	var day: int = GameState.instance.current_day if GameState.instance != null else 1
-	expedition_info_label.text = "%s  •  Dia %d" % [map_name, day]
+	expedition_info_label.text = tr("%s  •  Dia %d") % [map_name, day]
 	leave_button.disabled = false
 
 
@@ -324,8 +326,8 @@ func _should_show_toast() -> bool:
 
 func _on_quest_completed(quest_id: String, reward: int) -> void:
 	var quest: Dictionary = GameState.QUESTS.get(quest_id, {})
-	var quest_name: String = str(quest.get("name", "Missão"))
-	_enqueue_toast("Missão concluída: %s (+%s)" % [quest_name, UiFormat.money(reward)])
+	var quest_name: String = tr(str(quest.get("name", "Missão")))
+	_enqueue_toast(tr("Missão concluída: %s (+%s)") % [quest_name, UiFormat.money(reward)])
 
 
 ## "Segredo encontrado! (Praia 3/6)": a contagem é do mapa do segredo, não da expedição.
@@ -335,14 +337,14 @@ func _on_secret_found(secret_id: String) -> void:
 	var counts: Dictionary = UiFormat.secret_counts_by_map(found)
 	var maps: Variant = _session_call(&"get_available_maps", [])
 	var map_list: Array = maps as Array if maps is Array else []
-	_enqueue_toast("Segredo encontrado! (%s)" % UiFormat.secret_count_text(map_id, counts.get(map_id, {}), map_list))
+	_enqueue_toast(tr("Segredo encontrado! (%s)") % UiFormat.secret_count_text(map_id, counts.get(map_id, {}), map_list))
 
 
 ## Primeira vez que se derrota um tipo de criatura (Diário de campo).
 func _on_creature_discovered(kind: String) -> void:
 	var total: int = GameState.CREATURES.size()
 	var seen: int = GameState.instance.seen_creatures.size() if GameState.instance != null else 0
-	_enqueue_toast("📖 Nova criatura no diário: %s (%d/%d)" % [GameState.CREATURES.get(kind, kind), seen, total])
+	_enqueue_toast(tr("📖 Nova criatura no diário: %s (%d/%d)") % [tr(str(GameState.CREATURES.get(kind, kind))), seen, total])
 
 
 func _enqueue_toast(text: String) -> void:
@@ -373,12 +375,23 @@ func _show_next_toast() -> void:
 
 # --- Resumo do dia ------------------------------------------------------------
 
+## Idioma trocado (#131): a barra da expedição e o resumo aberto são montados por código.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or not is_node_ready() or expedition_bar == null:
+		return
+	_refresh_expedition_bar()
+	if summary_panel.visible and not _last_summary.is_empty():
+		_show_summary(_last_summary)
+
+
+## O resumo vem do host com os nomes em PT-BR (as chaves): a tradução é aqui, na tela de cada um.
 func _show_summary(summary: Dictionary) -> void:
+	_last_summary = summary
 	var day: int = int(summary.get("day", 0))
-	var map_name: String = str(summary.get("map_name", summary.get("map_id", "")))
+	var map_name: String = tr(str(summary.get("map_name", summary.get("map_id", ""))))
 	if bool(summary.get("night", false)):
-		map_name += " (noite)"
-	summary_title_label.text = "Resumo do Dia %d — %s" % [day, map_name]
+		map_name = tr("%s (noite)") % map_name
+	summary_title_label.text = tr("Resumo do Dia %d — %s") % [day, map_name]
 	summary_list.clear()
 	var entries: Array = []
 	if summary.get("entries") is Array:
@@ -389,9 +402,9 @@ func _show_summary(summary: Dictionary) -> void:
 		if not entry is Dictionary:
 			continue
 		var e: Dictionary = entry as Dictionary
-		var action_text: String = "Doado ao museu" if str(e.get("action", "")) == "donated" else "Vendido"
-		summary_list.add_item("%s — %s (+%s)" % [str(e.get("name", "?")), action_text, UiFormat.money(int(e.get("value", 0)))])
-	summary_total_label.text = "Total ganho: %s  (saldo: %s → %s)" % [
+		var action_text: String = tr("Doado ao museu") if str(e.get("action", "")) == "donated" else tr("Vendido")
+		summary_list.add_item("%s — %s (+%s)" % [tr(str(e.get("name", "?"))), action_text, UiFormat.money(int(e.get("value", 0)))])
+	summary_total_label.text = tr("Total ganho: %s  (saldo: %s → %s)") % [
 		UiFormat.money(int(summary.get("money_earned", 0))),
 		UiFormat.money(int(summary.get("money_start", 0))),
 		UiFormat.money(int(summary.get("money_end", 0))),

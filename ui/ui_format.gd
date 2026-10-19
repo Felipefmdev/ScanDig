@@ -58,8 +58,8 @@ static func map_display_name(map_id: String, maps: Array) -> String:
 	for map: Variant in maps:
 		var data: MapData = map as MapData
 		if data != null and data.id == map_id and not data.display_name.is_empty():
-			return data.display_name
-	return map_id.left(1).to_upper() + map_id.substr(1)
+			return I18n.t(data.display_name)
+	return I18n.t(map_id.left(1).to_upper() + map_id.substr(1))
 
 
 ## "Praia 3/6" sem quebra de linha dentro (NBSP no lugar dos espaços).

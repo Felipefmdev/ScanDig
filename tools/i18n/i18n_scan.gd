@@ -13,7 +13,8 @@ extends RefCounted
 ## SIGLA ("FPS") ou com _ / dígito / ":" sem espaço.
 
 const ROOTS: Array[String] = ["res://gameplay", "res://ui", "res://core", "res://items", "res://world"]
-const SKIP_PARTS: Array[String] = ["/tests/", "res://gameplay/debug/"]
+## build_theme.gd é ferramenta (gera o .tres do tema), não tela.
+const SKIP_PARTS: Array[String] = ["/tests/", "res://gameplay/debug/", "res://ui/theme/build_theme.gd"]
 const CSV_PATH: String = "res://translations/scandig.csv"
 const IGNORE_PATH: String = "res://translations/i18n_ignore.txt"
 ## Campos de texto exibido das .tscn/.tres (line_* é prefixo: falas de NPC). Mesmos do
@@ -30,6 +31,7 @@ static var _id_like: RegEx = RegEx.create_from_string("^[a-z0-9_./:%-]*$")
 static var _letters: RegEx = RegEx.create_from_string("[A-Za-zÀ-ÿ]{2}")
 static var _ascii_word: RegEx = RegEx.create_from_string("^[A-Za-z0-9_./:%#@$-]*$")
 static var _code_marks: RegEx = RegEx.create_from_string("[_/0-9:%]|[a-z][A-Z]|^[A-Z]{2,}$")
+static var _dev_prefix: RegEx = RegEx.create_from_string("^[A-Z][a-z]+[A-Z][A-Za-z]*: ")
 static var _node_assign: RegEx = RegEx.create_from_string("(?<![A-Za-z0-9_])name\\s*=\\s*\"")
 static var _resource_field: RegEx = RegEx.create_from_string("(?m)^([A-Za-z_][A-Za-z0-9_/]*) = \"((?:[^\"\\\\]|\\\\.)*)\"")
 
@@ -40,6 +42,10 @@ static func is_text(literal: String) -> bool:
 		return false
 	if not literal.contains(" ") and literal.contains("/"):
 		return false  # caminho de nó com acento ("TabContainer/Expedições/MapList")
+	if literal.contains("=\\\"") or literal.contains("=\""):
+		return false  # marcação com atributo (SVG dos ícones, linhas de .tscn)
+	if _dev_prefix.search(literal) != null:
+		return false  # "SaveManager: ..." (mensagem do dev, com o nome da classe na frente)
 	if _ascii_word.search(literal) != null and _code_marks.search(literal) != null:
 		return false
 	return true

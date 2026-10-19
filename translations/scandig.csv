@@ -135,3 +135,370 @@ Eixo %d-,Eixo %d-,Axis %d-
 Eixo %d+,Eixo %d+,Axis %d+
 Botão %d,Botão %d,Button %d
 Botão %d do mouse,Botão %d do mouse,Mouse button %d
+Dinheiro  %s,Dinheiro  %s,Money  %s
+Detector  nível %d,Detector  nível %d,Detector  level %d
+Museu  %d/%d,Museu  %d/%d,Museum  %d/%d
+Jogador,Jogador,Player
+Sem saldo,Sem saldo,No funds
+Aguardando conexão com o estado do jogo...,Aguardando conexão com o estado do jogo...,Waiting for the game state connection...
+Mapa do Tesouro,Mapa do Tesouro,Treasure Map
+Loja de Equipamentos,Loja de Equipamentos,Equipment Shop
+Loja,Loja,Shop
+Museu de Achados,Museu de Achados,Museum of Finds
+Museu,Museu,Museum
+Expedições,Expedições,Expeditions
+Diário,Diário,Journal
+Mapa,Mapa,Map
+Sistema de expedições indisponível.,Sistema de expedições indisponível.,Expedition system unavailable.
+Nenhum mapa disponível.,Nenhum mapa disponível.,No maps available.
+%s  •  Detector nível %d  •  %d pontos,%s  •  Detector nível %d  •  %d pontos,%s  •  Detector level %d  •  %d spots
+  •  Chefe: %s,  •  Chefe: %s,  •  Boss: %s
+%s  •  Em breve,%s  •  Em breve,%s  •  Coming soon
+Selecione um mapa.,Selecione um mapa.,Select a map.
+Já existe uma expedição em andamento.,Já existe uma expedição em andamento.,An expedition is already under way.
+Apenas o host pode iniciar a expedição.,Apenas o host pode iniciar a expedição.,Only the host can start the expedition.
+Requer detector nível %d.,Requer detector nível %d.,Requires detector level %d.
+Desbloquear %s (%s),Desbloquear %s (%s),Unlock %s (%s)
+Processando desbloqueio...,Processando desbloqueio...,Processing unlock...
+Sem resposta do host. Tente novamente.,Sem resposta do host. Tente novamente.,No response from the host. Try again.
+Partir,Partir,Depart
+Partir para %s (noite),Partir para %s (noite),Depart for %s (night)
+Partir para %s,Partir para %s,Depart for %s
+Preparando expedição noturna para %s...,Preparando expedição noturna para %s...,Preparing night expedition to %s...
+Preparando expedição para %s...,Preparando expedição para %s...,Preparing expedition to %s...
+Noite,Noite,Night
+"Expedição noturna: mais achados raros e criaturas noturnas, mas pouca visão. A Lanterna de Magnésio e o visor do detector iluminam.","Expedição noturna: mais achados raros e criaturas noturnas, mas pouca visão. A Lanterna de Magnésio e o visor do detector iluminam.","Night expedition: more rare finds and nocturnal creatures, but poor visibility. The Magnesium Lantern and the detector screen give light."
+Catálogo de itens indisponível.,Catálogo de itens indisponível.,Item catalog unavailable.
+Catálogo de itens vazio.,Catálogo de itens vazio.,Item catalog is empty.
+Nível %d/%d,Nível %d/%d,Level %d/%d
+Nível %d/%d  •  radar Nv.%d,Nível %d/%d  •  radar Nv.%d,Level %d/%d  •  radar Lv.%d
+Máximo,Máximo,Maxed
+%s já está no nível máximo.,%s já está no nível máximo.,%s is already at max level.
+🔒 Requer %s,🔒 Requer %s,🔒 Requires %s
+Comprar,Comprar,Buy
+Radar: Nv.%d → Nv.%d,Radar: Nv.%d → Nv.%d,Radar: Lv.%d → Lv.%d
+Mochila: %d → %d espaços,Mochila: %d → %d espaços,Backpack: %d → %d slots
+Saldo insuficiente (%s).,Saldo insuficiente (%s).,Not enough funds (%s).
+Ver museu,Ver museu,View museum
+Ver a vitrine do Museu ao lado da tenda,Ver a vitrine do Museu ao lado da tenda,See the Museum display next to the tent
+Erro: GameState não disponível.,Erro: GameState não disponível.,Error: GameState unavailable.
+Processando compra...,Processando compra...,Processing purchase...
+%s já estava cadastrado no Museu!,%s já estava cadastrado no Museu!,%s was already registered in the Museum!
+🏆 Jogo concluído — Modo Museu completo ativo!,🏆 Jogo concluído — Modo Museu completo ativo!,🏆 Game complete — Full Museum Mode active!
+[DESCOBERTO],[DESCOBERTO],[FOUND]
+Profundidade: %d cm,Profundidade: %d cm,Depth: %d cm
+Achado especial,Achado especial,Special find
+%s %s (Valor: %s | %s),%s %s (Valor: %s | %s),%s %s (Value: %s | %s)
+  ✦ intacto,  ✦ intacto,  ✦ intact
+Segredos —,Segredos —,Secrets —
+Diário de campo —,Diário de campo —,Field journal —
+%d/%d criaturas,%d/%d criaturas,%d/%d creatures
+★ Jogo concluído (Modo Museu completo) — Peças: %d/%d • Segredos: %d/%d • Diário: %d/%d,★ Jogo concluído (Modo Museu completo) — Peças: %d/%d • Segredos: %d/%d • Diário: %d/%d,★ Game complete (Full Museum Mode) — Pieces: %d/%d • Secrets: %d/%d • Journal: %d/%d
+Venda concluída: %s (+%s),Venda concluída: %s (+%s),Sold: %s (+%s)
+%s doado ao Museu! (+%s de recompensa),%s doado ao Museu! (+%s de recompensa),%s donated to the Museum! (+%s reward)
+🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipe.,🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipe.,🗺️ Map complete! %d/%d fragments — Treasure Island awaits the team.
+🗺️ Fragmentos do mapa:,🗺️ Fragmentos do mapa:,🗺️ Map fragments:
+… e mais %d por descobrir.,… e mais %d por descobrir.,… and %d more to discover.
+Onde procurar:,Onde procurar:,Where to look:
+Praia,Praia,Beach
+Campo,Campo,Fields
+Ruínas,Ruínas,Ruins
+Geleira,Geleira,Glacier
+Cratera,Cratera,Crater
+Ilha,Ilha,Island
+Outros,Outros,Others
+Caranguejo-Rei,Caranguejo-Rei,King Crab
+Toupeira Gigante,Toupeira Gigante,Giant Mole
+Guardião Ancestral,Guardião Ancestral,Ancient Guardian
+Mamute Congelado,Mamute Congelado,Frozen Mammoth
+Polvo do Abismo,Polvo do Abismo,Abyssal Octopus
+Corvo-Rei,Corvo-Rei,Crow King
+Espantalho Vivo,Espantalho Vivo,Living Scarecrow
+Múmia do Ídolo,Múmia do Ídolo,Idol Mummy
+Yeti da Caverna,Yeti da Caverna,Cave Yeti
+Morsa Anciã,Morsa Anciã,Elder Walrus
+O Adormecido,O Adormecido,The Sleeper
+O Eco,O Eco,The Echo
+Colosso do Tesouro,Colosso do Tesouro,Treasure Colossus
+Ilha do Tesouro,Ilha do Tesouro,Treasure Island
+Sítio,Sítio,Site
+%s • Catalogado,%s • Catalogado,%s • Cataloged
+%s • Por avistar,%s • Por avistar,%s • Not yet seen
+Caderno de Campo — Fauna dos Sítios (%d/%d) e Guardiões Abatidos:,Caderno de Campo — Fauna dos Sítios (%d/%d) e Guardiões Abatidos:,Field Notebook — Site Wildlife (%d/%d) and Defeated Guardians:
+%s • Vencido,%s • Vencido,%s • Defeated
+%s • Guardião,%s • Guardião,%s • Guardian
+Guardiões e Chefes de Sítio (%d/%d):,Guardiões e Chefes de Sítio (%d/%d):,Guardians and Site Bosses (%d/%d):
+Base de Operações — Tenda de Pesquisa,Base de Operações — Tenda de Pesquisa,Operations Base — Research Tent
+Melhorias para a equipe (pagas com o saldo comum):,Melhorias para a equipe (pagas com o saldo comum):,Team upgrades (paid from the shared funds):
+Catálogo de Relíquias e Descobertas:,Catálogo de Relíquias e Descobertas:,Catalog of Relics and Discoveries:
+Segredos: 0/0,Segredos: 0/0,Secrets: 0/0
+Simulação de Achado em Campo (Testes Dev B):,Simulação de Achado em Campo (Testes Dev B):,Field Find Simulation (Dev B tests):
+Vender Item,Vender Item,Sell Item
+Doar ao Museu,Doar ao Museu,Donate to Museum
+Escolha um local de escavação. Só o host pode iniciar a expedição.,Escolha um local de escavação. Só o host pode iniciar a expedição.,Choose a dig site. Only the host can start the expedition.
+Desbloquear,Desbloquear,Unlock
+Caderno de Campo — Fauna dos Sítios (0/13) e Guardiões Abatidos:,Caderno de Campo — Fauna dos Sítios (0/13) e Guardiões Abatidos:,Field Notebook — Site Wildlife (0/13) and Defeated Guardians:
+Guardiões e Chefes de Sítio (0/12):,Guardiões e Chefes de Sítio (0/12):,Guardians and Site Bosses (0/12):
+Conectando ao servidor de salas...,Conectando ao servidor de salas...,Connecting to the room server...
+Conectando ao amigo...,Conectando ao amigo...,Connecting to your friend...
+"Conexão direta falhou, usando o servidor...","Conexão direta falhou, usando o servidor...","Direct connection failed, using the server..."
+Multiplayer ▴,Multiplayer ▴,Multiplayer ▴
+Multiplayer ▾,Multiplayer ▾,Multiplayer ▾
+Erro: NetworkManager não encontrado.,Erro: NetworkManager não encontrado.,Error: NetworkManager not found.
+Hospedando na porta %d. Abrindo a porta no roteador (UPnP)...,Hospedando na porta %d. Abrindo a porta no roteador (UPnP)...,Hosting on port %d. Opening the port on the router (UPnP)...
+Servidor iniciado (Host ativo).,Servidor iniciado (Host ativo).,Server started (host active).
+Falha ao iniciar host: erro %d,Falha ao iniciar host: erro %d,Failed to start host: error %d
+Conectando a %s...,Conectando a %s...,Connecting to %s...
+Erro ao tentar conectar: erro %d,Erro ao tentar conectar: erro %d,Error while connecting: error %d
+Continuar (%s),Continuar (%s),Continue (%s)
+Progresso: %s,Progresso: %s,Progress: %s
+Museu: %d/%d,Museu: %d/%d,Museum: %d/%d
+Salvo em %s,Salvo em %s,Saved on %s
+Save ilegível: %s,Save ilegível: %s,Unreadable save: %s
+erro desconhecido,erro desconhecido,unknown error
+Dia %d • %s,Dia %d • %s,Day %d • %s
+Só o host pode mudar o progresso.,Só o host pode mudar o progresso.,Only the host can change the progress.
+Termine a expedição primeiro.,Termine a expedição primeiro.,Finish the expedition first.
+Não foi possível mudar o progresso (erro %d).,Não foi possível mudar o progresso (erro %d).,Could not change the progress (error %d).
+Apagar o progresso salvo (%s)? Um backup será salvo.,Apagar o progresso salvo (%s)? Um backup será salvo.,Erase the saved progress (%s)? A backup will be kept.
+Apagar e começar,Apagar e começar,Erase and start
+Começar do zero?,Começar do zero?,Start from scratch?
+Começar,Começar,Start
+Erro: salas online indisponíveis.,Erro: salas online indisponíveis.,Error: online rooms unavailable.
+Criando sala...,Criando sala...,Creating room...
+Falha ao criar sala: erro %d,Falha ao criar sala: erro %d,Failed to create room: error %d
+Cancelado.,Cancelado.,Canceled.
+Sala criada!,Sala criada!,Room created!
+Código copiado!,Código copiado!,Code copied!
+Na mesma rede: %s,Na mesma rede: %s,On the same network: %s
+Sem IP de rede local.,Sem IP de rede local.,No local network IP.
+"IP para os amigos: %s
+%s","IP para os amigos: %s
+%s","IP for your friends: %s
+%s"
+IP copiado!,IP copiado!,IP copied!
+Jogador conectado: Peer %d,Jogador conectado: Peer %d,Player connected: Peer %d
+Jogador desconectado: Peer %d,Jogador desconectado: Peer %d,Player disconnected: Peer %d
+Conectado com sucesso ao servidor!,Conectado com sucesso ao servidor!,Connected to the server!
+Falha na conexão com o servidor.,Falha na conexão com o servidor.,Connection to the server failed.
+Servidor foi desconectado.,Servidor foi desconectado.,The server disconnected.
+Você encerrou a sessão (host).,Você encerrou a sessão (host).,You closed the session (host).
+Você saiu da sessão.,Você saiu da sessão.,You left the session.
+Peer ID %s: %s,Peer ID %s: %s,Peer ID %s: %s
+%s (host),%s (host),%s (host)
+%s (você),%s (você),%s (you)
+Multiplayer,Multiplayer,Multiplayer
+Seu nome,Seu nome,Your name
+Continuar,Continuar,Continue
+Progresso,Progresso,Progress
+Novo jogo,Novo jogo,New game
+Criar sala online,Criar sala online,Create online room
+Entrar,Entrar,Join
+Tentar de novo,Tentar de novo,Try again
+Hospedar Partida (Host),Hospedar Partida (Host),Host Game
+Entrar (Join),Entrar (Join),Join (LAN)
+Copiar IP,Copiar IP,Copy IP
+Sair da sessão,Sair da sessão,Leave session
+Modo Solo (Não conectado),Modo Solo (Não conectado),Solo mode (not connected)
+Copiar código,Copiar código,Copy code
+Mande este código para o seu amigo,Mande este código para o seu amigo,Send this code to your friend
+Jogadores Conectados:,Jogadores Conectados:,Connected players:
+Expedição noturna,Expedição noturna,Night expedition
+"Sair do jogo?
+O progresso da base é salvo ao fim de cada expedição.","Sair do jogo?
+O progresso da base é salvo ao fim de cada expedição.","Quit the game?
+Base progress is saved at the end of each expedition."
+"Voltar ao menu principal?
+O progresso da base é salvo agora.","Voltar ao menu principal?
+O progresso da base é salvo agora.","Return to the main menu?
+Base progress is saved now."
+"Voltar ao menu principal?
+A expedição em andamento não é salva.","Voltar ao menu principal?
+A expedição em andamento não é salva.","Return to the main menu?
+The current expedition is not saved."
+Sair da sessão e voltar ao menu principal?,Sair da sessão e voltar ao menu principal?,Leave the session and return to the main menu?
+%d FPS,%d FPS,%d FPS
+Pausado,Pausado,Paused
+Voltar à base,Voltar à base,Return to base
+Sair para o menu principal,Sair para o menu principal,Quit to main menu
+Sair do jogo,Sair do jogo,Quit game
+Sair,Sair,Quit
+Ir para o menu,Ir para o menu,Go to menu
+"Você é o host: todos os jogadores voltarão à base.
+O dinheiro e o museu até agora ficam salvos, mas o dia não avança.","Você é o host: todos os jogadores voltarão à base.
+O dinheiro e o museu até agora ficam salvos, mas o dia não avança.","You are the host: every player will return to base.
+Money and museum so far are saved, but the day does not advance."
+"Sair da sessão e voltar à base?
+O que estiver na sua mochila será perdido.","Sair da sessão e voltar à base?
+O que estiver na sua mochila será perdido.","Leave the session and return to base?
+Whatever is in your backpack will be lost."
+Mapa desconhecido,Mapa desconhecido,Unknown map
+%s  •  Dia %d,%s  •  Dia %d,%s  •  Day %d
+Carregando...,Carregando...,Loading...
+Voltando à base...,Voltando à base...,Returning to base...
+Partindo para a expedição...,Partindo para a expedição...,Setting off on the expedition...
+Missão,Missão,Quest
+Missão concluída: %s (+%s),Missão concluída: %s (+%s),Quest complete: %s (+%s)
+Segredo encontrado! (%s),Segredo encontrado! (%s),Secret found! (%s)
+📖 Nova criatura no diário: %s (%d/%d),📖 Nova criatura no diário: %s (%d/%d),📖 New creature in the journal: %s (%d/%d)
+%s (noite),%s (noite),%s (night)
+Resumo do Dia %d — %s,Resumo do Dia %d — %s,Day %d Summary — %s
+Nenhum item vendido ou doado nesta expedição.,Nenhum item vendido ou doado nesta expedição.,No items sold or donated on this expedition.
+Doado ao museu,Doado ao museu,Donated to the museum
+Vendido,Vendido,Sold
+Total ganho: %s  (saldo: %s → %s),Total ganho: %s  (saldo: %s → %s),Total earned: %s  (funds: %s → %s)
+Expedição,Expedição,Expedition
+Aviso,Aviso,Notice
+Resumo do Dia,Resumo do Dia,Day Summary
+Fechar,Fechar,Close
+"A conexão com o host foi perdida.
+Você voltou para a base.","A conexão com o host foi perdida.
+Você voltou para a base.","The connection to the host was lost.
+You are back at base."
+OK,OK,OK
+Sair da sessão?,Sair da sessão?,Leave the session?
+Detecção de metais e escavação cooperativa,Detecção de metais e escavação cooperativa,Co-op metal detecting and digging
+"Começar um jogo novo no slot %d?
+O progresso atual dele vai para o backup.","Começar um jogo novo no slot %d?
+O progresso atual dele vai para o backup.","Start a new game in slot %d?
+Its current progress goes to the backup."
+Apagar o slot %d? Isso não pode ser desfeito.,Apagar o slot %d? Isso não pode ser desfeito.,Delete slot %d? This cannot be undone.
+Carregar jogo,Carregar jogo,Load game
+Novo jogo: escolha o slot,Novo jogo: escolha o slot,New game: choose a slot
+Multiplayer: escolha o slot do host,Multiplayer: escolha o slot do host,Multiplayer: choose the host's slot
+Slot %d   %s,Slot %d   %s,Slot %d   %s
+Vazio,Vazio,Empty
+Save ilegível,Save ilegível,Unreadable save
+Dia %d  •  %s  •  Museu %d/%d,Dia %d  •  %s  •  Museu %d/%d,Day %d  •  %s  •  Museum %d/%d
+Não foi possível usar o slot %d (erro %d).,Não foi possível usar o slot %d (erro %d).,Could not use slot %d (error %d).
+Carregar,Carregar,Load
+Slot %d,Slot %d,Slot %d
+Apagar,Apagar,Delete
+Confirmar,Confirmar,Confirm
+Jogo concluído,Jogo concluído,Game complete
+"O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.
+Leve o Ídolo de Ouro, o tesouro principal, ao Museu.
+Ainda há peças, segredos e bichos por achar.","O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.
+Leve o Ídolo de Ouro, o tesouro principal, ao Museu.
+Ainda há peças, segredos e bichos por achar.","The Treasure Colossus has been defeated and the treasure map is complete.
+Take the Golden Idol, the main treasure, to the Museum.
+There are still pieces, secrets and critters to find."
+— CRÉDITOS —,— CRÉDITOS —,— CREDITS —
+"Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral
+Broca (Dev_Player) — Controle em 1ª Pessoa, Ferramentas, Terrenos e Segredos
+Sonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes
+Dev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo
+Felipe — Concepção, Arte Low-Poly Toon e Direção Criativa","Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral
+Broca (Dev_Player) — Controle em 1ª Pessoa, Ferramentas, Terrenos e Segredos
+Sonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes
+Dev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo
+Felipe — Concepção, Arte Low-Poly Toon e Direção Criativa","Maestro / Lead_Gameplay (Antigravity #2) — Coordination and Overall Architecture
+Broca (Dev_Player) — First-Person Controls, Tools, Terrain and Secrets
+Sonda (Dev_Enemies) — Artificial Intelligence, Enemies and Bosses
+Dev B — Core Systems, Interface, HUD and Co-op Multiplayer
+Felipe — Concept, Low-Poly Toon Art and Creative Direction"
+Peças do museu,Peças do museu,Museum pieces
+Peças intactas,Peças intactas,Intact pieces
+Fragmentos do mapa,Fragmentos do mapa,Map fragments
+Segredos,Segredos,Secrets
+Diário de campo,Diário de campo,Field journal
+Continuar explorando,Continuar explorando,Keep exploring
+Créditos,Créditos,Credits
+Chuva chegando…,Chuva chegando…,Rain is coming…
+Nevasca chegando…,Nevasca chegando…,Blizzard is coming…
+Tempestade de cinzas chegando…,Tempestade de cinzas chegando…,Ash storm is coming…
+O tempo abriu,O tempo abriu,The weather cleared
+"Detector  •  Nível 0/3
+Comprar nível 1 — R$ 300","Detector  •  Nível 0/3
+Comprar nível 1 — R$ 300","Detector  •  Level 0/3
+Buy level 1 — R$ 300"
+"Pinpointer de Precisão  •  Nível 0/1
+Comprar nível 1 — R$ 500","Pinpointer de Precisão  •  Nível 0/1
+Comprar nível 1 — R$ 500","Precision Pinpointer  •  Level 0/1
+Buy level 1 — R$ 500"
+"Pá de Fibra  •  Nível 0/1
+Comprar nível 1 — R$ 800","Pá de Fibra  •  Nível 0/1
+Comprar nível 1 — R$ 800","Fiber Shovel  •  Level 0/1
+Buy level 1 — R$ 800"
+"Mochila Reforçada  •  Nível 0/3
+Comprar nível 1 — R$ 400","Mochila Reforçada  •  Nível 0/3
+Comprar nível 1 — R$ 400","Reinforced Backpack  •  Level 0/3
+Buy level 1 — R$ 400"
+Total ganho: R$ 0,Total ganho: R$ 0,Total earned: R$ 0
+Jogador %d,Jogador %d,Player %d
+Host,Host,Host
+O anzol de ouro,O anzol de ouro,The golden hook
+Os corvos levaram as chaves,Os corvos levaram as chaves,The crows took the keys
+A câmara selada,A câmara selada,The sealed chamber
+A expedição perdida,A expedição perdida,The lost expedition
+Sinal no fundo,Sinal no fundo,Signal from the depths
+O Pescador Zé guarda um pedaço de papel velho no barco: ajude o pescador.,O Pescador Zé guarda um pedaço de papel velho no barco: ajude o pescador.,Zé the Fisherman keeps a scrap of old paper on his boat: help the fisherman.
+Algo grande cava túneis debaixo do círculo de pedras do Campo.,Algo grande cava túneis debaixo do círculo de pedras do Campo.,Something big is digging tunnels under the stone circle in the Fields.
+A arqueóloga Inês procura a câmara selada das Ruínas.,A arqueóloga Inês procura a câmara selada das Ruínas.,Inês the archaeologist is looking for the sealed chamber in the Ruins.
+"Nas Ruínas, uma parede soa a oco.","Nas Ruínas, uma parede soa a oco.","In the Ruins, one wall sounds hollow."
+O Velho Björn ainda espera notícias da expedição perdida.,O Velho Björn ainda espera notícias da expedição perdida.,Old Björn is still waiting for news of the lost expedition.
+Bem fundo no gelo da Geleira: um achado raro pode trazer mais do que parece.,Bem fundo no gelo da Geleira: um achado raro pode trazer mais do que parece.,Deep in the Glacier ice: a rare find may hold more than it seems.
+A Dra. Vega capta um sinal estranho no fundo da Cratera.,A Dra. Vega capta um sinal estranho no fundo da Cratera.,Dr. Vega picks up a strange signal deep in the Crater.
+O que dorme no altar da Cratera guarda a última peça.,O que dorme no altar da Cratera guarda a última peça.,What sleeps on the Crater altar guards the last piece.
+Caranguejo,Caranguejo,Crab
+Ermitão,Ermitão,Hermit crab
+Gaivota,Gaivota,Seagull
+Cobra,Cobra,Snake
+Toupeira,Toupeira,Mole
+Corvo,Corvo,Crow
+Guardião de Pedra,Guardião de Pedra,Stone Guardian
+Morcego,Morcego,Bat
+Lobo do Gelo,Lobo do Gelo,Ice Wolf
+Pinguim-ladrão,Pinguim-ladrão,Thief penguin
+Morsa,Morsa,Walrus
+Rastejante,Rastejante,Crawler
+Flutuante,Flutuante,Floater
+Detector,Detector,Detector
+Pinpointer de Precisão,Pinpointer de Precisão,Precision Pinpointer
+Pá de Fibra,Pá de Fibra,Fiber Shovel
+Mochila Reforçada,Mochila Reforçada,Reinforced Backpack
+Upgrade desconhecido.,Upgrade desconhecido.,Unknown upgrade.
+Desbloqueie %s primeiro.,Desbloqueie %s primeiro.,Unlock %s first.
+Saldo insuficiente para %s (Custo: %s).,Saldo insuficiente para %s (Custo: %s).,Not enough funds for %s (Cost: %s).
+Mapa desconhecido.,Mapa desconhecido.,Unknown map.
+%s já está desbloqueado.,%s já está desbloqueado.,%s is already unlocked.
+Complete o Mapa do Tesouro (%d/%d fragmentos) para navegar até %s no barco da Praia.,Complete o Mapa do Tesouro (%d/%d fragmentos) para navegar até %s no barco da Praia.,Complete the Treasure Map (%d/%d fragments) to sail to %s on the Beach boat.
+Saldo insuficiente para desbloquear %s (%s).,Saldo insuficiente para desbloquear %s (%s).,Not enough funds to unlock %s (%s).
+Vença o chefe %s para liberar.,Vença o chefe %s para liberar.,Defeat the boss %s to unlock.
+Vença o chefe %s (%s) para liberar.,Vença o chefe %s (%s) para liberar.,Defeat the boss %s (%s) to unlock.
+Compra realizada: %s (nível %d)!,Compra realizada: %s (nível %d)!,Purchased: %s (level %d)!
+Produto indisponível.,Produto indisponível.,Item unavailable.
+Saldo insuficiente para %s (%s).,Saldo insuficiente para %s (%s).,Not enough funds for %s (%s).
+Comprado: %s,Comprado: %s,Bought: %s
+%s desbloqueado!,%s desbloqueado!,%s unlocked!
+Não foi possível hospedar: a porta %d já está em uso.,Não foi possível hospedar: a porta %d já está em uso.,Could not host: port %d is already in use.
+Endereço inválido: %s,Endereço inválido: %s,Invalid address: %s
+"Não foi possível conectar (host offline, porta fechada ou sala cheia).","Não foi possível conectar (host offline, porta fechada ou sala cheia).","Could not connect (host offline, port closed or room full)."
+Código de sala inválido.,Código de sala inválido.,Invalid room code.
+Servidor de salas fora do ar.,Servidor de salas fora do ar.,Room server is down.
+Servidor de salas mal configurado: código com %d caracteres (esperado %d).,Servidor de salas mal configurado: código com %d caracteres (esperado %d).,Room server misconfigured: code has %d characters (expected %d).
+Sala não encontrada.,Sala não encontrada.,Room not found.
+Não foi possível conectar ao amigo.,Não foi possível conectar ao amigo.,Could not connect to your friend.
+Servidor de salas caiu: novos jogadores não conseguem entrar.,Servidor de salas caiu: novos jogadores não conseguem entrar.,Room server went down: new players cannot join.
+UPnP indisponível: abra a porta %d (UDP) no roteador ou jogue na mesma rede.,UPnP indisponível: abra a porta %d (UDP) no roteador ou jogue na mesma rede.,UPnP unavailable: open port %d (UDP) on your router or play on the same network.
+O roteador recusou abrir a porta %d (UPnP). Abra manualmente (UDP).,O roteador recusou abrir a porta %d (UPnP). Abra manualmente (UDP).,The router refused to open port %d (UPnP). Open it manually (UDP).
+Porta %d aberta no roteador. Passe o IP %s aos amigos.,Porta %d aberta no roteador. Passe o IP %s aos amigos.,Port %d opened on the router. Give the IP %s to your friends.
+O host não respondeu em %d s. Confira o IP e se a porta está aberta.,O host não respondeu em %d s. Confira o IP e se a porta está aberta.,The host did not answer within %d s. Check the IP and whether the port is open.
+O save estava corrompido e foi salvo como backup. Começando um jogo novo.,O save estava corrompido e foi salvo como backup. Começando um jogo novo.,The save was corrupted and was kept as a backup. Starting a new game.
+Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar.,Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar.,This save is from a newer version of the game. Update ScanDig to continue.
+Não foi possível abrir o arquivo (erro %d).,Não foi possível abrir o arquivo (erro %d).,Could not open the file (error %d).
+JSON inválido na linha %d: %s.,JSON inválido na linha %d: %s.,Invalid JSON on line %d: %s.
+A raiz do save não é um objeto.,A raiz do save não é um objeto.,The save root is not an object.
+Campo 'version' inválido.,Campo 'version' inválido.,Invalid 'version' field.
+"Save da versão %d, mais nova que a suportada (%d).","Save da versão %d, mais nova que a suportada (%d).",Save version %d is newer than supported (%d).
+Campo 'team_money' ausente ou inválido.,Campo 'team_money' ausente ou inválido.,Missing or invalid 'team_money' field.
+Campo '%s' inválido.,Campo '%s' inválido.,Invalid '%s' field.
+Campo '%s' não é uma lista.,Campo '%s' não é uma lista.,Field '%s' is not a list.
+Campo 'upgrade_levels' inválido.,Campo 'upgrade_levels' inválido.,Invalid 'upgrade_levels' field.
+Campo 'game_completed' inválido.,Campo 'game_completed' inválido.,Invalid 'game_completed' field.
+Desbloqueie por %s.,Desbloqueie por %s.,Unlock for %s.
+Em breve.,Em breve.,Coming soon.
+Clima forçado (F3),Clima forçado (F3),Weather forced (F3)
+Clima encerrado (F3),Clima encerrado (F3),Weather ended (F3)
+Só o host (F3),Só o host (F3),Host only (F3)
+Sem clima neste mapa (F3),Sem clima neste mapa (F3),No weather on this map (F3)

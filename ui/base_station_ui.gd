@@ -144,6 +144,19 @@ func _ready() -> void:
 		_queue_fit_height()
 
 
+## Idioma trocado (#131): os textos fixos (abas, botões da cena) se traduzem sozinhos; as linhas
+## montadas aqui (mapas, loja, museu, segredos, mapa do tesouro, diário) são refeitas.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_fill_item_select_box()
+		_refresh_map_list()
+		_refresh_shop_buttons()
+		_refresh_museum_display()
+		_refresh_secrets_label()
+		_refresh_treasure_map()
+		_refresh_journal_display()
+
+
 ## Rótulos curtos + nome completo na dica de cada aba.
 func _apply_tab_titles() -> void:
 	if tab_container == null:
@@ -309,7 +322,7 @@ func _refresh_map_list() -> void:
 			map_list.add_item(_format_map_details(map))
 			continue
 		var idx: int = map_list.add_item(_format_map_row(map, status))
-		map_list.set_item_tooltip(idx, UiFormat.fix_money_spaces(str(status.get("reason", ""))))
+		map_list.set_item_tooltip(idx, UiFormat.fix_money_spaces(tr(str(status.get("reason", "")))))
 		if not bool(status.get("playable", false)):
 			# Continua selecionável para o jogador ver o motivo e poder desbloquear.
 			map_list.set_item_custom_fg_color(idx, MAP_LOCKED_COLOR)
@@ -323,11 +336,11 @@ func _refresh_map_list() -> void:
 
 
 func _map_name(map: MapData) -> String:
-	return map.display_name if not map.display_name.is_empty() else map.id
+	return tr(map.display_name) if not map.display_name.is_empty() else map.id
 
 
 func _format_map_details(map: MapData) -> String:
-	return "%s  •  Detector nível %d  •  %d pontos" % [_map_name(map), map.required_detector_level, map.spot_count]
+	return tr("%s  •  Detector nível %d  •  %d pontos") % [_map_name(map), map.required_detector_level, map.spot_count]
 
 
 func _format_map_row(map: MapData, status: Dictionary) -> String:
@@ -337,12 +350,12 @@ func _format_map_row(map: MapData, status: Dictionary) -> String:
 		var row: String = "🔒 %s  •  %s" % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
 		var boss_name: String = str(status.get("required_boss_name", ""))
 		if not boss_name.is_empty():
-			row += "  •  Chefe: %s" % boss_name
+			row += tr("  •  Chefe: %s") % tr(boss_name)
 			if bool(status.get("boss_defeated", false)):
 				row += " ✔"
 		return row
 	if not bool(status.get("has_scene", false)):
-		return "%s  •  Em breve" % _map_name(map)
+		return tr("%s  •  Em breve") % _map_name(map)
 	return _format_map_details(map)
 
 
@@ -381,7 +394,7 @@ func _get_depart_block_reason(map: MapData) -> String:
 	if not status.is_empty():
 		return str(status.get("reason", ""))
 	if not bool(_session_call(&"can_start_map", [map.id], false)):
-		return "Requer detector nível %d." % map.required_detector_level
+		return tr("Requer detector nível %d.") % map.required_detector_level
 	return ""
 
 
@@ -399,7 +412,7 @@ func _refresh_map_status_label() -> void:
 		return
 	var reason: String = _get_map_status_reason(_get_selected_map())
 	map_status_label.visible = not reason.is_empty()
-	map_status_label.text = "🔒 " + UiFormat.fix_money_spaces(reason) if not reason.is_empty() else ""
+	map_status_label.text = "🔒 " + UiFormat.fix_money_spaces(tr(reason)) if not reason.is_empty() else ""
 
 
 func _get_map_status_reason(map: MapData) -> String:
@@ -426,9 +439,9 @@ func _refresh_unlock_button() -> void:
 		unlock_map_btn.visible = false
 		return
 	unlock_map_btn.visible = true
-	unlock_map_btn.text = "Desbloquear %s (%s)" % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
+	unlock_map_btn.text = tr("Desbloquear %s (%s)") % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
 	unlock_map_btn.disabled = _pending_unlock or not bool(status.get("can_unlock", false))
-	unlock_map_btn.tooltip_text = UiFormat.fix_money_spaces(str(status.get("reason", ""))) if unlock_map_btn.disabled else ""
+	unlock_map_btn.tooltip_text = UiFormat.fix_money_spaces(tr(str(status.get("reason", "")))) if unlock_map_btn.disabled else ""
 
 
 func _on_unlock_map_pressed() -> void:
@@ -479,10 +492,13 @@ func _refresh_depart_button() -> void:
 	var map: MapData = _get_selected_map()
 	var reason: String = _get_depart_block_reason(map)
 	depart_btn.disabled = not reason.is_empty()
-	depart_btn.tooltip_text = UiFormat.fix_money_spaces(reason)
-	depart_btn.text = "Partir para %s" % _map_name(map) if map != null else "Partir"
-	if map != null and is_night_selected():
-		depart_btn.text += " (noite)"
+	depart_btn.tooltip_text = UiFormat.fix_money_spaces(tr(reason))
+	if map == null:
+		depart_btn.text = "Partir"
+	elif is_night_selected():
+		depart_btn.text = tr("Partir para %s (noite)") % _map_name(map)
+	else:
+		depart_btn.text = tr("Partir para %s") % _map_name(map)
 
 
 func _on_depart_pressed() -> void:
@@ -493,7 +509,7 @@ func _on_depart_pressed() -> void:
 		return
 	depart_btn.disabled = true
 	var night: bool = is_night_selected()
-	_set_expedition_feedback("Preparando expedição %spara %s..." % ["noturna " if night else "", _map_name(map)])
+	_set_expedition_feedback((tr("Preparando expedição noturna para %s...") if night else tr("Preparando expedição para %s...")) % _map_name(map))
 	_session_call(&"request_start_expedition", [map.id, night])
 
 
@@ -541,7 +557,7 @@ func _on_night_toggled(on: bool) -> void:
 
 func _set_expedition_feedback(msg: String) -> void:
 	if expedition_feedback_label != null:
-		expedition_feedback_label.text = UiFormat.fix_money_spaces(msg)
+		expedition_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
 
 
 func _resolve_game_state() -> void:
@@ -616,7 +632,7 @@ func _load_catalog() -> void:
 ## Museu sem catálogo: avisa na própria aba e trava os botões de teste.
 func _mark_catalog_unavailable(message: String) -> void:
 	if museum_feedback_label != null:
-		museum_feedback_label.text = message
+		museum_feedback_label.text = tr(message)
 	if sell_item_btn != null:
 		sell_item_btn.disabled = true
 	if register_item_btn != null:
@@ -721,7 +737,7 @@ func _set_shop_row(upgrade_id: String, display_name: String, level: int, max_lev
 	if not _shop_rows.has(upgrade_id):
 		return
 	var row: Dictionary = _shop_rows[upgrade_id]
-	(row["name"] as Label).text = display_name
+	(row["name"] as Label).text = tr(display_name)
 	(row["detail"] as Label).text = detail
 	_set_shop_pips(row["pips"] as HBoxContainer, level, max_level)
 
@@ -773,39 +789,39 @@ func _refresh_shop_buttons() -> void:
 		var level: int = _game_state.get_upgrade_level(upgrade_id)
 		var max_level: int = _game_state.get_upgrade_max_level(upgrade_id)
 		var cost: int = _game_state.get_next_upgrade_cost(upgrade_id)
-		var detail: String = "Nível %d/%d" % [level, max_level]
+		var detail: String = tr("Nível %d/%d") % [level, max_level]
 		if upgrade_id == "detector":
 			# O radar começa no nível 1 com o detector no nível 0.
-			detail += "  •  radar Nv.%d" % (level + 1)
+			detail = tr("Nível %d/%d  •  radar Nv.%d") % [level, max_level, level + 1]
 		if _shop_rows.has(upgrade_id):
 			(_shop_rows[upgrade_id]["row"] as Control).visible = true
 		if cost < 0:
 			_set_shop_row(upgrade_id, display_name, level, max_level, detail)
 			btn.text = "Máximo"
-			btn.tooltip_text = "%s já está no nível máximo." % display_name
+			btn.tooltip_text = tr("%s já está no nível máximo.") % tr(display_name)
 			btn.disabled = true
 			_set_shop_state(btn, SHOP_STATE_MAX)
 			continue
 		var reason: String = _get_upgrade_block_reason(upgrade_id, cost)
 		var required_map: String = _get_next_upgrade_required_map(upgrade_id)
-		if not required_map.is_empty() and reason.begins_with("Desbloqueie"):
-			_set_shop_row(upgrade_id, display_name, level, max_level, "🔒 Requer %s" % _get_map_display_name(required_map))
+		if not required_map.is_empty() and not reason.is_empty() and not _game_state.is_map_unlocked(required_map):
+			_set_shop_row(upgrade_id, display_name, level, max_level, tr("🔒 Requer %s") % tr(_get_map_display_name(required_map)))
 			btn.text = "🔒 %s" % UiFormat.money(cost)
-			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
+			btn.tooltip_text = UiFormat.fix_money_spaces(tr(reason))
 			btn.disabled = true
 			_set_shop_state(btn, SHOP_STATE_LOCKED)
 			continue
 		_set_shop_row(upgrade_id, display_name, level, max_level, detail)
 		var no_money: bool = not reason.is_empty() and _game_state.team_money < cost
-		btn.text = "%s\n%s" % [SHOP_NO_MONEY_TEXT if no_money else "Comprar", UiFormat.money(cost)]
+		btn.text = "%s\n%s" % [tr(SHOP_NO_MONEY_TEXT) if no_money else tr("Comprar"), UiFormat.money(cost)]
 		_set_shop_state(btn, SHOP_STATE_NO_MONEY if no_money else Color.TRANSPARENT)
 		if not reason.is_empty():
-			btn.tooltip_text = UiFormat.fix_money_spaces(reason)
+			btn.tooltip_text = UiFormat.fix_money_spaces(tr(reason))
 		elif upgrade_id == "detector":
-			btn.tooltip_text = "Radar: Nv.%d → Nv.%d" % [level + 1, level + 2]
+			btn.tooltip_text = tr("Radar: Nv.%d → Nv.%d") % [level + 1, level + 2]
 		elif upgrade_id == "backpack":
 			var base: int = _get_backpack_base()
-			btn.tooltip_text = "Mochila: %d → %d espaços" % [base + level, base + level + 1]
+			btn.tooltip_text = tr("Mochila: %d → %d espaços") % [base + level, base + level + 1]
 		else:
 			btn.tooltip_text = ""
 		btn.disabled = _pending_purchase or not reason.is_empty()
@@ -836,7 +852,7 @@ func _get_upgrade_block_reason(upgrade_id: String, cost: int) -> String:
 	if _game_state.has_method(&"get_upgrade_block_reason"):
 		return str(_game_state.call(&"get_upgrade_block_reason", upgrade_id))
 	if _game_state.team_money < cost:
-		return "Saldo insuficiente (%s)." % UiFormat.money(_game_state.team_money)
+		return tr("Saldo insuficiente (%s).") % UiFormat.money(_game_state.team_money)
 	return ""
 
 
@@ -853,17 +869,25 @@ func _get_map_display_name(map_id: String) -> String:
 
 
 func _setup_museum_controls() -> void:
-	if item_select_box != null:
-		item_select_box.clear()
-		for i in range(_catalog_items.size()):
-			var item: ItemData = _catalog_items[i]
-			item_select_box.add_item("%s (%s)" % [item.display_name, UiFormat.money(item.base_value)], i)
-	
+	_fill_item_select_box()
 	if sell_item_btn != null:
 		sell_item_btn.pressed.connect(_on_sell_test_pressed)
 	if register_item_btn != null:
 		register_item_btn.pressed.connect(_on_register_test_pressed)
 	_build_view_museum_button()
+
+
+## Itens do catálogo na caixa de teste do Museu (nome no idioma atual; a seleção fica).
+func _fill_item_select_box() -> void:
+	if item_select_box == null:
+		return
+	var selected: int = item_select_box.selected
+	item_select_box.clear()
+	for i in range(_catalog_items.size()):
+		var item: ItemData = _catalog_items[i]
+		item_select_box.add_item("%s (%s)" % [tr(item.display_name), UiFormat.money(item.base_value)], i)
+	if selected >= 0 and selected < item_select_box.item_count:
+		item_select_box.select(selected)
 
 
 ## "Catálogo..." e o botão "Ver museu" na mesma linha (a aba não fica mais alta).
@@ -970,7 +994,7 @@ func _on_register_test_pressed() -> void:
 	if selected_item == null or _game_state == null:
 		return
 	if _game_state.discovered_items.has(selected_item.id):
-		_set_museum_feedback("%s já estava cadastrado no Museu!" % selected_item.display_name)
+		_set_museum_feedback(tr("%s já estava cadastrado no Museu!") % tr(selected_item.display_name))
 		return
 	_game_state.request_donate_item(selected_item.id)
 
@@ -1000,7 +1024,7 @@ func _refresh_museum_display() -> void:
 	if tab_container != null and tab_container.get_tab_count() > 1:
 		var museum_title: String = TAB_SHORT_TITLES.get(String(tab_container.get_tab_control(1).name), "Museu")
 		if _game_state != null and _game_state.game_completed:
-			museum_title += MUSEUM_DONE_MARK
+			museum_title = tr(museum_title) + MUSEUM_DONE_MARK
 		tab_container.set_tab_title(1, museum_title)
 	if museum_feedback_label != null and museum_feedback_label.text.is_empty() and _game_state != null and _game_state.game_completed:
 		museum_feedback_label.text = "🏆 Jogo concluído — Modo Museu completo ativo!"
@@ -1009,10 +1033,10 @@ func _refresh_museum_display() -> void:
 ## Linha do Museu. Itens que não são escavados (missão, relíquia escondida, troféu de chefe,
 ## easter egg) têm depth_cm 0: mostram "Achado especial" no lugar da profundidade.
 static func museum_line(item: ItemData, is_found: bool, is_intact: bool = false) -> String:
-	var status_str: String = "[DESCOBERTO]" if is_found else "[ ? ]"
-	var detail: String = "Profundidade: %d cm" % item.depth_cm if item.depth_cm > 0 else "Achado especial"
-	var line: String = "%s %s (Valor: %s | %s)" % [status_str, item.display_name, UiFormat.money(item.base_value), detail]
-	return line + ("  ✦ intacto" if is_intact else "")
+	var status_str: String = I18n.t("[DESCOBERTO]") if is_found else "[ ? ]"
+	var detail: String = I18n.t("Profundidade: %d cm") % item.depth_cm if item.depth_cm > 0 else I18n.t("Achado especial")
+	var line: String = I18n.t("%s %s (Valor: %s | %s)") % [status_str, I18n.t(item.display_name), UiFormat.money(item.base_value), detail]
+	return line + (I18n.t("  ✦ intacto") if is_intact else "")
 
 
 func _refresh_secrets_label() -> void:
@@ -1027,15 +1051,15 @@ func _refresh_secrets_label() -> void:
 	var parts: PackedStringArray = []
 	for map_id: String in counts:
 		parts.append(UiFormat.secret_count_text(map_id, counts[map_id], map_list))
-	secrets_label.text = "Segredos —" + UiFormat.NBSP + (UiFormat.NBSP + "• ").join(parts)
+	secrets_label.text = tr("Segredos —") + UiFormat.NBSP + (UiFormat.NBSP + "• ").join(parts)
 	var seen: int = _game_state.seen_creatures.size() if _game_state != null and "seen_creatures" in _game_state else 0
-	secrets_label.text += "\nDiário de campo —" + UiFormat.NBSP + "%d/%d criaturas" % [seen, GameState.CREATURES.size()]
+	secrets_label.text += "\n" + tr("Diário de campo —") + UiFormat.NBSP + tr("%d/%d criaturas") % [seen, GameState.CREATURES.size()]
 	if _game_state != null and _game_state.game_completed:
 		var museum_found: int = _game_state.discovered_items.size()
 		var museum_total: int = _game_state.get_total_catalog_items()
 		var secrets_found: int = _game_state.found_secrets.size()
 		var secrets_total: int = GameState.SECRETS.size()
-		secrets_label.text += "\n★ Jogo concluído (Modo Museu completo) — Peças: %d/%d • Segredos: %d/%d • Diário: %d/%d" % [
+		secrets_label.text += "\n" + tr("★ Jogo concluído (Modo Museu completo) — Peças: %d/%d • Segredos: %d/%d • Diário: %d/%d") % [
 			museum_found, museum_total,
 			secrets_found, secrets_total,
 			seen, GameState.CREATURES.size()
@@ -1074,21 +1098,21 @@ func _on_collection_updated(_total_found: int, _max_items: int) -> void:
 
 
 func _on_item_sold(item_name: String, value: int) -> void:
-	_set_museum_feedback("Venda concluída: %s (+%s)" % [item_name, UiFormat.money(value)])
+	_set_museum_feedback(tr("Venda concluída: %s (+%s)") % [tr(item_name), UiFormat.money(value)])
 
 
 func _on_item_donated(item_name: String, reward: int) -> void:
-	_set_museum_feedback("%s doado ao Museu! (+%s de recompensa)" % [item_name, UiFormat.money(reward)])
+	_set_museum_feedback(tr("%s doado ao Museu! (+%s de recompensa)") % [tr(item_name), UiFormat.money(reward)])
 
 
 func _set_shop_feedback(msg: String) -> void:
 	if shop_feedback_label != null:
-		shop_feedback_label.text = UiFormat.fix_money_spaces(msg)
+		shop_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
 
 
 func _set_museum_feedback(msg: String) -> void:
 	if museum_feedback_label != null:
-		museum_feedback_label.text = UiFormat.fix_money_spaces(msg)
+		museum_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
 
 
 # --- Mapa do Tesouro (#112) ---------------------------------------------------
@@ -1123,9 +1147,9 @@ func _refresh_treasure_map() -> void:
 	_treasure_scroll.found = found
 	var total: int = GameState.MAP_FRAGMENT_IDS.size()
 	if found.size() >= total:
-		_treasure_count_label.text = "🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipe." % [found.size(), total]
+		_treasure_count_label.text = tr("🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipe.") % [found.size(), total]
 	else:
-		_treasure_count_label.text = "🗺️ Fragmentos do mapa:" + UiFormat.NBSP + "%d/%d" % [found.size(), total]
+		_treasure_count_label.text = tr("🗺️ Fragmentos do mapa:") + UiFormat.NBSP + "%d/%d" % [found.size(), total]
 	# Só as próximas dicas: a Base tem a altura da maior aba e tem de caber em 1152x648.
 	var hints: PackedStringArray = []
 	var missing: int = 0
@@ -1133,12 +1157,10 @@ func _refresh_treasure_map() -> void:
 		if not found.has(id):
 			missing += 1
 			if hints.size() < TREASURE_MAX_HINTS:
-				hints.append("• " + str(GameState.MAP_FRAGMENTS[id]["hint"]))
+				hints.append("• " + tr(str(GameState.MAP_FRAGMENTS[id]["hint"])))
 	if missing > hints.size():
-		hints.append("… e mais %d por descobrir." % (missing - hints.size()))
-	_treasure_hints_label.text = "Onde procurar:
-" + "
-".join(hints) if not hints.is_empty() else ""
+		hints.append(tr("… e mais %d por descobrir.") % (missing - hints.size()))
+	_treasure_hints_label.text = tr("Onde procurar:") + "\n" + "\n".join(hints) if not hints.is_empty() else ""
 
 
 # --- Diário de Campo (#86) ----------------------------------------------------
@@ -1212,17 +1234,17 @@ func _refresh_journal_display() -> void:
 		var is_seen: bool = seen_list.has(kind)
 		if is_seen:
 			seen_count += 1
-		var creature_name: String = str(GameState.CREATURES[kind])
+		var creature_name: String = tr(str(GameState.CREATURES[kind]))
 		var meta: Dictionary = CREATURE_FIELD_META.get(kind, {"region": "Sítio", "color": Color(0.7, 0.6, 0.4)})
-		var region: String = str(meta.get("region", "Sítio"))
+		var region: String = tr(str(meta.get("region", "Sítio")))
 		var accent: Color = meta.get("color", Color(0.7, 0.6, 0.4))
 		var title_line: String = creature_name if is_seen else "???"
-		var sub_line: String = "%s • Catalogado" % region if is_seen else "%s • Por avistar" % region
+		var sub_line: String = tr("%s • Catalogado") % region if is_seen else tr("%s • Por avistar") % region
 		var slot: PanelContainer = _build_journal_slot(kind, title_line, sub_line, is_seen, accent, false)
 		journal_grid.add_child(slot)
 
 	if journal_info_label != null:
-		journal_info_label.text = "Caderno de Campo — Fauna dos Sítios (%d/%d) e Guardiões Abatidos:" % [seen_count, GameState.CREATURES.size()]
+		journal_info_label.text = tr("Caderno de Campo — Fauna dos Sítios (%d/%d) e Guardiões Abatidos:") % [seen_count, GameState.CREATURES.size()]
 
 	if bosses_grid != null:
 		for child: Node in bosses_grid.get_children():
@@ -1236,16 +1258,16 @@ func _refresh_journal_display() -> void:
 			if is_defeated:
 				defeated_count += 1
 			var bmeta: Dictionary = BOSS_FIELD_META.get(boss_id, {"name": boss_id, "region": "Sítio", "color": Color(0.8, 0.4, 0.2)})
-			var bname: String = str(bmeta.get("name", boss_id))
-			var bregion: String = str(bmeta.get("region", "Sítio"))
+			var bname: String = tr(str(bmeta.get("name", boss_id)))
+			var bregion: String = tr(str(bmeta.get("region", "Sítio")))
 			var bcolor: Color = bmeta.get("color", Color(0.8, 0.4, 0.2))
 			var btitle: String = "✔ %s" % bname if is_defeated else "???"
-			var bsub: String = "%s • Vencido" % bregion if is_defeated else "%s • Guardião" % bregion
+			var bsub: String = tr("%s • Vencido") % bregion if is_defeated else tr("%s • Guardião") % bregion
 			var bslot: PanelContainer = _build_journal_slot(boss_id, btitle, bsub, is_defeated, bcolor, true)
 			bosses_grid.add_child(bslot)
 
 		if bosses_header_label != null:
-			bosses_header_label.text = "Guardiões e Chefes de Sítio (%d/%d):" % [defeated_count, BOSS_ORDER.size()]
+			bosses_header_label.text = tr("Guardiões e Chefes de Sítio (%d/%d):") % [defeated_count, BOSS_ORDER.size()]
 
 
 func _build_journal_slot(id: String, title_text: String, sub_text: String, discovered: bool, accent: Color, is_boss: bool) -> PanelContainer:

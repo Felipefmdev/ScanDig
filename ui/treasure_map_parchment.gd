@@ -61,6 +61,12 @@ func has_treasure_x() -> bool:
 	return true
 
 
+## Idioma trocado (#131): os nomes dos sítios são desenhados.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		queue_redraw()
+
+
 func _draw() -> void:
 	debug_ops.clear()
 	if size.x < 8.0 or size.y < 8.0:
@@ -147,12 +153,13 @@ func _draw_labels(cell: Vector2i, rect: Rect2) -> void:
 	labels.append([ROUTE_POINTS.size() - 1, "Ilha", ISLAND_LABEL_OFFSET])
 	for entry: Array in labels:
 		var anchor: Vector2 = ROUTE_POINTS[entry[0]] * size + (entry[2] as Vector2) * size.y
-		var text: String = entry[1]
+		var key: String = entry[1]
+		var text: String = tr(key)
 		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var box: Rect2 = Rect2(anchor + Vector2(-w * 0.5, -fs), Vector2(w, fs * 1.2))
 		if rect.grow(-2.0).encloses(box):
 			draw_string(font, box.position + Vector2(0.0, fs), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiPalette.WOOD_DARK)
-			(debug_ops[cell]["tags"] as Array).append("label:" + text)
+			(debug_ops[cell]["tags"] as Array).append("label:" + key)
 
 
 func _draw_treasure_x() -> void:

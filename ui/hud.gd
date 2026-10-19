@@ -19,6 +19,14 @@ func _ready() -> void:
 	_resolve_game_state()
 
 
+## Idioma trocado (#131): os chips são montados por código.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and _game_state != null:
+		update_money(_game_state.team_money)
+		update_detector(_game_state.equipped_detector_level)
+		update_museum(_game_state.discovered_items.size(), _game_state.get_total_catalog_items())
+
+
 func _resolve_game_state() -> void:
 	if GameState.instance != null:
 		_game_state = GameState.instance
@@ -46,17 +54,17 @@ func _resolve_game_state() -> void:
 
 func update_money(new_amount: int) -> void:
 	if money_label != null:
-		money_label.text = "Dinheiro  %s" % UiFormat.money(new_amount)
+		money_label.text = tr("Dinheiro  %s") % UiFormat.money(new_amount)
 
 
 func update_detector(level: int) -> void:
 	if detector_label != null:
-		detector_label.text = "Detector  nível %d" % level
+		detector_label.text = tr("Detector  nível %d") % level
 
 
 func update_museum(total_found: int, max_items: int) -> void:
 	if museum_label != null:
-		museum_label.text = "Museu  %d/%d" % [total_found, max_items]
+		museum_label.text = tr("Museu  %d/%d") % [total_found, max_items]
 
 
 func _on_money_changed(new_amount: int) -> void:

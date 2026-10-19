@@ -191,11 +191,18 @@ func refresh() -> void:
 	_link_focus([continue_button, new_game_button, load_button, coop_button, settings_button, quit_button])
 
 
+## Idioma trocado (#131): as linhas dos slots e a dica do Continuar são montadas por código.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and continue_button != null:
+		refresh()
+		refresh_slots()
+
+
 func refresh_slots() -> void:
 	var save: SaveManager = _save()
 	for i: int in SaveManager.SLOT_COUNT:
 		var summary: Dictionary = save.get_slot_summary(i + 1) if save != null else {"exists": false}
-		slot_buttons[i].text = "Slot %d   %s" % [i + 1, _slot_line(summary)]
+		slot_buttons[i].text = tr("Slot %d   %s") % [i + 1, _slot_line(summary)]
 		slot_delete_buttons[i].visible = bool(summary.get("exists", false))
 	var focus_chain: Array = []
 	for i: int in SaveManager.SLOT_COUNT:
@@ -211,10 +218,10 @@ func refresh_slots() -> void:
 ## "Dia 12 • R$ 1.234 • Museu 14/52 • 15/10 00:46 ★", "Vazio" ou "Save ilegível".
 static func _slot_line(summary: Dictionary) -> String:
 	if not bool(summary.get("exists", false)):
-		return "Vazio"
+		return I18n.t("Vazio")
 	if not bool(summary.get("valid", false)):
-		return "Save ilegível"
-	var line: String = "Dia %d  •  %s  •  Museu %d/%d" % [int(summary["day"]), UiFormat.money(int(summary["money"])),
+		return I18n.t("Save ilegível")
+	var line: String = I18n.t("Dia %d  •  %s  •  Museu %d/%d") % [int(summary["day"]), UiFormat.money(int(summary["money"])),
 		int(summary["museum_found"]), int(summary["museum_total"])]
 	if int(summary.get("saved_at", 0)) > 0:
 		line += "  •  " + _format_saved_at(int(summary["saved_at"]))
@@ -243,7 +250,7 @@ func _on_slot_pressed(n: int) -> void:
 	match slot_mode:
 		"new":
 			if occupied:
-				_ask(NEW_GAME_CONFIRM % n, launch.bind(n, false, SessionManager.LAUNCH_SOLO))
+				_ask(tr(NEW_GAME_CONFIRM) % n, launch.bind(n, false, SessionManager.LAUNCH_SOLO))
 			else:
 				launch(n, false, SessionManager.LAUNCH_SOLO)
 		"coop":
@@ -253,7 +260,7 @@ func _on_slot_pressed(n: int) -> void:
 
 
 func _on_delete_pressed(n: int) -> void:
-	_ask(DELETE_CONFIRM % n, _delete_slot.bind(n))
+	_ask(tr(DELETE_CONFIRM) % n, _delete_slot.bind(n))
 
 
 func _delete_slot(n: int) -> void:
@@ -272,7 +279,7 @@ func launch(slot: int, continue_saved: bool, mode: String) -> Error:
 		error = save.continue_game() if continue_saved else save.start_new_game()
 	# Save corrompido/de versão nova: o SaveManager já seguiu com jogo novo e avisa; a base abre.
 	if error != OK and error != ERR_FILE_CORRUPT and error != ERR_FILE_UNRECOGNIZED:
-		message_label.text = "Não foi possível usar o slot %d (erro %d)." % [slot, error]
+		message_label.text = tr("Não foi possível usar o slot %d (erro %d).") % [slot, error]
 		message_label.visible = true
 		return error
 	SessionManager.launch_mode = mode
@@ -395,7 +402,7 @@ func _build() -> void:
 	for i: int in SaveManager.SLOT_COUNT:
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
-		var slot_button: Button = _button("Slot %d" % (i + 1))
+		var slot_button: Button = _button(tr("Slot %d") % (i + 1))
 		slot_button.custom_minimum_size = Vector2(520, 52)
 		slot_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		slot_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL

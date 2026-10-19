@@ -71,6 +71,14 @@ func _resolve_node(unique_id: String, rel_path: String) -> Node:
 	return find_child(unique_id, true, false)
 
 
+## Idioma trocado (#131): progresso, jogadores e o botão de recolher são montados por código.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_refresh_progress_panel()
+		_refresh_players_list()
+		_update_collapse()
+
+
 func _ready() -> void:
 	if ip_line_edit != null and ip_line_edit.text.is_empty():
 		ip_line_edit.text = "127.0.0.1"
@@ -262,12 +270,12 @@ func _on_host_pressed() -> void:
 	if err == OK:
 		_refresh_players_list()
 		if _net_manager.has_method(&"start_upnp"):
-			_set_status("Hospedando na porta %d. Abrindo a porta no roteador (UPnP)..." % NetworkManager.DEFAULT_PORT)
+			_set_status(tr("Hospedando na porta %d. Abrindo a porta no roteador (UPnP)...") % NetworkManager.DEFAULT_PORT)
 			_net_manager.call(&"start_upnp")
 		else:
 			_set_status("Servidor iniciado (Host ativo).")
 	elif not _has_error_messages():
-		_set_status("Falha ao iniciar host: erro %d" % err)
+		_set_status(tr("Falha ao iniciar host: erro %d") % err)
 	_refresh_session_buttons()
 
 
@@ -280,10 +288,10 @@ func _on_join_pressed() -> void:
 	if ip.is_empty():
 		ip = "127.0.0.1"
 
-	_set_status("Conectando a %s..." % ip)
+	_set_status(tr("Conectando a %s...") % ip)
 	var err: Error = _net_manager.join_game(ip)
 	if err != OK and not _has_error_messages():
-		_set_status("Erro ao tentar conectar: erro %d" % err)
+		_set_status(tr("Erro ao tentar conectar: erro %d") % err)
 	_refresh_session_buttons()
 
 
@@ -365,25 +373,25 @@ func _refresh_progress_panel() -> void:
 	continue_button.visible = can_continue
 	continue_button.disabled = false
 	if can_continue:
-		continue_button.text = "Continuar (%s)" % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
+		continue_button.text = tr("Continuar (%s)") % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
 	progress_label.visible = applied and not unreadable
 	if progress_label.visible:
-		progress_label.text = "Progresso: %s" % _format_day_money(_current_day(summary), _current_money(summary))
+		progress_label.text = tr("Progresso: %s") % _format_day_money(_current_day(summary), _current_money(summary))
 
 	var info: Array[String] = []
 	if can_continue:
-		info.append("Museu: %d/%d" % [int(summary.get("museum_found", 0)), int(summary.get("museum_total", 0))])
+		info.append(tr("Museu: %d/%d") % [int(summary.get("museum_found", 0)), int(summary.get("museum_total", 0))])
 		var saved_at: int = int(summary.get("saved_at", 0))
 		if saved_at > 0:
-			info.append("Salvo em %s" % _format_saved_at(saved_at))
+			info.append(tr("Salvo em %s") % _format_saved_at(saved_at))
 	progress_info_label.text = "  •  ".join(info)
 	progress_info_label.visible = not progress_label.visible
 	new_game_button.disabled = false
 
 	var warning: String = _progress_message
 	if warning.is_empty() and unreadable:
-		warning = "Save ilegível: %s" % str(summary.get("error", "erro desconhecido"))
-	progress_warning_label.text = warning
+		warning = tr("Save ilegível: %s") % tr(str(summary.get("error", "erro desconhecido")))
+	progress_warning_label.text = tr(warning)
 	progress_warning_label.visible = not warning.is_empty()
 
 
@@ -397,7 +405,7 @@ func _current_money(summary: Dictionary) -> int:
 
 
 func _format_day_money(day: int, money: int) -> String:
-	return "Dia %d • %s" % [day, UiFormat.money(money)]
+	return tr("Dia %d • %s") % [day, UiFormat.money(money)]
 
 
 ## 3200 -> "3.200"; -1500 -> "-1.500".
@@ -418,7 +426,7 @@ func _save_error_text(err: Error) -> String:
 			return "Só o host pode mudar o progresso."
 		ERR_BUSY:
 			return "Termine a expedição primeiro."
-	return "Não foi possível mudar o progresso (erro %d)." % err
+	return tr("Não foi possível mudar o progresso (erro %d).") % err
 
 
 func _on_continue_pressed() -> void:
@@ -435,7 +443,7 @@ func _on_new_game_pressed() -> void:
 		return
 	var summary: Dictionary = _get_save_summary()
 	if bool(summary.get("valid", false)):
-		new_game_dialog.dialog_text = "Apagar o progresso salvo (%s)? Um backup será salvo." % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
+		new_game_dialog.dialog_text = tr("Apagar o progresso salvo (%s)? Um backup será salvo.") % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
 		new_game_dialog.ok_button_text = "Apagar e começar"
 	else:
 		new_game_dialog.dialog_text = "Começar do zero?"
@@ -492,7 +500,7 @@ func _on_host_online_pressed() -> void:
 	if err != OK and _online_attempt == "host":
 		_online_attempt = ""
 		if not _has_error_messages():
-			_set_status("Falha ao criar sala: erro %d" % err)
+			_set_status(tr("Falha ao criar sala: erro %d") % err)
 		_refresh_session_buttons()
 
 
@@ -587,9 +595,9 @@ func _on_copy_code_pressed() -> void:
 func _on_upnp_finished(success: bool, public_ip: String, message: String) -> void:
 	_set_status(message)
 	var local_addresses: Array[String] = _get_local_addresses()
-	var local_text: String = "Na mesma rede: %s" % ", ".join(local_addresses) if not local_addresses.is_empty() else "Sem IP de rede local."
+	var local_text: String = tr("Na mesma rede: %s") % ", ".join(local_addresses) if not local_addresses.is_empty() else tr("Sem IP de rede local.")
 	if share_label != null:
-		share_label.text = "IP para os amigos: %s\n%s" % [public_ip, local_text] if success else local_text
+		share_label.text = tr("IP para os amigos: %s\n%s") % [public_ip, local_text] if success else local_text
 		share_label.visible = true
 	if copy_ip_button != null:
 		copy_ip_button.visible = success
@@ -622,12 +630,12 @@ func _hide_share() -> void:
 # --- Sinais do NetworkManager ---------------------------------------------------
 
 func _on_player_connected(peer_id: int) -> void:
-	_set_status("Jogador conectado: Peer %d" % peer_id)
+	_set_status(tr("Jogador conectado: Peer %d") % peer_id)
 	_refresh_players_list()
 
 
 func _on_player_disconnected(peer_id: int) -> void:
-	_set_status("Jogador desconectado: Peer %d" % peer_id)
+	_set_status(tr("Jogador desconectado: Peer %d") % peer_id)
 	_refresh_players_list()
 
 
@@ -721,7 +729,7 @@ func _refresh_players_list() -> void:
 		for peer_id in _net_manager.connected_players:
 			var player_info: Dictionary = _net_manager.connected_players[peer_id]
 			var player_name: String = str(player_info.get("name", "Jogador"))
-			players_list.add_item("Peer ID %s: %s" % [str(peer_id), player_name])
+			players_list.add_item(tr("Peer ID %s: %s") % [str(peer_id), player_name])
 		return
 
 	var ids: Array[int] = []
@@ -740,12 +748,12 @@ func _refresh_players_list() -> void:
 	for peer_id: int in ids:
 		var line: String = str(_net_manager.call(&"get_player_name", peer_id))
 		if peer_id == 1:
-			line += " (host)"
+			line = tr("%s (host)") % line
 		if peer_id == my_id:
-			line += " (você)"
+			line = tr("%s (você)") % line
 		players_list.add_item(line)
 
 
 func _set_status(msg: String) -> void:
 	if status_label != null:
-		status_label.text = msg
+		status_label.text = tr(msg)
