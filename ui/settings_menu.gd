@@ -1,7 +1,8 @@
 class_name SettingsMenu
 extends PanelContainer
 
-## Tela de Configurações (#77): abas Vídeo / Áudio / Controles / Jogabilidade. Só fala com o
+## Tela de Configurações (#77): abas Vídeo / Áudio / Controles / Jogabilidade / Acessibilidade
+## (#140). Só fala com o
 ## SettingsManager. As mudanças ficam pendentes até Aplicar (aviso "Configurações salvas");
 ## Voltar com mudanças pendentes pergunta antes de descartar. Modo de janela e resolução pedem
 ## confirmação e voltam sozinhos em 10 s.
@@ -13,10 +14,14 @@ const QUALITY_LABELS: Dictionary = {"low": "Baixa", "medium": "Média", "high": 
 const AUDIO_LABELS: Dictionary = {"master": "Volume geral", "music": "Música", "sfx": "Efeitos"}
 ## Idiomas (#131), na ordem de SettingsManager.LANGUAGES; cada um com o nome dele mesmo.
 const LANGUAGE_LABELS: Dictionary = {"pt_BR": "Português (Brasil)", "en": "English"}
+## Na ordem de SettingsManager.COLORBLIND_MODES e HOLD_MODES.
+const COLORBLIND_LABELS: Dictionary = {"off": "Desligado", "protanopia": "Protanopia", "deuteranopia": "Deuteranopia", "tritanopia": "Tritanopia"}
+const HOLD_LABELS: Dictionary = {"hold": "Segurar", "toggle": "Alternar"}
 const TAB_VIDEO: int = 0
 const TAB_AUDIO: int = 1
 const TAB_CONTROLS: int = 2
 const TAB_GAMEPLAY: int = 3
+const TAB_ACCESSIBILITY: int = 4
 ## Sensibilidade mostrada em % do padrão (0.0025 = 100 %), como no painel antigo do Esc.
 const SENSITIVITY_UNIT: float = 0.0025
 const CAPTURE_TEXT: String = "Pressione uma tecla…"
@@ -75,6 +80,12 @@ var pad_look_slider: HSlider = null
 var pad_look_value: Label = null
 var hud_text_value: Label = null
 var language_option: OptionButton = null
+var colorblind_option: OptionButton = null
+var shake_slider: HSlider = null
+var shake_value: Label = null
+var reduce_flashes_check: CheckBox = null
+var hold_mode_option: OptionButton = null
+var captions_check: CheckBox = null
 var buttons_row: HBoxContainer = null
 var saved_notice: PanelContainer = null
 var saved_notice_label: Label = null
@@ -341,6 +352,30 @@ func _build() -> void:
 	gameplay_scroll.name = "Jogabilidade"
 	tabs.add_child(gameplay_scroll)
 
+	# Acessibilidade (#140): quem usa os valores é o A11y.
+	var a11y: GridContainer = _grid()
+	colorblind_option = _option(COLORBLIND_LABELS.values())
+	_row(a11y, "Modo daltônico", colorblind_option)
+	var shake_row: Array = _slider_row(a11y, "Tremor de tela", 0.0, 100.0, 5.0)
+	shake_slider = shake_row[0]
+	shake_value = shake_row[1]
+	shake_slider.value_changed.connect(func(v: float) -> void: shake_value.text = "%d %%" % int(v))
+	reduce_flashes_check = _checkbox()
+	_row(a11y, "Reduzir flashes", reduce_flashes_check)
+	hold_mode_option = _option(HOLD_LABELS.values())
+	_row(a11y, "Ações de segurar", hold_mode_option)
+	captions_check = _checkbox()
+	_row(a11y, "Legendas de sons importantes", captions_check)
+	var a11y_scroll: ScrollContainer = ScrollContainer.new()
+	a11y_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	a11y_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	a11y.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var a11y_page: MarginContainer = _margin(a11y, 14)
+	a11y_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	a11y_scroll.add_child(a11y_page)
+	a11y_scroll.name = "Acessibilidade"
+	tabs.add_child(a11y_scroll)
+
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons_row = buttons
 	buttons.add_theme_constant_override("separation", 12)
@@ -499,6 +534,13 @@ func refresh() -> void:
 	hud_text_slider.value = roundf(float(gameplay["hud_text_scale"]) * 100.0)
 	hud_text_value.text = "%d %%" % int(hud_text_slider.value)
 	language_option.select(maxi(SettingsManager.LANGUAGES.find(sm.get_language()), 0))
+	var a11y: Dictionary = sm.get_section(SettingsManager.ACCESSIBILITY)
+	colorblind_option.select(maxi(SettingsManager.COLORBLIND_MODES.find(a11y["colorblind_mode"]), 0))
+	shake_slider.value = roundf(float(a11y["screen_shake"]) * 100.0)
+	shake_value.text = "%d %%" % int(shake_slider.value)
+	reduce_flashes_check.button_pressed = bool(a11y["reduce_flashes"])
+	hold_mode_option.select(maxi(SettingsManager.HOLD_MODES.find(a11y["hold_mode"]), 0))
+	captions_check.button_pressed = bool(a11y["captions"])
 	_mark_clean()
 
 
@@ -517,8 +559,18 @@ func pending_gameplay() -> Dictionary:
 	}
 
 
+func pending_accessibility() -> Dictionary:
+	return {
+		"colorblind_mode": SettingsManager.COLORBLIND_MODES[maxi(colorblind_option.selected, 0)],
+		"screen_shake": shake_slider.value / 100.0,
+		"reduce_flashes": reduce_flashes_check.button_pressed,
+		"hold_mode": SettingsManager.HOLD_MODES[maxi(hold_mode_option.selected, 0)],
+		"captions": captions_check.button_pressed,
+	}
+
+
 func _pending_all() -> Dictionary:
-	return {"video": pending_video(), "audio": pending_audio(), "gameplay": pending_gameplay()}
+	return {"video": pending_video(), "audio": pending_audio(), "gameplay": pending_gameplay(), "accessibility": pending_accessibility()}
 
 
 ## Há mudança na tela que ainda não foi aplicada (os controles se aplicam na hora).
@@ -568,6 +620,7 @@ func _on_apply_pressed() -> void:
 		return
 	sm.set_section(SettingsManager.AUDIO, pending_audio())
 	sm.set_section(SettingsManager.GAMEPLAY, pending_gameplay())
+	sm.set_section(SettingsManager.ACCESSIBILITY, pending_accessibility())
 	var video: Dictionary = pending_video()
 	if SettingsManager.needs_video_trial(sm.get_section(SettingsManager.VIDEO), video):
 		_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
@@ -591,6 +644,8 @@ func _on_defaults_pressed() -> void:
 		sm.reset_controls()
 	elif tabs.current_tab == TAB_GAMEPLAY:
 		sm.restore_defaults(SettingsManager.GAMEPLAY)
+	elif tabs.current_tab == TAB_ACCESSIBILITY:
+		sm.restore_defaults(SettingsManager.ACCESSIBILITY)
 	elif tabs.current_tab == TAB_AUDIO:
 		sm.restore_defaults(SettingsManager.AUDIO)
 	elif tabs.current_tab == TAB_VIDEO:

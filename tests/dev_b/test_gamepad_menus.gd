@@ -120,13 +120,13 @@ func test_settings_tabs_with_shoulders() -> void:
 	pause.settings_button.pressed.emit()
 	var settings: SettingsMenu = pause.settings_menu
 	assert_eq(settings.tabs.current_tab, SettingsMenu.TAB_VIDEO)
-	for expected: int in [SettingsMenu.TAB_AUDIO, SettingsMenu.TAB_CONTROLS, SettingsMenu.TAB_GAMEPLAY, SettingsMenu.TAB_VIDEO]:
+	for expected: int in [SettingsMenu.TAB_AUDIO, SettingsMenu.TAB_CONTROLS, SettingsMenu.TAB_GAMEPLAY, SettingsMenu.TAB_ACCESSIBILITY, SettingsMenu.TAB_VIDEO]:
 		await _joy(JOY_BUTTON_RIGHT_SHOULDER)
 		assert_eq(settings.tabs.current_tab, expected, "RB vai para a aba %d" % expected)
 		var page: Control = settings.tabs.get_current_tab_control()
 		assert_true(page.is_ancestor_of(_focus()), "aba %d: foco no primeiro controle (%s)" % [expected, _focus()])
 	await _joy(JOY_BUTTON_LEFT_SHOULDER)
-	assert_eq(settings.tabs.current_tab, SettingsMenu.TAB_GAMEPLAY, "LB volta")
+	assert_eq(settings.tabs.current_tab, SettingsMenu.TAB_ACCESSIBILITY, "LB volta")
 	var first: Control = _focus()
 	await _action(&"ui_down")
 	assert_ne(_focus(), first, "ui_down anda dentro da aba")

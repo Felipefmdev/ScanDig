@@ -107,7 +107,7 @@ func _run() -> void:
 	menu.settings_button.pressed.emit()
 	var settings: SettingsMenu = menu.settings_menu
 	_check(settings.visible and not menu.card.visible, "configurações abertas no lugar do cartão")
-	_check(settings.tabs.get_tab_count() == 4 and not settings.tabs.is_tab_disabled(2) and not settings.tabs.is_tab_disabled(3), "abas: Vídeo, Áudio, Controles e Jogabilidade, todas ativas")
+	_check(settings.tabs.get_tab_count() == 5 and not settings.tabs.is_tab_disabled(2) and not settings.tabs.is_tab_disabled(3) and not settings.tabs.is_tab_disabled(4), "abas: Vídeo, Áudio, Controles, Jogabilidade e Acessibilidade, todas ativas")
 	(settings.audio_sliders["master"] as HSlider).value = 40.0
 	(settings.audio_sliders["music"] as HSlider).value = 0.0
 	settings.apply_button.pressed.emit()
