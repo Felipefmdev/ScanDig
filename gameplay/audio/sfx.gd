@@ -73,6 +73,12 @@ const SEAGULL_CAW: Array[String] = [_GEN + "gull_caw.wav"]
 const SEAGULL_DIVE: Array[String] = [_GEN + "gull_dive.wav"]
 const SHELL_KNOCK: Array[String] = [_IMPACT + "impactPlate_medium_000.ogg", _IMPACT + "impactPlate_medium_001.ogg", _IMPACT + "impactPlate_medium_002.ogg"]
 const EMERGE_SAND: Array[String] = [_GEN + "emerge_0.ogg", _GEN + "emerge_1.ogg", _GEN + "emerge_2.ogg"]
+## Vozes próprias (N2, gravações CC0 cortadas por tools/gen_audio.py clip): o corvo e o morcego
+## herdam da gaivota e trocam o grito (Seagull.caw_sfx/dive_sfx); o lobo rosna antes do bote.
+const CROW_CAW: Array[String] = [_GEN + "crow_caw_0.ogg", _GEN + "crow_caw_1.ogg", _GEN + "crow_caw_2.ogg"]
+const BAT_SCREECH: Array[String] = [_GEN + "bat_screech_0.ogg", _GEN + "bat_screech_1.ogg", _GEN + "bat_screech_2.ogg"]
+const WOLF_GROWL: Array[String] = [_GEN + "wolf_growl_0.ogg", _GEN + "wolf_growl_1.ogg", _GEN + "wolf_growl_2.ogg"]
+const WOLF_HOWL: Array[String] = [_GEN + "wolf_howl_0.ogg"]
 
 # --- Volume e alcance por categoria (#123) ------------------------------------------------
 ## dB somados ao volume pedido em play_at/play_ui. Um arquivo listado em mais de uma
@@ -98,7 +104,7 @@ const _BANK: Dictionary = {
 	&"game_ui": [BUY, ERROR, MEDKIT, RESPAWN],
 	&"player": [PLAYER_HURT, PLAYER_DEATH],
 	&"ui_nav": [UI_HOVER, UI_CLICK],
-	&"creature": [CRAB_PINCH, SEAGULL_CAW, SEAGULL_DIVE, SHELL_KNOCK, EMERGE_SAND],
+	&"creature": [CRAB_PINCH, SEAGULL_CAW, SEAGULL_DIVE, SHELL_KNOCK, EMERGE_SAND, CROW_CAW, BAT_SCREECH, WOLF_GROWL, WOLF_HOWL],
 }
 
 static var _cache: Dictionary = {}

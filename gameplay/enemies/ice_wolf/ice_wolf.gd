@@ -111,6 +111,7 @@ func _enter_state(new_state: State) -> void:
 	match state:
 		State.EMERGE:
 			global_position.y = _surface_y - 1.2
+			SFX.play_at(SFX.WOLF_HOWL, global_position, -2.0)
 		State.CHASE:
 			_warning.hide_warning()
 		State.BITE_WINDUP:
@@ -121,6 +122,7 @@ func _enter_state(new_state: State) -> void:
 			to.y = 0.0
 			var dir: Vector3 = to.normalized() if to.length() > 0.1 else -transform.basis.z
 			_warning.show_circle(global_position + dir * 0.9, bite_range)
+			_growl()
 		State.LEAP_WINDUP:
 			velocity.x = 0.0
 			velocity.z = 0.0
@@ -132,6 +134,7 @@ func _enter_state(new_state: State) -> void:
 			else:
 				net_leap_dir = -transform.basis.z
 			_warning.show_line(global_position, net_leap_dir, leap_range, 1.4)
+			_growl()
 		State.LEAP:
 			_warning.hide_warning()
 			velocity = net_leap_dir * leap_speed + Vector3.UP * 4.5
@@ -253,6 +256,11 @@ func _on_flee_started() -> void:
 	_enter_state(State.FLEE)
 
 
+## Rosnado antes da mordida e do salto (N2): no host em _enter_state, nos clientes pelo net_state.
+func _growl() -> void:
+	SFX.play_at(SFX.WOLF_GROWL, global_position, 1.0)
+
+
 func _refresh_remote_leap_warning() -> void:
 	if _warning != null and state == State.LEAP_WINDUP:
 		_warning.show_line(global_position, net_leap_dir, leap_range, 1.4)
@@ -261,6 +269,8 @@ func _refresh_remote_leap_warning() -> void:
 func _on_remote_state(new_state: int) -> void:
 	state = new_state as State
 	_state_time = 0.0
+	if state == State.BITE_WINDUP or state == State.LEAP_WINDUP:
+		_growl()
 	if _warning != null:
 		if state == State.LEAP_WINDUP:
 			_refresh_remote_leap_warning()

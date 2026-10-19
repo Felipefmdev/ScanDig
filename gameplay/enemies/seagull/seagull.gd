@@ -98,6 +98,9 @@ var _escape_dir: Vector3 = Vector3.FORWARD
 var _escape_start: Vector3 = Vector3.ZERO
 var _flap_time: float = 0.0
 var _fall_ground_y: float = 0.0
+## Grito e mergulho (N2): o corvo e o morcego herdam a gaivota e trocam pelos seus no _init.
+var caw_sfx: Array[String] = SFX.SEAGULL_CAW
+var dive_sfx: Array[String] = SFX.SEAGULL_DIVE
 var _wing_left: Node3D = null
 var _wing_right: Node3D = null
 var _loot_visual: MeshInstance3D = null
@@ -116,7 +119,7 @@ func _ready() -> void:
 	_build_model()
 	_dive_warning = GroundWarning.new()
 	add_child(_dive_warning)
-	SFX.play_at(SFX.SEAGULL_CAW, global_position, 2.0)
+	SFX.play_at(caw_sfx, global_position, 2.0)
 	_orbit_dir = 1.0 if randf() < 0.5 else -1.0
 	_circle_left = randf_range(circle_time_min, circle_time_max)
 	var target: Node3D = _update_target(0.0)
@@ -191,7 +194,7 @@ func _process_circle(delta: float) -> void:
 	_circle_left -= delta
 	if _circle_left <= 0.0:
 		_dives += 1
-		SFX.play_at(SFX.SEAGULL_DIVE, global_position)
+		SFX.play_at(dive_sfx, global_position)
 		var loose: ItemPickup = find_ground_loot(target.global_position)
 		if loose != null and randf() < GROUND_STEAL_CHANCE:
 			_ground_target = loose
@@ -347,7 +350,7 @@ func _on_loot_reply(loot: CarriedItem, target: Node3D) -> void:
 	if loot != null:
 		stolen = loot
 		has_stolen = true
-		SFX.play_at(SFX.SEAGULL_CAW, global_position)
+		SFX.play_at(caw_sfx, global_position)
 		_show_loot()
 		_start_escape(target.global_position if target != null else global_position)
 		return
@@ -427,7 +430,7 @@ func _process_kamikaze_telegraph(delta: float) -> void:
 	_fly_towards(net_dive_point + Vector3.UP * 6.0, fly_speed * 1.5, delta, 5.0)
 	_dive_warning.pulse(delta)
 	if _state_time >= KAMIKAZE_TELEGRAPH_TIME:
-		SFX.play_at(SFX.SEAGULL_CAW, global_position, 4.0)
+		SFX.play_at(caw_sfx, global_position, 4.0)
 		_enter_state(State.KAMIKAZE)
 
 
@@ -464,7 +467,7 @@ func _hit_kamikaze(p: Node3D) -> void:
 	var dir: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
 	dir = dir.normalized() if dir.length_squared() > 0.01 else Vector3.FORWARD
 	_knockback(p, dir * 7.0 + Vector3.UP * 6.0, 0.06)
-	SFX.play_at(SFX.SEAGULL_CAW, global_position, 4.0)
+	SFX.play_at(caw_sfx, global_position, 4.0)
 
 
 ## Bico espetado na areia: a espernear (rabo para o ar); presa fácil até se soltar.

@@ -44,6 +44,11 @@ var target_nest: Node3D = null
 var _stolen_visual: Node3D = null
 
 
+func _init() -> void:
+	caw_sfx = SFX.CROW_CAW
+	dive_sfx = SFX.CROW_CAW
+
+
 func _ready() -> void:
 	super._ready()
 	_refresh_key()
@@ -89,7 +94,7 @@ func _process_circle(delta: float) -> void:
 		if loose != null and _circle_left <= 1.5:
 			_ground_target = loose
 			_circle_left = randf_range(circle_time_min, circle_time_max)
-			SFX.play_at(SFX.SEAGULL_CAW, global_position, 1.5)
+			SFX.play_at(caw_sfx, global_position, 1.5)
 	super._process_circle(delta)
 
 
@@ -125,7 +130,7 @@ func _process_spiral(delta: float) -> void:
 	_dive_warning.pulse(delta)
 	if state == State.SPIRAL_TELEGRAPH:
 		if _state_time >= SPIRAL_TELEGRAPH_TIME:
-			SFX.play_at(SFX.SEAGULL_CAW, global_position, 2.0)
+			SFX.play_at(caw_sfx, global_position, 2.0)
 			_enter_state(State.SPIRAL)
 		return
 	if _state_time >= SPIRAL_TIME:
@@ -179,7 +184,7 @@ func _process_escape(delta: float) -> void:
 			has_stolen = false
 			target_nest = null
 			_refresh_stolen()
-			SFX.play_at(SFX.SEAGULL_CAW, global_position, 2.5)
+			SFX.play_at(caw_sfx, global_position, 2.5)
 			_circle_left = randf_range(circle_time_min, circle_time_max)
 			_enter_state(State.CIRCLE)
 			return
@@ -207,7 +212,7 @@ func _drop_stolen_item() -> void:
 	var impulse: Vector3 = Vector3(velocity.x * 0.15, 2.2, velocity.z * 0.15)
 	ItemPickup.spawn(p, item_to_drop, drop_pos, impulse)
 	SFX.play_at(SFX.ITEM_IMPACT_STONE, drop_pos, -2.0)
-	SFX.play_at(SFX.SEAGULL_CAW, global_position, 4.0)
+	SFX.play_at(caw_sfx, global_position, 4.0)
 	_leave_timer = despawn_after
 	_escape_dir = (Vector3.UP * 0.7 + Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))).normalized()
 	_enter_state(State.ESCAPE)

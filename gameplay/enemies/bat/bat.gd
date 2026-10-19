@@ -14,6 +14,11 @@ const PUPIL: Color = Color(0.08, 0.07, 0.06)
 const ROCK: Color = Color("#7a6a58")
 
 
+func _init() -> void:
+	caw_sfx = SFX.BAT_SCREECH
+	dive_sfx = SFX.BAT_SCREECH
+
+
 func _ready() -> void:
 	super._ready()
 	add_to_group(LanternFlash.GROUP_FLEES)

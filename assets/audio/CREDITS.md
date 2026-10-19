@@ -1,7 +1,8 @@
 # Créditos de áudio
 
 Todos os sons de `assets/audio/` são **CC0 1.0** (domínio público): pacotes da Kenney, gerados
-por script versionado neste repositório ou gravações CC0 do OpenGameArt (autor e link na tabela).
+por script versionado neste repositório ou gravações CC0 do OpenGameArt (autor e link na tabela;
+a licença CC0 foi conferida na página de cada uma e, quando derivada, na da gravação original).
 Licença CC0: https://creativecommons.org/publicdomain/zero/1.0/ — o `License.txt` de cada
 pacote da Kenney está na pasta dele.
 
@@ -19,6 +20,12 @@ Um teste GUT (`tests/dev_b/test_audio_credits.gd`) falha se um arquivo de áudio
 | `generated/amb_praia_day.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/amb_praia_night.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/amb_ruinas.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
+| `generated/bat_screech_0.ogg` | "bat_01.ogg" de [Bat Screeches](https://opengameart.org/node/132771) (OpenGameArt; extraído de [fruit_bats3.wav](https://freesound.org/s/104205/), CC0), cortado por `tools/gen_audio.py clip bat_01.ogg 0.05 0.98 bat_screech_0.ogg` | AntumDeluge (gravação: polymorpheva) | CC0 1.0 |
+| `generated/bat_screech_1.ogg` | "bat_02.ogg" de [Bat Screeches](https://opengameart.org/node/132771) (OpenGameArt; extraído de [fruit_bats3.wav](https://freesound.org/s/104205/), CC0), cortado por `tools/gen_audio.py clip bat_02.ogg 0 0.8 bat_screech_1.ogg` | AntumDeluge (gravação: polymorpheva) | CC0 1.0 |
+| `generated/bat_screech_2.ogg` | "bat_03.ogg" de [Bat Screeches](https://opengameart.org/node/132771) (OpenGameArt; extraído de [fruit_bats3.wav](https://freesound.org/s/104205/), CC0), cortado por `tools/gen_audio.py clip bat_03.ogg 0 0.6 bat_screech_2.ogg` | AntumDeluge (gravação: polymorpheva) | CC0 1.0 |
+| `generated/crow_caw_0.ogg` | "crow_caw.wav" de [Crow caw](https://opengameart.org/content/crow-caw) (OpenGameArt; gravado no Cairo), cortado por `tools/gen_audio.py clip crow_caw.wav 0 0.55 crow_caw_0.ogg` | zeroisnotnull | CC0 1.0 |
+| `generated/crow_caw_1.ogg` | "crow_caw.wav" de [Crow caw](https://opengameart.org/content/crow-caw) (OpenGameArt; gravado no Cairo), cortado por `tools/gen_audio.py clip crow_caw.wav 0 0.55 crow_caw_1.ogg -2` | zeroisnotnull | CC0 1.0 |
+| `generated/crow_caw_2.ogg` | "crow_caw.wav" de [Crow caw](https://opengameart.org/content/crow-caw) (OpenGameArt; gravado no Cairo), cortado por `tools/gen_audio.py clip crow_caw.wav 0 0.55 crow_caw_2.ogg 1.5` | zeroisnotnull | CC0 1.0 |
 | `generated/dirt_dig_careful_0.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/dirt_dig_careful_1.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/dirt_dig_fast_0.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
@@ -66,6 +73,10 @@ Um teste GUT (`tests/dev_b/test_audio_credits.gd`) falha se um arquivo de áudio
 | `generated/whoosh_0.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/whoosh_1.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/whoosh_2.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
+| `generated/wolf_growl_0.ogg` | "monster-snarls_0.ogg" de [Monster snarls](https://opengameart.org/content/monster-snarls) (OpenGameArt), cortado por `tools/gen_audio.py clip monster-snarls_0.ogg 7.25 7.95 wolf_growl_0.ogg -3` | Darsycho | CC0 1.0 |
+| `generated/wolf_growl_1.ogg` | "monster-snarls_0.ogg" de [Monster snarls](https://opengameart.org/content/monster-snarls) (OpenGameArt), cortado por `tools/gen_audio.py clip monster-snarls_0.ogg 8.15 8.72 wolf_growl_1.ogg -3` | Darsycho | CC0 1.0 |
+| `generated/wolf_growl_2.ogg` | "monster-snarls_0.ogg" de [Monster snarls](https://opengameart.org/content/monster-snarls) (OpenGameArt), cortado por `tools/gen_audio.py clip monster-snarls_0.ogg 2.10 3.40 wolf_growl_2.ogg -3` | Darsycho | CC0 1.0 |
+| `generated/wolf_howl_0.ogg` | "wolf_monster_6.mp3" de [Wolf Monster Sound](https://opengameart.org/node/118896) (OpenGameArt), cortado por `tools/gen_audio.py clip wolf_monster_6.mp3 0.12 1.25 wolf_howl_0.ogg` | CaveboyTup | CC0 1.0 |
 | `kenney_impact-sounds/footstep_concrete_000.ogg` | [Kenney — Impact Sounds 1.0](https://kenney.nl/assets/impact-sounds) | Kenney (www.kenney.nl) | CC0 1.0 |
 | `kenney_impact-sounds/footstep_concrete_001.ogg` | [Kenney — Impact Sounds 1.0](https://kenney.nl/assets/impact-sounds) | Kenney (www.kenney.nl) | CC0 1.0 |
 | `kenney_impact-sounds/footstep_concrete_002.ogg` | [Kenney — Impact Sounds 1.0](https://kenney.nl/assets/impact-sounds) | Kenney (www.kenney.nl) | CC0 1.0 |
