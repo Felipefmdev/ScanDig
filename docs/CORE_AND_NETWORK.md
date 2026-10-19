@@ -4,6 +4,8 @@ Documentação técnica de `res://core/` e `res://ui/`. Se algo aqui divergir do
 
 ## 1. Autoloads
 
+Lista completa, na ordem do `project.godot` e com o papel de cada um: `docs/ARCHITECTURE.md` §1. Aqui ficam os de estado e rede.
+
 | Autoload | Script | `class_name` | Acesso |
 | :--- | :--- | :--- | :--- |
 | `CoreGameState` | `res://core/game_state.gd` | `GameState` | `GameState.instance` |
@@ -302,7 +304,7 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 - Visual (`CoreWeatherFx`, `ui/weather_fx.gd`) e aviso/ícone (`CoreWeatherUI`, `ui/weather_hud.gd`): só para o jogador local. As partículas (CPUParticles3D, até 400) seguem a câmera ativa. O `Environment` do mapa é trocado por uma cópia durante o evento (tween de 3 s, valores somados aos do mapa em `WeatherFx.ENV_TARGETS`), e o MESMO recurso original volta no fim; nada é gravado nos `.tres`. A opção `[video] strong_weather_fx` (aba Vídeo) só reduz partículas (metade) e névoa (35 %); os modificadores de jogo não mudam.
 - Bots: `tools/run_bot.sh "<godot>" tools/bot/weather_praia.json` (também `weather_geleira.json` e `weather_cratera.json`) pega o detector, força o evento e captura antes, aviso e ativo.
 
-## 3. Save (`user://scandig_save_<n>.json`, versão 5)
+## 3. Save (`user://scandig_save_<n>.json`, versão 6)
 
 ```json
 { "version": 5, "saved_at": 1792080000, "last_played": 1792080000, "play_time_s": 7500, "last_map": "praia", "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"] }
@@ -314,7 +316,7 @@ Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertido
 
 ### Contrato do `SaveManager` (a UI programa contra ele)
 ```gdscript
-const SAVE_VERSION: int = 5
+const SAVE_VERSION: int = 6
 signal save_load_failed(message: String)   # corrompido/versão nova; texto pronto para a UI
 signal new_game_started()
 signal save_state_changed()                # depois de load/new/save/delete: a UI recalcula
