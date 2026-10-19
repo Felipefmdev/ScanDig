@@ -1,0 +1,137 @@
+keys,pt_BR,en
+Português (Brasil),Português (Brasil),Português (Brasil)
+English,English,English
+Idioma,Idioma,Language
+Configurações,Configurações,Settings
+Balanço da câmera ao andar,Balanço da câmera ao andar,Camera bob while walking
+Cancelar,Cancelar,Cancel
+Janela,Janela,Windowed
+Tela cheia,Tela cheia,Fullscreen
+Tela cheia sem borda,Tela cheia sem borda,Borderless fullscreen
+Baixa,Baixa,Low
+Média,Média,Medium
+Alta,Alta,High
+Volume geral,Volume geral,Master volume
+Música,Música,Music
+Efeitos,Efeitos,Effects
+Pressione uma tecla…,Pressione uma tecla…,Press a key…
+Aperte um botão…,Aperte um botão…,Press a button…
+Configurações salvas,Configurações salvas,Settings saved
+Dicas reativadas,Dicas reativadas,Hints re-enabled
+"Descartar alterações?
+As mudanças que não foram aplicadas serão perdidas.","Descartar alterações?
+As mudanças que não foram aplicadas serão perdidas.","Discard changes?
+Changes that were not applied will be lost."
+"Manter este modo de vídeo?
+Voltando ao anterior em %d s.","Manter este modo de vídeo?
+Voltando ao anterior em %d s.","Keep this video mode?
+Reverting in %d s."
+Desligado,Desligado,Off
+Ligado,Ligado,On
+Modo de janela,Modo de janela,Window mode
+Resolução,Resolução,Resolution
+VSync,VSync,VSync
+Ilimitado,Ilimitado,Unlimited
+Limite de FPS,Limite de FPS,FPS limit
+Escala da interface,Escala da interface,Interface scale
+Qualidade gráfica,Qualidade gráfica,Graphics quality
+Efeitos de clima fortes,Efeitos de clima fortes,Strong weather effects
+Mudo,Mudo,Muted
+Comando,Comando,Gamepad
+Teclado/Mouse,Teclado/Mouse,Keyboard/Mouse
+Vídeo,Vídeo,Video
+Áudio,Áudio,Audio
+Controles,Controles,Controls
+Jogabilidade,Jogabilidade,Gameplay
+Sensibilidade do mouse,Sensibilidade do mouse,Mouse sensitivity
+Sensibilidade do controle,Sensibilidade do controle,Gamepad sensitivity
+Inverter eixo Y,Inverter eixo Y,Invert Y axis
+Campo de visão,Campo de visão,Field of view
+Mira assistida no controle,Mira assistida no controle,Gamepad aim assist
+Efeitos intensos de clima,Efeitos intensos de clima,Intense weather effects
+Mostrar FPS,Mostrar FPS,Show FPS
+Mostrar dicas,Mostrar dicas,Show hints
+Rever dicas,Rever dicas,Show hints again
+Dicas já vistas,Dicas já vistas,Seen hints
+Tamanho do texto do HUD,Tamanho do texto do HUD,HUD text size
+Restaurar padrão,Restaurar padrão,Restore defaults
+Voltar,Voltar,Back
+Aplicar,Aplicar,Apply
+Manter,Manter,Keep
+Voltar ao anterior,Voltar ao anterior,Revert
+Trocar,Trocar,Swap
+Descartar,Descartar,Discard
+"«%s» já está em %s.
+Trocar as duas ações?","«%s» já está em %s.
+Trocar as duas ações?","«%s» is already used by %s.
+Swap both actions?"
+Andar para frente,Andar para frente,Move forward
+Andar para trás,Andar para trás,Move backward
+Andar para a esquerda,Andar para a esquerda,Move left
+Andar para a direita,Andar para a direita,Move right
+Pular,Pular,Jump
+Correr,Correr,Sprint
+Interagir / pegar,Interagir / pegar,Interact / pick up
+Usar ferramenta,Usar ferramenta,Use tool
+Cavar com cuidado,Cavar com cuidado,Dig carefully
+Atacar,Atacar,Attack
+Soltar / arremessar item,Soltar / arremessar item,Drop / throw item
+Inspecionar item na mão,Inspecionar item na mão,Inspect held item
+Marcador no coop,Marcador no coop,Co-op marker
+Espaço anterior da mochila,Espaço anterior da mochila,Previous backpack slot
+Próximo espaço da mochila,Próximo espaço da mochila,Next backpack slot
+Olhar para cima,Olhar para cima,Look up
+Olhar para baixo,Olhar para baixo,Look down
+Olhar para a esquerda,Olhar para a esquerda,Look left
+Olhar para a direita,Olhar para a direita,Look right
+Espaço 1 da mochila,Espaço 1 da mochila,Backpack slot 1
+Espaço 2 da mochila,Espaço 2 da mochila,Backpack slot 2
+Espaço 3 da mochila,Espaço 3 da mochila,Backpack slot 3
+Espaço 4 da mochila,Espaço 4 da mochila,Backpack slot 4
+Espaço 5 da mochila,Espaço 5 da mochila,Backpack slot 5
+Espaço 6 da mochila,Espaço 6 da mochila,Backpack slot 6
+Espaço 7 da mochila,Espaço 7 da mochila,Backpack slot 7
+Espaço 8 da mochila,Espaço 8 da mochila,Backpack slot 8
+Pausa,Pausa,Pause
+Select,Select,Select
+Guia,Guia,Guide
+Start,Start,Start
+Analógico E ←,Analógico E ←,Left stick ←
+Analógico E →,Analógico E →,Left stick →
+Analógico E ↑,Analógico E ↑,Left stick ↑
+Analógico E ↓,Analógico E ↓,Left stick ↓
+Analógico D ←,Analógico D ←,Right stick ←
+Analógico D →,Analógico D →,Right stick →
+Analógico D ↑,Analógico D ↑,Right stick ↑
+Analógico D ↓,Analógico D ↓,Right stick ↓
+Espaço,Espaço,Space
+Shift,Shift,Shift
+Ctrl,Ctrl,Ctrl
+Alt,Alt,Alt
+Enter,Enter,Enter
+Enter (numérico),Enter (numérico),Enter (numpad)
+Tab,Tab,Tab
+Esc,Esc,Esc
+Backspace,Backspace,Backspace
+Caps Lock,Caps Lock,Caps Lock
+Seta para cima,Seta para cima,Up arrow
+Seta para baixo,Seta para baixo,Down arrow
+Seta para a esquerda,Seta para a esquerda,Left arrow
+Seta para a direita,Seta para a direita,Right arrow
+Delete,Delete,Delete
+Insert,Insert,Insert
+Home,Home,Home
+End,End,End
+Page Up,Page Up,Page Up
+Page Down,Page Down,Page Down
+Botão esquerdo,Botão esquerdo,Left button
+Botão direito,Botão direito,Right button
+Botão do meio,Botão do meio,Middle button
+Roda para cima,Roda para cima,Wheel up
+Roda para baixo,Roda para baixo,Wheel down
+Botão lateral 1,Botão lateral 1,Side button 1
+Botão lateral 2,Botão lateral 2,Side button 2
+Eixo %d-,Eixo %d-,Axis %d-
+Eixo %d+,Eixo %d+,Axis %d+
+Botão %d,Botão %d,Button %d
+Botão %d do mouse,Botão %d do mouse,Mouse button %d

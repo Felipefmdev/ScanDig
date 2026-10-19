@@ -114,8 +114,10 @@ const LEGACY_KEY_TOKENS: Dictionary = {"[E]": "interact", "[Q]": "drop", "[F]": 
 
 
 ## "[E] Apanhar", "[Q] Largar"... e "{ação}": tudo com o rótulo do dispositivo em uso. Com o
-## teclado nos padrões o texto fica igual.
+## teclado nos padrões o texto fica igual. O texto passa antes pela tradução (#131): a chave é o
+## PT-BR com os "[E]"/"{ação}" e a tradução os mantém.
 static func fill_key_prompts(text: String) -> String:
+	text = I18n.t(text)
 	for token: String in LEGACY_KEY_TOKENS.keys():
 		if text.contains(token):
 			text = text.replace(token, "[%s]" % action_label(str(LEGACY_KEY_TOKENS[token])))
@@ -124,6 +126,7 @@ static func fill_key_prompts(text: String) -> String:
 
 ## Troca "{ação}" (ex.: "{drop}", "{interact}") pelo action_label de cada ação conhecida.
 static func fill_action_labels(text: String) -> String:
+	text = I18n.t(text)
 	if not text.contains("{"):
 		return text
 	for action: String in SettingsManager.CONTROL_ACTIONS:

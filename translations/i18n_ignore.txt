@@ -1,0 +1,3 @@
+# Literais de .gd/.tscn/.tres que o jogador não vê (nome de nó, tipo do tema, id) e por isso não
+# entram em scandig.csv (#131). Um por linha, como estão no fonte (com os escapes). Linhas que
+# começam com "# " são comentários. Ver tools/i18n/i18n_scan.gd e tools/i18n/missing_keys.gd.

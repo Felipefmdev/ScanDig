@@ -224,7 +224,7 @@ func _check_gameplay(settings: SettingsMenu, sm: SettingsManager, menu: PauseMen
 	settings.tabs.current_tab = SettingsMenu.TAB_GAMEPLAY
 	await _wait(2)
 	_check(is_equal_approx(settings.sensitivity_slider.value, 100.0) and is_equal_approx(settings.fov_slider.value, 75.0) and settings.bobbing_check.button_pressed and not settings.invert_y_check.button_pressed, "Jogabilidade mostra os padrões")
-	_check(settings.language_option.disabled and settings.language_option.get_item_text(0) == "Português (Brasil)", "idioma: só português, desativado")
+	_check(not settings.language_option.disabled and settings.language_option.get_item_text(0) == "Português (Brasil)" and settings.language_option.get_item_text(1) == "English" and settings.language_option.selected == 0, "idioma: português (padrão) e inglês (#131)")
 	settings.sensitivity_slider.value = 160.0
 	settings.fov_slider.value = 90.0
 	settings.invert_y_check.button_pressed = true

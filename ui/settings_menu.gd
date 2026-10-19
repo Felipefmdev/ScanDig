@@ -11,6 +11,8 @@ signal closed
 const WINDOW_LABELS: Dictionary = {"windowed": "Janela", "fullscreen": "Tela cheia", "borderless": "Tela cheia sem borda"}
 const QUALITY_LABELS: Dictionary = {"low": "Baixa", "medium": "Média", "high": "Alta"}
 const AUDIO_LABELS: Dictionary = {"master": "Volume geral", "music": "Música", "sfx": "Efeitos"}
+## Idiomas (#131), na ordem de SettingsManager.LANGUAGES; cada um com o nome dele mesmo.
+const LANGUAGE_LABELS: Dictionary = {"pt_BR": "Português (Brasil)", "en": "English"}
 const TAB_VIDEO: int = 0
 const TAB_AUDIO: int = 1
 const TAB_CONTROLS: int = 2
@@ -107,7 +109,7 @@ func _process(delta: float) -> void:
 	if confirm_panel == null or not confirm_panel.visible:
 		return
 	_trial_left = maxf(_trial_left - delta, 0.0)
-	confirm_label.text = "Manter este modo de vídeo?\nVoltando ao anterior em %d s." % ceili(_trial_left)
+	confirm_label.text = tr("Manter este modo de vídeo?\nVoltando ao anterior em %d s.") % ceili(_trial_left)
 
 
 # --- Montagem ------------------------------------------------------------------
@@ -320,10 +322,14 @@ func _build() -> void:
 	hud_text_slider = hud_row[0]
 	hud_text_value = hud_row[1]
 	hud_text_slider.value_changed.connect(func(v: float) -> void: hud_text_value.text = "%d %%" % int(v))
-	# Idioma: só português por enquanto (sem tradução ainda).
-	language_option = _option(["Português (Brasil)"])
-	language_option.disabled = true
-	language_option.tooltip_text = "Outros idiomas em breve."
+	# Idioma (#131): troca na hora (não espera o Aplicar) e grava; os nomes não se traduzem.
+	var language_labels: Array = []
+	for language: String in SettingsManager.LANGUAGES:
+		language_labels.append(LANGUAGE_LABELS.get(language, language))
+	language_option = _option(language_labels)
+	language_option.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	language_option.get_popup().auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	language_option.item_selected.connect(_on_language_selected)
 	_row(gameplay, "Idioma", language_option)
 	var gameplay_scroll: ScrollContainer = ScrollContainer.new()
 	gameplay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -492,6 +498,7 @@ func refresh() -> void:
 	show_hints_check.button_pressed = bool(gameplay["show_hints"])
 	hud_text_slider.value = roundf(float(gameplay["hud_text_scale"]) * 100.0)
 	hud_text_value.text = "%d %%" % int(hud_text_slider.value)
+	language_option.select(maxi(SettingsManager.LANGUAGES.find(sm.get_language()), 0))
 	_mark_clean()
 
 
@@ -695,6 +702,9 @@ func hide_saved_notice() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_THEME_CHANGED and title_label != null:
 		_fit_title_row()
+	# Idioma trocado (#131): os textos fixos se traduzem sozinhos; os nomes de tecla não.
+	if what == NOTIFICATION_TRANSLATION_CHANGED and tabs != null:
+		_refresh_controls()
 
 
 ## A linha do título tem pelo menos a altura do aviso no tema atual: ele não invade as abas.
@@ -710,6 +720,13 @@ func _place_saved_notice() -> void:
 	var row: Rect2 = title_label.get_global_rect()
 	var right: float = (title_label.get_parent() as Control).get_global_rect().end.x
 	saved_notice.global_position = Vector2(right - saved_notice.size.x, row.position.y + (row.size.y - saved_notice.size.y) * 0.5)
+
+
+func _on_language_selected(index: int) -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	if sm == null or index < 0 or index >= SettingsManager.LANGUAGES.size():
+		return
+	sm.set_language(SettingsManager.LANGUAGES[index])
 
 
 func _on_review_hints_pressed() -> void:
@@ -808,7 +825,7 @@ func capture_binding(binding: Dictionary) -> void:
 		_end_capture()
 		return
 	_conflict_binding = binding
-	conflict_label.text = "«%s» já está em %s.\nTrocar as duas ações?" % [SettingsManager.binding_label(binding), SettingsManager.ACTION_LABELS[other]]
+	conflict_label.text = tr("«%s» já está em %s.\nTrocar as duas ações?") % [SettingsManager.binding_label(binding), tr(SettingsManager.ACTION_LABELS[other])]
 	conflict_panel.visible = true
 	tabs.visible = false
 	UiFocus.link_row([conflict_cancel_button, swap_button])

@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://b4a7mpyfb4fcq"
+
+[deps]
+
+files=["res://translations/scandig.pt_BR.translation", "res://translations/scandig.en.translation"]
+
+source_file="res://translations/scandig.csv"
+dest_files=["res://translations/scandig.pt_BR.translation", "res://translations/scandig.en.translation"]
+
+[params]
+
+compress=true
+delimiter=0

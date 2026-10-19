@@ -20,6 +20,11 @@ const CONTROLS: String = "controls"
 ## sem migração, e cada coluna se aplica, confere conflito e restaura sozinha.
 const CONTROLS_PAD: String = "controls_pad"
 const GAMEPLAY: String = "gameplay"
+## Idioma (#131), seção à parte: o "Restaurar padrão" das abas não troca o idioma.
+const GENERAL: String = "general"
+## Locales com tradução (translations/scandig.csv). O PT-BR é o texto-fonte e o padrão.
+const LANGUAGES: Array[String] = ["pt_BR", "en"]
+const DEFAULT_LANGUAGE: String = "pt_BR"
 
 const WINDOW_MODES: Array[String] = ["windowed", "fullscreen", "borderless"]
 const FPS_LIMITS: Array[int] = [30, 60, 120, 144, 0]
@@ -47,6 +52,9 @@ const HUD_TEXT_GROUP: StringName = &"settings_hud_text"
 const _BASE_FONT_META: StringName = &"_settings_base_font_size"
 
 const DEFAULTS: Dictionary = {
+	GENERAL: {
+		"language": DEFAULT_LANGUAGE,
+	},
 	VIDEO: {
 		"window_mode": "windowed",
 		"resolution": Vector2i(1280, 720),
@@ -95,6 +103,11 @@ var _trial_token: int = 0
 ## O arquivo tinha [video]: só então o início do jogo mexe na janela (sem escolha salva, vale o
 ## tamanho do projeto ou o --resolution da linha de comando).
 var _video_saved: bool = false
+
+
+func _init() -> void:
+	# Antes de qualquer tela: sem isso valeria o idioma do sistema (inglês no CI, por exemplo).
+	TranslationServer.set_locale(DEFAULT_LANGUAGE)
 
 
 func _enter_tree() -> void:
@@ -166,6 +179,10 @@ func load_settings() -> void:
 static func sanitize(section: String, values: Dictionary) -> Dictionary:
 	var out: Dictionary = (DEFAULTS.get(section, {}) as Dictionary).duplicate()
 	match section:
+		GENERAL:
+			var language: Variant = values.get("language")
+			if language is String and LANGUAGES.has(language):
+				out["language"] = language
 		VIDEO:
 			var mode: Variant = values.get("window_mode")
 			if mode is String and WINDOW_MODES.has(mode):
@@ -265,6 +282,15 @@ func save_settings() -> Error:
 	return err
 
 
+## Troca o idioma do jogo na hora e grava (#131).
+func set_language(language: String, persist: bool = true) -> void:
+	set_section(GENERAL, {"language": language}, persist)
+
+
+func get_language() -> String:
+	return str(get_section(GENERAL)["language"])
+
+
 # --- Teste de vídeo (resolução / modo de janela) --------------------------------
 
 ## Mudança que pode deixar a tela inutilizável: aplica sem gravar e volta sozinha se
@@ -349,6 +375,11 @@ static func project_window_size() -> Vector2i:
 
 func _apply_section(section: String, apply_window: bool) -> void:
 	match section:
+		GENERAL:
+			# Troca ao vivo: a Godot avisa todas as telas (NOTIFICATION_TRANSLATION_CHANGED).
+			var language: String = str(get_section(GENERAL)["language"])
+			if TranslationServer.get_locale() != language:
+				TranslationServer.set_locale(language)
 		VIDEO:
 			_apply_video(get_section(VIDEO), apply_window)
 		AUDIO:
@@ -659,21 +690,21 @@ static func event_from_binding(binding: Dictionary) -> InputEvent:
 	return key
 
 
-## Nome legível em português ("Espaço", "Botão esquerdo", "E", "A", "LB", "RT", "Analógico E ↑").
+## Nome legível no idioma atual ("Espaço", "Botão esquerdo", "E", "A", "LB", "RT", "Analógico E ↑").
 static func binding_label(binding: Dictionary) -> String:
 	if _valid_pad_binding(binding):
 		var pad_code: int = int(binding["code"])
 		if binding["type"] == "joy_axis":
-			var names: Array = JOY_AXIS_NAMES.get(pad_code, ["Eixo %d-" % pad_code, "Eixo %d+" % pad_code])
-			return str(names[1] if int(binding["sign"]) > 0 else names[0])
-		return str(JOY_BUTTON_NAMES.get(pad_code, "Botão %d" % pad_code))
+			var names: Array = JOY_AXIS_NAMES.get(pad_code, [I18n.t("Eixo %d-") % pad_code, I18n.t("Eixo %d+") % pad_code])
+			return I18n.t(str(names[1] if int(binding["sign"]) > 0 else names[0]))
+		return I18n.t(str(JOY_BUTTON_NAMES.get(pad_code, I18n.t("Botão %d") % pad_code)))
 	if not _valid_binding(binding):
 		return "—"
 	var code: int = int(binding["code"])
 	if binding["type"] == "mouse":
-		return str(MOUSE_NAMES.get(code, "Botão %d do mouse" % code))
+		return I18n.t(str(MOUSE_NAMES.get(code, I18n.t("Botão %d do mouse") % code)))
 	if KEY_NAMES.has(code):
-		return str(KEY_NAMES[code])
+		return I18n.t(str(KEY_NAMES[code]))
 	return OS.get_keycode_string(code as Key)
 
 
