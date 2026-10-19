@@ -22,6 +22,11 @@ const CONTROLS_PAD: String = "controls_pad"
 const GAMEPLAY: String = "gameplay"
 ## Idioma (#131), seção à parte: o "Restaurar padrão" das abas não troca o idioma.
 const GENERAL: String = "general"
+## Acessibilidade (#140): daltonismo, tremor, flashes, alternar × segurar e legendas. Quem lê é o
+## A11y (core/a11y.gd); padrões neutros (o jogo fica igual até o jogador mudar algo).
+const ACCESSIBILITY: String = "accessibility"
+const COLORBLIND_MODES: Array[String] = ["off", "protanopia", "deuteranopia", "tritanopia"]
+const HOLD_MODES: Array[String] = ["hold", "toggle"]
 ## Locales com tradução (translations/scandig.csv). O PT-BR é o texto-fonte e o padrão.
 const LANGUAGES: Array[String] = ["pt_BR", "en"]
 const DEFAULT_LANGUAGE: String = "pt_BR"
@@ -84,6 +89,14 @@ const DEFAULTS: Dictionary = {
 		"pad_look_sensitivity": 180.0,
 		"controller_aim_assist": true,
 		"weather_effects": true,
+	},
+	ACCESSIBILITY: {
+		"colorblind_mode": "off",
+		# Fração de todo tremor de tela (0 = nenhum, 1 = como o jogo foi feito).
+		"screen_shake": 1.0,
+		"reduce_flashes": false,
+		"hold_mode": "hold",
+		"captions": false,
 	},
 }
 
@@ -236,6 +249,19 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 			var pad_look: Variant = values.get("pad_look_sensitivity")
 			if pad_look is float or pad_look is int:
 				out["pad_look_sensitivity"] = clampf(float(pad_look), PAD_LOOK_SENSITIVITY_RANGE.x, PAD_LOOK_SENSITIVITY_RANGE.y)
+		ACCESSIBILITY:
+			var colorblind: Variant = values.get("colorblind_mode")
+			if colorblind is String and COLORBLIND_MODES.has(colorblind):
+				out["colorblind_mode"] = colorblind
+			var shake: Variant = values.get("screen_shake")
+			if shake is float or shake is int:
+				out["screen_shake"] = clampf(float(shake), 0.0, 1.0)
+			var hold: Variant = values.get("hold_mode")
+			if hold is String and HOLD_MODES.has(hold):
+				out["hold_mode"] = hold
+			for key: String in ["reduce_flashes", "captions"]:
+				if values.get(key) is bool:
+					out[key] = values[key]
 	return out
 
 
