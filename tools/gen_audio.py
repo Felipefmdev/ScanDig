@@ -2,6 +2,7 @@
 
   python tools/gen_audio.py gen                  -> escreve assets/audio/generated/*.ogg (cavar e passos
                                                      por superfície, arremesso, loops de ambiente e clima)
+                                                     e gull_caw/gull_dive/spray_hiss.wav
   python tools/gen_audio.py normalize <arquivos> -> normaliza .ogg/.wav no lugar (mono, alvo abaixo)
   python tools/gen_audio.py measure <arquivos>   -> imprime pico e RMS (das janelas com som)
 
@@ -189,6 +190,15 @@ def normalize(x: np.ndarray, sr: int, target_rms: float) -> np.ndarray:
     return np.clip(y, -thr, thr)
 
 
+def write_wav(name: str, x: np.ndarray) -> str:
+    y = normalize(x, SR, RMS_ONESHOT)
+    fade = min(len(y), int(SR * 0.012))
+    y[-fade:] *= np.linspace(1.0, 0.0, fade)
+    path = os.path.join(OUT, name)
+    sf.write(path, y.astype(np.float32), SR, subtype="PCM_16")
+    return path
+
+
 def write_ogg(name: str, x: np.ndarray, loop: bool = False) -> str:
     y = normalize(x, SR, RMS_LOOP if loop else RMS_ONESHOT)
     if not loop:
@@ -282,6 +292,25 @@ def gull(dur: float = 0.38) -> np.ndarray:
     tone = sum(np.sin(ph * h) / h ** 1.2 for h in range(1, 7))
     rough = 1.0 + 0.5 * np.sin(2 * np.pi * 32 * t)
     return band(tone * rough, 700, 4000) * env_ad(n, 0.02, dur * 0.45)
+
+
+def gull_dive() -> np.ndarray:
+    """Gaivota mergulhando: grito que desce de tom sobre um assobio de ar."""
+    dur = 0.7
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    f = 1300 - 700 * t / dur
+    tone = sum(np.sin(2 * np.pi * np.cumsum(f * h) / SR) / h ** 1.3 for h in range(1, 6))
+    cry = band(tone * (1.0 + 0.4 * np.sin(2 * np.pi * 28 * t)), 600, 4000) * env_ad(n, 0.05, 0.3)
+    air = whoosh(2)
+    return cry + np.pad(air, (0, max(0, n - len(air))))[:n] * 0.6
+
+
+def spray_hiss() -> np.ndarray:
+    """Spray: chiado de ar em passa-alta com ataque rápido."""
+    dur = 0.6
+    n = int(SR * dur)
+    return high(band(white(n), 2500, 9000), 2000) * env_ad(n, 0.015, 0.35) * np.hanning(n * 2)[n:] ** 0.2
 
 
 def gulls(n: int, count: int) -> np.ndarray:
@@ -429,6 +458,10 @@ def gen() -> None:
         made.append(write_ogg("emerge_%d.ogg" % k, emerge()))
     for name, fn in AMBIENT.items():
         made.append(write_ogg(name, make_loop(fn), loop=True))
+    # criaturas e spray (antes sem script de origem; mesmos nomes de arquivo)
+    made.append(write_wav("gull_caw.wav", gull(0.6)))
+    made.append(write_wav("gull_dive.wav", gull_dive()))
+    made.append(write_wav("spray_hiss.wav", spray_hiss()))
     report(made)
 
 
