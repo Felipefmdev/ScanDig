@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://c6hudscandig01"]
+[gd_scene load_steps=4 format=3 uid="uid://cunl1wbc8gk2w"]
 
 [ext_resource type="Script" path="res://ui/hud.gd" id="1_hud"]
 [ext_resource type="Theme" uid="uid://dt4byoe88efie" path="res://ui/theme/scandig_theme.tres" id="2_scandig_theme"]
