@@ -14,7 +14,16 @@ extends Node3D
 
 const CraterTerrain = preload("res://gameplay/environment/crater_terrain.gd")
 const Structure := preload("res://gameplay/environment/crater_structure.gd")
+const BOULDER_SCRIPT: Script = preload("res://gameplay/environment/rolling_boulder.gd")
 const K := Structure.Kind
+
+## Rochas Instáveis / Pedras que Rolam (#110): [x, z, radius, initial_roll_dir]
+const BOULDERS: Array = [
+	[14.0, 12.0, 1.45, Vector3(-0.8, 0.0, -0.6)],
+	[-12.0, -18.0, 1.35, Vector3(0.5, 0.0, 0.8)],
+	[18.0, -10.0, 1.50, Vector3(-0.9, 0.0, 0.3)],
+	[-16.0, 4.0, 1.30, Vector3(0.9, 0.0, -0.2)],
+]
 
 ## [kind, x, z, rot_y_graus, size(Vector3) ou null]
 const PIECES: Array = [
@@ -88,3 +97,19 @@ func rebuild() -> void:
 		n.rotation.y = deg_to_rad(float(p[3]))
 		add_child(n)
 		i += 1
+
+	var b_idx: int = 0
+	for b_info: Array in BOULDERS:
+		var bx: float = float(b_info[0])
+		var bz: float = float(b_info[1])
+		var b_radius: float = float(b_info[2])
+		var b_dir: Vector3 = b_info[3] as Vector3
+
+		var boulder: Node3D = BOULDER_SCRIPT.new() as Node3D
+		boulder.name = "RollingBoulder_%d" % b_idx
+		boulder.set("boulder_radius", b_radius)
+		boulder.set("roll_direction", b_dir)
+		var ground_y: float = CraterTerrain.height_at(bx, bz)
+		boulder.position = Vector3(bx, ground_y + b_radius * 0.95, bz)
+		add_child(boulder)
+		b_idx += 1

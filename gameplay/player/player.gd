@@ -3861,6 +3861,13 @@ func fire_harpoon() -> int:
 					(col as Node3D).call("take_stress", 0.35)
 				_show_temporary_message("⚓ Arpão cravou no gelo!", Color(0.7, 0.9, 1.0), 0.8)
 				SFX.play_ui(SFX.STONE_IMPACT, -1.0, 0.1)
+			elif col is Node3D and (col as Node3D).is_in_group(&"rolling_boulders"):
+				hit_point = hit["position"]
+				if (col as Node3D).has_method("dislodge"):
+					var p_dir: Vector3 = (col.global_position - origin).normalized()
+					(col as Node3D).call("dislodge", p_dir)
+				_show_temporary_message("🪨 Arpão deslodou a rocha instável!", Color(1.0, 0.75, 0.4), 1.0)
+				SFX.play_ui(SFX.STONE_IMPACT, -1.0, 0.1)
 				hit_count = 1
 			else:
 				hit_point = hit["position"]
@@ -3921,6 +3928,7 @@ func fire_harpoon() -> int:
 
 		if is_pickup:
 			var pickup: ItemPickup = best_target as ItemPickup
+			pickup.freeze = false
 			var pull_dest: Vector3 = global_position + (-fwd * 0.2) + Vector3.UP * 0.3
 			pickup.linear_velocity = (pull_dest - pickup.global_position).normalized() * 10.0 + Vector3.UP * 2.5
 			var t_p: Tween = pickup.create_tween()
