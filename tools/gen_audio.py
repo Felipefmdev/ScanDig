@@ -1,18 +1,23 @@
 """Sons gerados e normalização do ScanDig (issue #123). Requer: pip install numpy scipy soundfile
 
-  python tools/gen_audio.py gen                  -> escreve assets/audio/generated/*.ogg (cavar e passos
+  python tools/gen_audio.py gen [nomes]          -> escreve assets/audio/generated/*.ogg (cavar e passos
                                                      por superfície, arremesso, loops de ambiente e clima)
-                                                     e gull_caw/gull_dive/spray_hiss.wav
+                                                     e gull_caw/gull_dive/spray_hiss.wav; com nomes, só eles
   python tools/gen_audio.py normalize <arquivos> -> normaliza .ogg/.wav no lugar (mono, alvo abaixo)
   python tools/gen_audio.py measure <arquivos>   -> imprime pico e RMS (das janelas com som)
   python tools/gen_audio.py loop <gravação> <nome.ogg> -> gravação de terceiros (CC0) vira loop:
                                                      mono, SR, cauda cruzada no início, normalizada
+  python tools/gen_audio.py beach <ondas gravadas...> -> amb_praia_day/night e amb_ilha com as
+                                                     rebentações gravadas (CC0) por cima do sintético
+  python tools/gen_audio.py clip <gravação> <início s> <fim s> <nome.ogg> [semitons]
+                                                  -> trecho de gravação (CC0) vira one-shot normalizado
 
 Normalização (a mesma para os gerados e os da Kenney): RMS das janelas de 20 ms acima de -50 dB
 levado a -18 dBFS (loops: -20), ganho entre -12 e +16 dB, pico limitado a -3 dBFS por um limitador
 suave (no máximo 6 dB de redução). Rodar de novo é idempotente (ganho ~0).
-Tudo é ruído filtrado e senos sintetizados aqui, menos weather_rain.ogg (gravação CC0 passada por
-`loop`; autor e link em CREDITS.md).
+Tudo é ruído filtrado e senos sintetizados aqui, menos o que vem de gravação CC0 (autor, link e o
+comando exato em CREDITS.md): weather_rain/weather_blizzard (`loop`), as rebentações da Praia e da
+Ilha (`beach`) e as vozes de corvo, morcego e lobo (`clip`).
 Os loops têm a cauda cruzada no início, então emendam sem clique (import com loop=true).
 """
 import os
@@ -426,41 +431,147 @@ def ash(n: int) -> np.ndarray:
     return w + band(grit, 1500, 5000) * 0.6
 
 
+def creak(dur: float) -> np.ndarray:
+    """Rangido de madeira (stick-slip): trem de estalos cuja taxa sobe e desce, cada estalo
+    excitando ressonâncias de tábua (senos amortecidos)."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    f0 = rng.uniform(35, 60)
+    rate = f0 * (1.0 + rng.uniform(0.8, 1.8) * np.sin(np.pi * t / dur) ** 1.5)
+    ph = np.cumsum(rate) / SR
+    clicks = np.zeros(n)
+    idx = np.nonzero(np.diff(np.floor(ph)) > 0)[0]
+    clicks[idx] = rng.uniform(0.5, 1.0, len(idx))
+    rl = int(SR * 0.03)
+    rt = np.arange(rl) / SR
+    res = sum(np.sin(2 * np.pi * f * rt) * np.exp(-rt / d) * g
+              for f, d, g in ((rng.uniform(380, 520), 0.010, 1.0), (rng.uniform(900, 1200), 0.006, 0.6),
+                              (rng.uniform(1900, 2400), 0.003, 0.3)))
+    out = signal.fftconvolve(clicks, res)[:n]
+    return out * np.sin(np.pi * t / dur) ** 0.7
+
+
+def tent(n: int) -> np.ndarray:
+    """Base (acampamento): brisa suave + lona mexendo + a madeira da tenda a ranger de vez em quando."""
+    air = breeze(n, 180, 650, 0.6) * 0.45
+    canvas = band(pink(n), 90, 300) * 0.25 * lfo(n, 1.0 / 6.0, 0.8, rng.uniform(0, 6))
+    wood = np.zeros(n)
+    for _ in range(5):
+        at = rng.uniform(0.0, n / SR)
+        for r in range(int(rng.integers(1, 3))):
+            place(wood, creak(rng.uniform(0.35, 0.8)), int((at + r * rng.uniform(0.6, 1.1)) * SR), rng.uniform(0.05, 0.1))
+    return air + canvas + wood
+
+
+def load_mono(src: str) -> np.ndarray:
+    """Gravação (wav/ogg/flac/mp3) -> mono no SR do jogo."""
+    d, sr = sf.read(src, always_2d=True)
+    x = d.mean(axis=1)
+    return signal.resample_poly(x, SR, sr) if sr != SR else x
+
+
+def rec_waves(n: int, period: float, calm: float, shots: list) -> np.ndarray:
+    """Como waves(), mas cada rebentação leva por cima uma onda gravada (CC0) e a sintética fica
+    só como cauda de espuma e corpo grave."""
+    base = low(pink(n), 350) * 0.35 * lfo(n, 1.0 / 12.0, 0.4, 0.3)
+    surf = np.zeros(n)
+    t = rng.uniform(0.0, 1.5)
+    while t < n / SR:
+        ln = int(SR * rng.uniform(4.0, 5.5))
+        e = env_ad(ln, rng.uniform(1.2, 1.8), rng.uniform(1.2, 1.8) * (1.0 + calm))
+        crash = low(pink(ln), 900) * e * 0.35
+        place(surf, crash, int(t * SR), rng.uniform(0.7, 1.0))
+        shot = shots[int(rng.integers(0, len(shots)))]
+        if calm > 0.0:
+            shot = low(shot, 3000 - 1800 * calm)
+        place(surf, shot, int((t + rng.uniform(0.2, 0.6)) * SR), rng.uniform(0.75, 1.0) * (1.0 - 0.4 * calm))
+        t += period * rng.uniform(0.8, 1.2)
+    return base + surf
+
+
+def wave_shots(paths: list[str]) -> list:
+    """Ondas gravadas -> one-shots: 30 ms de entrada, 0.8 s de saída, RMS igualado entre elas e
+    estalos (pico > 12 dB acima do RMS) segurados pelo limitador."""
+    shots = []
+    for p in paths:
+        x = high(load_mono(p), 40)
+        fi, fo = int(SR * 0.03), int(SR * 0.8)
+        x[:fi] *= np.linspace(0.0, 1.0, fi)
+        x[-fo:] *= np.linspace(1.0, 0.0, fo) ** 2
+        x = x / (np.sqrt(np.mean(x ** 2)) + 1e-9) * 0.22
+        shots.append(limit(x, 0.22 * 4.0, SR))
+    return shots
+
+
 AMBIENT = {
-    "amb_praia_day.ogg": lambda n: waves(n, 7.0, 0.0) + gulls(n, 4),
-    "amb_praia_night.ogg": lambda n: waves(n, 8.0, 0.3) + crickets(n) * 0.25,
     "amb_campo_day.ogg": lambda n: breeze(n, 250, 900, 0.6) * 0.5 + birds(n, 9),
     "amb_campo_night.ogg": lambda n: breeze(n, 200, 700, 0.6) * 0.35 + crickets(n),
     "amb_ruinas.ogg": lambda n: low(brown(n), 220) * 0.25 + drips(n, 14),
     "amb_geleira.ogg": lambda n: wind(n, 350, 1100, 0.7, 0.5),
     "amb_cratera.ogg": rumble,
-    "amb_ilha.ogg": lambda n: waves(n, 9.0, 0.5) * 0.8 + gulls(n, 7) + breeze(n, 300, 1200, 0.5) * 0.2,
-    "weather_blizzard.ogg": lambda n: wind(n, 600, 2200, 0.5, 0.8) + high(pink(n), 3000) * 0.3,
     "weather_ashstorm.ogg": ash,
+    "amb_base.ogg": tent,
+}
+## Praia e Ilha: rebentações gravadas (comando `beach`), por cima das camadas sintéticas.
+BEACH = {
+    "amb_praia_day.ogg": lambda n, s: rec_waves(n, 7.0, 0.0, s) + gulls(n, 4),
+    "amb_praia_night.ogg": lambda n, s: rec_waves(n, 8.0, 0.3, s) + crickets(n) * 0.25,
+    "amb_ilha.ogg": lambda n, s: rec_waves(n, 9.0, 0.5, s) * 0.8 + gulls(n, 7) + breeze(n, 300, 1200, 0.5) * 0.2,
 }
 
 
-def gen() -> None:
+def gen(only: list[str]) -> None:
+    """Sem nomes: tudo. Com nomes (ex.: amb_base.ogg): só esses arquivos."""
     os.makedirs(OUT, exist_ok=True)
     made: list[str] = []
+
+    def want(name: str) -> bool:
+        return not only or name in only
+
     for surface in ("dirt", "snow", "stone"):
         for k in range(3):
-            made.append(write_ogg("%s_dig_fast_%d.ogg" % (surface, k), dig(surface, False)))
+            if want("%s_dig_fast_%d.ogg" % (surface, k)):
+                made.append(write_ogg("%s_dig_fast_%d.ogg" % (surface, k), dig(surface, False)))
         for k in range(2):
-            made.append(write_ogg("%s_dig_careful_%d.ogg" % (surface, k), dig(surface, True)))
+            if want("%s_dig_careful_%d.ogg" % (surface, k)):
+                made.append(write_ogg("%s_dig_careful_%d.ogg" % (surface, k), dig(surface, True)))
     for k in range(5):
-        made.append(write_ogg("gravel_step_%d.ogg" % k, gravel_step()))
+        if want("gravel_step_%d.ogg" % k):
+            made.append(write_ogg("gravel_step_%d.ogg" % k, gravel_step()))
     for k in range(3):
-        made.append(write_ogg("whoosh_%d.ogg" % k, whoosh(k)))
+        if want("whoosh_%d.ogg" % k):
+            made.append(write_ogg("whoosh_%d.ogg" % k, whoosh(k)))
     for k in range(3):
-        made.append(write_ogg("emerge_%d.ogg" % k, emerge()))
+        if want("emerge_%d.ogg" % k):
+            made.append(write_ogg("emerge_%d.ogg" % k, emerge()))
     for name, fn in AMBIENT.items():
-        made.append(write_ogg(name, make_loop(fn), loop=True))
+        if want(name):
+            made.append(write_ogg(name, make_loop(fn), loop=True))
     # criaturas e spray (antes sem script de origem; mesmos nomes de arquivo)
-    made.append(write_wav("gull_caw.wav", gull(0.6)))
-    made.append(write_wav("gull_dive.wav", gull_dive()))
-    made.append(write_wav("spray_hiss.wav", spray_hiss()))
+    for name, fn in (("gull_caw.wav", lambda: gull(0.6)), ("gull_dive.wav", gull_dive), ("spray_hiss.wav", spray_hiss)):
+        if want(name):
+            made.append(write_wav(name, fn()))
     report(made)
+
+
+def beach(paths: list[str]) -> None:
+    shots = wave_shots(paths)
+    report([write_ogg(name, make_loop(lambda n, f=fn: f(n, shots)), loop=True) for name, fn in BEACH.items()])
+
+
+def clip_file(src: str, start: float, end: float, name: str, semitones: float = 0.0) -> None:
+    """Gravação -> one-shot: trecho [start, end] s, mono, tom deslocado (muda a duração junto),
+    entrada de 5 ms e saída de 60 ms, normalizado como os outros one-shots."""
+    x = load_mono(src)
+    x = high(x[int(start * SR): int(end * SR)], 60)
+    if semitones != 0.0:
+        ratio = 2.0 ** (semitones / 12.0)
+        up, down = int(round(1000 / ratio)), 1000
+        x = signal.resample_poly(x, up, down)
+    fi, fo = int(SR * 0.005), min(len(x) // 2, int(SR * 0.06))
+    x[:fi] *= np.linspace(0.0, 1.0, fi)
+    x[-fo:] *= np.linspace(1.0, 0.0, fo)
+    report([write_ogg(name, x)])
 
 
 def loop_file(src: str, name: str, xfade: float = 2.0) -> None:
@@ -499,11 +610,16 @@ def report(paths: list[str]) -> None:
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "gen"
     if cmd == "gen":
-        gen()
+        gen(sys.argv[2:])
     elif cmd == "normalize":
         normalize_files(sys.argv[2:])
     elif cmd == "loop":
         loop_file(sys.argv[2], sys.argv[3])
+    elif cmd == "beach":
+        beach(sys.argv[2:])
+    elif cmd == "clip":
+        clip_file(sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), sys.argv[5],
+                  float(sys.argv[6]) if len(sys.argv) > 6 else 0.0)
     elif cmd == "measure":
         report(sys.argv[2:])
     else:
