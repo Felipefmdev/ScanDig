@@ -34,6 +34,8 @@ var credits_back_button: Button = null
 ## Vistas do mesmo cartão: contagens (padrão ao abrir) e créditos.
 var summary_view: Control = null
 var credits_view: Control = null
+## Foco antes de abrir (#135), devolvido ao fechar.
+var _focus_before: Control = null
 var credits_label: Label = null
 
 var _open: bool = false
@@ -114,6 +116,9 @@ func open() -> void:
 	_open = true
 	root_control.visible = true
 	UiFocus.link_chain([continue_button, credits_button])
+	var before: Control = get_viewport().gui_get_focus_owner()
+	if before != null and not root_control.is_ancestor_of(before):
+		_focus_before = before
 	continue_button.grab_focus()
 	_previous_mouse_mode = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -131,6 +136,13 @@ func close() -> void:
 	Input.mouse_mode = _previous_mouse_mode
 	if SessionUI.instance != null and SessionUI.instance.expedition_bar != null:
 		SessionUI.instance.call(&"_refresh_expedition_bar")
+	# O foco volta aonde estava (#135); sem ele (vitória na expedição e volta ao lobby), à Base.
+	var before: Control = _focus_before
+	_focus_before = null
+	if is_instance_valid(before) and before.is_visible_in_tree():
+		before.grab_focus()
+	elif is_inside_tree():
+		get_tree().call_group(UiFocus.HOME_GROUP, &"focus_home")
 	open_changed.emit(false)
 
 
@@ -182,6 +194,7 @@ func _build() -> void:
 	var box: VBoxContainer = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 14)
 	summary_view = box
+	summary_view.name = "SummaryView"
 	views.add_child(box)
 
 	var title_row: HBoxContainer = HBoxContainer.new()
@@ -236,6 +249,7 @@ func _build() -> void:
 	box.add_child(credits_button)
 
 	credits_view = _build_credits()
+	credits_view.name = "CreditsView"
 	credits_view.visible = false
 	views.add_child(credits_view)
 

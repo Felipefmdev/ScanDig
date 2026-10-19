@@ -30,6 +30,8 @@ var quit_panel: PanelContainer = null
 var quit_yes_button: Button = null
 var quit_no_button: Button = null
 var settings_menu: SettingsMenu = null
+## Foco antes de abrir (#135), devolvido ao fechar.
+var _focus_before: Control = null
 var fps_label: Label = null
 
 var _open: bool = false
@@ -141,6 +143,7 @@ func open() -> bool:
 	card.visible = true
 	root_control.visible = true
 	_link_card_focus()
+	_focus_before = get_viewport().gui_get_focus_owner()
 	continue_button.grab_focus()
 	_previous_mouse_mode = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -167,7 +170,18 @@ func close() -> void:
 	Input.mouse_mode = _previous_mouse_mode
 	if SessionUI.instance != null and SessionUI.instance.expedition_bar != null:
 		SessionUI.instance.call(&"_refresh_expedition_bar")
+	_restore_focus()
 	open_changed.emit(false)
+
+
+## Fechou (#135): o foco volta ao controle de antes (a aba da Base, no lobby); sem ele, à Base.
+func _restore_focus() -> void:
+	var before: Control = _focus_before
+	_focus_before = null
+	if is_instance_valid(before) and before.is_visible_in_tree():
+		before.grab_focus()
+	elif is_inside_tree():
+		get_tree().call_group(UiFocus.HOME_GROUP, &"focus_home")
 
 
 func toggle() -> void:
@@ -224,6 +238,7 @@ func _build() -> void:
 	for button: Button in [continue_button, settings_button, return_button, leave_button, main_menu_button, quit_button]:
 		box.add_child(button)
 	card = _card(box)
+	card.name = "PauseCard"
 	stack.add_child(card)
 
 	var quit_box: VBoxContainer = VBoxContainer.new()
@@ -237,10 +252,12 @@ func _build() -> void:
 	quit_box.add_child(quit_yes_button)
 	quit_box.add_child(quit_no_button)
 	quit_panel = _card(quit_box)
+	quit_panel.name = "QuitPanel"
 	quit_panel.visible = false
 	stack.add_child(quit_panel)
 
 	settings_menu = SettingsMenu.new()
+	settings_menu.name = "SettingsMenu"
 	settings_menu.visible = false
 	stack.add_child(settings_menu)
 
