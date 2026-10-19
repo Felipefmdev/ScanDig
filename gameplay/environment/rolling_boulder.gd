@@ -341,7 +341,8 @@ func _build_interaction() -> void:
 	_interactable_comp.name = "Interactable"
 	_interactable_comp.prompt = "[E] Empurrar rocha instável"
 	_interactable_comp.interact_range = boulder_radius * 2.2
-	_interactable_comp.focus_offset = Vector3(0.0, boulder_radius * 0.5, 0.0)
+	_interactable_comp.position = Vector3(0.0, -boulder_radius * 0.95, 0.0)
+	_interactable_comp.focus_offset = Vector3(0.0, boulder_radius * 1.4, 0.0)
 	_interactable_comp.once = true
 	_interactable_comp.interacted.connect(_on_player_interacted)
 	add_child(_interactable_comp)
