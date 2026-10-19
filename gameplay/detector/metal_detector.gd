@@ -679,9 +679,9 @@ func get_pinpoint_text() -> String:
 	if not is_pinpointing():
 		return ""
 	if _current_distance <= PINPOINT_DIG_DISTANCE:
-		return "PIN ✔ CAVE"
+		return I18n.t("PIN ✔ CAVE")
 	var dir: Vector2 = world_to_radar(get_current_target().global_position)
-	return "PIN %s %.1fm" % [get_direction_arrow(dir), _current_distance]
+	return tr("PIN %s %.1fm") % [get_direction_arrow(dir), _current_distance]
 
 
 ## Pinpointer Nv.2: vetor (plano do radar) até à variante rara mais próxima, a qualquer
@@ -759,9 +759,9 @@ static func get_value_range(item: ItemData, rare: bool) -> Vector2i:
 static func get_identify_text(item: ItemData) -> String:
 	if item == null:
 		return "---"
-	var item_name: String = item.display_name if not item.display_name.is_empty() else item.id
+	var item_name: String = I18n.t(item.display_name) if not item.display_name.is_empty() else item.id
 	if GameState.instance != null and not GameState.instance.discovered_items.has(item.id):
-		return "Novo: " + item_name
+		return I18n.t("Novo: %s") % item_name
 	return item_name
 
 
@@ -793,7 +793,7 @@ func _signal_bars() -> String:
 func get_footer_lines() -> PackedStringArray:
 	var level: int = get_detector_level()
 	var lines: PackedStringArray = PackedStringArray()
-	var head: String = "Nv.%d  %dm" % [level, int(round(get_effective_detection_distance()))]
+	var head: String = tr("Nv.%d  %dm") % [level, int(round(get_effective_detection_distance()))]
 	var enemies: int = get_enemy_count()
 	if enemies > 0:
 		head += "  ⚠%d" % enemies
@@ -803,22 +803,22 @@ func get_footer_lines() -> PackedStringArray:
 	lines.append(head)
 
 	var pin: String = get_pinpoint_text()
-	lines.append(pin if not pin.is_empty() else "Sinal " + _signal_bars())
+	lines.append(pin if not pin.is_empty() else I18n.t("Sinal ") + _signal_bars())
 
 	var target: BuriedSpot = get_current_target()
 	var item: ItemData = target.item if target != null else null
 	if level >= IDENTIFY_LEVEL and item != null:
 		lines.append(get_identify_text(item))
 	else:
-		lines.append("Mat: " + (get_material_name(item.material_type) if item != null and level >= 2 else "---"))
-	lines.append("Prof: " + (get_depth_range_text(item) if item != null and level >= 3 else "---"))
+		lines.append(I18n.t("Mat: ") + (I18n.t(get_material_name(item.material_type)) if item != null and level >= 2 else "---"))
+	lines.append(I18n.t("Prof: ") + (get_depth_range_text(item) if item != null and level >= 3 else "---"))
 	if level >= VALUE_RANGE_LEVEL:
 		var val_text: String = "---"
 		if item != null:
 			var rare: bool = is_rare_revealed(target, get_signal_strength())
 			var r: Vector2i = get_value_range(item, rare)
 			val_text = "%s–%s%s" % [MoneyFormat.money(r.x), MoneyFormat.thousands(r.y), " ★x3" if rare else ""]
-		lines.append("Val: " + val_text)
+		lines.append(I18n.t("Val: ") + val_text)
 	return lines
 
 
@@ -827,5 +827,5 @@ func get_readout_text() -> String:
 	var lines: PackedStringArray = get_footer_lines()
 	var target: BuriedSpot = get_current_target()
 	if target != null and target.item != null and get_detector_level() >= 3:
-		lines.append("Tam: " + get_size_name(target.item.size_category))
+		lines.append(I18n.t("Tam: ") + I18n.t(get_size_name(target.item.size_category)))
 	return "\n".join(lines)
