@@ -65,6 +65,8 @@ func _ready() -> void:
 	particles_root = Node3D.new()
 	particles_root.name = "WeatherParticles"
 	add_child(particles_root)
+	# Só segue a câmera enquanto há partículas (_build_particles liga, finish desliga).
+	set_process(false)
 	var weather: WeatherManager = WeatherManager.instance
 	if weather != null:
 		weather.weather_changed.connect(_on_weather_changed)
@@ -130,6 +132,7 @@ func finish(instant: bool = false) -> void:
 		particles.emitting = false
 		var old: CPUParticles3D = particles
 		particles = null
+		set_process(false)
 		# Deixa as últimas gotas caírem e some.
 		get_tree().create_timer(old.lifetime + 0.2, true, false, true).timeout.connect(func() -> void:
 			if is_instance_valid(old):
@@ -216,6 +219,7 @@ func _build_particles(kind: String) -> void:
 	particles.preprocess = particles.lifetime
 	particles.emitting = true
 	particles_root.add_child(particles)
+	set_process(true)
 
 
 ## Brasa laranja que vira cinza clara e apaga (vale sobre o chão escuro da Cratera).

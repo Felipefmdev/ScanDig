@@ -43,6 +43,8 @@ var _env_copy: Environment = null
 var _sky_material: ShaderMaterial = null
 var _sun: DirectionalLight3D = null
 var _base: Dictionary = {}
+## Último jogador local achado: evita varrer o grupo a cada frame.
+var _player: Player = null
 
 
 func _enter_tree() -> void:
@@ -56,6 +58,8 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
+	# Só processa à noite (start liga, restore desliga).
+	set_process(false)
 	var sm: SessionManager = SessionManager.instance
 	if sm != null:
 		sm.scene_loaded.connect(_on_scene_loaded)
@@ -87,6 +91,7 @@ func start(map_id: String, instant: bool = false) -> void:
 		return
 	_map_id = map_id
 	_cfg = cfg
+	set_process(true)
 	_grab_scene()
 	_update_local_player()
 	if instant:
@@ -123,6 +128,8 @@ func restore() -> void:
 	_cfg = {}
 	_map_id = ""
 	_amount = 0.0
+	_player = null
+	set_process(false)
 
 
 func _grab_scene() -> void:
@@ -209,10 +216,14 @@ func _update_local_player() -> void:
 func _local_player() -> Player:
 	if not is_inside_tree():
 		return null
+	if is_instance_valid(_player) and _player.is_inside_tree() and _player.is_in_group(Player.LOCAL_GROUP):
+		return _player
+	_player = null
 	for node: Node in get_tree().get_nodes_in_group(Player.LOCAL_GROUP):
 		if node is Player and node.is_inside_tree():
-			return node as Player
-	return null
+			_player = node as Player
+			break
+	return _player
 
 
 func _update_lantern(player: Player) -> void:
