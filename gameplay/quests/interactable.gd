@@ -73,6 +73,11 @@ func _ready() -> void:
 	_apply_visibility()
 
 
+func _exit_tree() -> void:
+	if _focus == self:
+		_focus = null
+
+
 func _process(delta: float) -> void:
 	if _focus_frame != Engine.get_process_frames():
 		_focus_frame = Engine.get_process_frames()
@@ -231,14 +236,28 @@ func _send_full_state(peer_id: int) -> void:
 # Foco do jogador local (uma vez por frame para todos os interativos)
 # ---------------------------------------------------------------------------
 
+static func has_active_focus() -> bool:
+	return _focus != null and is_instance_valid(_focus) and _focus.is_inside_tree() and _focus._focused and _focus.active
+
+
+static func get_current_focus() -> Interactable:
+	return _focus if has_active_focus() else null
+
+
+static func reset_focus() -> void:
+	if is_instance_valid(_focus):
+		_focus._set_focused(false)
+	_focus = null
+
+
 static func _update_focus(tree: SceneTree) -> void:
 	var best: Interactable = null
-	var cam: Camera3D = tree.root.get_viewport().get_camera_3d() if tree != null else null
 	var player: Node3D = tree.get_first_node_in_group(&"player") as Node3D if tree != null else null
-	# O [E] do próprio jogador (apanhar, banca, entregar) tem prioridade: com esse alvo, os
-	# interativos nem mostram o texto, para o mesmo toque não fazer duas coisas.
-	if player != null and player_has_own_target(player):
-		player = null
+	var cam: Camera3D = null
+	if player != null and "camera" in player and player.get("camera") is Camera3D:
+		cam = player.get("camera") as Camera3D
+	elif tree != null and tree.root != null and tree.root.get_viewport() != null:
+		cam = tree.root.get_viewport().get_camera_3d()
 	if cam != null and player != null:
 		var from: Vector3 = cam.global_position
 		var fwd: Vector3 = -cam.global_basis.z
@@ -255,6 +274,21 @@ static func _update_focus(tree: SceneTree) -> void:
 			if d > best_dot:
 				best = it
 				best_dot = d
+
+		# Arbitragem (#105): se o jogador tem um alvo próprio (carrinho, pickup, oferta, entrega)
+		# decide qual está mais na mira/mais próximo para exibir apenas um prompt e [E] agir só nele.
+		if best != null and player.has_method(&"get_own_interact_target_info"):
+			var own_info: Dictionary = player.call(&"get_own_interact_target_info")
+			if bool(own_info.get("has_target", false)):
+				var own_dot: float = float(own_info.get("dot", 0.0))
+				var own_dist: float = float(own_info.get("dist", 999.0))
+				var it_dist: float = player.global_position.distance_to(best.get_focus_point())
+				# Se o alvo próprio do jogador estiver mais na mira ou mais próximo com alinhamento similar:
+				if own_dot > best_dot + 0.12 or (absf(own_dot - best_dot) <= 0.12 and own_dist < it_dist):
+					best = null
+		elif best == null and player_has_own_target(player):
+			pass
+
 	if best != _focus:
 		if is_instance_valid(_focus):
 			_focus._set_focused(false)
@@ -270,7 +304,7 @@ static func _update_focus(tree: SceneTree) -> void:
 static func player_has_own_target(player: Node) -> bool:
 	if player.has_method(&"has_own_interact_target"):
 		return bool(player.call(&"has_own_interact_target"))
-	for field: String in ["_target_offer", "_target_pickup"]:
+	for field: String in ["_target_wheelbarrow", "_target_crow_nest", "_target_zipline", "_target_offer", "_target_pickup"]:
 		if field in player:
 			var o: Variant = player.get(field)
 			if o is Object and is_instance_valid(o):

@@ -405,7 +405,8 @@ func is_alive() -> bool:
 
 func _ready() -> void:
 	add_to_group(ALL_GROUP)
-	net_sync.add_visibility_filter(_sync_visible_to)
+	if net_sync != null:
+		net_sync.add_visibility_filter(_sync_visible_to)
 	if not is_local():
 		_setup_remote()
 		return
@@ -1170,6 +1171,13 @@ func _push_message(text: String, color: Color, duration: float, font_size: int, 
 	while live.size() > 1 and (live.size() > MAX_MESSAGES or _line_count(live) > MAX_MESSAGE_LINES):
 		live.pop_front().queue_free()
 	_fade_message(label, duration)
+
+
+func clear_messages() -> void:
+	if message_stack == null:
+		return
+	for child: Node in message_stack.get_children():
+		child.queue_free()
 
 
 static func _line_count(labels: Array[Label]) -> int:
@@ -2696,6 +2704,10 @@ func _interact() -> void:
 	if is_downed:
 		return
 
+	# Se um Interactable do cenário está em foco ativo na mira, o [E] age só nele (#105)
+	if Interactable.has_active_focus():
+		return
+
 	# Carrinho de mão (#104): Se empurrando, entrega carga na base ou solta
 	if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
 		var sp: SellPoint = _get_sell_point_in_range()
@@ -2864,18 +2876,71 @@ func _drop_selected(charge: float = 0.0) -> void:
 	SFX.play_at(SFX.DROP if charge < 0.3 else SFX.THROW, pos, -3.0)
 
 
-## Interactable (#39/#40): o [E] fica com o jogador quando ele tem alvo próprio (produto da
-## banca, item no chão ou entrega possível na base).
+## Interactable (#39/#40/#105): o [E] fica com o jogador quando ele tem alvo próprio (carrinho,
+## produto da banca, tirolesa, ninho, item no chão ou entrega possível na base).
 func has_own_interact_target() -> bool:
+	if pushing_wheelbarrow != null:
+		return true
 	if carried_player != null:
 		return true
 	if _target_downed_player != null and is_instance_valid(_target_downed_player):
+		return true
+	if _target_wheelbarrow != null and is_instance_valid(_target_wheelbarrow):
+		return true
+	if _target_crow_nest != null and is_instance_valid(_target_crow_nest):
+		return true
+	if _target_zipline != null and is_instance_valid(_target_zipline):
 		return true
 	if _target_offer != null and is_instance_valid(_target_offer):
 		return true
 	if _target_pickup != null and is_instance_valid(_target_pickup):
 		return true
 	return _get_sell_point_in_range() != null and _count_deliverable() > 0
+
+
+## Informações de mira e distância do alvo próprio para arbitragem com Interactables do cenário (#105).
+func get_own_interact_target_info() -> Dictionary:
+	if camera == null:
+		return {"has_target": false}
+	var from: Vector3 = camera.global_position
+	var fwd: Vector3 = -camera.global_basis.z
+
+	if pushing_wheelbarrow != null or carried_player != null:
+		return {"has_target": true, "dist": 0.0, "dot": 1.0}
+
+	var target_pos: Vector3 = Vector3.ZERO
+	var has_target: bool = false
+
+	if _target_wheelbarrow != null and is_instance_valid(_target_wheelbarrow):
+		target_pos = _target_wheelbarrow.global_position + Vector3.UP * 0.4
+		has_target = true
+	elif _target_crow_nest != null and is_instance_valid(_target_crow_nest):
+		target_pos = _target_crow_nest.global_position + Vector3.UP * 0.3
+		has_target = true
+	elif _target_zipline != null and is_instance_valid(_target_zipline):
+		target_pos = _target_zipline.get_zipline_start()
+		has_target = true
+	elif _target_downed_player != null and is_instance_valid(_target_downed_player):
+		target_pos = _target_downed_player.global_position + Vector3.UP * 0.2
+		has_target = true
+	elif _target_offer != null and is_instance_valid(_target_offer):
+		target_pos = _target_offer.global_position
+		has_target = true
+	elif _target_pickup != null and is_instance_valid(_target_pickup):
+		target_pos = _target_pickup.global_position
+		has_target = true
+	elif _get_sell_point_in_range() != null and _count_deliverable() > 0:
+		var sp: SellPoint = _get_sell_point_in_range()
+		target_pos = sp.global_position
+		has_target = true
+
+	if not has_target:
+		return {"has_target": false}
+
+	var to_t: Vector3 = target_pos - from
+	var dist: float = to_t.length()
+	var dot: float = fwd.dot(to_t / maxf(dist, 0.001))
+	return {"has_target": true, "dist": dist, "dot": dot}
 
 
 func _get_sell_point_in_range() -> SellPoint:
@@ -2977,7 +3042,7 @@ func _update_interaction_target() -> void:
 		if _target_offer != null and is_instance_valid(_target_offer):
 			_target_offer.set_highlighted(false)
 		_target_offer = offer
-		if _target_offer != null:
+		if _target_offer != null and not Interactable.has_active_focus():
 			_target_offer.set_highlighted(true)
 
 	var target: ItemPickup = null if (_target_offer != null or _target_downed_player != null or carried_player != null or pushing_wheelbarrow != null or _target_crow_nest != null or _target_zipline != null) else _find_target_pickup()
@@ -2985,10 +3050,15 @@ func _update_interaction_target() -> void:
 		if _target_pickup != null and is_instance_valid(_target_pickup):
 			_target_pickup.set_highlighted(false)
 		_target_pickup = target
-		if _target_pickup != null:
+		if _target_pickup != null and not Interactable.has_active_focus():
 			_target_pickup.set_highlighted(true)
 
 	if interact_prompt == null:
+		return
+
+	# Se um Interactable do cenário está focado na mira, suprime o prompt do HUD do jogador (#105)
+	if Interactable.has_active_focus():
+		interact_prompt.text = ""
 		return
 	var sell_point: SellPoint = _get_sell_point_in_range()
 	var deliverable: int = _count_deliverable()
@@ -4635,6 +4705,7 @@ func _process_zipline(delta: float) -> void:
 	if _active_zipline == null or not is_instance_valid(_active_zipline) or not _active_zipline.is_built:
 		is_ziplining = false
 		_active_zipline = null
+		clear_messages()
 		return
 
 	var p_start: Vector3 = _active_zipline.get_zipline_start()
@@ -4643,6 +4714,7 @@ func _process_zipline(delta: float) -> void:
 	if total_dist < 0.2:
 		is_ziplining = false
 		_active_zipline = null
+		clear_messages()
 		return
 
 	var slide_dir: Vector3 = (p_end - p_start).normalized()
@@ -4657,6 +4729,7 @@ func _process_zipline(delta: float) -> void:
 	if Input.is_action_just_pressed(&"jump") and not is_settings_open():
 		is_ziplining = false
 		_active_zipline = null
+		clear_messages()
 		velocity = slide_dir * 8.0 + Vector3.UP * 4.2
 		_show_temporary_message("Pulou da tirolesa!", UiPalette.GOLD, 0.8)
 		SFX.play_ui(SFX.DROP, 0.0, 0.1)
@@ -4665,6 +4738,7 @@ func _process_zipline(delta: float) -> void:
 	if _zipline_progress >= 1.0:
 		is_ziplining = false
 		_active_zipline = null
+		clear_messages()
 		global_position = p_end - Vector3.UP * 1.2
 		velocity = slide_dir * 5.0 + Vector3.UP * 1.5
 		_show_temporary_message("Chegada da tirolesa!", UiPalette.GREEN_BOTTLE.lightened(0.3), 1.0)
