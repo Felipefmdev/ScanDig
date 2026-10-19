@@ -76,7 +76,7 @@ func _title() -> TitleScreen:
 
 func test_v4_save_gets_defaults_and_saves_as_v5() -> void:
 	var save: SaveManager = SaveManager.instance
-	assert_eq(SaveManager.SAVE_VERSION, 5)
+	assert_gte(SaveManager.SAVE_VERSION, 5)
 	_write(save.slot_path(1), _v4_save())
 	var summary: Dictionary = save.get_slot_summary(1)
 	assert_true(summary["valid"], "v4 continua válido")
@@ -93,7 +93,7 @@ func test_v4_save_gets_defaults_and_saves_as_v5() -> void:
 	assert_eq(GameState.instance.team_money, 321, "progresso intacto")
 	assert_eq(save.save_game(), OK)
 	var data: Dictionary = _read(save.slot_path(1))
-	assert_eq(int(data["version"]), 5)
+	assert_eq(int(data["version"]), SaveManager.SAVE_VERSION)
 	assert_eq(int(data["play_time_s"]), 0)
 	assert_eq(str(data["last_map"]), "")
 	assert_eq(int(data["last_played"]), int(data["saved_at"]))

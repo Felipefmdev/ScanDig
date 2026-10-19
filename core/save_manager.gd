@@ -30,7 +30,7 @@ const SLOT_COUNT: int = 3
 const SLOT_FILE_FORMAT: String = "scandig_save_%d.json"
 ## O save de antes dos slots, depois de copiado para o slot 1.
 const LEGACY_FILE_NAME: String = "scandig_save.legacy.json"
-const SAVE_VERSION: int = 5
+const SAVE_VERSION: int = 6
 ## Pasta dos saves isolados dos testes (use_test_save_dir).
 const TEST_SAVES_DIR: String = "user://test_saves"
 ## Caminho base sob GUT/--script/bot, antes de use_test_save_dir/set_save_path.
@@ -40,7 +40,7 @@ const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atuali
 ## Miniatura do slot (<save>.png), gravada junto com o save quando há render (#139).
 const THUMBNAIL_SIZE: Vector2i = Vector2i(256, 144)
 ## Campos que o apply_snapshot só aceita como Array.
-const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments", "built_shortcuts"]
+const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments", "built_shortcuts", "achievements"]
 ## Campos numéricos opcionais (team_money é obrigatório e conferido à parte).
 const NUMBER_FIELDS: Array[String] = ["current_day", "equipped_detector_level", "saved_at"]
 
@@ -567,6 +567,8 @@ func save_game(target_state: GameState = null) -> Error:
 		"map_fragments": Array(state.map_fragments),
 		"built_shortcuts": Array(state.built_shortcuts),
 		"game_completed": state.game_completed,
+		"stats": state.stats.duplicate(),
+		"achievements": Array(state.achievements),
 	}
 
 	var error: Error = save_to_file(save_data)
@@ -769,7 +771,7 @@ func _validate_fields(data: Dictionary) -> String:
 	return ""
 
 
-## Converte saves v1–v4 para o formato atual (v5).
+## Converte saves v1–v5 para o formato atual (v6).
 func _upgrade_save_data(source: Dictionary) -> Dictionary:
 	var save_data: Dictionary = source.duplicate(true)
 	# Ids são texto e níveis são números: o resto (null, objetos) seria "<null>" ou quebraria o int().
@@ -818,6 +820,11 @@ func _upgrade_save_data(source: Dictionary) -> Dictionary:
 		save_data["last_map"] = ""
 	if not _is_number(save_data.get("last_played")):
 		save_data["last_played"] = int(save_data["saved_at"]) if _is_number(save_data.get("saved_at")) else 0
+	# v6 (#141): saves antigos começam sem estatísticas e sem conquistas (o load_snapshot dá as que o
+	# progresso já cumpre). Estatística de tipo errado cai fora em vez de invalidar o save.
+	save_data["stats"] = GameState.sanitize_stats(save_data["stats"]) if save_data.get("stats") is Dictionary else {}
+	if not save_data.has("achievements"):
+		save_data["achievements"] = []
 	return save_data
 
 

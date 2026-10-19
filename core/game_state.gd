@@ -32,6 +32,9 @@ signal game_victory()
 signal map_fragment_found(fragment_id: String)
 ## Em todos os peers, quando um atalho de tirolesa ou ponte de corda é construído com o arpão (#105).
 signal shortcut_built(shortcut_id: String)
+## Em todos os peers, uma vez por conquista nova (#141). Não emite ao carregar um save no host
+## (load_snapshot): só o que se conquista jogando vira aviso.
+signal achievement_unlocked(achievement_id: String)
 
 const HOST_PEER_ID: int = 1
 ## Fração do valor paga como recompensa ao doar um item inédito ao museu.
@@ -153,6 +156,12 @@ var map_fragments: Array[String] = []
 ## Atalhos construídos com o arpão (#105): ids dos atalhos completados.
 var built_shortcuts: Array[String] = []
 var game_completed: bool = false
+## Estatísticas acumuladas da campanha (#141): chave de Achievements.STAT_KEYS -> inteiro >= 0.
+var stats: Dictionary = {}
+## Conquistas desbloqueadas (#141), ids de core/data/achievements.json na ordem em que caíram.
+var achievements: Array[String] = []
+## load_snapshot no host: conquistas do save entram sem achievement_unlocked.
+var _silent_achievements: bool = false
 
 
 func _enter_tree() -> void:
@@ -435,6 +444,7 @@ func _host_sell_item(item_id: String, final_value: int) -> void:
 		return
 	var value: int = clampi(final_value, 0, get_max_item_value(item_data))
 	team_money += value
+	_bump_stats({"items_sold": 1, "money_earned": value})
 	_broadcast_snapshot()
 	_notify_sold(item_id, value)
 
@@ -452,6 +462,7 @@ func _host_donate_item(item_id: String, final_value: int, is_rare: bool = false)
 	if is_rare and not rare_items.has(item_id):
 		rare_items.append(item_id)
 	team_money += reward
+	_bump_stats({"items_donated": 1, "money_earned": reward})
 	_broadcast_snapshot()
 	_notify_donated(item_id, reward)
 
@@ -542,6 +553,7 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 		if boss_id == FINAL_BOSS_ID:
 			data["game_completed"] = true
 		_add_earned_fragments(data)
+		Achievements.award(data)
 		apply_snapshot(data)
 		if _is_online():
 			_receive_snapshot.rpc(data)
@@ -568,6 +580,8 @@ func _host_complete_quest(quest_id: String) -> void:
 	data["completed_quests"] = quests
 	_add_earned_fragments(data)
 	data["team_money"] = team_money + int(QUESTS[quest_id]["reward"])
+	_bump_stats({"money_earned": int(QUESTS[quest_id]["reward"])})
+	data["stats"] = stats.duplicate()
 	apply_snapshot(data)
 	_broadcast_snapshot()
 
@@ -665,8 +679,12 @@ static func _inside_remote_rpc(sender_id: int) -> bool:
 func _host_report_creature(kind: String) -> void:
 	if not is_authority() or not _is_host_sender("criatura", kind):
 		return
-	if not CREATURES.has(kind) or seen_creatures.has(kind):
+	if not CREATURES.has(kind):
 		return
+	if seen_creatures.has(kind):
+		add_stats({"creatures_defeated": 1})
+		return
+	_bump_stats({"creatures_defeated": 1})
 	var data: Dictionary = get_snapshot()
 	var seen: Array = Array(seen_creatures).duplicate()
 	seen.append(kind)
@@ -743,6 +761,8 @@ func get_snapshot() -> Dictionary:
 		"map_fragments": Array(map_fragments),
 		"built_shortcuts": Array(built_shortcuts).duplicate(),
 		"game_completed": game_completed,
+		"stats": stats.duplicate(),
+		"achievements": Array(achievements),
 	}
 
 
@@ -794,6 +814,13 @@ func apply_snapshot(data: Dictionary) -> void:
 		var scs: Array[String] = _to_id_list(data["built_shortcuts"])
 		new_shortcuts = _new_ids(built_shortcuts, scs)
 		built_shortcuts = scs
+	if data.get("stats") is Dictionary:
+		stats = sanitize_stats(data["stats"])
+	var new_achievements: Array[String] = []
+	if data.get("achievements") is Array:
+		var unlocked: Array[String] = _to_id_list(data["achievements"])
+		new_achievements = _new_ids(achievements, unlocked)
+		achievements = unlocked
 	if data.get("upgrade_levels") is Dictionary:
 		# JSON devolve números como float e pode conter chaves obsoletas.
 		var source: Dictionary = data["upgrade_levels"]
@@ -818,6 +845,9 @@ func apply_snapshot(data: Dictionary) -> void:
 		map_fragment_found.emit(fragment_id)
 	for shortcut_id: String in new_shortcuts:
 		shortcut_built.emit(shortcut_id)
+	if not _silent_achievements:
+		for achievement_id: String in new_achievements:
+			achievement_unlocked.emit(achievement_id)
 	if game_completed != old_completed:
 		game_completed_changed.emit(game_completed)
 	state_synced.emit()
@@ -831,12 +861,17 @@ func load_snapshot(data: Dictionary) -> void:
 	# Saves de antes do Mapa do Tesouro: dá os fragmentos de origens já cumpridas.
 	data = data.duplicate()
 	_add_earned_fragments(data)
+	# Saves de antes das conquistas (#141): ganham as que já cumprem, sem aviso.
+	Achievements.award(data)
+	_silent_achievements = true
 	apply_snapshot(data)
+	_silent_achievements = false
 	_broadcast_snapshot()
 
 
 func _broadcast_snapshot() -> void:
 	var snapshot: Dictionary = get_snapshot()
+	Achievements.award(snapshot)
 	apply_snapshot(snapshot)
 	if _is_online():
 		_receive_snapshot.rpc(snapshot)
@@ -908,6 +943,38 @@ func _on_connected_to_server() -> void:
 		_request_full_state.rpc_id(HOST_PEER_ID)
 
 
+# --- Estatísticas (#141) ---------------------------------------------------------
+
+func get_stat(key: String) -> int:
+	return int(stats.get(key, 0))
+
+
+## Host: soma `delta` (chave -> quantidade) às estatísticas. Só propaga o snapshot se isso
+## desbloquear uma conquista; senão os números seguem no próximo snapshot (pazadas e mortes são
+## frequentes demais para um snapshot cada).
+func add_stats(delta: Dictionary) -> void:
+	if not is_authority():
+		return
+	_bump_stats(delta)
+	if not Achievements.newly_met(get_snapshot()).is_empty():
+		_broadcast_snapshot()
+
+
+func _bump_stats(delta: Dictionary) -> void:
+	for key: Variant in delta:
+		stats[str(key)] = maxi(int(stats.get(str(key), 0)) + int(delta[key]), 0)
+
+
+## Estatísticas do snapshot/save: chaves de texto e valores inteiros >= 0 (o resto cai fora).
+static func sanitize_stats(source: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	for key: Variant in source:
+		var value: Variant = source[key]
+		if key is String and (value is int or value is float):
+			out[key] = maxi(int(value), 0)
+	return out
+
+
 # --- Utilitários ----------------------------------------------------------------
 
 ## Host: avança para o próximo dia e propaga o snapshot para todos.
@@ -936,6 +1003,8 @@ func reset_state() -> void:
 	map_fragments.clear()
 	built_shortcuts.clear()
 	game_completed = false
+	stats.clear()
+	achievements.clear()
 	_broadcast_snapshot()
 
 

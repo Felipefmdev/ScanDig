@@ -138,7 +138,7 @@ func _run() -> void:
 
 	SaveManager.instance.save_game()
 	var saved: Dictionary = SaveManager.instance.load_from_file()
-	_check(int(saved.get("version", 0)) == 5, "save versão 5: %s" % str(saved.get("version")))
+	_check(int(saved.get("version", 0)) == SaveManager.SAVE_VERSION, "save na versão atual: %s" % str(saved.get("version")))
 	_check(saved.get("unlocked_maps", []) == ["campo"], "save unlocked_maps: %s" % str(saved.get("unlocked_maps")))
 	_check(saved.get("defeated_bosses", []) == ["king_crab"], "save defeated_bosses: %s" % str(saved.get("defeated_bosses")))
 

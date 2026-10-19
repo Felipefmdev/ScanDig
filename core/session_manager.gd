@@ -266,6 +266,9 @@ func request_end_expedition() -> void:
 	if state != null:
 		summary["money_end"] = state.team_money
 		summary["money_earned"] = state.team_money - int(summary.get("money_start", state.team_money))
+		# Estatísticas da expedição (#141) antes do snapshot do novo dia e do save.
+		if Achievements.instance != null:
+			Achievements.instance.record_expedition_end(bool(summary.get("night", false)))
 		state.advance_day()
 	var save: SaveManager = SaveManager.instance
 	if save != null:

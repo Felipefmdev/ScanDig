@@ -62,7 +62,7 @@ func _run() -> void:
 	save.save_load_failed.connect(func(message: String) -> void: _load_failed.append(message))
 	save.new_game_started.connect(func() -> void: _new_games += 1)
 	save.save_state_changed.connect(func() -> void: _state_changes += 1)
-	_check(save.SAVE_VERSION == 5, "SAVE_VERSION 5")
+	_check(save.SAVE_VERSION == 6, "SAVE_VERSION 6")
 
 	await _case_auto_apply()
 	await _case_continue()
@@ -106,7 +106,7 @@ func _case_auto_apply() -> void:
 	_check(int(saved.get("team_money", 0)) >= 3200, "auto: não perdeu dinheiro: %s" % str(saved.get("team_money")))
 	var items: Array = saved.get("discovered_items", [])
 	_check(items.has("moeda_antiga") and items.has("chave_enferrujada"), "auto: museu antigo + item novo: %s" % str(items))
-	_check(int(saved.get("version", 0)) == 5 and int(saved.get("saved_at", 0)) > 1700000000, "auto: versão 5 e saved_at novo")
+	_check(int(saved.get("version", 0)) == SaveManager.SAVE_VERSION and int(saved.get("saved_at", 0)) > 1700000000, "auto: versão atual e saved_at novo")
 	_check(int(sm.get_last_summary().get("money_start", 0)) == 3200, "auto: resumo começa com R$ 3200: %s" % str(sm.get_last_summary().get("money_start")))
 	_check(not FileAccess.file_exists(save.save_path + ".tmp"), "auto: sem .tmp sobrando (gravação atômica)")
 
@@ -191,4 +191,4 @@ func _case_newer_version() -> void:
 	_check(_file_text(save.save_path) == original, "v99: arquivo intacto depois da expedição")
 	# Novo jogo explícito libera: guarda o v99 no backup.
 	_check(save.start_new_game() == OK and _file_text(save.get_backup_path()) == original, "v99: start_new_game guarda o v99 no backup")
-	_check(int(save.load_from_file().get("version", 0)) == 5, "v99: save novo na versão 5")
+	_check(int(save.load_from_file().get("version", 0)) == SaveManager.SAVE_VERSION, "v99: save novo na versão atual")
