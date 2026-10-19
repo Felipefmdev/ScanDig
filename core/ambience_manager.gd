@@ -7,10 +7,14 @@ extends Node
 ## Campo trocam de loop (sem gaivotas / grilos). O clima entra com fade no aviso (baixo, ao longe),
 ## sobe no "active" e sai com fade no fim. Só local: cada peer toca o seu, a partir do mapa e do
 ## clima que já recebeu. Loops: tools/gen_audio.py (import com loop=true).
+## A Base (lobby_base.tscn) tem o seu loop leve (brisa e madeira da tenda), com o mesmo fade.
 ## Autoload CoreAmbience.
 
 const BUS: StringName = &"Ambient"
 const _GEN: String = "res://assets/audio/generated/"
+const BASE_SCENE: String = SessionManager.LOBBY_SCENE
+## Chave da Base em AMBIENT_BY_MAP (não é um MapData).
+const BASE_ID: String = "base"
 ## Por mapa (MapData.id): loop de dia, de noite (opcional) e volume em dB (fundo: bem abaixo dos
 ## passos, que tocam a -16 dB + o offset da superfície).
 const AMBIENT_BY_MAP: Dictionary = {
@@ -20,6 +24,7 @@ const AMBIENT_BY_MAP: Dictionary = {
 	"geleira": {"day": _GEN + "amb_geleira.ogg", "db": -18.0},
 	"cratera": {"day": _GEN + "amb_cratera.ogg", "db": -15.0},
 	"ilha_tesouro": {"day": _GEN + "amb_ilha.ogg", "db": -18.0},
+	BASE_ID: {"day": _GEN + "amb_base.ogg", "db": -21.0},
 }
 ## Por tipo de clima (WeatherManager.KIND_*): loop e volume no auge, nunca acima do passo no chão
 ## dos mapas onde cai (chuva: areia/grama; nevasca: neve -3; cinzas: cristal -2).
@@ -83,14 +88,21 @@ static func map_id_from_scene(scene_path: String) -> String:
 	return scene_path.trim_prefix(MAP_SCENE_PREFIX).trim_suffix(".tscn")
 
 
+## Loop da cena: mapa -> o id dele; Base -> BASE_ID; resto (título) -> "".
+static func ambience_id_from_scene(scene_path: String) -> String:
+	if scene_path == BASE_SCENE:
+		return BASE_ID
+	return map_id_from_scene(scene_path)
+
+
 func _play_initial_scene() -> void:
 	var scene: Node = get_tree().current_scene
-	if scene != null and map_id_from_scene(scene.scene_file_path) != "" and _map_path == "":
+	if scene != null and ambience_id_from_scene(scene.scene_file_path) != "" and _map_path == "":
 		_on_scene_loaded(scene.scene_file_path)
 
 
 func _on_scene_loaded(scene_path: String) -> void:
-	var map_id: String = map_id_from_scene(scene_path)
+	var map_id: String = ambience_id_from_scene(scene_path)
 	if map_id == "":
 		stop_all()
 		return
@@ -116,7 +128,8 @@ func play_map(map_id: String, night: bool = false) -> void:
 ## Liga o loop do clima: aviso = baixo, active = cheio, none (ou tipo sem loop) = sai com fade.
 func set_weather(kind: String, phase: String) -> void:
 	var cfg: Dictionary = WEATHER_LOOPS.get(kind, {}) as Dictionary
-	if cfg.is_empty() or phase == WeatherManager.PHASE_NONE or _map_path == "":
+	# na Base não há clima (o loop dela já é o vento)
+	if cfg.is_empty() or phase == WeatherManager.PHASE_NONE or _map_path == "" or _map_path == ambient_path(BASE_ID, false):
 		_weather_kind = ""
 		_fade(_weather_player, SILENT_DB, weather_fade_s, true)
 		return

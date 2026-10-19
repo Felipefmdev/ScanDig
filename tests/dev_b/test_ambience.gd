@@ -41,6 +41,7 @@ func test_every_map_has_a_looping_ambience() -> void:
 		assert_true(AmbienceManager.AMBIENT_BY_MAP.has(id), "ambiente de %s" % id)
 		_assert_loop(AmbienceManager.ambient_path(id, false))
 		_assert_loop(AmbienceManager.ambient_path(id, true))
+	_assert_loop(AmbienceManager.ambient_path(AmbienceManager.BASE_ID, false))
 	for kind: String in AmbienceManager.WEATHER_LOOPS:
 		_assert_loop(str((AmbienceManager.WEATHER_LOOPS[kind] as Dictionary)["path"]))
 	for kind: String in [WeatherManager.KIND_RAIN, WeatherManager.KIND_BLIZZARD, WeatherManager.KIND_ASHSTORM]:
@@ -105,9 +106,21 @@ func test_ambience_and_weather_stay_below_footsteps() -> void:
 			assert_lte(db, step_db + SFX.footstep_volume_offset(surface), "%s abaixo do passo em %s" % [kind, surface])
 
 
-func test_scene_changing_and_lobby_silence() -> void:
+## N2: a Base tem o seu loop (brisa e madeira da tenda) com fade, sem clima por cima; o título fica
+## em silêncio.
+func test_base_has_its_own_loop_and_title_is_silent() -> void:
 	_am.play_map("geleira", false)
 	_am._on_scene_loaded("res://world/lobby_base.tscn")
 	await wait_seconds(0.2)
-	assert_false(_am.is_map_playing(), "lobby sem ambiente de mapa")
-	assert_false(_am.map_player().playing)
+	var p: AudioStreamPlayer = _am.map_player()
+	assert_true(_am.is_map_playing(), "a Base toca o seu ambiente")
+	assert_eq(p.stream.resource_path, AmbienceManager.ambient_path(AmbienceManager.BASE_ID, false))
+	var target: float = float((AmbienceManager.AMBIENT_BY_MAP[AmbienceManager.BASE_ID] as Dictionary)["db"])
+	assert_almost_eq(p.volume_db, target, 0.1, "fade-in até o volume da Base")
+	_am.set_weather(WeatherManager.KIND_RAIN, WeatherManager.PHASE_ACTIVE)
+	await wait_seconds(0.2)
+	assert_false(_am.weather_player().playing, "sem clima na Base")
+	_am._on_scene_loaded("res://world/title_screen.tscn")
+	await wait_seconds(0.2)
+	assert_false(_am.is_map_playing(), "título sem ambiente")
+	assert_false(p.playing)

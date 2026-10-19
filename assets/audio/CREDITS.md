@@ -12,6 +12,7 @@ Um teste GUT (`tests/dev_b/test_audio_credits.gd`) falha se um arquivo de áudio
 
 | Arquivo | Origem | Autor | Licença |
 |---|---|---|---|
+| `generated/amb_base.ogg` | gerado: `tools/gen_audio.py gen amb_base.ogg` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/amb_campo_day.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/amb_campo_night.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/amb_cratera.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
