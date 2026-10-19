@@ -98,6 +98,13 @@ var _m: Dictionary = {
 }
 var _last_health: float = -1.0
 var _watched_player: Node = null
+# Resistência (R5): FPS em janelas de 1 s (tempo real) desde a última expedição carregada.
+var _perf_t0_usec: int = 0
+var _perf_frames: int = 0
+var _perf_win_usec: int = 0
+var _perf_win_frames: int = 0
+var _perf_fps_min: float = -1.0
+var _last_load_s: float = -1.0
 
 
 func _ready() -> void:
@@ -552,6 +559,7 @@ func _start_monitoring() -> void:
 func _process(delta: float) -> void:
 	if _start_msec > 0:
 		_game_time += delta
+	_perf_tick()
 	_bot_auto_eat(delta)
 	if not _monitoring:
 		return
@@ -581,6 +589,44 @@ func _process(delta: float) -> void:
 	if _screenshot_every > 0.0 and now >= _next_screenshot:
 		_screenshot("periodic_%04ds" % int(_next_screenshot))
 		_next_screenshot += _screenshot_every
+
+
+func _perf_reset() -> void:
+	_perf_t0_usec = Time.get_ticks_usec()
+	_perf_frames = 0
+	_perf_win_usec = _perf_t0_usec
+	_perf_win_frames = 0
+	_perf_fps_min = -1.0
+
+
+func _perf_tick() -> void:
+	if _perf_t0_usec == 0:
+		return
+	_perf_frames += 1
+	_perf_win_frames += 1
+	var now: int = Time.get_ticks_usec()
+	if now - _perf_win_usec >= 1000000:
+		var fps: float = _perf_win_frames * 1000000.0 / float(now - _perf_win_usec)
+		if _perf_fps_min < 0.0 or fps < _perf_fps_min:
+			_perf_fps_min = fps
+		_perf_win_usec = now
+		_perf_win_frames = 0
+
+
+## Memória, objetos e FPS (média/mínimo) desde a última expedição carregada pelo bot.
+func _perf_state() -> Dictionary:
+	var elapsed_us: int = Time.get_ticks_usec() - _perf_t0_usec
+	var fps_avg: float = -1.0
+	if _perf_t0_usec > 0 and elapsed_us > 0:
+		fps_avg = _perf_frames * 1000000.0 / float(elapsed_us)
+	return {
+		"mem_static": int(Performance.get_monitor(Performance.MEMORY_STATIC)),
+		"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		"resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+		"fps_avg": snappedf(fps_avg, 0.1),
+		"fps_min": snappedf(_perf_fps_min, 0.1),
+		"load_s": snappedf(_last_load_s, 0.01),
+	}
 
 
 func _on_player_died() -> void:
@@ -1358,6 +1404,7 @@ func collect_state() -> Dictionary:
 		# QA #126: nós órfãos (crescimento entre idas e voltas ao lobby = vazamento).
 		"orphans": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
 		"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"perf": _perf_state(),
 		"scene": get_tree().current_scene.scene_file_path if get_tree().current_scene else "",
 		"player": {},
 		"game_state": {},
@@ -1581,6 +1628,7 @@ func _start_expedition(map_id: String, timeout: float, night: bool = false) -> v
 		_error("start_expedition: '%s' indisponivel (bloqueado ou sem cena)" % map_id)
 		return
 	sm.request_start_expedition(map_id, night)
+	var t0_usec: int = Time.get_ticks_usec()
 	var t0: float = _elapsed()
 	while not sm.is_peer_scene_ready(multiplayer.get_unique_id()):
 		if _elapsed() - t0 > timeout:
@@ -1592,7 +1640,9 @@ func _start_expedition(map_id: String, timeout: float, night: bool = false) -> v
 		await tree.process_frame
 		if not is_inside_tree():
 			return
-	_log("  expedicao em %s" % get_tree().current_scene.scene_file_path)
+	_last_load_s = (Time.get_ticks_usec() - t0_usec) / 1000000.0
+	_perf_reset()
+	_log("  expedicao em %s (%.2f s)" % [get_tree().current_scene.scene_file_path, _last_load_s])
 
 
 # --- UI (#62): os mesmos sinais que um clique do jogador ----------------------
