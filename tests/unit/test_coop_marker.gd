@@ -18,10 +18,12 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	# free() e não queue_free(): o GUT só cede um quadro entre testes se passou paint_after
+	# (0,1 s), então marcadores na fila de remoção ainda estariam no grupo no teste seguinte.
 	var markers: Array[Node] = get_tree().get_nodes_in_group(&"coop_markers")
 	for m: Node in markers:
 		if is_instance_valid(m):
-			m.queue_free()
+			m.free()
 
 
 func test_settings_has_marker_action() -> void:

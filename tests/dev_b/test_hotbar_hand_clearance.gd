@@ -75,7 +75,12 @@ func _check(res: Vector2i, scale: float, slot: int) -> void:
 	get_tree().root.size = res
 	get_tree().root.content_scale_factor = scale
 	(_player.get("inventory") as Inventory).select(slot)
-	await wait_frames(3)
+	# Mede a mão assentada: a troca de slot mergulha a ferramenta por tool_equip_time (delta
+	# real) e wait_frames conta ticks de física, então com quadros lentos (CI) a mão saía a
+	# meio do mergulho e a hotbar a meio do layout. Espera a troca acabar e mais um quadro.
+	var settled: bool = await wait_until(func() -> bool: return float(_player.get("_equip_left")) <= 0.0, 2.0)
+	assert_true(settled, "a troca de slot assenta")
+	await get_tree().process_frame
 	var bar: Control = _player.get_node(^"HUD/Hotbar") as Control
 	assert_eq(bar.get_child_count(), 8, "8 slots")
 	var cam: Camera3D = _player.get_node(^"Head/Camera3D") as Camera3D
