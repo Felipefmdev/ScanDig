@@ -17,9 +17,9 @@ Um teste GUT (`tests/dev_b/test_audio_credits.gd`) falha se um arquivo de áudio
 | `generated/amb_campo_night.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/amb_cratera.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/amb_geleira.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
-| `generated/amb_ilha.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
-| `generated/amb_praia_day.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
-| `generated/amb_praia_night.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
+| `generated/amb_ilha.ogg` | rebentações gravadas de [Beach Ocean Waves](https://opengameart.org/content/beach-ocean-waves) ([alkaibeach](https://freesound.org/s/18363/), jasinski) e [Water Waves](https://opengameart.org/content/water-waves) ([wavesound](https://freesound.org/s/11505/), transitking), todas CC0, por cima das camadas sintéticas de `tools/gen_audio.py beach` | ScanDig (Dev B); jasinski; transitking | CC0 1.0 |
+| `generated/amb_praia_day.ogg` | rebentações gravadas de [Beach Ocean Waves](https://opengameart.org/content/beach-ocean-waves) ([alkaibeach](https://freesound.org/s/18363/), jasinski) e [Water Waves](https://opengameart.org/content/water-waves) ([wavesound](https://freesound.org/s/11505/), transitking), todas CC0, por cima das camadas sintéticas de `tools/gen_audio.py beach` | ScanDig (Dev B); jasinski; transitking | CC0 1.0 |
+| `generated/amb_praia_night.ogg` | rebentações gravadas de [Beach Ocean Waves](https://opengameart.org/content/beach-ocean-waves) ([alkaibeach](https://freesound.org/s/18363/), jasinski) e [Water Waves](https://opengameart.org/content/water-waves) ([wavesound](https://freesound.org/s/11505/), transitking), todas CC0, por cima das camadas sintéticas de `tools/gen_audio.py beach` | ScanDig (Dev B); jasinski; transitking | CC0 1.0 |
 | `generated/amb_ruinas.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/bat_screech_0.ogg` | "bat_01.ogg" de [Bat Screeches](https://opengameart.org/node/132771) (OpenGameArt; extraído de [fruit_bats3.wav](https://freesound.org/s/104205/), CC0), cortado por `tools/gen_audio.py clip bat_01.ogg 0.05 0.98 bat_screech_0.ogg` | AntumDeluge (gravação: polymorpheva) | CC0 1.0 |
 | `generated/bat_screech_1.ogg` | "bat_02.ogg" de [Bat Screeches](https://opengameart.org/node/132771) (OpenGameArt; extraído de [fruit_bats3.wav](https://freesound.org/s/104205/), CC0), cortado por `tools/gen_audio.py clip bat_02.ogg 0 0.8 bat_screech_1.ogg` | AntumDeluge (gravação: polymorpheva) | CC0 1.0 |
@@ -69,7 +69,7 @@ Um teste GUT (`tests/dev_b/test_audio_credits.gd`) falha se um arquivo de áudio
 | `generated/water_step_1.wav` | gerado: `tools/gen_sand_sfx.py` | ScanDig (Felipe Mayer) | CC0 1.0 |
 | `generated/water_step_2.wav` | gerado: `tools/gen_sand_sfx.py` | ScanDig (Felipe Mayer) | CC0 1.0 |
 | `generated/weather_ashstorm.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
-| `generated/weather_blizzard.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
+| `generated/weather_blizzard.ogg` | gravação "wind.ogg" de [Icy Heights](https://opengameart.org/content/icy-heights) (OpenGameArt), em loop por `tools/gen_audio.py loop` | Écrivain | CC0 1.0 |
 | `generated/weather_rain.ogg` | gravação "3.ogg" de [rain loopable](https://opengameart.org/content/rain-loopable) (OpenGameArt), em loop por `tools/gen_audio.py loop` | Ylmir | CC0 1.0 |
 | `generated/whoosh_0.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/whoosh_1.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
