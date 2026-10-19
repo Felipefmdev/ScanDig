@@ -12,6 +12,7 @@ Lê isto ao entrares no projeto. Primeiro ganhas contexto e só depois montas a 
 ## 2. Contexto obrigatório (ler por esta ordem)
 
 1. `CONTEXT.md`: regras de arquitetura (Godot 4.3, GDScript tipado), divisão Dev A / Dev B e o que cada equipa pode editar.
+   - Visão geral do código (autoloads, fluxo da expedição, save, testes): [`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
 2. `docs/GAME_DESIGN.md`: a visão do jogo (mapas, armas por mapa, missões, segredos, estilo de arte).
 3. `docs/CORE_AND_NETWORK.md`: autoridade do host, RPCs, snapshot e save.
 4. `docs/PACING.md` e `docs/TOOLS.md`: economia e ferramentas.
