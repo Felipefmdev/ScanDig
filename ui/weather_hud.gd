@@ -27,7 +27,10 @@ var root_control: Control = null
 var stack: VBoxContainer = null
 var toast_panel: PanelContainer = null
 var toast_label: Label = null
+## Aviso do atalho F8 (debug), criado só no primeiro uso, abaixo do aviso do clima.
+var debug_panel: PanelContainer = null
 var _toast_token: int = 0
+var _debug_token: int = 0
 
 
 func _enter_tree() -> void:
@@ -46,6 +49,7 @@ func _ready() -> void:
 	var weather: WeatherManager = WeatherManager.instance
 	if weather != null:
 		weather.weather_changed.connect(_on_weather_changed)
+		weather.debug_toast.connect(show_debug_toast)
 
 
 func _build() -> void:
@@ -120,6 +124,22 @@ func show_toast(text: String) -> void:
 	await tween.finished
 	if token == _toast_token:
 		toast_panel.visible = false
+
+
+func show_debug_toast(text: String) -> void:
+	if debug_panel == null:
+		debug_panel = _chip()
+		debug_panel.name = "WeatherDebugToast"
+		stack.add_child(debug_panel)
+	_debug_token += 1
+	var token: int = _debug_token
+	(debug_panel.get_child(0) as Label).text = text
+	debug_panel.visible = true
+	if not is_inside_tree():
+		return
+	await get_tree().create_timer(2.0, false).timeout
+	if token == _debug_token and is_instance_valid(debug_panel):
+		debug_panel.visible = false
 
 
 func hide_toast() -> void:

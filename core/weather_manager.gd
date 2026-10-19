@@ -10,6 +10,8 @@ extends Node
 ## Autoload CoreWeather (mesmo caminho em todos os peers: /root/CoreWeather).
 
 signal weather_changed(kind: String, phase: String)
+## Atalho de debug (F8): aviso curto para a tela local (WeatherHud mostra).
+signal debug_toast(text: String)
 
 const PHASE_NONE: String = "none"
 const PHASE_WARNING: String = "warning"
@@ -43,6 +45,12 @@ const EFFECTS_BY_KIND: Dictionary = {
 const FORCE_WARNING_S: float = 3.0
 ## Variação sorteada da intensidade a cada evento (× a do mapa).
 const INTENSITY_JITTER: Vector2 = Vector2(0.85, 1.0)
+## F8 (só build de debug): lido direto do teclado, fora do InputMap e da aba Controles.
+const DEBUG_KEY: Key = KEY_F8
+const DEBUG_FORCED_TEXT: String = "Clima forçado (F8)"
+const DEBUG_ENDED_TEXT: String = "Clima encerrado (F8)"
+const DEBUG_HOST_ONLY_TEXT: String = "Só o host (F8)"
+const DEBUG_NO_WEATHER_TEXT: String = "Sem clima neste mapa (F8)"
 
 static var instance: WeatherManager = null
 
@@ -54,6 +62,8 @@ var _map_id: String = ""
 ## Host com o ciclo correndo (num mapa com clima).
 var _running: bool = false
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Atalho F8 ligado (os testes trocam; no export release fica desligado e nem lê o teclado).
+var debug_shortcuts: bool = OS.is_debug_build()
 
 
 func _enter_tree() -> void:
@@ -68,6 +78,7 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	_rng.randomize()
+	set_process_unhandled_input(debug_shortcuts)
 	var sm: SessionManager = SessionManager.instance
 	if sm != null:
 		sm.expedition_started.connect(_on_expedition_started)
@@ -80,6 +91,28 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _running:
 		tick(delta)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not debug_shortcuts:
+		return
+	var key: InputEventKey = event as InputEventKey
+	if key == null or not key.pressed or key.echo or key.keycode != DEBUG_KEY:
+		return
+	if is_inside_tree():
+		get_viewport().set_input_as_handled()
+	debug_toast.emit(debug_toggle())
+
+
+## F8: sem evento, força o do mapa; em aviso/ativo, encerra com o fim normal. Devolve o aviso.
+func debug_toggle() -> String:
+	if not _is_host():
+		return DEBUG_HOST_ONLY_TEXT
+	if _phase == PHASE_NONE:
+		force_weather()
+		return DEBUG_FORCED_TEXT if _phase != PHASE_NONE else DEBUG_NO_WEATHER_TEXT
+	force_end()
+	return DEBUG_ENDED_TEXT
 
 
 # --- Consultas (neutras sem evento ativo) ------------------------------------------
@@ -191,10 +224,13 @@ func _advance_phase() -> void:
 		PHASE_WARNING:
 			_set_state(_kind, PHASE_ACTIVE, _time_left + _roll_duration(), _intensity, true)
 		_:
-			# Fim do evento: avisa com o tipo que acabou ("O tempo abriu") e volta ao intervalo.
-			var next: float = _time_left + _roll_interval()
-			_set_state(_kind, PHASE_NONE, next, 1.0, true)
-			_kind = ""
+			_end_event(_time_left + _roll_interval())
+
+
+## Fim do evento: avisa com o tipo que acabou ("O tempo abriu") e volta ao intervalo.
+func _end_event(next_interval: float) -> void:
+	_set_state(_kind, PHASE_NONE, next_interval, 1.0, true)
+	_kind = ""
 
 
 func _roll_interval() -> float:
@@ -219,6 +255,15 @@ func force_weather() -> void:
 	_map_id = map_id
 	_running = true
 	_set_state(str(config["kind"]), PHASE_WARNING, FORCE_WARNING_S, float(config.get("intensity", 1.0)), true)
+
+
+## Host (F8/testes): encerra já o evento em aviso ou ativo, com o mesmo fim natural (fase
+## "none" difundida e próximo intervalo sorteado). Sem evento, não faz nada.
+func force_end() -> void:
+	if not _is_host() or _phase == PHASE_NONE:
+		return
+	_running = not config_for(_map_id).is_empty()
+	_end_event(_roll_interval())
 
 
 ## Host (testes): evento `kind` já ativo por `duration` s, com intensidade cheia.
@@ -272,7 +317,11 @@ func _set_state(kind: String, new_phase: String, time_left_s: float, level: floa
 	if changed:
 		weather_changed.emit(_kind, _phase)
 	if broadcast:
-		HostSync.broadcast(self, &"_rpc_sync", [get_state()])
+		_broadcast_state()
+
+
+func _broadcast_state() -> void:
+	HostSync.broadcast(self, &"_rpc_sync", [get_state()])
 
 
 ## Clientes: estado do host (mudança de fase ou entrada no meio). Nunca agenda.

@@ -10,6 +10,14 @@ class ClientWeather extends WeatherManager:
 		return false
 
 
+## Host que conta as difusões (o HostSync não manda nada fora da árvore).
+class CountingWeather extends WeatherManager:
+	var broadcasts: Array[Dictionary] = []
+
+	func _broadcast_state() -> void:
+		broadcasts.append(get_state())
+
+
 var _wm: WeatherManager = null
 
 
@@ -155,3 +163,81 @@ func test_scene_change_stops_weather() -> void:
 	core.force_event(WeatherManager.KIND_RAIN, 10.0)
 	SessionManager.instance.expedition_ending.emit("praia")
 	assert_eq(core.phase(), WeatherManager.PHASE_NONE, "fim da expedição volta ao neutro")
+
+
+func _f8() -> InputEventKey:
+	var ev: InputEventKey = InputEventKey.new()
+	ev.keycode = KEY_F8
+	ev.pressed = true
+	return ev
+
+
+func test_f8_forces_then_ends_like_natural_end() -> void:
+	var host: CountingWeather = CountingWeather.new()
+	host.debug_shortcuts = true
+	host.set_seed(7)
+	host.start_cycle("praia")
+	watch_signals(host)
+	host._unhandled_input(_f8())
+	assert_eq(host.phase(), WeatherManager.PHASE_WARNING, "F8 sem evento: força o clima do mapa")
+	assert_eq(host.current_kind(), WeatherManager.KIND_RAIN)
+	assert_signal_emitted_with_parameters(host, "debug_toast", [WeatherManager.DEBUG_FORCED_TEXT])
+	host.tick(WeatherManager.FORCE_WARNING_S)
+	assert_true(host.is_active())
+	var sent: int = host.broadcasts.size()
+	host._unhandled_input(_f8())
+	assert_eq(host.phase(), WeatherManager.PHASE_NONE, "F8 com evento: encerra")
+	assert_eq(host.current_kind(), "")
+	assert_signal_emitted_with_parameters(host, "weather_changed", [WeatherManager.KIND_RAIN, WeatherManager.PHASE_NONE])
+	assert_signal_emitted_with_parameters(host, "debug_toast", [WeatherManager.DEBUG_ENDED_TEXT])
+	assert_eq(host.broadcasts.size(), sent + 1, "o fim é difundido aos peers")
+	assert_eq(str(host.broadcasts[-1]["phase"]), WeatherManager.PHASE_NONE)
+	var cfg: Dictionary = WeatherManager.config_for("praia")
+	assert_between(host.time_left(), float(cfg["interval_min"]), float(cfg["interval_max"]), "reagenda o próximo intervalo")
+	host.tick(host.time_left())
+	assert_eq(host.phase(), WeatherManager.PHASE_WARNING, "o ciclo segue depois do F8")
+	host.free()
+
+
+func test_f8_ends_during_warning() -> void:
+	_wm.start_cycle("geleira")
+	_wm.force_weather()
+	_wm.force_end()
+	assert_eq(_wm.phase(), WeatherManager.PHASE_NONE, "encerra também no aviso")
+	_wm.force_end()
+	assert_eq(_wm.phase(), WeatherManager.PHASE_NONE, "sem evento: não faz nada")
+
+
+func test_f8_ignored_without_debug_build() -> void:
+	_wm.debug_shortcuts = false
+	_wm.start_cycle("praia")
+	watch_signals(_wm)
+	_wm._unhandled_input(_f8())
+	assert_eq(_wm.phase(), WeatherManager.PHASE_NONE, "release: F8 não reage")
+	assert_signal_not_emitted(_wm, "debug_toast")
+
+
+func test_f8_other_keys_ignored() -> void:
+	_wm.debug_shortcuts = true
+	_wm.start_cycle("praia")
+	var ev: InputEventKey = _f8()
+	ev.keycode = KEY_F7
+	_wm._unhandled_input(ev)
+	ev = _f8()
+	ev.pressed = false
+	_wm._unhandled_input(ev)
+	assert_eq(_wm.phase(), WeatherManager.PHASE_NONE)
+
+
+func test_f8_client_does_not_force() -> void:
+	var client: ClientWeather = ClientWeather.new()
+	client.debug_shortcuts = true
+	client._map_id = "praia"
+	watch_signals(client)
+	client._unhandled_input(_f8())
+	assert_eq(client.phase(), WeatherManager.PHASE_NONE, "cliente não força")
+	assert_signal_emitted_with_parameters(client, "debug_toast", [WeatherManager.DEBUG_HOST_ONLY_TEXT])
+	client._rpc_sync({"kind": WeatherManager.KIND_RAIN, "phase": WeatherManager.PHASE_ACTIVE, "time_left": 40.0, "intensity": 1.0, "map_id": "praia"})
+	client._unhandled_input(_f8())
+	assert_true(client.is_active(), "cliente não encerra")
+	client.free()
