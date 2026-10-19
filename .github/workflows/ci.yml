@@ -9,6 +9,7 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       GODOT_VERSION: "4.3"
     steps:
@@ -36,6 +37,7 @@ jobs:
       # Um teste GUT que não compila é ignorado em silêncio ("does not extend GutTest"):
       # qualquer SCRIPT ERROR ou Parse Error no log derruba o passo.
       - name: Unit tests (GUT)
+        timeout-minutes: 15
         run: |
           set -o pipefail
           ./godot --headless --path . -s addons/gut/gut_cmdln.gd 2>&1 | tee gut.log
@@ -56,6 +58,7 @@ jobs:
     needs: tests
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
