@@ -81,7 +81,7 @@ func _ready() -> void:
 	stun_fx_height = 3.4
 	death_color = GOLD
 	_build_model()
-	_hud = BossHud.create("💰 " + BOSS_NAME, max_health, Color(0.98, 0.78, 0.3))
+	_hud = BossHud.create("💰 " + tr(BOSS_NAME), max_health, Color(0.98, 0.78, 0.3))
 	add_child(_hud)
 	for i: int in 3:
 		var w: GroundWarning = GroundWarning.new()

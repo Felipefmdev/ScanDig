@@ -121,7 +121,7 @@ func _ready() -> void:
 	stun_fx_height = 2.6
 	death_color = STRAW
 	_build_model()
-	_hud = BossHud.create("🎃 " + BOSS_NAME, max_health, Color(0.95, 0.5, 0.1))
+	_hud = BossHud.create("🎃 " + tr(BOSS_NAME), max_health, Color(0.95, 0.5, 0.1))
 	add_child(_hud)
 	_warning = GroundWarning.new()
 	add_child(_warning)

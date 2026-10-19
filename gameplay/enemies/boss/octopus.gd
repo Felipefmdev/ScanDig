@@ -1073,7 +1073,7 @@ func _build_planks() -> void:
 
 
 func _build_hud() -> void:
-	_hud = BossHud.create("🐙 " + BOSS_NAME, max_health, Color(0.62, 0.22, 0.48))
+	_hud = BossHud.create("🐙 " + tr(BOSS_NAME), max_health, Color(0.62, 0.22, 0.48))
 	_health_bar = _hud.bar
 	add_child(_hud)
 

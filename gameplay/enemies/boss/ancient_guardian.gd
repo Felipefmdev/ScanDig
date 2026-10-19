@@ -89,7 +89,7 @@ func _ready() -> void:
 	_surface_y = global_position.y
 	_build_model()
 	_build_plates()
-	_hud = BossHud.create("🗿 " + BOSS_NAME, max_health, Color(0.3, 0.75, 0.55))
+	_hud = BossHud.create("🗿 " + tr(BOSS_NAME), max_health, Color(0.3, 0.75, 0.55))
 	add_child(_hud)
 	_warning = GroundWarning.new()
 	add_child(_warning)

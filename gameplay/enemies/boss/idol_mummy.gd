@@ -103,7 +103,7 @@ func _ready() -> void:
 	death_color = LINEN
 	_surface_y = global_position.y
 	_build_model()
-	_hud = BossHud.create("📜 " + BOSS_NAME, max_health, Color(0.92, 0.78, 0.42))
+	_hud = BossHud.create("📜 " + tr(BOSS_NAME), max_health, Color(0.92, 0.78, 0.42))
 	add_child(_hud)
 	_warning = GroundWarning.new()
 	add_child(_warning)

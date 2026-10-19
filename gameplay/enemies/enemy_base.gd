@@ -74,7 +74,8 @@ func _tick_boss_timer(delta: float) -> void:
 		return
 	boss_time += delta
 	while _boss_warned < BOSS_WARNINGS.size() and boss_time_left() <= BOSS_WARNINGS[_boss_warned]:
-		_rpc_boss_notice.rpc("⏳ O chefe está se cansando: %d s para fugir!" % int(BOSS_WARNINGS[_boss_warned]))
+		# Template e número vão juntos (I18n.fmt, #131): cada jogador lê no idioma dele.
+		_rpc_boss_notice.rpc(I18n.fmt("⏳ O chefe está se cansando: %d s para fugir!", [int(BOSS_WARNINGS[_boss_warned])]))
 		_boss_warned += 1
 	if boss_time >= BOSS_TIME_LIMIT:
 		leave_fight()

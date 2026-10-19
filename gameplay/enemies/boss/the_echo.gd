@@ -93,7 +93,7 @@ func _ready() -> void:
 	stun_fx_height = 2.6
 	_surface_y = global_position.y
 	_build_model()
-	_hud = BossHud.create("🔊 " + BOSS_NAME, max_health, Color(0.30, 0.90, 0.85))
+	_hud = BossHud.create("🔊 " + tr(BOSS_NAME), max_health, Color(0.30, 0.90, 0.85))
 	add_child(_hud)
 	_warning = GroundWarning.new()
 	add_child(_warning)

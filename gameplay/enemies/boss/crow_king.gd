@@ -137,7 +137,7 @@ func _ready() -> void:
 	_home = global_position
 	_ground_y = _ground_height(global_position, global_position.y)
 	_build_model()
-	_hud = BossHud.create("👑 " + BOSS_NAME, max_health, Color(0.35, 0.3, 0.55))
+	_hud = BossHud.create("👑 " + tr(BOSS_NAME), max_health, Color(0.35, 0.3, 0.55))
 	add_child(_hud)
 	_warning = GroundWarning.new()
 	add_child(_warning)
