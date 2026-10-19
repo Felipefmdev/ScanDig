@@ -42,14 +42,14 @@ Job `export-windows` em `.github/workflows/ci.yml`, com os passos no workflow re
 - publica o artifact **ScanDig-windows** (`ScanDig-windows.zip`, 14 dias). O GitHub entrega o artifact dentro de outro zip.
 
 ## Lançar uma versão (#138)
-`.github/workflows/release.yml` reusa o `build-windows.yml`, gera o CHANGELOG (`tools/changelog.sh`: commits convencionais desde a tag `v*` anterior, agrupados em feat/fix/perf/docs/test/chore e "Outros") e cria a GitHub Release em **draft** com o `ScanDig-windows.zip`.
+`.github/workflows/release.yml` roda antes o job de testes do CI (`tests.yml`: import, cenas, GUT e headless; se falhar, não há zip nem draft), reusa o `build-windows.yml`, gera o CHANGELOG (`tools/changelog.sh`: commits convencionais desde a tag `v*` anterior, agrupados em feat/fix/perf/docs/test/chore e "Outros") e cria a GitHub Release em **draft** com o `ScanDig-windows.zip`.
 1. **Ensaio (dry-run)**, opcional: `gh workflow run release.yml -f dry_run=true` (ou *Actions → Release → Run workflow*). Não cria release: os artifacts `ScanDig-windows` (zip) e `release-notes` (`CHANGELOG.md`) ficam no run (`gh run view <id>`), e o changelog aparece no resumo do run.
 2. **Bump**: suba `application/config/version` no `project.godot` (ex.: `0.2.0`), rode `tools/sync_version.sh` e commite os dois arquivos (`chore(release): v0.2.0`). Espere o CI verde no `main`.
 3. **Tag** no commit do bump, igual à versão: `git tag -a v0.2.0 -m "ScanDig v0.2.0"` e `git push origin v0.2.0`. O release falha se a tag não bater com o `config/version`.
 4. **Revisar o draft** em *Releases*: baixe o zip, abra o jogo (título mostra `v0.2.0`) e ajuste as notas (o changelog sai dos títulos dos commits).
 5. **Publicar**: *Edit → Publish release* (ou `gh release edit v0.2.0 --draft=false`).
 - Sem tag, `gh workflow run release.yml -f dry_run=false` cria o draft da tag `v<config/version>` no commit atual; o GitHub só cria a tag ao publicar.
-- O release não roda o GUT: marque a tag só num commit do `main` com o CI verde.
+- O release roda os mesmos testes do CI antes do build, mas marque a tag num commit do `main` com o CI verde para não perder um run.
 
 ## Pendências
 - Assinatura de código (`codesign/*`): sem certificado; o Windows SmartScreen avisa na 1ª execução.

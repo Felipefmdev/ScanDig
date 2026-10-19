@@ -7,49 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Os passos ficam em tests.yml (reutilizado pelo release.yml, #144).
   tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      GODOT_VERSION: "4.3"
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download Godot ${{ env.GODOT_VERSION }}
-        run: |
-          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q godot.zip
-          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
-          chmod +x godot
-
-      # --import espera o import de todos os assets (.glb, fontes) e o cache de class_name.
-      # O antigo --editor --quit saía no 1º frame, antes disso, e as instâncias de .glb sumiam.
-      - name: Import project (assets + class_name cache)
-        run: ./godot --headless --path . --import
-
-      - name: Parse-check every scene by loading it
-        run: |
-          for scene in world/map_praia.tscn world/test_sandbox.tscn; do
-            ./godot --headless --path . --quit-after 60 "res://$scene" 2>&1 | tee run.log
-            if grep -q "SCRIPT ERROR" run.log; then echo "Script error in $scene"; exit 1; fi
-          done
-
-      # Um teste GUT que não compila é ignorado em silêncio ("does not extend GutTest"):
-      # qualquer SCRIPT ERROR ou Parse Error no log derruba o passo.
-      - name: Unit tests (GUT)
-        timeout-minutes: 15
-        run: |
-          set -o pipefail
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd 2>&1 | tee gut.log
-          if grep -qE "SCRIPT ERROR|Parse Error" gut.log; then
-            echo "::error::SCRIPT ERROR / Parse Error no log do GUT"
-            grep -nE -A2 "SCRIPT ERROR|Parse Error" gut.log | head -40
-            exit 1
-          fi
-
-      # Testes headless do Dev B (core/tests e ui/tests, "RESULT fails=N") e pares de rede local.
-      - name: Headless tests (core/tests, ui/tests)
-        run: bash tools/run_headless_tests.sh ./godot
+    uses: ./.github/workflows/tests.yml
 
   # Build do Windows (#101): só no main (push) ou à mão (workflow_dispatch), depois dos testes.
   # PR não exporta. Os passos ficam em build-windows.yml (reutilizado pelo release.yml, #138).

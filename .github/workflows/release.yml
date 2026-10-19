@@ -6,6 +6,7 @@ name: Release
 # - workflow_dispatch: dry_run (padrão true) só gera o zip (ScanDig-windows) e o CHANGELOG
 #   (release-notes) como artifacts, sem release. Com dry_run=false cria o draft da tag
 #   v<config/version>; o GitHub só cria a tag quando o draft for publicado.
+# - Antes do build roda o job de testes do CI (tests.yml: GUT e headless); falhou, para ali.
 
 on:
   push:
@@ -22,7 +23,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Os mesmos testes do CI (tests.yml, #144) antes do build: se falharem, nem zip nem draft.
+  tests:
+    uses: ./.github/workflows/tests.yml
+
   build:
+    needs: tests
     uses: ./.github/workflows/build-windows.yml
 
   release:
