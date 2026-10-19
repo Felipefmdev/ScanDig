@@ -11,20 +11,22 @@ extends Node
 
 const BUS: StringName = &"Ambient"
 const _GEN: String = "res://assets/audio/generated/"
-## Por mapa (MapData.id): loop de dia, de noite (opcional) e volume em dB.
+## Por mapa (MapData.id): loop de dia, de noite (opcional) e volume em dB (fundo: bem abaixo dos
+## passos, que tocam a -16 dB + o offset da superfície).
 const AMBIENT_BY_MAP: Dictionary = {
-	"praia": {"day": _GEN + "amb_praia_day.ogg", "night": _GEN + "amb_praia_night.ogg", "db": -12.0},
-	"campo": {"day": _GEN + "amb_campo_day.ogg", "night": _GEN + "amb_campo_night.ogg", "db": -13.0},
-	"ruinas": {"day": _GEN + "amb_ruinas.ogg", "db": -11.0},
-	"geleira": {"day": _GEN + "amb_geleira.ogg", "db": -12.0},
-	"cratera": {"day": _GEN + "amb_cratera.ogg", "db": -9.0},
-	"ilha_tesouro": {"day": _GEN + "amb_ilha.ogg", "db": -12.0},
+	"praia": {"day": _GEN + "amb_praia_day.ogg", "night": _GEN + "amb_praia_night.ogg", "db": -18.0},
+	"campo": {"day": _GEN + "amb_campo_day.ogg", "night": _GEN + "amb_campo_night.ogg", "db": -19.0},
+	"ruinas": {"day": _GEN + "amb_ruinas.ogg", "db": -17.0},
+	"geleira": {"day": _GEN + "amb_geleira.ogg", "db": -18.0},
+	"cratera": {"day": _GEN + "amb_cratera.ogg", "db": -15.0},
+	"ilha_tesouro": {"day": _GEN + "amb_ilha.ogg", "db": -18.0},
 }
-## Por tipo de clima (WeatherManager.KIND_*): loop e volume no auge.
+## Por tipo de clima (WeatherManager.KIND_*): loop e volume no auge, nunca acima do passo no chão
+## dos mapas onde cai (chuva: areia/grama; nevasca: neve -3; cinzas: cristal -2).
 const WEATHER_LOOPS: Dictionary = {
-	"rain": {"path": _GEN + "weather_rain.ogg", "db": -9.0},
-	"blizzard": {"path": _GEN + "weather_blizzard.ogg", "db": -8.0},
-	"ashstorm": {"path": _GEN + "weather_ashstorm.ogg", "db": -9.0},
+	"rain": {"path": _GEN + "weather_rain.ogg", "db": -17.0},
+	"blizzard": {"path": _GEN + "weather_blizzard.ogg", "db": -19.0},
+	"ashstorm": {"path": _GEN + "weather_ashstorm.ogg", "db": -18.0},
 }
 ## No aviso o clima já se ouve, mais baixo (vem chegando).
 const WARNING_DB_OFFSET: float = -12.0

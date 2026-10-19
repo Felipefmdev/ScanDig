@@ -5,11 +5,14 @@
                                                      e gull_caw/gull_dive/spray_hiss.wav
   python tools/gen_audio.py normalize <arquivos> -> normaliza .ogg/.wav no lugar (mono, alvo abaixo)
   python tools/gen_audio.py measure <arquivos>   -> imprime pico e RMS (das janelas com som)
+  python tools/gen_audio.py loop <gravação> <nome.ogg> -> gravação de terceiros (CC0) vira loop:
+                                                     mono, SR, cauda cruzada no início, normalizada
 
 Normalização (a mesma para os gerados e os da Kenney): RMS das janelas de 20 ms acima de -50 dB
 levado a -18 dBFS (loops: -20), ganho entre -12 e +16 dB, pico limitado a -3 dBFS por um limitador
 suave (no máximo 6 dB de redução). Rodar de novo é idempotente (ganho ~0).
-Tudo é ruído filtrado e senos sintetizados aqui: sem amostras de terceiros (CC0, ver CREDITS.md).
+Tudo é ruído filtrado e senos sintetizados aqui, menos weather_rain.ogg (gravação CC0 passada por
+`loop`; autor e link em CREDITS.md).
 Os loops têm a cauda cruzada no início, então emendam sem clique (import com loop=true).
 """
 import os
@@ -205,8 +208,15 @@ def write_ogg(name: str, x: np.ndarray, loop: bool = False) -> str:
         fade = min(len(y), int(SR * 0.012))
         y[-fade:] *= np.linspace(1.0, 0.0, fade)
     path = os.path.join(OUT, name)
-    sf.write(path, y.astype(np.float32), SR, format="OGG", subtype="VORBIS")
+    write_vorbis(path, y, SR)
     return path
+
+
+def write_vorbis(path: str, y: np.ndarray, sr: int) -> None:
+    """Em blocos: o libsndfile 1.2 quebra ao gravar um .ogg longo (>~30 s) de uma vez."""
+    with sf.SoundFile(path, "w", sr, 1, format="OGG", subtype="VORBIS") as f:
+        for i in range(0, len(y), 4096):
+            f.write(y[i: i + 4096].astype(np.float32))
 
 
 def make_loop(fn, xfade: float = 2.0) -> np.ndarray:
@@ -407,17 +417,6 @@ def rumble(n: int) -> np.ndarray:
     return out
 
 
-def rain(n: int) -> np.ndarray:
-    """Chuva: chiado contínuo + milhares de gotinhas (cliques em passa-alta)."""
-    hiss = band(pink(n), 900, 7000) * 0.5
-    clicks = np.zeros(n)
-    k = int(n / SR * 900)
-    idx = rng.integers(0, n, k)
-    clicks[idx] = rng.uniform(-1.0, 1.0, k) * rng.uniform(0.2, 1.0, k) ** 2
-    drops = high(signal.lfilter([1.0], [1.0, -0.6], clicks), 1800) * 1.2
-    return (hiss + drops) * lfo(n, 1.0 / 10.0, 0.2, 0.5)
-
-
 def ash(n: int) -> np.ndarray:
     """Tempestade de cinzas: vento grave e áspero + grãos batendo."""
     w = wind(n, 180, 520, 0.6, 0.15)
@@ -436,7 +435,6 @@ AMBIENT = {
     "amb_geleira.ogg": lambda n: wind(n, 350, 1100, 0.7, 0.5),
     "amb_cratera.ogg": rumble,
     "amb_ilha.ogg": lambda n: waves(n, 9.0, 0.5) * 0.8 + gulls(n, 7) + breeze(n, 300, 1200, 0.5) * 0.2,
-    "weather_rain.ogg": rain,
     "weather_blizzard.ogg": lambda n: wind(n, 600, 2200, 0.5, 0.8) + high(pink(n), 3000) * 0.3,
     "weather_ashstorm.ogg": ash,
 }
@@ -465,6 +463,18 @@ def gen() -> None:
     report(made)
 
 
+def loop_file(src: str, name: str, xfade: float = 2.0) -> None:
+    """Gravação -> loop do jogo: a cauda (xfade s) cruzada sobre o início, como em make_loop."""
+    d, sr = sf.read(src, always_2d=True)
+    x = signal.resample_poly(d.mean(axis=1), SR, sr) if sr != SR else d.mean(axis=1)
+    xf = int(SR * xfade)
+    n = len(x) - xf
+    out = x[:n].copy()
+    ramp = np.linspace(0.0, 1.0, xf)
+    out[:xf] = out[:xf] * np.sqrt(ramp) + x[n:] * np.sqrt(1.0 - ramp)
+    report([write_ogg(name, out, loop=True)])
+
+
 def normalize_files(paths: list[str]) -> None:
     for p in paths:
         d, sr = sf.read(p, always_2d=True)
@@ -472,7 +482,7 @@ def normalize_files(paths: list[str]) -> None:
         loop = os.path.basename(p).startswith(("amb_", "weather_"))
         y = normalize(x, sr, RMS_LOOP if loop else RMS_ONESHOT).astype(np.float32)
         if p.endswith(".ogg"):
-            sf.write(p, y, sr, format="OGG", subtype="VORBIS")
+            write_vorbis(p, y, sr)
         else:
             sf.write(p, y, sr, subtype="PCM_16")
     report(paths)
@@ -492,6 +502,8 @@ if __name__ == "__main__":
         gen()
     elif cmd == "normalize":
         normalize_files(sys.argv[2:])
+    elif cmd == "loop":
+        loop_file(sys.argv[2], sys.argv[3])
     elif cmd == "measure":
         report(sys.argv[2:])
     else:

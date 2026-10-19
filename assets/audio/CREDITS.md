@@ -1,7 +1,7 @@
 # Créditos de áudio
 
-Todos os sons de `assets/audio/` são **CC0 1.0** (domínio público): pacotes da Kenney ou
-gerados por script versionado neste repositório (sem amostras de terceiros).
+Todos os sons de `assets/audio/` são **CC0 1.0** (domínio público): pacotes da Kenney, gerados
+por script versionado neste repositório ou gravações CC0 do OpenGameArt (autor e link na tabela).
 Licença CC0: https://creativecommons.org/publicdomain/zero/1.0/ — o `License.txt` de cada
 pacote da Kenney está na pasta dele.
 
@@ -62,7 +62,7 @@ Um teste GUT (`tests/dev_b/test_audio_credits.gd`) falha se um arquivo de áudio
 | `generated/water_step_2.wav` | gerado: `tools/gen_sand_sfx.py` | ScanDig (Felipe Mayer) | CC0 1.0 |
 | `generated/weather_ashstorm.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/weather_blizzard.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
-| `generated/weather_rain.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
+| `generated/weather_rain.ogg` | gravação "3.ogg" de [rain loopable](https://opengameart.org/content/rain-loopable) (OpenGameArt), em loop por `tools/gen_audio.py loop` | Ylmir | CC0 1.0 |
 | `generated/whoosh_0.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/whoosh_1.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |
 | `generated/whoosh_2.ogg` | gerado: `tools/gen_audio.py` | ScanDig (Dev B) | CC0 1.0 |

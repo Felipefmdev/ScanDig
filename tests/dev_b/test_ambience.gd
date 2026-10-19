@@ -91,6 +91,20 @@ func test_weather_loop_fades_with_phase() -> void:
 	assert_false(w.playing, "fim do evento: sai")
 
 
+## Teste de ouvido: o fundo e o clima nunca cobrem os passos (-16 dB + offset da superfície).
+func test_ambience_and_weather_stay_below_footsteps() -> void:
+	var player: Player = Player.new()
+	var step_db: float = player.footsteps_volume_db
+	player.free()
+	for id: String in AmbienceManager.AMBIENT_BY_MAP:
+		assert_lte(float((AmbienceManager.AMBIENT_BY_MAP[id] as Dictionary)["db"]), step_db + 1.0, "fundo de %s" % id)
+	var ground: Dictionary = {"rain": [&"sand", &"grass"], "blizzard": [&"snow"], "ashstorm": [&"crystal"]}
+	for kind: String in AmbienceManager.WEATHER_LOOPS:
+		var db: float = float((AmbienceManager.WEATHER_LOOPS[kind] as Dictionary)["db"])
+		for surface: StringName in ground[kind]:
+			assert_lte(db, step_db + SFX.footstep_volume_offset(surface), "%s abaixo do passo em %s" % [kind, surface])
+
+
 func test_scene_changing_and_lobby_silence() -> void:
 	_am.play_map("geleira", false)
 	_am._on_scene_loaded("res://world/lobby_base.tscn")
