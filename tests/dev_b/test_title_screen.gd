@@ -195,7 +195,7 @@ func test_settings_and_escape_return_to_main() -> void:
 func test_title_polish_version_tagline_icons_and_motion() -> void:
 	assert_eq(str(ProjectSettings.get_setting("application/config/version", "")), "0.1.0", "versão no project.godot")
 	var title: TitleScreen = _title()
-	assert_eq(title.version_label.text, "v0.1.0")
+	assert_eq(title.version_label.text, BuildInfo.display_text())
 	assert_eq(title.tagline_label.text, TitleScreen.TAGLINE)
 	for button: Button in [title.continue_button, title.new_game_button, title.load_button, title.coop_button, title.settings_button, title.quit_button]:
 		assert_not_null(button.icon, "ícone em %s" % button.text)

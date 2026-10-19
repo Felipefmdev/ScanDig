@@ -11,3 +11,6 @@
 
 # Saida do DebugBridge (tools/run_bot.sh)
 .bot_runs/
+
+# Commit do build, gerado no CI (tools/write_build_info.sh, #138)
+/build_info.json

@@ -9,7 +9,6 @@ extends Node3D
 
 const ORBIT_SPEED: float = 0.05
 const TAGLINE: String = "Detecção de metais e escavação cooperativa"
-const DEFAULT_VERSION: String = "0.1.0"
 ## Hover/foco dos botões: leve escala a partir do centro.
 const BUTTON_FOCUS_SCALE: float = 1.04
 ## Logo: balanço lento (graus) e respiração da escala.
@@ -458,7 +457,7 @@ func _build() -> void:
 
 	version_label = Label.new()
 	version_label.name = "Version"
-	version_label.text = "v" + game_version()
+	version_label.text = BuildInfo.display_text()
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	version_label.add_theme_font_size_override(&"font_size", 14)
 	version_label.add_theme_color_override(&"font_color", UiPalette.PAPER_LIGHT)
@@ -521,12 +520,6 @@ func _animate_logo(logo: Label) -> void:
 	var tween: Tween = logo.create_tween().set_loops().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(logo, "rotation", deg_to_rad(LOGO_SWAY_DEG), LOGO_SWAY_SECONDS)
 	tween.tween_property(logo, "rotation", deg_to_rad(-LOGO_SWAY_DEG), LOGO_SWAY_SECONDS)
-
-
-## "0.1.0" de application/config/version (o mesmo do .exe).
-static func game_version() -> String:
-	var version: String = str(ProjectSettings.get_setting("application/config/version", ""))
-	return version if not version.is_empty() else DEFAULT_VERSION
 
 
 func _card(child: Control) -> PanelContainer:
