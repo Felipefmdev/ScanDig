@@ -352,11 +352,12 @@ func start_new_game() -> Error              # host/offline, fora de expedição;
    - emite `save_load_failed("O save estava corrompido e foi guardado como backup. Começando um jogo novo.")`;
    - segue com o jogo novo e `is_progress_applied() = true`.
    - `get_save_summary()` dá `valid=false` e o motivo em `error`.
+   - Não conta como corrompido (carrega e descarta só o valor ruim): `null`/números/objetos dentro das listas de ids e níveis de upgrade que não são número (#132).
 5. **Versão mais nova que 4.**
    - Não aplica, e a gravação fica bloqueada nesta sessão (`save_game` → `ERR_UNAUTHORIZED`); o arquivo fica intacto.
    - Emite `save_load_failed("Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar.")`.
    - `get_save_summary()` dá `valid=false` e a versão lida. As versões 1 a 3 continuam sendo convertidas.
-6. **Gravação atômica.** Grava em `scandig_save.json.tmp` e renomeia por cima do `scandig_save.json` (`DirAccess.rename_absolute`; se o sistema não renomear por cima, apaga o antigo e renomeia). Grava também `"saved_at"` (unix, opcional); a versão continua 4.
+6. **Gravação atômica (#132).** Grava em `scandig_save.json.tmp`, confere se o tamanho no disco bate com o texto e só então renomeia por cima do `scandig_save.json` (`DirAccess.rename_absolute`). Se o sistema não renomear por cima, o antigo vira `scandig_save.json.old`, o `.tmp` entra no lugar e o `.old` é apagado; se essa troca falhar, o `.old` volta. Qualquer falha (disco cheio, sem permissão, rename recusado) apaga o `.tmp`, mantém o save anterior intacto e emite `save_failed`. Um `.old` sem save ao lado (jogo fechado no meio da troca) volta a ser o save ao abrir o slot. Grava também `"saved_at"` (unix, opcional); a versão continua 4. Testes: `tests/dev_b/test_save_robustness.gd`.
 
 ### Slots (#100)
 - `SaveManager.SLOT_COUNT = 3`. `slot_path(n)` fica na pasta do caminho base (`user://` no jogo; a pasta de `use_test_save_dir`/`set_save_path` nos testes), então os testes isolam os slots sozinhos.
@@ -378,6 +379,7 @@ func start_new_game() -> Error              # host/offline, fora de expedição;
 | `scandig_save.legacy.json` | o save de antes dos slots, depois de copiado para o slot 1 (nunca apagado) |
 | `scandig_save.json` | save de antes dos slots (migrado uma vez para o slot 1); também o caminho base de testes/bots |
 | `scandig_save.json.tmp` | só durante a gravação |
+| `scandig_save.json.old` | só durante a troca, se o sistema não renomeia por cima |
 | `scandig_save.backup.json` | save anterior, a cada `start_new_game()` |
 | `scandig_save.corrupt-<unix>.json` | save ilegível, guardado ao tentar carregar |
 | `test_saves/<teste>/` | saves isolados dos testes (`use_test_save_dir`), nunca o do jogador |
