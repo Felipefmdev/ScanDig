@@ -224,6 +224,7 @@ func _connect_session() -> void:
 		_connect_if_has(GameState.instance, &"quest_completed", _on_quest_completed)
 		_connect_if_has(GameState.instance, &"secret_found", _on_secret_found)
 		_connect_if_has(GameState.instance, &"creature_discovered", _on_creature_discovered)
+		_connect_if_has(GameState.instance, &"achievement_unlocked", _on_achievement_unlocked)
 	if NetworkManager.instance != null:
 		_connect_if_has(NetworkManager.instance, &"session_left", _on_session_left)
 	if SaveManager.instance != null:
@@ -423,8 +424,18 @@ func _on_creature_discovered(kind: String) -> void:
 	_enqueue_toast(tr("📖 Nova criatura no diário: %s (%d/%d)") % [tr(str(GameState.CREATURES.get(kind, kind))), seen, total])
 
 
-func _enqueue_toast(text: String) -> void:
-	if not _should_show_toast():
+## Conquista nova (#141): avisa também na Base (doar ao Museu desbloqueia). O save carregado no
+## host não emite achievement_unlocked, e a leva inicial de quem entra fica de fora (_synced_once).
+func _on_achievement_unlocked(achievement_id: String) -> void:
+	var def: Dictionary = Achievements.get_definition(achievement_id)
+	if def.is_empty():
+		return
+	_enqueue_toast(tr("🏆 Conquista desbloqueada: %s") % tr(str(def["name"])), true)
+
+
+## `anywhere`: fora da expedição também (senão o aviso é só de expedição).
+func _enqueue_toast(text: String, anywhere: bool = false) -> void:
+	if not (_should_show_toast() or (anywhere and _synced_once)):
 		return
 	_toast_queue.append(text)
 	if not toast_panel.visible:

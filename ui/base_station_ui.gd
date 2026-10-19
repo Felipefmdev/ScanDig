@@ -81,12 +81,15 @@ const TAB_SHORT_TITLES: Dictionary = {
 	"Expedições": "Expedições",
 	"Diário": "Diário",
 	TREASURE_TAB_TITLE: "Mapa",
+	AchievementsTab.TAB_NAME: "Conquistas",
 }
 const MUSEUM_DONE_MARK: String = " ★"
 const TREASURE_MAX_HINTS: int = 3
 var _treasure_count_label: Label = null
 var _treasure_scroll: TreasureMapScroll = null
 var _treasure_hints_label: Label = null
+## Aba Conquistas (#141), também criada em runtime.
+var achievements_tab: AchievementsTab = null
 
 ## Cor das linhas de mapas que ainda não podem ser jogados.
 const MAP_LOCKED_COLOR: Color = UiPalette.METAL
@@ -127,6 +130,7 @@ func _ready() -> void:
 	# A loja já usa o CoreSession (nome dos mapas) no primeiro refresh.
 	_session = get_node_or_null(SESSION_PATH)
 	_build_treasure_tab()
+	_build_achievements_tab()
 	_wrap_pages_in_scroll()
 	_apply_tab_titles()
 	# Borda de foco só navegando por teclado/comando; com o mouse, nada aceso (#122).
@@ -1137,6 +1141,15 @@ func _set_shop_feedback(msg: String) -> void:
 func _set_museum_feedback(msg: String) -> void:
 	if museum_feedback_label != null:
 		museum_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
+
+
+# --- Conquistas (#141) ---------------------------------------------------------
+
+func _build_achievements_tab() -> void:
+	if tab_container == null or tab_container.has_node(AchievementsTab.TAB_NAME):
+		return
+	achievements_tab = AchievementsTab.new()
+	tab_container.add_child(achievements_tab)
 
 
 # --- Mapa do Tesouro (#112) ---------------------------------------------------

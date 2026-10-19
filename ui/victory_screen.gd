@@ -4,7 +4,8 @@ extends CanvasLayer
 ## Tela "Jogo concluído" (#81). Abre só na vitória ao vivo (GameState.game_victory: o chefe final
 ## GameState.FINAL_BOSS_ID, o Colosso do Tesouro da Ilha, vencido nesta sessão; #115). Carregar um
 ## save concluído, entrar no meio ou reconectar não abre.
-## Mostra Peças do museu, Peças intactas (#93), Fragmentos do mapa (#115), Segredos e Diário e tem
+## Mostra Peças do museu, Peças intactas (#93), Fragmentos do mapa (#115), Segredos e Diário, ao
+## lado as estatísticas da campanha (#141: GameState.stats, tempo de jogo e conquistas) e tem
 ## os botões "Continuar explorando" e "Créditos" (o mesmo
 ## cartão troca para os créditos; "Voltar" ou Esc volta às contagens). Enquanto está aberta,
 ## o player não se mexe (is_settings_open) e o menu de pausa não abre. Fecha na troca de cena.
@@ -15,6 +16,15 @@ signal open_changed(open: bool)
 
 const TITLE_TEXT: String = "Jogo concluído"
 const SUBTITLE_TEXT: String = "O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.\nLeve o Ídolo de Ouro, o tesouro principal, ao Museu.\nAinda há peças, segredos e bichos por achar."
+## Linhas "Campanha" (#141): chave -> rótulo. Chaves de Achievements.STAT_KEYS vêm do
+## GameState.stats; "play_time" é o tempo do save (só o host sabe) e "achievements" a contagem.
+const CAMPAIGN_ROWS: Array[Array] = [
+	["expeditions", "Expedições"], ["items_found", "Peças desenterradas"],
+	["items_sold", "Peças vendidas"], ["items_donated", "Peças doadas"],
+	["money_earned", "Dinheiro ganho"], ["creatures_defeated", "Criaturas derrotadas"],
+	["digs", "Pazadas"], ["dig_depth_cm", "Profundidade escavada"],
+	["play_time", "Tempo de jogo"], ["achievements", "Conquistas"],
+]
 const CREDITS_TITLE: String = "— CRÉDITOS —"
 ## Fonte única dos créditos (veio do overlay do gameplay/environment/crater_altar.gd).
 const CREDITS_TEXT: String = "Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral\nBroca (Dev_Player) — Controle em 1ª Pessoa, Ferramentas, Terrenos e Segredos\nSonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes\nDev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo\nFelipe — Concepção, Arte Low-Poly Toon e Direção Criativa"
@@ -28,6 +38,8 @@ var intact_value: Label = null
 var fragments_value: Label = null
 var secrets_value: Label = null
 var creatures_value: Label = null
+## Estatísticas da campanha (#141): chave de CAMPAIGN_ROWS -> Label do valor.
+var campaign_values: Dictionary = {}
 var continue_button: Button = null
 var credits_button: Button = null
 var credits_back_button: Button = null
@@ -171,6 +183,28 @@ func refresh() -> void:
 	fragments_value.text = "%d / %d" % [gs.map_fragments.size(), GameState.MAP_FRAGMENT_IDS.size()]
 	secrets_value.text = "%d / %d" % [gs.found_secrets.size(), GameState.SECRETS.size()]
 	creatures_value.text = "%d / %d" % [gs.seen_creatures.size(), GameState.CREATURES.size()]
+	for row: Array in CAMPAIGN_ROWS:
+		(campaign_values[row[0]] as Label).text = campaign_value_text(gs, str(row[0]))
+
+
+## Valor de uma linha "Campanha" como aparece na tela.
+static func campaign_value_text(gs: GameState, key: String) -> String:
+	match key:
+		"money_earned":
+			return UiFormat.money(gs.get_stat(key))
+		"dig_depth_cm":
+			return "%s m" % UiFormat.thousands(gs.get_stat(key) / 100)
+		"play_time":
+			var save: SaveManager = SaveManager.instance
+			return UiFormat.play_time(int(save.play_time_s)) if save != null and gs.is_authority() else "—"
+		"achievements":
+			var total: int = Achievements.ids().size()
+			var done: int = 0
+			for id: String in gs.achievements:
+				if Achievements.ids().has(id):
+					done += 1
+			return "%d / %d" % [done, total]
+	return UiFormat.thousands(gs.get_stat(key))
 
 
 # --- Montagem ------------------------------------------------------------------
@@ -183,7 +217,7 @@ func _build() -> void:
 	card = PanelContainer.new()
 	card.name = "VictoryCard"
 	card.theme_type_variation = &"WornPanel"
-	card.custom_minimum_size = Vector2(460, 0)
+	card.custom_minimum_size = Vector2(720, 0)
 	center.add_child(card)
 	var margin: MarginContainer = MarginContainer.new()
 	for side: String in ["left", "right", "top", "bottom"]:
@@ -220,17 +254,22 @@ func _build() -> void:
 	box.add_child(subtitle)
 	box.add_child(HSeparator.new())
 
-	var grid: GridContainer = GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 28)
-	grid.add_theme_constant_override("v_separation", 10)
-	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var columns: HBoxContainer = HBoxContainer.new()
+	columns.alignment = BoxContainer.ALIGNMENT_CENTER
+	columns.add_theme_constant_override("separation", 22)
+	box.add_child(columns)
+	var grid: GridContainer = _stats_column(columns, "Coleção", 2)
 	items_value = _count_row(grid, "Peças do museu")
 	intact_value = _count_row(grid, "Peças intactas")
 	fragments_value = _count_row(grid, "Fragmentos do mapa")
 	secrets_value = _count_row(grid, "Segredos")
 	creatures_value = _count_row(grid, "Diário de campo")
-	box.add_child(grid)
+	columns.add_child(VSeparator.new())
+	# Duas colunas de pares (rótulo, valor): a mesma altura das contagens ao lado.
+	var campaign: GridContainer = _stats_column(columns, "Campanha", 4)
+	campaign.name = "CampaignGrid"
+	for row: Array in CAMPAIGN_ROWS:
+		campaign_values[row[0]] = _count_row(campaign, str(row[1]))
 
 	continue_button = Button.new()
 	continue_button.text = "Continuar explorando"
@@ -280,6 +319,24 @@ func _build_credits() -> VBoxContainer:
 	credits_back_button.pressed.connect(show_summary)
 	box.add_child(credits_back_button)
 	return box
+
+
+## Coluna com título e grade (columns = 2 × pares rótulo/valor).
+func _stats_column(parent: Control, title_text: String, grid_columns: int) -> GridContainer:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	parent.add_child(column)
+	var title: Label = Label.new()
+	title.text = title_text
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override(&"font_color", UiPalette.WOOD)
+	column.add_child(title)
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = grid_columns
+	grid.add_theme_constant_override("h_separation", 18)
+	grid.add_theme_constant_override("v_separation", 10)
+	column.add_child(grid)
+	return grid
 
 
 func _count_row(grid: GridContainer, text: String) -> Label:

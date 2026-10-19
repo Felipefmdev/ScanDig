@@ -16,7 +16,7 @@ func test_journal_tab_lists_all_13_creatures_and_worn_panel_slots() -> void:
 	var ui: BaseStationUI = BASE_STATION_SCENE.instantiate() as BaseStationUI
 	add_child_autofree(ui)
 
-	assert_eq(ui.tab_container.get_tab_count(), 5, "BaseStationUI deve ter 5 abas (Diário e Mapa do Tesouro, #112)")
+	assert_eq(ui.tab_container.get_tab_count(), 6, "BaseStationUI deve ter 6 abas (Diário e Mapa do Tesouro, #112; Conquistas, #141)")
 	assert_eq(ui.tab_container.get_tab_title(3), "Diário", "4ª aba deve chamar-se Diário")
 	assert_eq(ui.get_journal_creature_count(), GameState.CREATURES.size(), "Deve listar as 13 criaturas")
 

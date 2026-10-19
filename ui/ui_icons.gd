@@ -63,6 +63,11 @@ const SHAPES: Dictionary = {
 	"map": "<path d=\"M3 6 L9 4 L15 6 L21 4 V18 L15 20 L9 18 L3 20 Z\" fill=\"#E8DCC0\" {s}/>"
 		+ "<path d=\"M9 4 V18 M15 6 V20\" fill=\"none\" {s}/>"
 		+ "<path d=\"M11 13 L13 11 M11 11 L13 13\" fill=\"none\" stroke=\"#C8463A\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>",
+	# Conquistas (#141).
+	"trophy": "<path d=\"M7.5 5.5 H4 Q4 10 8.5 10.5 M16.5 5.5 H20 Q20 10 15.5 10.5\" fill=\"none\" {s}/>"
+		+ "<path d=\"M7 3.5 H17 V8 Q17 13.5 12 13.5 Q7 13.5 7 8 Z\" fill=\"#E0A82E\" {s}/>"
+		+ "<path d=\"M12 13.5 V17\" {s}/><rect x=\"7.5\" y=\"17\" width=\"9\" height=\"3.5\" rx=\"1\" fill=\"#9A5A28\" {s}/>"
+		+ "<path d=\"M9.5 5.5 Q9.3 8.5 10.5 10.5\" fill=\"none\" stroke=\"#F2D27A\" stroke-width=\"1.3\" stroke-linecap=\"round\"/>",
 }
 
 static var _cache: Dictionary = {}

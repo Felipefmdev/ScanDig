@@ -1,12 +1,12 @@
 extends GutTest
 
-## Abas da Base (Loja, Museu, Expedições, Diário, Mapa): rótulos curtos que cabem na TabBar sem
+## Abas da Base (Loja, Museu, Expedições, Diário, Mapa, Conquistas): rótulos curtos que cabem na TabBar sem
 ## setas, também com o ui_scale de vídeo no máximo (1.3); os nós mantêm os nomes completos (caminhos
 ## do _resolve_node e ui_tab dos bots), que viram a dica da aba; LB/RB continuam a trocar de aba.
 
 const BASE_STATION_SCENE: PackedScene = preload("res://ui/base_station_ui.tscn")
-const PAGE_NAMES: Array[String] = ["Loja de Equipamentos", "Museu de Achados", "Expedições", "Diário", "Mapa do Tesouro"]
-const SHORT_TITLES: Array[String] = ["Loja", "Museu", "Expedições", "Diário", "Mapa"]
+const PAGE_NAMES: Array[String] = ["Loja de Equipamentos", "Museu de Achados", "Expedições", "Diário", "Mapa do Tesouro", "Conquistas"]
+const SHORT_TITLES: Array[String] = ["Loja", "Museu", "Expedições", "Diário", "Mapa", "Conquistas"]
 
 var ui: BaseStationUI = null
 
