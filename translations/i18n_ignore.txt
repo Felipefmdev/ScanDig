@@ -75,3 +75,4 @@ foco em controle oculto %s
 foco em controle desativado %s
 foco saiu da camada para %s
 sem volta ao foco inicial a partir de %s
+Control

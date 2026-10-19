@@ -1,7 +1,8 @@
 # Capturas do polimento de UI do lote E (#122, precisa de janela):
-# "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 960x540 --windowed --script res://tests/dev_b/hud_polish_snapshots.gd -- --prefix=960_ [--only=hud,titulo,loja,loja_praia,config] [--lang=en] [--ui_scale=1.3]
+# "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 960x540 --windowed --script res://tests/dev_b/hud_polish_snapshots.gd -- --prefix=960_ [--only=hud,titulo,slots,loja,loja_praia,config] [--lang=en] [--ui_scale=1.3]
 # Grava em .bot_runs/theme/<prefixo>: hud_{praia,geleira}.png (HUD sem cartão e hotbar com slots
-# vazios, olhando para a areia/neve), titulo.png, loja_sem_saldo.png, loja_praia.png (rótulos 3D) e
+# vazios, olhando para a areia/neve), titulo.png, slots.png (seletor com 2 slots cheios, com
+# miniatura, e 1 vazio, #139), loja_sem_saldo.png, loja_praia.png (rótulos 3D) e
 # config_{video,audio,controles,jogabilidade,jogabilidade_fim}.png (Configurações pela pausa, na Base).
 # --lang troca o idioma (#131) e --ui_scale a escala da interface, sem gravar. Save isolado
 # (use_test_save_dir).
@@ -40,6 +41,8 @@ func _run() -> void:
 	var session: Node = root.get_node(^"CoreSession")
 	if _wants("titulo"):
 		await _title()
+	if _wants("slots"):
+		await _slots()
 	if _wants("loja"):
 		await _base_shop()
 	if _wants("config"):
@@ -100,6 +103,42 @@ func _title() -> void:
 	await _save_shot("titulo")
 	title.queue_free()
 	await _frames(2)
+
+
+## Seletor de slots (#139): slot 1 concluído com miniatura da Base, slot 2 com miniatura da Praia,
+## slot 3 vazio. As miniaturas saem da tela de verdade, como no jogo (o --script não captura).
+func _slots() -> void:
+	var save: SaveManager = SaveManager.instance
+	var now: int = int(Time.get_unix_time_from_system())
+	var slots: Array[Dictionary] = [
+		{"scene": "res://world/lobby_base.tscn", "data": {"version": SaveManager.SAVE_VERSION, "saved_at": now - 3600,
+			"last_played": now - 3600, "team_money": 48250, "current_day": 23, "play_time_s": 7500, "last_map": "praia",
+			"discovered_items": ["alianca_ouro", "moeda_antiga", "bussola_lata"],
+			"defeated_bosses": ["king_crab", "giant_mole", "octopus", GameState.FINAL_BOSS_ID]}},
+		{"scene": MAPS["praia"], "data": {"version": SaveManager.SAVE_VERSION, "saved_at": now - 86400 * 2,
+			"last_played": now - 86400 * 2, "team_money": 1234, "current_day": 4, "play_time_s": 2100,
+			"last_map": "campo", "discovered_items": ["alianca_ouro"], "defeated_bosses": ["king_crab"]}},
+	]
+	for i: int in slots.size():
+		var path: String = save.slot_path(i + 1)
+		var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify(slots[i]["data"]))
+		file.close()
+		change_scene_to_file(str(slots[i]["scene"]))
+		await _frames(60)
+		SaveManager.make_thumbnail(root.get_texture().get_image()).save_png(SaveManager.thumbnail_path_for(path))
+	DirAccess.remove_absolute(save.slot_path(3))
+	# O --script pularia a tela inicial: monta à mão no lugar do mapa.
+	var title: TitleScreen = (load("res://world/title_screen.tscn") as PackedScene).instantiate() as TitleScreen
+	title.auto_skip = false
+	title.scene_change_enabled = false
+	current_scene.queue_free()
+	root.add_child(title)
+	current_scene = title
+	await _frames(10)
+	title.show_slots("load")
+	await _frames(30)
+	await _save_shot("slots")
 
 
 ## Loja da Base sem saldo (R$ 0), com o mouse (sem foco visível).

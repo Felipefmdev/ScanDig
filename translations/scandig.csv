@@ -366,10 +366,8 @@ Apagar o slot %d? Isso não pode ser desfeito.,Apagar o slot %d? Isso não pode 
 Carregar jogo,Carregar jogo,Load game
 Novo jogo: escolha o slot,Novo jogo: escolha o slot,New game: choose a slot
 Multiplayer: escolha o slot do host,Multiplayer: escolha o slot do host,Multiplayer: choose the host's slot
-Slot %d   %s,Slot %d   %s,Slot %d   %s
 Vazio,Vazio,Empty
 Save ilegível,Save ilegível,Unreadable save
-Dia %d  •  %s  •  Museu %d/%d,Dia %d  •  %s  •  Museu %d/%d,Day %d  •  %s  •  Museum %d/%d
 Não foi possível usar o slot %d (erro %d).,Não foi possível usar o slot %d (erro %d).,Could not use slot %d (error %d).
 Carregar,Carregar,Load
 Slot %d,Slot %d,Slot %d
@@ -1029,3 +1027,10 @@ Não é possível usar a tirolesa empurrando o carrinho!,Não é possível usar 
 Não é possível usar a tirolesa carregando um parceiro!,Não é possível usar a tirolesa carregando um parceiro!,You can't use the zip line while carrying a partner!
 ⚡ Deslizando pela tirolesa! [Espaço] para soltar.,⚡ Deslizando pela tirolesa! [Espaço] para soltar.,⚡ Sliding down the zip line! [Space] to let go.
 Chegada da tirolesa!,Chegada da tirolesa!,End of the zip line!
+Dia %d,Dia %d,Day %d
+%s  •  %s  •  Museu %d/%d  •  Chefes %d/%d,%s  •  %s  •  Museu %d/%d  •  Chefes %d/%d,%s  •  %s  •  Museum %d/%d  •  Bosses %d/%d
+Tempo de jogo %s,Tempo de jogo %s,Play time %s
+Abrir pasta de saves,Abrir pasta de saves,Open save folder
+< 1min,< 1min,< 1m
+%dmin,%dmin,%dm
+%dh %02dmin,%dh %02dmin,%dh %02dm

@@ -23,6 +23,9 @@ const NEW_GAME_CONFIRM: String = "Começar um jogo novo no slot %d?\nO progresso
 const DELETE_CONFIRM: String = "Apagar o slot %d? Isso não pode ser desfeito."
 ## User arg do bot que mantém a tela inicial (should_skip devolve false).
 const BOT_KEEP_TITLE_ARG: String = "--bot-keep-title"
+## Card do slot (#139): miniatura 16:9 à esquerda e três linhas de texto.
+const SLOT_CARD_SIZE: Vector2 = Vector2(600, 96)
+const SLOT_THUMB_SIZE: Vector2 = Vector2(128, 72)
 const SLOT_TITLES: Dictionary = {
 	"load": "Carregar jogo",
 	"new": "Novo jogo: escolha o slot",
@@ -50,7 +53,17 @@ var slots_panel: PanelContainer = null
 var slots_title: Label = null
 var slot_buttons: Array[Button] = []
 var slot_delete_buttons: Array[Button] = []
+## Partes do card de cada slot (#139), na ordem dos slot_buttons.
+var slot_thumbnails: Array[TextureRect] = []
+var slot_thumb_placeholders: Array[Label] = []
+var slot_title_labels: Array[Label] = []
+var slot_summary_labels: Array[Label] = []
+var slot_meta_labels: Array[Label] = []
+var open_folder_button: Button = null
 var slots_back_button: Button = null
+## "Abrir pasta de saves" só com janela (no headless fica desabilitado e fora do foco). Os
+## testes ligam para auditar a navegação.
+var save_folder_enabled: bool = DisplayServer.get_name() != "headless"
 var confirm_panel: PanelContainer = null
 var confirm_label: Label = null
 var confirm_ok_button: Button = null
@@ -201,39 +214,103 @@ func refresh_slots() -> void:
 	var save: SaveManager = _save()
 	for i: int in SaveManager.SLOT_COUNT:
 		var summary: Dictionary = save.get_slot_summary(i + 1) if save != null else {"exists": false}
-		slot_buttons[i].text = tr("Slot %d   %s") % [i + 1, _slot_line(summary)]
+		_fill_slot_card(i, summary)
 		slot_delete_buttons[i].visible = bool(summary.get("exists", false))
+	open_folder_button.disabled = not save_folder_enabled
+	open_folder_button.focus_mode = Control.FOCUS_ALL if save_folder_enabled else Control.FOCUS_NONE
 	var focus_chain: Array = []
 	for i: int in SaveManager.SLOT_COUNT:
 		focus_chain.append(slot_buttons[i])
+	if save_folder_enabled:
+		focus_chain.append(open_folder_button)
 	focus_chain.append(slots_back_button)
 	_link_focus(focus_chain)
 	for i: int in SaveManager.SLOT_COUNT:
 		var row_neighbor: NodePath = slot_delete_buttons[i].get_path() if slot_delete_buttons[i].visible else NodePath("")
 		slot_buttons[i].focus_neighbor_right = row_neighbor
 		slot_delete_buttons[i].focus_neighbor_left = slot_buttons[i].get_path()
+	# Pasta e Voltar ficam lado a lado: esquerda/direita entre eles, cima/baixo saem da linha.
+	var last_slot: NodePath = slot_buttons[SaveManager.SLOT_COUNT - 1].get_path()
+	if save_folder_enabled:
+		open_folder_button.focus_neighbor_right = slots_back_button.get_path()
+		open_folder_button.focus_neighbor_left = slots_back_button.get_path()
+		open_folder_button.focus_neighbor_bottom = slot_buttons[0].get_path()
+		slots_back_button.focus_neighbor_left = open_folder_button.get_path()
+		slots_back_button.focus_neighbor_right = open_folder_button.get_path()
+		slots_back_button.focus_neighbor_top = last_slot
+	else:
+		slots_back_button.focus_neighbor_left = NodePath("")
+		slots_back_button.focus_neighbor_right = NodePath("")
 
 
-## "Dia 12 • R$ 1.234 • Museu 14/52 • 15/10 00:46 ★", "Vazio" ou "Save ilegível".
-static func _slot_line(summary: Dictionary) -> String:
+## Card do slot: miniatura (ou o número), "Slot 1  •  Dia 3  ★", o resumo e tempo/data.
+func _fill_slot_card(i: int, summary: Dictionary) -> void:
+	var valid: bool = bool(summary.get("valid", false))
+	slot_title_labels[i].text = _slot_title(i + 1, summary)
+	slot_summary_labels[i].text = _slot_summary_text(summary)
+	slot_meta_labels[i].text = _slot_meta_text(summary) if valid else ""
+	slot_meta_labels[i].visible = valid
+	slot_thumbnails[i].texture = _load_thumbnail(str(summary.get("thumbnail", "")))
+	slot_thumb_placeholders[i].visible = slot_thumbnails[i].texture == null
+
+
+## "Slot 1  •  Dia 3  ★"; vazio ou ilegível: só "Slot 1".
+static func _slot_title(n: int, summary: Dictionary) -> String:
+	var title: String = I18n.t("Slot %d") % n
+	if bool(summary.get("valid", false)):
+		title += "  •  " + I18n.t("Dia %d") % int(summary["day"])
+		if bool(summary.get("game_completed", false)):
+			title += "  ★"
+	return title
+
+
+## "Praia  •  R$ 1.234  •  Museu 14/52  •  Chefes 3/13" (sem mapa: "—"), "Vazio" ou "Save ilegível".
+static func _slot_summary_text(summary: Dictionary) -> String:
 	if not bool(summary.get("exists", false)):
 		return I18n.t("Vazio")
 	if not bool(summary.get("valid", false)):
 		return I18n.t("Save ilegível")
-	var line: String = I18n.t("Dia %d  •  %s  •  Museu %d/%d") % [int(summary["day"]), UiFormat.money(int(summary["money"])),
-		int(summary["museum_found"]), int(summary["museum_total"])]
-	if int(summary.get("saved_at", 0)) > 0:
-		line += "  •  " + _format_saved_at(int(summary["saved_at"]))
+	return I18n.t("%s  •  %s  •  Museu %d/%d  •  Chefes %d/%d") % [_map_name(str(summary.get("last_map", ""))),
+		UiFormat.money(int(summary["money"])), int(summary["museum_found"]), int(summary["museum_total"]),
+		int(summary.get("bosses_defeated", 0)), int(summary.get("bosses_total", 0))]
+
+
+## "Tempo de jogo 2h 05min  •  19/10/2026 14:30" (a data é o last_played; num save antigo, o saved_at).
+static func _slot_meta_text(summary: Dictionary) -> String:
+	var text: String = I18n.t("Tempo de jogo %s") % UiFormat.play_time(int(summary.get("play_time_s", 0)))
+	var when: int = int(summary.get("last_played", 0))
+	if when <= 0:
+		when = int(summary.get("saved_at", 0))
+	if when > 0:
+		text += "  •  " + UiFormat.date_time(when)
+	return text
+
+
+## Tudo numa linha (dica do Continuar): "Dia 3  •  Praia  •  …  •  Tempo de jogo …  ★".
+static func _slot_line(summary: Dictionary) -> String:
+	if not bool(summary.get("valid", false)):
+		return _slot_summary_text(summary)
+	var line: String = "%s  •  %s  •  %s" % [I18n.t("Dia %d") % int(summary["day"]), _slot_summary_text(summary),
+		_slot_meta_text(summary)]
 	if bool(summary.get("game_completed", false)):
 		line += "  ★"
 	return line
 
 
-## Unix (UTC) -> "dd/mm hh:mm" no fuso do sistema.
-static func _format_saved_at(unix_time: int) -> String:
-	var bias_minutes: int = int(Time.get_time_zone_from_system().get("bias", 0))
-	var d: Dictionary = Time.get_datetime_dict_from_unix_time(unix_time + bias_minutes * 60)
-	return "%02d/%02d %02d:%02d" % [int(d["day"]), int(d["month"]), int(d["hour"]), int(d["minute"])]
+static func _map_name(map_id: String) -> String:
+	if map_id.is_empty():
+		return "—"
+	var maps: Array = SessionManager.instance.get_available_maps() if SessionManager.instance != null else []
+	return UiFormat.map_display_name(map_id, maps)
+
+
+static func _load_thumbnail(path: String) -> Texture2D:
+	if path.is_empty():
+		return null
+	var image: Image = Image.load_from_file(path)
+	if image == null or image.is_empty():
+		return null
+	return ImageTexture.create_from_image(image)
 
 
 # --- Ações ---------------------------------------------------------------------------
@@ -265,6 +342,12 @@ func _on_delete_pressed(n: int) -> void:
 func _delete_slot(n: int) -> void:
 	_save().delete_slot(n)
 	show_slots(slot_mode)
+
+
+## A pasta dos saves no gerenciador de arquivos do sistema.
+func _on_open_folder_pressed() -> void:
+	if save_folder_enabled:
+		OS.shell_open(ProjectSettings.globalize_path("user://"))
 
 
 ## Ativa o slot, aplica (continuar ou jogo novo) e abre a base no modo pedido. Devolve o erro
@@ -401,22 +484,27 @@ func _build() -> void:
 	for i: int in SaveManager.SLOT_COUNT:
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
-		var slot_button: Button = _button(tr("Slot %d") % (i + 1))
-		slot_button.custom_minimum_size = Vector2(520, 52)
-		slot_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		slot_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var slot_button: Button = _slot_card(i + 1)
 		slot_button.pressed.connect(_on_slot_pressed.bind(i + 1))
 		var delete_button: Button = _button("Apagar", &"DangerButton")
-		delete_button.custom_minimum_size = Vector2(110, 52)
+		delete_button.custom_minimum_size = Vector2(110, SLOT_CARD_SIZE.y)
 		delete_button.pressed.connect(_on_delete_pressed.bind(i + 1))
 		row.add_child(slot_button)
 		row.add_child(delete_button)
 		slots_box.add_child(row)
 		slot_buttons.append(slot_button)
 		slot_delete_buttons.append(delete_button)
+	var bottom_row: HBoxContainer = HBoxContainer.new()
+	bottom_row.add_theme_constant_override("separation", 8)
+	open_folder_button = _button("Abrir pasta de saves", &"", "load")
+	open_folder_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	open_folder_button.pressed.connect(_on_open_folder_pressed)
 	slots_back_button = _button("Voltar")
+	slots_back_button.custom_minimum_size.x = 200
 	slots_back_button.pressed.connect(show_main)
-	slots_box.add_child(slots_back_button)
+	bottom_row.add_child(open_folder_button)
+	bottom_row.add_child(slots_back_button)
+	slots_box.add_child(bottom_row)
 	slots_panel = _card(slots_box)
 	slots_panel.name = "SlotsPanel"
 	stack.add_child(slots_panel)
@@ -477,6 +565,74 @@ func _build() -> void:
 	coop_button.pressed.connect(show_slots.bind("coop"))
 	settings_button.pressed.connect(show_settings)
 	quit_button.pressed.connect(func() -> void: get_tree().quit())
+
+
+## Botão do slot com o card dentro: miniatura (ou o número do slot) e três linhas. Os filhos
+## ignoram o mouse: clique, hover e foco são do botão.
+func _slot_card(n: int) -> Button:
+	var button: Button = _button("")
+	button.name = "Slot%d" % n
+	button.custom_minimum_size = SLOT_CARD_SIZE
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var margin: MarginContainer = MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side: String in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 10)
+	button.add_child(margin)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	margin.add_child(row)
+
+	var frame: PanelContainer = PanelContainer.new()
+	frame.custom_minimum_size = SLOT_THUMB_SIZE
+	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var frame_style: StyleBoxFlat = StyleBoxFlat.new()
+	frame_style.bg_color = UiPalette.WOOD_DARK
+	frame_style.border_color = UiPalette.INK
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(4)
+	frame.add_theme_stylebox_override(&"panel", frame_style)
+	var placeholder: Label = Label.new()
+	placeholder.text = str(n)
+	placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	placeholder.add_theme_font_size_override(&"font_size", 34)
+	placeholder.add_theme_color_override(&"font_color", UiPalette.PAPER_DARK)
+	frame.add_child(placeholder)
+	var thumb: TextureRect = TextureRect.new()
+	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	frame.add_child(thumb)
+	row.add_child(frame)
+
+	var lines: VBoxContainer = VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	lines.add_theme_constant_override("separation", 2)
+	var title: Label = _card_label(20, UiPalette.INK)
+	var summary: Label = _card_label(16, UiPalette.INK)
+	var meta: Label = _card_label(14, UiPalette.WOOD)
+	for label: Label in [title, summary, meta]:
+		lines.add_child(label)
+	row.add_child(lines)
+	for node: Node in button.find_children("*", "Control", true, false):
+		(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot_thumbnails.append(thumb)
+	slot_thumb_placeholders.append(placeholder)
+	slot_title_labels.append(title)
+	slot_summary_labels.append(summary)
+	slot_meta_labels.append(meta)
+	return button
+
+
+## Texto montado por código (sem auto-traduzir a chave) que corta com "…" em vez de alargar o card.
+func _card_label(font_size: int, color: Color) -> Label:
+	var label: Label = Label.new()
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.add_theme_font_size_override(&"font_size", font_size)
+	label.add_theme_color_override(&"font_color", color)
+	return label
 
 
 func _button(text: String, variation: StringName = &"", icon_name: String = "") -> Button:

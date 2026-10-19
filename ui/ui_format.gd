@@ -66,3 +66,30 @@ static func map_display_name(map_id: String, maps: Array) -> String:
 static func secret_count_text(map_id: String, entry: Dictionary, maps: Array) -> String:
 	var text: String = "%s %d/%d" % [map_display_name(map_id, maps), int(entry.get("found", 0)), int(entry.get("total", 0))]
 	return text.replace(" ", NBSP)
+
+
+# --- Data e tempo de jogo (#139) -------------------------------------------------------------
+
+## Unix (UTC) -> data e hora no fuso do sistema, no formato do idioma (vazio = o atual):
+## "19/10/2026 14:30" (pt) ou "10/19/2026 2:30 PM" (en).
+static func date_time(unix_time: int, locale: String = "") -> String:
+	if locale.is_empty():
+		locale = TranslationServer.get_locale()
+	var bias_minutes: int = int(Time.get_time_zone_from_system().get("bias", 0))
+	var d: Dictionary = Time.get_datetime_dict_from_unix_time(unix_time + bias_minutes * 60)
+	var hour: int = int(d["hour"])
+	if locale.begins_with("en"):
+		var hour_12: int = 12 if hour % 12 == 0 else hour % 12
+		return "%d/%d/%d %d:%02d %s" % [int(d["month"]), int(d["day"]), int(d["year"]), hour_12, int(d["minute"]),
+			"AM" if hour < 12 else "PM"]
+	return "%02d/%02d/%d %02d:%02d" % [int(d["day"]), int(d["month"]), int(d["year"]), hour, int(d["minute"])]
+
+
+## Segundos de jogo -> "2h 05min", "12min" ou "< 1min" (o inglês, pelo CSV: "2h 05m").
+static func play_time(seconds: int) -> String:
+	var minutes: int = floori(seconds / 60.0)
+	if minutes < 1:
+		return I18n.t("< 1min")
+	if minutes < 60:
+		return I18n.t("%dmin") % minutes
+	return I18n.t("%dh %02dmin") % [floori(minutes / 60.0), minutes % 60]

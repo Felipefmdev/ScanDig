@@ -117,6 +117,22 @@ func test_title_slots_and_delete() -> void:
 		assert_true(title.main_card.is_ancestor_of(_focus()), "%s: foco volta ao cartão" % device)
 
 
+## Cards novos (#139) com o botão "Abrir pasta de saves" ligado (no headless ele fica fora).
+func test_title_slot_cards_with_save_folder() -> void:
+	_write_slot(1)
+	_write_slot(3)
+	var title: TitleScreen = _title()
+	await _frames()
+	title.save_folder_enabled = true
+	for device: String in DEVICES:
+		title.show_slots("load")
+		await _frames()
+		assert_true(title.slots_panel.is_ancestor_of(_focus()), "slots: foco num slot")
+		await _assert_nav("slots com pasta", title.slots_panel)
+		var back: Dictionary = await UiNavAudit.check_cancel(title.slots_panel, device)
+		assert_true(back["closed"] and title.main_card.visible, "%s: Esc/B volta ao cartão" % device)
+
+
 func test_title_settings_every_tab() -> void:
 	var title: TitleScreen = _title()
 	await _frames()
