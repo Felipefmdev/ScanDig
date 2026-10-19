@@ -326,9 +326,25 @@ static func available_resolutions() -> Array[Vector2i]:
 
 ## Início do jogo: aplica tudo; a janela só se houver escolha salva e nenhum --resolution.
 func apply_all() -> void:
-	var window: bool = _video_saved and not OS.get_cmdline_args().has("--resolution")
+	var window: bool = _video_saved and not window_from_cmdline(DisplayServer.window_get_size(), DisplayServer.window_get_mode())
 	for section: String in DEFAULTS.keys():
 		_apply_section(section, window)
+
+
+## --resolution, --fullscreen e afins são do motor e não aparecem em OS.get_cmdline_args(): a
+## janela que o motor abriu só difere da do projeto quando a linha de comando a escolheu (#126).
+static func window_from_cmdline(size: Vector2i, mode: DisplayServer.WindowMode) -> bool:
+	return size != project_window_size() or mode != int(ProjectSettings.get_setting("display/window/size/mode", 0))
+
+
+static func project_window_size() -> Vector2i:
+	var w: int = int(ProjectSettings.get_setting("display/window/size/window_width_override", 0))
+	var h: int = int(ProjectSettings.get_setting("display/window/size/window_height_override", 0))
+	if w <= 0:
+		w = int(ProjectSettings.get_setting("display/window/size/viewport_width", 1152))
+	if h <= 0:
+		h = int(ProjectSettings.get_setting("display/window/size/viewport_height", 648))
+	return Vector2i(w, h)
 
 
 func _apply_section(section: String, apply_window: bool) -> void:
