@@ -859,7 +859,7 @@ func _physics_process(delta: float) -> void:
 			_hooked_anchor.set_hooked(false)
 			_hooked_anchor = null
 		if is_local() and not is_settings_open():
-			var holding_interact: bool = InputMap.has_action("interact") and Input.is_action_pressed("interact")
+			var holding_interact: bool = A11y.latched(&"interact")  # segurar ou alternar (#140)
 			update_downed_give_up(delta, holding_interact)
 			if not is_downed:
 				return
@@ -940,7 +940,7 @@ func _physics_process(delta: float) -> void:
 
 	if is_settings_open():
 		return
-	update_eating(delta, InputMap.has_action("use_tool") and Input.is_action_pressed("use_tool"))
+	update_eating(delta, is_eating() and A11y.holding(&"use_tool"))
 	_handle_dig_actions()
 	_handle_attack_action()
 	_handle_inventory_actions()
@@ -970,7 +970,7 @@ func _handle_dig_actions() -> void:
 	if carried_player != null or _dig_cooldown > 0.0 or dig_animator.is_playing():
 		return
 	if Input.is_action_just_pressed("careful_dig"):
-		_perform_dig(Input.is_physical_key_pressed(KEY_SHIFT))
+		_perform_dig(A11y.careful_held())
 
 
 func get_dig_cooldown() -> float:
@@ -1351,7 +1351,7 @@ func _update_threat_color() -> void:
 	if _threat_fill_style == null:
 		return
 	var level: int = DisturbanceMeter.instance.current_level if DisturbanceMeter.instance != null else 0
-	_threat_fill_style.bg_color = THREAT_COLORS[clampi(level, 0, THREAT_COLORS.size() - 1)]
+	A11y.tint_bar(threat_bar, A11y.threat_role(level))  # THREAT_COLORS pela paleta do daltonismo (#140)
 
 
 ## Aviso da ameaça do subsolo: na mesma pilha, maior e a vermelho.
@@ -1360,7 +1360,8 @@ func _show_threat_message(text: String, duration: float) -> void:
 
 
 func _shake_camera(strength: float, duration: float) -> void:
-	if camera == null:
+	strength *= A11y.shake_scale()  # Acessibilidade (#140): tremor de tela 0–100 %
+	if camera == null or strength <= 0.0:
 		return
 	if _shake_tween != null and _shake_tween.is_valid():
 		_shake_tween.kill()
@@ -2066,6 +2067,8 @@ func _setup_hunger_hud() -> void:
 	_hunger_bar.add_theme_stylebox_override(&"fill", fill)
 	panel.add_child(_hunger_label)
 	panel.add_child(_hunger_bar)
+	A11y.tint_bar(_hunger_bar, &"bar_hunger")
+	A11y.tint_bar(health_bar, &"bar_health")
 	_refresh_hunger_hud()
 
 
@@ -2705,7 +2708,7 @@ func _handle_inventory_actions() -> void:
 	if Input.is_action_just_pressed("interact"):
 		_interact()
 	if InputMap.has_action("drop"):
-		if Input.is_action_just_pressed("drop"):
+		if A11y.just_pressed(&"drop"):
 			if carried_player != null:
 				request_drop_carried_player()
 				return
@@ -2713,7 +2716,7 @@ func _handle_inventory_actions() -> void:
 			_drop_holding = inventory.get_selected() != null
 			if not _drop_holding:
 				_drop_selected()
-		elif _drop_holding and Input.is_action_pressed("drop"):
+		elif _drop_holding and A11y.holding(&"drop"):
 			_drop_hold += get_physics_process_delta_time()
 		elif _drop_holding:
 			_drop_holding = false
@@ -3385,7 +3388,7 @@ func steal_loot() -> CarriedItem:
 
 
 func _handle_use_tool_action() -> void:
-	if carried_player != null or not Input.is_action_just_pressed("use_tool") or _use_cooldown > 0.0 or _disarm_time > 0.0:
+	if carried_player != null or not A11y.just_pressed(&"use_tool") or _use_cooldown > 0.0 or _disarm_time > 0.0:
 		return
 	var c: CarriedItem = inventory.get_selected()
 	if c == null or c.tool_data == null:
@@ -3487,7 +3490,7 @@ func show_explosion(center: Vector3) -> void:
 	var parent: Node = tree.current_scene if tree.current_scene != null else self
 	var flash: OmniLight3D = OmniLight3D.new()
 	flash.light_color = Color(1.0, 0.7, 0.3)
-	flash.light_energy = 8.0
+	flash.light_energy = 8.0 * A11y.flash_scale()
 	flash.omni_range = 9.0
 	parent.add_child(flash)
 	flash.global_position = center + Vector3.UP * 0.8
@@ -3516,6 +3519,7 @@ func show_explosion(center: Vector3) -> void:
 		p.emitting = true
 		tree.create_timer(1.2).timeout.connect(p.queue_free)
 	SFX.play_at(SFX.PLAYER_DEATH, center, 4.0, 0.25)
+	A11y.on_explosion(center)
 	for n: Node in tree.get_nodes_in_group(LOCAL_GROUP):
 		var local: Node3D = n as Node3D
 		if local != null and local.has_method("_shake_camera"):

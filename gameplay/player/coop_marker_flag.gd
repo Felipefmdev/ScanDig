@@ -104,7 +104,9 @@ func fade_out_and_free() -> void:
 
 
 func get_type_config() -> Dictionary:
-	return TYPE_CONFIG.get(marker_type, TYPE_CONFIG[MarkerType.SIGNAL])
+	var cfg: Dictionary = (TYPE_CONFIG.get(marker_type, TYPE_CONFIG[MarkerType.SIGNAL]) as Dictionary).duplicate()
+	cfg["color"] = A11y.color(A11y.marker_role(marker_type))  # paleta do daltonismo (#140)
+	return cfg
 
 
 func get_display_label() -> String:

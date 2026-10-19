@@ -132,6 +132,7 @@ static func play_at(sound: Variant, pos: Vector3, volume_db: float = 0.0, pitch_
 	p.global_position = pos
 	p.finished.connect(p.queue_free)
 	p.play()
+	A11y.on_sound(path, pos)  # legendas de sons importantes (#140)
 	return p
 
 

@@ -102,8 +102,7 @@ func _draw() -> void:
 	]
 
 	for i: int in SECTOR_COUNT:
-		var cfg: Dictionary = COOP_MARKER_FLAG_SCRIPT.TYPE_CONFIG[i]
-		var col: Color = cfg.get("color", Color.WHITE)
+		var col: Color = A11y.color(A11y.marker_role(i))  # paleta do daltonismo (#140)
 		var is_sel: bool = (i == _selected_type)
 		var arc_range: Vector2 = slice_angles[i]
 
@@ -157,7 +156,7 @@ func _update_info() -> void:
 	var cfg: Dictionary = COOP_MARKER_FLAG_SCRIPT.TYPE_CONFIG.get(_selected_type, {})
 	var icon: String = cfg.get("icon", "🚩")
 	var title: String = tr(cfg.get("name", "Marcador"))
-	var col: Color = cfg.get("color", Color.WHITE)
+	var col: Color = A11y.color(A11y.marker_role(_selected_type))
 	var desc: String = cfg.get("desc", "")
 
 	_label_title.text = "%s %s" % [icon, title]

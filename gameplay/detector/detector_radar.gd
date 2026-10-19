@@ -52,18 +52,19 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+## Cores pelo A11y (#140): no modo daltônico desligado, as de sempre.
 static func get_material_color(material: ItemData.MaterialType) -> Color:
 	match material:
 		ItemData.MaterialType.FERRO:
-			return Color(0.55, 0.55, 0.58)
+			return A11y.color(&"material_ferro")
 		ItemData.MaterialType.ALUMINIO:
-			return Color(0.55, 0.85, 1.0)
+			return A11y.color(&"material_aluminio")
 		ItemData.MaterialType.PRATA:
-			return Color(0.88, 0.94, 1.0)
+			return A11y.color(&"material_prata")
 		ItemData.MaterialType.OURO:
-			return Color(1.0, 0.8, 0.15)
+			return A11y.color(&"material_ouro")
 		ItemData.MaterialType.DESCONHECIDO:
-			return Color(0.72, 0.3, 1.0)
+			return A11y.color(&"material_desconhecido")
 	return LEVEL1_COLOR
 
 
@@ -186,7 +187,7 @@ func _draw_item_blip(p: Vector2, alpha: float, blip: MetalDetector.RadarBlip, le
 
 func _draw_enemy_blip(p: Vector2, alpha: float) -> void:
 	var pulse: float = 0.75 + 0.25 * sin(_time * 10.0)
-	var c: Color = Color(ENEMY_COLOR.r, ENEMY_COLOR.g, ENEMY_COLOR.b, alpha)
+	var c: Color = Color(A11y.color(&"radar_enemy"), alpha)
 	var glow: Color = c
 	glow.a = alpha * 0.3
 	draw_circle(p, ENEMY_BLIP_RADIUS * 1.9 * pulse, glow)
@@ -203,7 +204,7 @@ func _draw_pinpoint(center: Vector2, scale_px: float) -> void:
 	if target == null:
 		return
 	var in_reach: bool = detector.get_target_distance() <= MetalDetector.PINPOINT_DIG_DISTANCE
-	var ring: Color = RARE_COLOR if in_reach else PIN_COLOR
+	var ring: Color = A11y.color(&"radar_rare") if in_reach else A11y.color(&"radar_pin")
 	draw_arc(center, MetalDetector.PINPOINT_DIG_DISTANCE * scale_px, 0.0, TAU, 40, Color(ring, 0.8), 1.5, true)
 	var radar_pos: Vector2 = detector.world_to_radar(target.global_position)
 	var p: Vector2 = center + Vector2(radar_pos.x, -radar_pos.y) * scale_px
@@ -212,10 +213,11 @@ func _draw_pinpoint(center: Vector2, scale_px: float) -> void:
 	draw_circle(p, 9.0 + pulse * 3.0, Color(color, 0.25))
 	draw_circle(p, 5.0, color)
 	var arm: float = 11.0
-	draw_line(p + Vector2(-arm, 0.0), p + Vector2(-6.0, 0.0), PIN_COLOR, 1.5)
-	draw_line(p + Vector2(6.0, 0.0), p + Vector2(arm, 0.0), PIN_COLOR, 1.5)
-	draw_line(p + Vector2(0.0, -arm), p + Vector2(0.0, -6.0), PIN_COLOR, 1.5)
-	draw_line(p + Vector2(0.0, 6.0), p + Vector2(0.0, arm), PIN_COLOR, 1.5)
+	var pin: Color = A11y.color(&"radar_pin")
+	draw_line(p + Vector2(-arm, 0.0), p + Vector2(-6.0, 0.0), pin, 1.5)
+	draw_line(p + Vector2(6.0, 0.0), p + Vector2(arm, 0.0), pin, 1.5)
+	draw_line(p + Vector2(0.0, -arm), p + Vector2(0.0, -6.0), pin, 1.5)
+	draw_line(p + Vector2(0.0, 6.0), p + Vector2(0.0, arm), pin, 1.5)
 
 
 ## Pinpointer Nv.2: triângulo dourado na borda a apontar para a variante rara mais próxima.
@@ -225,7 +227,7 @@ func _draw_rare_compass(center: Vector2, radius: float, compass: Vector2) -> voi
 	var tip: Vector2 = center + dir * (radius + 1.0)
 	var base: Vector2 = center + dir * (radius - 9.0)
 	var pulse: float = 0.7 + 0.3 * sin(_time * 6.0)
-	draw_colored_polygon(PackedVector2Array([tip, base + side * 5.0, base - side * 5.0]), Color(RARE_COLOR, pulse))
+	draw_colored_polygon(PackedVector2Array([tip, base + side * 5.0, base - side * 5.0]), Color(A11y.color(&"radar_rare"), pulse))
 
 
 ## Texto por baixo do círculo (MetalDetector.get_footer_lines: nível/alcance/inimigos/raro,

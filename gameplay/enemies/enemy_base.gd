@@ -849,19 +849,20 @@ func _flash(color: Color) -> void:
 	if _flash_tween != null and _flash_tween.is_valid():
 		_flash_tween.kill()
 	_flash_tween = create_tween().set_parallel(true)
+	var amount: float = A11y.flash_scale()  # Reduzir flashes (#140)
 	for i: int in range(_flash_mats.size()):
 		var shader_mat: ShaderMaterial = _flash_mats[i] as ShaderMaterial
 		if shader_mat != null:
 			shader_mat.set_shader_parameter(&"flash_color", color)
-			shader_mat.set_shader_parameter(&"flash_amount", 1.0)
+			shader_mat.set_shader_parameter(&"flash_amount", amount)
 			_flash_tween.tween_property(shader_mat, "shader_parameter/flash_amount", 0.0, FLASH_TIME)
 			continue
 		var mat: StandardMaterial3D = _flash_mats[i] as StandardMaterial3D
 		if mat == null:
 			continue
-		mat.albedo_color = color
+		mat.albedo_color = _flash_base_colors[i].lerp(color, amount)
 		mat.emission_enabled = true
-		mat.emission = color
+		mat.emission = color * amount
 		_flash_tween.tween_property(mat, "albedo_color", _flash_base_colors[i], FLASH_TIME)
 	_flash_tween.chain().tween_callback(_end_flash)
 
