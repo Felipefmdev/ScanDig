@@ -24,7 +24,7 @@ const HAND_GAP: float = 16.0
 ## Largura reservada à direita para a barra da expedição (SessionUI: ~260 px + margem 16), que
 ## limita a faixa quando a mão fica mais à direita (telas menos largas que 16:9).
 const EXPEDITION_RESERVED: float = 288.0
-const COLOR_BG: Color = Color(0.169, 0.129, 0.094, 0.65)
+const COLOR_BG: Color = Color(0.169, 0.129, 0.094, 1.0)
 const COLOR_BORDER: Color = UiPalette.INK
 const COLOR_SELECTED: Color = UiPalette.GOLD
 const COLOR_RARE: Color = Color(0.85, 0.55, 1.0)
@@ -258,7 +258,7 @@ func _on_selected_slot_changed(index: int) -> void:
 	for i: int in _slot_panels.size():
 		var selected: bool = (i == index)
 		var style: StyleBoxFlat = StyleBoxFlat.new()
-		style.bg_color = Color(UiPalette.INK.r, UiPalette.INK.g, UiPalette.INK.b, 0.85) if selected else COLOR_BG
+		style.bg_color = UiPalette.INK if selected else COLOR_BG
 		style.border_color = COLOR_SELECTED if selected else COLOR_BORDER
 		var w: int = 3 if selected else 1
 		if selected:
