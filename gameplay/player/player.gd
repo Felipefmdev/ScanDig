@@ -297,6 +297,8 @@ var _held_museum_key: String = ""
 ## Distância percorrida desde o último passo (sons de passos na areia).
 var _step_distance: float = 0.0
 const STEP_LENGTH: float = 1.15
+## Distância máxima (m) do ponto cavado a quem cavou, para a pazada remota (N2).
+const REMOTE_DIG_REACH: float = 4.0
 ## Velocidade de queda (m/s) a partir da qual a aterrissagem faz som: o passo da superfície mais
 ## forte. Um pulo no plano chega a ~5.4 (a descida usa fall_gravity_multiplier); descer um degrau
 ## de 30 cm, a ~3.1 (sem som de queda, só os passos).
@@ -4205,6 +4207,27 @@ func _update_remote_footsteps(delta: float) -> void:
 	var surface: StringName = _detect_surface_type()
 	SFX.play_at(SFX.footstep_sound_for_surface(surface), pos,
 		footsteps_volume_db + SFX.footstep_volume_offset(surface) + randf_range(-1.5, 1.5), 0.06)
+
+
+## Pazada de outro jogador (N2): o BuriedSpot em rede já avisa todos os peers (_play_dig_fx);
+## o som sai no ponto cavado, na superfície de quem cavou (o jogador mais perto do ponto). Quem
+## cavou já tocou o seu em _on_shovel_impact: se o mais perto é o local, não toca de novo.
+static func play_remote_dig(tree: SceneTree, at: Vector3) -> AudioStreamPlayer3D:
+	if tree == null:
+		return null
+	var nearest: Player = null
+	var best: float = REMOTE_DIG_REACH
+	for n: Node in tree.get_nodes_in_group(ALL_GROUP):
+		var p: Player = n as Player
+		if p == null or not p.is_inside_tree():
+			continue
+		var d: float = p.global_position.distance_to(at)
+		if d < best:
+			best = d
+			nearest = p
+	if nearest == null or nearest.is_local():
+		return null
+	return SFX.play_at(SFX.dig_sound_for_surface(nearest._detect_surface_type(), false), at, -3.0, 0.06)
 
 
 ## Deteta a superfície por baixo do jogador (How to Fish SurfaceManager).

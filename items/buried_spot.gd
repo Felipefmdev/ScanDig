@@ -135,6 +135,9 @@ func _update_mound() -> void:
 func _play_dig_fx() -> void:
 	if _dirt_particles != null:
 		_dirt_particles.restart()
+	# Som da pazada de outro jogador (N2): mesmo aviso, sem RPC novo.
+	if is_inside_tree():
+		Player.play_remote_dig(get_tree(), global_position)
 
 
 # --- Rede (contrato #5, bloco D) -----------------------------------------------
