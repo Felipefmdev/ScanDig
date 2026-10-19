@@ -28,7 +28,8 @@ const CONDITION_VARS: PackedStringArray = [
 ## (estado da missão 0..4: OFFER, ACTIVE, READY, EVENT, DONE).
 const CONDITION_PREFIXES: PackedStringArray = ["flag_", "quest_"]
 ## Métodos que o passo "call" pode chamar (atalhos de debug para testar segredos e eventos).
-const DEBUG_CALL_METHODS: PackedStringArray = ["force_low_tide", "wake_immediately", "start", "trigger", "force_weather", "request_return_to_base"]
+## toggle/open/close (QA #126): pausa (CorePauseMenu.toggle) e vitória (CoreVictoryScreen.open/close).
+const DEBUG_CALL_METHODS: PackedStringArray = ["force_low_tide", "wake_immediately", "start", "trigger", "force_weather", "request_return_to_base", "toggle", "open", "close"]
 const DIG_MODES: PackedStringArray = ["fast", "careful", "smart"]
 ## Distância "infinita" usada pelas variáveis nearest_spot/sell_dist quando não há alvo.
 const NO_TARGET_DISTANCE: float = 9999.0
@@ -1333,6 +1334,9 @@ func collect_state() -> Dictionary:
 	var state: Dictionary = {
 		"time": _elapsed(),
 		"fps": Engine.get_frames_per_second(),
+		# QA #126: nós órfãos (crescimento entre idas e voltas ao lobby = vazamento).
+		"orphans": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+		"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
 		"scene": get_tree().current_scene.scene_file_path if get_tree().current_scene else "",
 		"player": {},
 		"game_state": {},

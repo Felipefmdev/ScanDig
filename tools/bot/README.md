@@ -114,3 +114,19 @@ Cada instância escreve o seu run em `.bot_runs/` (logs do Godot em `.bot_runs/<
 Os dumps trazem `net` (peer_id, is_server, peers) e `players` (todos os jogadores, com
 `local`, posição e ferramenta na mão); a variável `players` conta-os em `wait_until`.
 O jogador "local" (grupo `player`) é sempre o desta instância.
+
+## Varredura de QA (#126)
+
+```bash
+python tools/bot/qa_gen.py                                   # (re)gera tools/bot/qa_*.json
+tools/bot/run_qa.sh "<godot console exe>" [roteiro ...]      # todos os qa_*.json, janela 1920x1080
+python tools/bot/qa_report.py                                # só refaz a tabela (.bot_runs/qa_logs/report.md)
+```
+
+`qa_<mapa>.json`: dia (~20 s andando) + clima forçado (onde houver) + noite (onde houver) + uma
+3.ª ida curta, voltando sempre à base. Os dumps trazem `orphans` (`OBJECT_ORPHAN_NODE_COUNT`) e
+`nodes`. `qa_base` (abas + Ver museu), `qa_pause`, `qa_title_slots` (novo/continuar/carregar/apagar;
+`"scene": "res://world/title_screen.tscn"` faz o `run_bot.sh` passar `--bot-keep-title`) e
+`qa_victory`. O `run_qa.sh` guarda o `user://` antes e repõe-no no fim. `BOT_RESOLUTION=1920x1080`
+muda a janela de qualquer `run_bot.sh`. O passo `call` aceita também `toggle`/`open`/`close`
+(`CorePauseMenu`, `CoreVictoryScreen`).

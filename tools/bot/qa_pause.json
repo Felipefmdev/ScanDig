@@ -1,0 +1,145 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{
+			"t": 0.3,
+			"set_state": {
+				"unlocked_maps": [
+					"praia",
+					"campo",
+					"ruinas",
+					"geleira",
+					"cratera",
+					"ilha_tesouro"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole",
+					"ancient_guardian",
+					"frozen_mammoth"
+				],
+				"upgrade_levels": {
+					"detector": 5,
+					"backpack": 2,
+					"shovel": 2
+				},
+				"team_money": 5000,
+				"map_fragments": [
+					"praia_frag_1",
+					"campo_frag_1"
+				]
+			}
+		},
+		{
+			"t": 1.5,
+			"call": "CorePauseMenu",
+			"method": "toggle"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"screenshot": "01_pausa_lobby"
+		},
+		{
+			"t": 0,
+			"ui_press": "Configurações"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"screenshot": "02_pausa_config"
+		},
+		{
+			"t": 0,
+			"ui_press": "Voltar"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Continuar"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"start_expedition": "praia",
+			"timeout": 60
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"dump": "10_praia"
+		},
+		{
+			"t": 0,
+			"call": "CorePauseMenu",
+			"method": "toggle"
+		},
+		{
+			"sleep": 1.0
+		},
+		{
+			"t": 0,
+			"screenshot": "11_pausa_praia"
+		},
+		{
+			"t": 0,
+			"dump": "11_pausa_praia"
+		},
+		{
+			"t": 0,
+			"call": "CorePauseMenu",
+			"method": "toggle"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"call": "CorePauseMenu",
+			"method": "toggle"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Voltar à base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"screenshot": "12_resumo"
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 1.0
+		},
+		{
+			"t": 0,
+			"dump": "13_lobby_depois"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}
