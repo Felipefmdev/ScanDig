@@ -22,6 +22,9 @@ signal crushed_target(target: Node3D, damage: float)
 
 const GROUP: StringName = &"rolling_boulders"
 const Interactable = preload("res://gameplay/quests/interactable.gd")
+const ToonKit = preload("res://gameplay/art/toon_kit.gd")
+const LowPolyMesh = preload("res://gameplay/enemies/lowpoly_mesh.gd")
+const CrabModel = preload("res://gameplay/enemies/crab/crab_model.gd")
 
 const STATE_STABLE: int = 0
 const STATE_TEETERING: int = 1
@@ -33,9 +36,10 @@ const CRUSH_DAMAGE_PLAYER: float = 30.0
 const MIN_ROLL_SPEED: float = 1.8
 const SHATTER_SPEED_THRESHOLD: float = 10.5
 
-const BASALT_DARK: Color = Color(0.20, 0.18, 0.24)
-const BASALT_PURPLE: Color = Color(0.30, 0.24, 0.36)
-const METEOR_RUST: Color = Color(0.50, 0.32, 0.20)
+const BASALT_DARK: Color = Color(0.18, 0.15, 0.22)
+const BASALT_PURPLE: Color = Color(0.30, 0.20, 0.36)
+const METEOR_RUST: Color = Color(0.55, 0.28, 0.16)
+const FISSURE_VIOLET: Color = Color(0.75, 0.30, 0.95)
 
 @export var boulder_radius: float = 1.35
 @export var boulder_mass: float = 450.0
@@ -291,41 +295,45 @@ func _build_visuals() -> void:
 	_mesh_root.name = "MeshRoot"
 	add_child(_mesh_root)
 
-	# Corpo principal da rocha facetada (SphereMesh com poucos anéis/segmentos para visual toon/lowpoly)
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+	var r: float = boulder_radius
+
+	# 1. Corpo principal: rocha facetada convexa com facetas angulares e relevo de meteorito
+	var rings: Array = [
+		Vector3(-r * 0.45, r * 0.75, r * 0.72),
+		Vector3(0.0, r * 0.98, r * 0.95),
+		Vector3(r * 0.45, r * 0.78, r * 0.75),
+	]
+	CrabModel.gem(st, Transform3D.IDENTITY, Vector3.ZERO, Basis.IDENTITY, rings, 8, -r * 0.95, r * 0.95, BASALT_DARK, r * 0.12, 42)
+
+	# 2. Placas de crosta basáltica violeta e ferrugem cósmica da Cratera incrustadas na superfície
+	for i: int in 6:
+		var ang: float = float(i) * (TAU / 6.0) + 0.35
+		var pitch: float = (float(i % 3) - 1.0) * 0.6
+		var n_dir: Vector3 = Vector3(cos(ang) * cos(pitch), sin(pitch), sin(ang) * cos(pitch)).normalized()
+		var patch_pos: Vector3 = n_dir * (r * 0.78)
+		var patch_size: Vector3 = Vector3(r * 0.55, r * 0.22, r * 0.55)
+		var p_basis: Basis = Basis.looking_at(n_dir, Vector3.UP if absf(n_dir.y) < 0.9 else Vector3.RIGHT)
+		var patch_col: Color = METEOR_RUST if (i % 2 == 0) else BASALT_PURPLE
+		CrabModel.gem(st, Transform3D.IDENTITY, patch_pos, p_basis, [Vector3(0.0, patch_size.x * 0.5, patch_size.z * 0.5)], 6, -patch_size.y * 0.5, patch_size.y * 0.5, patch_col, r * 0.05, 100 + i)
+
+	# 3. Fissuras e rachaduras violeta/cósmicas cortando as facetas da rocha
+	for k: int in 4:
+		var a1: float = float(k) * (TAU / 4.0) + 0.2
+		var a2: float = a1 + 1.2
+		var p_start: Vector3 = Vector3(cos(a1) * r * 0.92, (float(k % 2) * 2.0 - 1.0) * r * 0.45, sin(a1) * r * 0.92)
+		var p_mid: Vector3 = Vector3(cos((a1 + a2) * 0.5) * r * 0.96, float(k % 3 - 1) * r * 0.35, sin((a1 + a2) * 0.5) * r * 0.96)
+		var p_end: Vector3 = Vector3(cos(a2) * r * 0.90, -(float(k % 2) * 2.0 - 1.0) * r * 0.40, sin(a2) * r * 0.90)
+		LowPolyMesh.prism(st, p_start, p_mid, r * 0.045, r * 0.035, 4, FISSURE_VIOLET)
+		LowPolyMesh.prism(st, p_mid, p_end, r * 0.035, r * 0.025, 4, FISSURE_VIOLET)
+
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "BoulderMesh"
-	var sph_mesh: SphereMesh = SphereMesh.new()
-	sph_mesh.radius = boulder_radius
-	sph_mesh.height = boulder_radius * 2.0
-	sph_mesh.radial_segments = 9
-	sph_mesh.rings = 6
-	mi.mesh = sph_mesh
-
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = BASALT_DARK
-	mat.roughness = 0.85
-	mat.metallic = 0.1
-	mi.material_override = mat
+	mi.mesh = ToonKit.commit(st)
+	mi.material_override = ToonKit.vertex_material(true, true)
 	_mesh_root.add_child(mi)
-
-	# Detalhes: cristas e incrustações de meteorito com reflexo mineral
-	for i: int in 4:
-		var chunk: MeshInstance3D = MeshInstance3D.new()
-		chunk.name = "RubbleChunk_%d" % i
-		var box: BoxMesh = BoxMesh.new()
-		var s: float = boulder_radius * 0.45
-		box.size = Vector3(s, s * 0.7, s * 0.8)
-		chunk.mesh = box
-
-		var chunk_mat: StandardMaterial3D = StandardMaterial3D.new()
-		chunk_mat.albedo_color = METEOR_RUST if i % 2 == 0 else BASALT_PURPLE
-		chunk_mat.roughness = 0.7
-		chunk.material_override = chunk_mat
-
-		var ang: float = float(i) * (TAU / 4.0) + 0.3
-		chunk.position = Vector3(cos(ang) * boulder_radius * 0.75, sin(float(i)) * boulder_radius * 0.3, sin(ang) * boulder_radius * 0.75)
-		chunk.rotation = Vector3(float(i) * 0.4, ang, float(i) * 0.3)
-		_mesh_root.add_child(chunk)
 
 
 func _build_interaction() -> void:

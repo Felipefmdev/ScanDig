@@ -241,25 +241,40 @@ func _add_sunken_item_glow(pickup: ItemPickup) -> void:
 	# Luz subaquática difusa no item afundado (#108)
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "SunkenGlowLight"
-	light.light_color = Color(0.35, 0.85, 1.0)
-	light.light_energy = 0.95
-	light.omni_range = 2.4
+	light.light_color = Color(0.40, 0.88, 1.0)
+	light.light_energy = 0.75
+	light.omni_range = 1.9
 	light.shadow_enabled = false
 	pickup.add_child(light)
 
-	# Brilho cintilante visível através da água semi-transparente (#108)
-	var glow_mesh: MeshInstance3D = MeshInstance3D.new()
-	glow_mesh.name = "SunkenHalo"
-	var q: QuadMesh = QuadMesh.new()
-	q.size = Vector2(0.55, 0.55)
-	glow_mesh.mesh = q
-	glow_mesh.position = Vector3(0.0, 0.08, 0.0)
-	glow_mesh.rotation.x = -PI * 0.5 # deitado sobre o fundo
+	# Bloco de gelo translúcido envolvendo o modelo do item (#108)
+	var ice_block: MeshInstance3D = MeshInstance3D.new()
+	ice_block.name = "SunkenIceBlock"
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(0.28, 0.24, 0.28)
+	ice_block.mesh = box
+	ice_block.position = Vector3(0.0, 0.08, 0.0)
 
-	var glow_mat: StandardMaterial3D = StandardMaterial3D.new()
-	glow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	glow_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	glow_mat.albedo_color = Color(0.3, 0.8, 1.0, 0.55)
-	glow_mesh.material_override = glow_mat
-	pickup.add_child(glow_mesh)
+	var ice_mat: StandardMaterial3D = StandardMaterial3D.new()
+	ice_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ice_mat.albedo_color = Color(0.70, 0.92, 1.0, 0.30)
+	ice_mat.roughness = 0.08
+	ice_mat.metallic = 0.05
+	ice_mat.specular = 0.95
+	ice_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	ice_block.material_override = ice_mat
+	pickup.add_child(ice_block)
+
+	# Borda facetada de geada no topo do bloco de gelo
+	var frost: MeshInstance3D = MeshInstance3D.new()
+	frost.name = "FrostRim"
+	var frost_box: BoxMesh = BoxMesh.new()
+	frost_box.size = Vector3(0.29, 0.03, 0.29)
+	frost.mesh = frost_box
+	frost.position = Vector3(0.0, 0.20, 0.0)
+	var frost_mat: StandardMaterial3D = StandardMaterial3D.new()
+	frost_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	frost_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.50)
+	frost_mat.roughness = 0.35
+	frost.material_override = frost_mat
+	pickup.add_child(frost)
