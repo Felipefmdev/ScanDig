@@ -17,7 +17,7 @@ class FaultySave extends SaveManager:
 	func _write_file(path: String, text: String) -> Error:
 		match fault:
 			"partial":
-				return super(path, text.substr(0, text.length() / 2))
+				return super(path, text.substr(0, int(text.length() / 2.0)))
 			"write":
 				super(path, text.substr(0, 10))
 				return ERR_FILE_CANT_WRITE
@@ -124,7 +124,7 @@ func test_invalid_json_goes_to_quarantine() -> void:
 
 func test_truncated_save_goes_to_quarantine() -> void:
 	var full: String = JSON.stringify(_full_save(4321), "\t")
-	var half: String = full.substr(0, full.length() / 2)
+	var half: String = full.substr(0, int(full.length() / 2.0))
 	_write_text(BASE, half)
 	_assert_quarantined(half, "truncado")
 

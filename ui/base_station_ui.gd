@@ -1074,11 +1074,11 @@ func _refresh_secrets_label() -> void:
 	# NBSP dentro de cada mapa e antes do "•": se não couber, a linha só quebra entre mapas.
 	var found: Array = Array(_game_state.found_secrets) if _game_state != null else []
 	var maps: Variant = _session_call(&"get_available_maps", [], [])
-	var map_list: Array = maps as Array if maps is Array else []
+	var map_ids: Array = maps as Array if maps is Array else []
 	var counts: Dictionary = UiFormat.secret_counts_by_map(found)
 	var parts: PackedStringArray = []
 	for map_id: String in counts:
-		parts.append(UiFormat.secret_count_text(map_id, counts[map_id], map_list))
+		parts.append(UiFormat.secret_count_text(map_id, counts[map_id], map_ids))
 	secrets_label.text = tr("Segredos —") + UiFormat.NBSP + (UiFormat.NBSP + "• ").join(parts)
 	var seen: int = _game_state.seen_creatures.size() if _game_state != null and "seen_creatures" in _game_state else 0
 	secrets_label.text += "\n" + tr("Diário de campo —") + UiFormat.NBSP + tr("%d/%d criaturas") % [seen, GameState.CREATURES.size()]
@@ -1352,28 +1352,28 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 
 
 static func _build_journal_mini_texture(id: String, discovered: bool, accent: Color, is_boss: bool) -> ImageTexture:
-	var size: int = 28
-	var img: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var tex_size: int = 28
+	var img: Image = Image.create(tex_size, tex_size, false, Image.FORMAT_RGBA8)
 	var bg: Color = Color(0.20, 0.16, 0.12, 0.95) if discovered else Color(0.11, 0.09, 0.08, 0.95)
 	var border: Color = accent.lightened(0.18) if discovered else Color(0.28, 0.24, 0.20, 0.85)
 	var body_col: Color = accent if discovered else Color(0.04, 0.04, 0.05, 0.96)
 	img.fill(bg)
 
 	# Moldura tipo ficha de campo
-	for i in range(size):
+	for i in range(tex_size):
 		img.set_pixel(i, 0, border)
-		img.set_pixel(i, size - 1, border)
+		img.set_pixel(i, tex_size - 1, border)
 		img.set_pixel(0, i, border)
-		img.set_pixel(size - 1, i, border)
+		img.set_pixel(tex_size - 1, i, border)
 
 	# Silhueta / miniatura estilizada (variada por hash do id para dar forma própria a cada espécie)
 	var h: int = absi(id.hash())
 	var rx: float = 7.0 + float(h % 3)
-	var ry: float = 6.0 + float((h / 3) % 3)
+	var ry: float = 6.0 + float(int(h / 3.0) % 3)
 	var cx: float = 13.5
 	var cy: float = 14.5
-	for y in range(4, size - 4):
-		for x in range(4, size - 4):
+	for y in range(4, tex_size - 4):
+		for x in range(4, tex_size - 4):
 			var dx: float = (float(x) - cx) / rx
 			var dy: float = (float(y) - cy) / ry
 			var d2: float = dx * dx + dy * dy

@@ -118,8 +118,8 @@ static func gd_literals(source: String) -> Array:
 
 
 static func _is_dev_only(line: String) -> bool:
-	for call: String in DEV_ONLY_CALLS:
-		if line.contains(call):
+	for dev_call: String in DEV_ONLY_CALLS:
+		if line.contains(dev_call):
 			return true
 	return false
 

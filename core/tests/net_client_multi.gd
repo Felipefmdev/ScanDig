@@ -88,7 +88,7 @@ func _on_state_synced(gs: GameState) -> void:
 		gs.request_buy_upgrade("pinpointer")
 	if level == 1 and gs.team_money == 7:
 		_saw_converged = true
-func _run_a(gs: GameState, sm: SessionManager) -> void:
+func _run_a(gs: GameState, _sm: SessionManager) -> void:
 	gs.request_report_discovery("alianca_ouro", 1)
 	var back: bool = await _wait_until(func() -> bool: return _scene_name() == "LobbyBase" and not summary.is_empty(), 25.0)
 	_check(back, "não voltou ao lobby com resumo em 25 s")

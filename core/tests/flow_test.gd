@@ -31,7 +31,7 @@ func _run() -> void:
 	sm.request_start_expedition("praia")
 	await _wait(30)
 	_check(sm.is_in_expedition(), "em expedicao")
-	_check(current_scene != null and current_scene.name == "MapPraia", "cena praia: %s" % (current_scene.name if current_scene else "null"))
+	_check(current_scene != null and current_scene.name == "MapPraia", "cena praia: %s" % (str(current_scene.name) if current_scene else "null"))
 	gs.request_report_discovery("moeda_antiga", 100)
 	gs.request_report_discovery("moeda_antiga", 100)
 	await _wait(2)

@@ -46,9 +46,9 @@ func _run() -> void:
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://test_saves"))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
-	var seed: ConfigFile = ConfigFile.new()
-	seed.set_value("player", "name", "Murilo")
-	seed.save(PATH)
+	var initial: ConfigFile = ConfigFile.new()
+	initial.set_value("player", "name", "Murilo")
+	initial.save(PATH)
 	sm.settings_path = PATH
 	sm.load_settings()
 	sm.apply_all()

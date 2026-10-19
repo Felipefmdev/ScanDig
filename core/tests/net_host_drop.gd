@@ -18,11 +18,3 @@ func _run() -> void:
 		await _w(0.5); t += 0.5
 	print("HOST players=", NetworkManager.instance.connected_players.size())
 	quit(0)
-	return
-	await _w(2.0)
-	GameState.instance.request_report_discovery("alianca_ouro", 400)
-	await _w(1.0)
-	SessionManager.instance.request_end_expedition()
-	await _w(4.0)
-	print("HOST day=", GameState.instance.current_day, " money=", GameState.instance.team_money)
-	quit(0)

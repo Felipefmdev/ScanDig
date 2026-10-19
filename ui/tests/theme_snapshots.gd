@@ -7,7 +7,6 @@ extends SceneTree
 const OUT_DIR: String = "res://.bot_runs/theme/"
 
 class FakeSave extends Node:
-	signal save_state_changed()
 	var summary: Dictionary = {"exists": true, "valid": true, "day": 12, "money": 123456,
 		"museum_found": 14, "museum_total": 27, "saved_at": 1760500000}
 

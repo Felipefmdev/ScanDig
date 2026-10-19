@@ -176,7 +176,7 @@ func _check_main_menu(menu: PauseMenu) -> void:
 	await _wait(10)
 	_check(not PauseMenu.is_open() and not paused, "menu principal: pausa fechada e despausada")
 	_check(not session.is_in_expedition() and SessionManager.launch_mode == "", "expedição e launch_mode limpos")
-	_check(current_scene != null and current_scene.name == "LobbyBase", "título pulado no --script: base (%s)" % (current_scene.name if current_scene != null else "null"))
+	_check(current_scene != null and current_scene.name == "LobbyBase", "título pulado no --script: base (%s)" % (str(current_scene.name) if current_scene != null else "null"))
 	_check(not save.has_save_file(), "em expedição não salva")
 	menu.open()
 	menu.main_menu_button.pressed.emit()

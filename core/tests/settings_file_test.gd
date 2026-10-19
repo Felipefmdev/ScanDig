@@ -41,11 +41,11 @@ func _run() -> void:
 	await _wait(3)
 
 	# 1. Nome e [online] existem; salvar as opções do Esc não pode apagá-los.
-	var seed: ConfigFile = ConfigFile.new()
-	seed.set_value("player", "name", "Murilo")
-	seed.set_value("online", "noray_address", "noray.exemplo.org")
-	seed.set_value("online", "noray_port", 9999)
-	_check(seed.save(PATH) == OK, "arquivo inicial gravado")
+	var initial: ConfigFile = ConfigFile.new()
+	initial.set_value("player", "name", "Murilo")
+	initial.set_value("online", "noray_address", "noray.exemplo.org")
+	initial.set_value("online", "noray_port", 9999)
+	_check(initial.save(PATH) == OK, "arquivo inicial gravado")
 	_check(PLAYER_SETTINGS.call(&"save_settings", {"mouse_sensitivity": 0.004, "fov": 90.0, "view_bobbing": false}) == OK, "opções do player gravadas")
 	var after_player: ConfigFile = _read()
 	_check(str(after_player.get_value("player", "name", "")) == "Murilo", "nome continua: '%s'" % str(after_player.get_value("player", "name", "")))

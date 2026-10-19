@@ -193,7 +193,7 @@ static func campaign_value_text(gs: GameState, key: String) -> String:
 		"money_earned":
 			return UiFormat.money(gs.get_stat(key))
 		"dig_depth_cm":
-			return "%s m" % UiFormat.thousands(gs.get_stat(key) / 100)
+			return "%s m" % UiFormat.thousands(int(gs.get_stat(key) / 100.0))
 		"play_time":
 			var save: SaveManager = SaveManager.instance
 			return UiFormat.play_time(int(save.play_time_s)) if save != null and gs.is_authority() else "—"

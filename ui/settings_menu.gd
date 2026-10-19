@@ -125,10 +125,10 @@ func _process(delta: float) -> void:
 
 # --- Montagem ------------------------------------------------------------------
 
-func _margin(child: Control, size: int) -> MarginContainer:
+func _margin(child: Control, px: int) -> MarginContainer:
 	var margin: MarginContainer = MarginContainer.new()
 	for side: String in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, size)
+		margin.add_theme_constant_override("margin_" + side, px)
 	margin.add_child(child)
 	return margin
 

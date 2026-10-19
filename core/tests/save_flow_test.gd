@@ -65,7 +65,7 @@ func _run() -> void:
 	_check(save.SAVE_VERSION == 6, "SAVE_VERSION 6")
 
 	await _case_auto_apply()
-	await _case_continue()
+	_case_continue()
 	await _case_new_game()
 	await _case_corrupt()
 	await _case_newer_version()

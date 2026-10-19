@@ -49,11 +49,11 @@ func _run() -> void:
 	sm.settings_changed.connect(func(section: String, _values: Dictionary) -> void: _changed.append(section))
 
 	# 1. Seções de outros donos ficam: nome, [online] e as opções do Esc.
-	var seed: ConfigFile = ConfigFile.new()
-	seed.set_value("player", "name", "Murilo")
-	seed.set_value("player", "fov", 90.0)
-	seed.set_value("online", "noray_port", 9999)
-	_check(seed.save(PATH) == OK, "arquivo inicial gravado")
+	var initial: ConfigFile = ConfigFile.new()
+	initial.set_value("player", "name", "Murilo")
+	initial.set_value("player", "fov", 90.0)
+	initial.set_value("online", "noray_port", 9999)
+	_check(initial.save(PATH) == OK, "arquivo inicial gravado")
 	sm.load_settings()
 	_check(sm.get_section(SettingsManager.AUDIO) == SettingsManager.DEFAULTS[SettingsManager.AUDIO], "sem [audio]: padrões")
 	sm.set_section(SettingsManager.AUDIO, {"master": 0.5, "music": 0.0, "sfx": 0.8})
