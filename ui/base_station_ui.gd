@@ -131,6 +131,7 @@ func _ready() -> void:
 	_apply_tab_titles()
 	# Borda de foco só navegando por teclado/comando; com o mouse, nada aceso (#122).
 	UiFocus.follow_pointer(get_node_or_null(^"PanelContainer") as Control)
+	add_to_group(UiFocus.HOME_GROUP)
 	_resolve_game_state()
 	_setup_expeditions()
 	if tab_container != null:
@@ -172,9 +173,26 @@ func _apply_tab_titles() -> void:
 ## Comando/teclado (#102): a base abre com o foco na aba atual (no coop o menu de rede pega o
 ## foco primeiro). LB/RB (ou Ctrl+Tab) trocam de aba, se nenhum menu estiver por cima.
 func _focus_initial() -> void:
-	if SessionManager.launch_mode == SessionManager.LAUNCH_COOP or not is_visible_in_tree():
+	if SessionManager.launch_mode == SessionManager.LAUNCH_COOP or not is_visible_in_tree() or UiFocus.modal_open():
 		return
-	UiFocus.focus_first(tab_container.get_current_tab_control())
+	UiFocus.focus_tab_page(tab_container)
+
+
+## Teclado/comando (#135): botões desativados (Comprar sem saldo, Partir bloqueado...) saem da
+## navegação e a corrente da aba atual é refeita, para o que voltou a ficar ativo entrar de novo.
+func _sync_focus() -> void:
+	var buttons: Array = [unlock_map_btn, depart_btn, night_check, sell_item_btn, register_item_btn]
+	for upgrade_id: String in SHOP_BUTTONS:
+		buttons.append(_get_shop_button(upgrade_id))
+	UiFocus.skip_disabled(buttons)
+	if tab_container != null and tab_container.is_visible_in_tree():
+		UiFocus.link_chain(UiFocus.focusables(tab_container.get_current_tab_control()))
+
+
+## Uma camada por cima fechou sem foco para devolver (resumo do dia, #135): foco na aba atual.
+func focus_home() -> void:
+	if tab_container != null and is_visible_in_tree() and not PauseMenu.is_open() and not VictoryScreen.is_open():
+		UiFocus.focus_tab_page(tab_container)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -442,6 +460,7 @@ func _refresh_unlock_button() -> void:
 	unlock_map_btn.text = tr("Desbloquear %s (%s)") % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
 	unlock_map_btn.disabled = _pending_unlock or not bool(status.get("can_unlock", false))
 	unlock_map_btn.tooltip_text = UiFormat.fix_money_spaces(tr(str(status.get("reason", "")))) if unlock_map_btn.disabled else ""
+	_sync_focus()
 
 
 func _on_unlock_map_pressed() -> void:
@@ -493,6 +512,7 @@ func _refresh_depart_button() -> void:
 	var reason: String = _get_depart_block_reason(map)
 	depart_btn.disabled = not reason.is_empty()
 	depart_btn.tooltip_text = UiFormat.fix_money_spaces(tr(reason))
+	_sync_focus()
 	if map == null:
 		depart_btn.text = "Partir"
 	elif is_night_selected():
@@ -546,6 +566,7 @@ func _refresh_night_check() -> void:
 	night_check.visible = _night_available(map)
 	night_check.disabled = not _is_host()
 	night_check.set_pressed_no_signal(night_check.visible and bool(_night_by_map.get(map.id, false)))
+	_sync_focus()
 
 
 func _on_night_toggled(on: bool) -> void:
@@ -637,6 +658,7 @@ func _mark_catalog_unavailable(message: String) -> void:
 		sell_item_btn.disabled = true
 	if register_item_btn != null:
 		register_item_btn.disabled = true
+	_sync_focus()
 
 
 func _setup_shop_buttons() -> void:
@@ -773,6 +795,7 @@ func _refresh_shop_buttons() -> void:
 			if waiting_btn != null:
 				waiting_btn.disabled = true
 				waiting_btn.tooltip_text = WAITING_GAME_STATE_TOOLTIP
+		_sync_focus()
 		return
 	for upgrade_id: String in SHOP_BUTTONS:
 		var btn: Button = _get_shop_button(upgrade_id)
@@ -825,6 +848,7 @@ func _refresh_shop_buttons() -> void:
 		else:
 			btn.tooltip_text = ""
 		btn.disabled = _pending_purchase or not reason.is_empty()
+	_sync_focus()
 
 
 ## Botão Comprar parado num estado (sem saldo, máximo, bloqueado): papel claro, borda e texto na

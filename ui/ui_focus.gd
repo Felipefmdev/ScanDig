@@ -10,6 +10,10 @@ extends RefCounted
 const POINTER_HIDDEN_FOCUS: Array[StringName] = [&"Button", &"CheckBox", &"CheckButton", &"OptionButton",
 	&"MenuButton", &"ItemList", &"HSlider", &"VSlider", &"SpinBox"]
 
+## Grupo da tela "de casa" (a Base): quem fecha uma camada e não tem para onde devolver o foco
+## chama focus_home() nele (#135), para o comando não ficar sem foco nenhum.
+const HOME_GROUP: StringName = &"ui_focus_home"
+
 static var _pointer_theme: Theme = null
 
 
@@ -61,6 +65,32 @@ static func focusables(root: Node) -> Array[Control]:
 		for i: int in range(children.size() - 1, -1, -1):
 			stack.push_front(children[i])
 	return out
+
+
+## Botão desativado sai da navegação (#135): sem foco por teclado/comando (a busca de vizinho da
+## Godot pula FOCUS_NONE, também nos vizinhos explícitos) até voltar a ficar ativo. O que está com
+## o foco fica como está, para o foco não pular sozinho (ex.: o Comprar recém-apertado, desativado
+## enquanto a compra processa). Só para botões que normalmente navegam (FOCUS_ALL).
+static func skip_disabled(buttons: Array) -> void:
+	for b: Variant in buttons:
+		var button: BaseButton = b as BaseButton
+		if button == null:
+			continue
+		if not button.disabled:
+			button.focus_mode = Control.FOCUS_ALL
+		elif not button.has_focus():
+			button.focus_mode = Control.FOCUS_NONE
+
+
+## Uma camada por cima (resumo do dia, aviso da sessão, pausa, vitória) está aberta: telas de baixo
+## que acabam de abrir (lobby carregando atrás do resumo) não tiram o foco dela (#135).
+static func modal_open() -> bool:
+	if PauseMenu.is_open() or VictoryScreen.is_open():
+		return true
+	var ui: SessionUI = SessionUI.instance
+	if ui == null or ui.summary_panel == null:
+		return false
+	return ui.summary_panel.visible or ui.host_lost_panel.visible or ui.leave_confirm_panel.visible
 
 
 ## O primeiro ativo (botão não desativado); se todos estiverem desativados, o primeiro mesmo.
@@ -143,5 +173,19 @@ static func step_tab(tabs: TabContainer, direction: int, extra: Array = []) -> v
 			break
 	tabs.current_tab = index
 	# No fim do frame: a página nova da TabContainer só fica visível depois.
-	var page: Control = tabs.get_current_tab_control()
-	(func() -> void: focus_first(page, extra)).call_deferred()
+	focus_tab_page.call_deferred(tabs, extra)
+
+
+## Foca o primeiro controle da aba atual; aba sem controles (só texto ou desenho, #135) foca a
+## barra de abas, que troca de aba com esquerda/direita, em vez de deixar o foco na aba oculta.
+static func focus_tab_page(tabs: TabContainer, extra: Array = []) -> void:
+	if tabs == null or not tabs.is_visible_in_tree():
+		return
+	if focus_first(tabs.get_current_tab_control(), extra):
+		return
+	var bar: TabBar = tabs.get_tab_bar()
+	bar.focus_mode = Control.FOCUS_ALL
+	# Tab/Shift+Tab ficam na barra (sem isso a Godot não acha o próximo e o foco some).
+	bar.focus_next = NodePath(".")
+	bar.focus_previous = NodePath(".")
+	bar.grab_focus()

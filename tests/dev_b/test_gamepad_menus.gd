@@ -154,6 +154,8 @@ func test_victory_and_credits() -> void:
 
 
 func test_base_station_focus_and_tabs() -> void:
+	# Com saldo: sem ele os Comprar ficam desativados e saem da navegação (#135, foco na barra).
+	GameState.instance.team_money = 5000
 	var base: BaseStationUI = BASE_SCENE.instantiate() as BaseStationUI
 	add_child_autofree(base)
 	await get_tree().process_frame
