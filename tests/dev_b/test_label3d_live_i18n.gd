@@ -49,3 +49,18 @@ func test_item_pickup_label_follows_locale() -> void:
 	assert_eq(label.text, carried.get_display_name())
 	TranslationServer.set_locale("pt_BR")
 	assert_eq(label.text, pt, "volta ao PT-BR")
+
+
+## Fala temporária com número (I18n.fmt) visível troca de idioma junto (#137).
+func test_interactable_packed_say_follows_locale() -> void:
+	TranslationServer.set_locale("pt_BR")
+	var item: Interactable = Interactable.new()
+	add_child_autofree(item)
+	var say: Label3D = item.get_node(^"Say") as Label3D
+	item.show_say(I18n.fmt("%d/%d criaturas", [3, 9]), 4.0)
+	assert_eq(say.text, "3/9 criaturas")
+	TranslationServer.set_locale("en")
+	assert_eq(say.text, "3/9 creatures", "fala com número refeita sem esperar sumir")
+	item.show_say("Fala fixa", 4.0)
+	TranslationServer.set_locale("pt_BR")
+	assert_eq(say.text, "Fala fixa", "fala fixa continua com a chave (o Label3D traduz)")

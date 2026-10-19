@@ -42,6 +42,8 @@ var _placed: bool = false
 var _prompt_label: Label3D = null
 var _say_label: Label3D = null
 var _say_left: float = 0.0
+## Fala com números (I18n.fmt) em exibição: refeita na troca de idioma (#137). "" = fala fixa.
+var _say_packed: String = ""
 var _focused: bool = false
 
 static var _focus: Interactable = null
@@ -153,7 +155,8 @@ func say_all(text: String, seconds: float = 4.0) -> void:
 func show_say(text: String, seconds: float) -> void:
 	# Fala com números (I18n.fmt, #131) traduz aqui; a fala fixa fica com a chave e o Label3D
 	# traduz sozinho (e acompanha a troca de idioma).
-	_say_label.text = I18n.t(text) if text.contains(I18n.PACK_SEP) else text
+	_say_packed = text if text.contains(I18n.PACK_SEP) else ""
+	_say_label.text = I18n.t(text) if not _say_packed.is_empty() else text
 	_say_label.visible = true
 	_say_left = seconds
 	_prompt_label.visible = false
@@ -327,10 +330,14 @@ func _on_input_device_changed(_using_gamepad: bool) -> void:
 		_prompt_label.text = _prompt_text()
 
 
-## Idioma trocado ao vivo (#131): o "[E] ..." em foco se refaz.
+## Idioma trocado ao vivo (#131): o "[E] ..." em foco se refaz, e a fala com números visível (#137).
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_TRANSLATION_CHANGED and _focused and _prompt_label != null:
+	if what != NOTIFICATION_TRANSLATION_CHANGED:
+		return
+	if _focused and _prompt_label != null:
 		_prompt_label.text = _prompt_text()
+	if _say_label != null and _say_label.visible and not _say_packed.is_empty():
+		_say_label.text = I18n.t(_say_packed)
 
 
 func _set_focused(on: bool) -> void:
