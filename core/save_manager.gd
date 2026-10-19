@@ -175,7 +175,8 @@ func delete_slot(n: int) -> Error:
 	if check != OK:
 		return check
 	var path: String = slot_path(n)
-	for file_path: String in [path, "%s.backup.json" % path.get_basename()]:
+	# .old/.tmp de uma gravação interrompida também: senão o .old voltaria como save.
+	for file_path: String in [path, "%s.backup.json" % path.get_basename(), path + ".old", path + ".tmp"]:
 		if FileAccess.file_exists(file_path):
 			var error: Error = DirAccess.remove_absolute(file_path)
 			if error != OK:
@@ -300,25 +301,75 @@ func delete_save_file() -> Error:
 	return OK
 
 
-## Gravação atômica: escreve em <save>.tmp e renomeia por cima do save.
+## Gravação atômica: escreve em <save>.tmp, confere o tamanho gravado e só então troca pelo
+## save. Qualquer falha (disco cheio, sem permissão, rename recusado) deixa o save anterior
+## intacto e apaga o .tmp.
 func save_to_file(data: Dictionary) -> Error:
 	DirAccess.make_dir_recursive_absolute(save_path.get_base_dir())
 	var tmp_path: String = save_path + ".tmp"
-	var file: FileAccess = FileAccess.open(tmp_path, FileAccess.WRITE)
-	if file == null:
-		var err: Error = FileAccess.get_open_error()
-		push_error("SaveManager: Falha ao abrir %s para escrita. Erro: %d" % [tmp_path, err])
-		return err
-	file.store_string(JSON.stringify(data, "\t"))
-	file.close()
-	var error: Error = DirAccess.rename_absolute(tmp_path, save_path)
-	if error != OK and FileAccess.file_exists(save_path):
-		# Alguns sistemas não renomeiam por cima de um arquivo existente.
-		DirAccess.remove_absolute(save_path)
-		error = DirAccess.rename_absolute(tmp_path, save_path)
+	var text: String = JSON.stringify(data, "	")
+	var error: Error = _write_file(tmp_path, text)
+	if error == OK and _file_size(tmp_path) != text.to_utf8_buffer().size():
+		# Gravação incompleta sem erro (disco cheio no meio): nunca vai por cima do save.
+		error = ERR_FILE_CANT_WRITE
+	if error != OK:
+		push_error("SaveManager: Falha ao gravar %s. Erro: %d" % [tmp_path, error])
+		_remove_if_exists(tmp_path)
+		return error
+	error = _replace_file(tmp_path, save_path)
 	if error != OK:
 		push_error("SaveManager: Falha ao trocar %s por %s. Erro: %d" % [tmp_path, save_path, error])
+		_remove_if_exists(tmp_path)
 	return error
+
+
+## Escreve `text` em `path`. Separado para os testes simularem disco cheio.
+func _write_file(path: String, text: String) -> Error:
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_string(text)
+	var error: Error = file.get_error()
+	file.close()
+	return error
+
+
+## Renomeia `from` para `to`. Separado para os testes simularem falha no rename.
+func _rename_file(from: String, to: String) -> Error:
+	return DirAccess.rename_absolute(from, to)
+
+
+## Troca `target` por `source`. Se o sistema não renomeia por cima, o antigo vira <target>.old
+## (não é apagado) e volta para o lugar se a troca falhar.
+func _replace_file(source: String, target: String) -> Error:
+	var error: Error = _rename_file(source, target)
+	if error == OK or not FileAccess.file_exists(target):
+		return error
+	var old_path: String = target + ".old"
+	_remove_if_exists(old_path)
+	if _rename_file(target, old_path) != OK:
+		return error
+	error = _rename_file(source, target)
+	if error != OK:
+		if _rename_file(old_path, target) != OK:
+			push_error("SaveManager: o save anterior ficou em %s." % old_path)
+		return error
+	_remove_if_exists(old_path)
+	return OK
+
+
+static func _file_size(path: String) -> int:
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return -1
+	var size: int = file.get_length()
+	file.close()
+	return size
+
+
+static func _remove_if_exists(path: String) -> void:
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
 
 
 func load_from_file() -> Dictionary:
@@ -461,8 +512,18 @@ func use_test_save_dir(test_name: String) -> void:
 # --- Internos ----------------------------------------------------------------------
 
 func _reset_session_flags() -> void:
+	_recover_interrupted_replace()
 	_write_blocked = false
 	_progress_applied = not FileAccess.file_exists(save_path)
+
+
+## O jogo fechou no meio do _replace_file (save já em <save>.old, .tmp ainda não no lugar):
+## o anterior volta a ser o save.
+func _recover_interrupted_replace() -> void:
+	var old_path: String = save_path + ".old"
+	if not FileAccess.file_exists(save_path) and FileAccess.file_exists(old_path):
+		if _rename_file(old_path, save_path) == OK:
+			push_warning("SaveManager: gravação interrompida; save anterior restaurado de %s." % old_path)
 
 
 ## OK se dá para trocar o progresso agora: host/offline e fora de expedição.
@@ -572,6 +633,16 @@ func _validate_fields(data: Dictionary) -> String:
 ## Converte saves v1–v3 para o formato do snapshot (v4).
 func _upgrade_save_data(source: Dictionary) -> Dictionary:
 	var save_data: Dictionary = source.duplicate(true)
+	# Ids são texto e níveis são números: o resto (null, objetos) seria "<null>" ou quebraria o int().
+	for key: String in LIST_FIELDS:
+		if save_data.get(key) is Array:
+			save_data[key] = (save_data[key] as Array).filter(func(value: Variant) -> bool: return value is String)
+	if save_data.get("upgrade_levels") is Dictionary:
+		var levels: Dictionary = {}
+		for key: Variant in save_data["upgrade_levels"]:
+			if key is String and _is_number(save_data["upgrade_levels"][key]):
+				levels[key] = save_data["upgrade_levels"][key]
+		save_data["upgrade_levels"] = levels
 	# Save v1 guardava apenas o nível do detector.
 	if not save_data.has("upgrade_levels") and save_data.has("equipped_detector_level"):
 		save_data["upgrade_levels"] = {"detector": maxi(int(save_data["equipped_detector_level"]) - 1, 0)}
