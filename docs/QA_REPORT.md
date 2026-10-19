@@ -122,3 +122,78 @@ Leitura: a diferença fica dentro do ruído entre rodadas (±10 FPS). A cena é 
 renderização, não pelos scripts do Dev B, e os órfãos/erros seguem iguais até #127/#128. Não há
 mais nada do Dev B a cortar sem mudar o visual (as partículas de clima são `CPUParticles3D` com
 400 gotas; passar para GPU fica para quando houver queda real de FPS em máquina fraca).
+
+## Navegação por teclado e comando (P3, #135)
+
+Rodada de 2026-10-19, janela 1920x1080. Os roteiros `qa_nav_keyboard.json` e `qa_nav_pad.json`
+(gerados por `qa_gen.py`) começam no título com os slots vazios, passam por slots, configurações (as 4
+abas, trocadas com Ctrl+Tab / RB), entram no lobby pelo Multiplayer (menu de rede visível), percorrem as
+5 abas da Base, Ver museu, pausa (cartão, confirmar sair, configurações), vitória e créditos, uma ida à
+Praia com o resumo do dia, e voltam ao título para os slots com save e o apagar. Só eventos de teclado
+(`InputEventKey`) ou de comando (`InputEventJoypadButton`), entregues pelo `Input` como os de verdade.
+
+```bash
+bash tools/bot/run_qa.sh "$G" tools/bot/qa_nav_keyboard.json tools/bot/qa_nav_pad.json
+```
+
+Cada tela: foco inicial dentro dela, busca em largura no grafo de foco (setas + Tab/Shift+Tab no
+teclado; só o direcional no comando) a partir do foco inicial, borda de foco presente (StyleBox `focus`,
+`tab_focus` ou a linha selecionada do ItemList) e, nas camadas, B/Esc fecha e o foco cai em algo visível.
+O resultado vai para `nav_<tela>.json` e para o `summary.json` (lista de alcançados × existentes,
+armadilhas, controles sem borda e o resultado do B/Esc). Botões desativados não contam no total (e cair
+num deles é armadilha). As abas Diário e Mapa do Tesouro não têm controles: o foco fica na barra de abas.
+
+| tela | teclado | comando | armadilhas | Esc/B ok |
+|---|---|---|---|---|
+| título | 5/5 | 5/5 | 0 | — |
+| slots (vazios) | 4/4 | 4/4 | 0 | ok |
+| configurações: Vídeo | 9/9 | 9/9 | 0 | — |
+| configurações: Áudio | 6/6 | 6/6 | 0 | — |
+| configurações: Controles | 59/59 | 59/59 | 0 | — |
+| configurações: Jogabilidade | 15/15 | 15/15 | 0 | ok |
+| menu Multiplayer (lobby coop) | 5/5 | 5/5 | 0 | — |
+| Base: Loja | 2/2 | 2/2 | 0 | — |
+| Base: Museu | 5/5 | 5/5 | 0 | — |
+| Base: Expedições | 3/3 | 3/3 | 0 | — |
+| Base: Diário | 0/0 | 0/0 | 0 | — |
+| Base: Mapa do Tesouro (pergaminho) | 0/0 | 0/0 | 0 | — |
+| Ver museu | 1/1 | 1/1 | 0 | ok |
+| pausa | 4/4 | 4/4 | 0 | — |
+| pausa: confirmar sair | 2/2 | 2/2 | 0 | ok |
+| pausa: configurações | 9/9 | 9/9 | 0 | ok |
+| pausa (fechar) | 4/4 | 4/4 | 0 | ok |
+| vitória | 2/2 | 2/2 | 0 | — |
+| créditos | 1/1 | 1/1 | 0 | ok |
+| vitória (fechar) | 2/2 | 2/2 | 0 | ok |
+| resumo do dia | 2/2 | 2/2 | 0 | ok |
+| slots (com save) | 5/5 | 5/5 | 0 | — |
+| apagar slot | 2/2 | 2/2 | 0 | ok |
+
+Passos novos do bot (edição mínima no `debug_bridge.gd`, Dev A): `{"ui_nav": "ui_down", "device":
+"pad"}` (ui_up/down/left/right/accept/cancel, ui_focus_next/prev, tab_next/prev) e `{"nav_audit":
+"<tela>", "root": "<nó>", "devices": [...], "allow_leave": bool, "cancel": "<nó>"}`. A lógica fica em
+`ui/ui_nav_audit.gd` (UiNavAudit), usada também pelos testes.
+
+Achados e correções Dev B (antes das correções: resumo do dia 0/2 sem foco nem B/Esc, menu coop 4/5 com
+4 armadilhas, Vídeo em tela cheia e Loja sem saldo com foco em botão desativado, Diário/Mapa sem foco):
+
+- Base: aba sem controles foca a barra de abas (esquerda/direita trocam de aba) em vez de deixar o
+  foco na aba oculta (`UiFocus.focus_tab_page`); botões desativados (Comprar sem saldo, Partir/Desbloquear
+  bloqueados) saem da navegação e voltam quando ativam (`UiFocus.skip_disabled`).
+- Menu Multiplayer: a corrente de foco é refeita a cada troca de foco e de estado dos botões (o "Novo
+  jogo" que aparece depois ficava fora; o "Entrar" desativado sem código era armadilha) e inclui a barra
+  Online / Rede local.
+- Configurações: a Resolução desativada (tela cheia) sai da navegação.
+- Resumo do dia, aviso de queda do host e confirmação de sair: foco no botão ao abrir, anel só dentro do
+  painel, B/Esc fecha e o foco volta ao de antes (ou à Base). O lobby carregando atrás do resumo não
+  rouba mais o foco dele (`UiFocus.modal_open`).
+- Pausa e vitória devolvem o foco ao fechar (antes o comando ficava sem foco nenhum na Base).
+
+Testes: `tests/dev_b/test_nav_audit.gd` (cada tela nos dois dispositivos, B/Esc por camada, captura de
+tecla cancelada por Esc/B sem fechar as configurações, toasts que não roubam o foco, painéis da sessão,
+botões desativados e o resumo com o lobby atrás).
+
+Limites: a confirmação de sair da sessão e o aviso de queda do host só aparecem com rede; ficam nos
+testes GUT (sem rede nova no bot). O B/Esc no título, na Base e no menu de rede não fecha nada (são a
+camada de baixo; na Base o Esc abre a pausa).
+
