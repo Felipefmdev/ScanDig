@@ -307,10 +307,22 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 ## 3. Save (`user://scandig_save_<n>.json`, versão 6)
 
 ```json
-{ "version": 5, "saved_at": 1792080000, "last_played": 1792080000, "play_time_s": 7500, "last_map": "praia", "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"] }
+{
+  "version": 6, "saved_at": 1792080000, "last_played": 1792080000, "play_time_s": 7500, "last_map": "praia",
+  "team_money": 100, "current_day": 1,
+  "discovered_items": ["moeda_antiga"],
+  "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 },
+  "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"],
+  "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"],
+  "seen_creatures": [], "intact_items": ["moeda_antiga"], "rare_items": [], "map_fragments": [], "built_shortcuts": [],
+  "game_completed": false,
+  "stats": { "expeditions": 3, "night_expeditions": 0, "flawless_expeditions": 1, "items_found": 12, "items_sold": 9,
+             "items_donated": 1, "money_earned": 640, "creatures_defeated": 2, "digs": 40, "dig_depth_cm": 1850 },
+  "achievements": ["first_find", "flawless_expedition"]
+}
 ```
 
-Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo e agora libera a Geleira (antes liberava a Cratera). Saves v1–v4 (#139) carregam com `play_time_s` 0, `last_map` "" (o card mostra "—") e `last_played` = `saved_at`; valor de tipo errado nesses três volta ao padrão sem invalidar o save. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save_<n>.json`.
+Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo e agora libera a Geleira (antes liberava a Cratera). Saves v1–v4 (#139) carregam com `play_time_s` 0, `last_map` "" (o card mostra "—") e `last_played` = `saved_at`; valor de tipo errado nesses três volta ao padrão sem invalidar o save. Saves v1–v5 (#141) carregam com `stats` {} e `achievements` []; `stats` passa pelo `GameState.sanitize_stats` (só chave texto com número, mínimo 0; as chaves válidas estão em `Achievements.STAT_KEYS`), e as conquistas que o save já cumpre entram sem toast no carregamento. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save_<n>.json`.
 
 **Tempo de jogo e miniatura (#139).** `SaveManager.play_time_s` soma no `_process` só com o progresso aplicado, no host/offline, fora da tela inicial e sem a árvore pausada (pausa do solo); em expedição guarda `last_map`. Ao gravar com render, a tela vira `scandig_save_<n>.png` (`THUMBNAIL_SIZE` 256x144, corte 16:9, `make_thumbnail`); no headless, testes, bots e na tela inicial não há captura (`_capture_viewport_image` devolve null, os testes a sobrescrevem). `delete_slot` apaga o .png; `start_new_game` apaga o antigo.
 
