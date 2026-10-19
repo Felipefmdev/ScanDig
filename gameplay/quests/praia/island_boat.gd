@@ -53,7 +53,7 @@ static func map_complete() -> bool:
 func _on_interact(peer_id: int) -> void:
 	if not map_complete():
 		var p: Vector2i = fragment_progress()
-		say_to(peer_id, "O mapa do tesouro ainda tem buracos: %d de %d fragmentos. Sem ele, ninguém encontra a ilha." % [p.x, p.y], 4.0)
+		say_to(peer_id, I18n.fmt("O mapa do tesouro ainda tem buracos: %d de %d fragmentos. Sem ele, ninguém encontra a ilha.", [p.x, p.y]), 4.0)
 		return
 	var sm: SessionManager = SessionManager.instance
 	if sm == null or not sm.can_start_map(ISLAND_ID):

@@ -33,7 +33,7 @@ func _on_input(peer_id: int, index: int) -> void:
 	progressed.emit(count, required)
 	var it: Interactable = get_node_or_null(inputs[index]) as Interactable
 	if it != null and not progress_text.is_empty():
-		it.say_to(peer_id, progress_text % [count, required], 3.0)
+		it.say_to(peer_id, I18n.fmt(progress_text, [count, required]), 3.0)
 	if count >= required:
 		var flags: WorldFlags = WorldFlags.find(get_tree())
 		if flags != null and success_flag != &"":

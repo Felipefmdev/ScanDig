@@ -23,8 +23,8 @@ static func message_for(fragment_id: String, found: int, total: int) -> String:
 	if found >= total:
 		return "🗺️ Último fragmento! O Mapa do Tesouro está completo: há uma ilha esperando a equipe."
 	var map_id: String = str(GameState.MAP_FRAGMENTS.get(fragment_id, {}).get("map", ""))
-	return "🗺️ Fragmento do Mapa do Tesouro (%s)! %d/%d — veja o pergaminho na base." % [
-		map_id.capitalize(), found, total]
+	return I18n.t("🗺️ Fragmento do Mapa do Tesouro (%s)! %d/%d — veja o pergaminho na base.") % [
+		I18n.t(map_id.capitalize()), found, total]
 
 
 func _on_fragment_found(fragment_id: String) -> void:

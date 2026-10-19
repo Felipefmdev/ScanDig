@@ -71,6 +71,13 @@ var _last_held_item_id: String = ""
 var _done_talks: int = 0
 
 
+## O "[E] Falar com <nome>" padrão no idioma atual (#131); um prompt próprio da cena fica igual.
+func get_prompt() -> String:
+	if prompt == "[E] Falar com %s" % npc_name:
+		return tr("[E] Falar com %s") % tr(npc_name)
+	return prompt
+
+
 func _ready() -> void:
 	super._ready()
 	if prompt == "[E] Interagir":

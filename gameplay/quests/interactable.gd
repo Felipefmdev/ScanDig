@@ -151,7 +151,9 @@ func say_all(text: String, seconds: float = 4.0) -> void:
 
 ## Local: balão de texto por cima do nó.
 func show_say(text: String, seconds: float) -> void:
-	_say_label.text = text
+	# Fala com números (I18n.fmt, #131) traduz aqui; a fala fixa fica com a chave e o Label3D
+	# traduz sozinho (e acompanha a troca de idioma).
+	_say_label.text = I18n.t(text) if text.contains(I18n.PACK_SEP) else text
 	_say_label.visible = true
 	_say_left = seconds
 	_prompt_label.visible = false
