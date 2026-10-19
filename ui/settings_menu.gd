@@ -554,6 +554,10 @@ func pending_audio() -> Dictionary:
 func _update_resolution_enabled() -> void:
 	# Resolução só vale em janela; em tela cheia vale a do monitor.
 	resolution_option.disabled = WINDOW_LABELS.keys()[maxi(window_mode_option.selected, 0)] != "windowed"
+	# Desativada sai da navegação por teclado/comando (#135); a corrente da aba é refeita.
+	UiFocus.skip_disabled([resolution_option])
+	if is_visible_in_tree() and tabs.current_tab == TAB_VIDEO:
+		_link_tab_focus()
 
 
 # --- Botões --------------------------------------------------------------------
@@ -646,7 +650,17 @@ func _hide_discard() -> void:
 func focus_first() -> void:
 	if not is_visible_in_tree():
 		return
-	UiFocus.focus_first(tabs.get_current_tab_control(), [defaults_button, back_button, apply_button])
+	_link_tab_focus()
+	var first: Control = UiFocus.first_focusable(tabs.get_current_tab_control())
+	if first != null:
+		first.grab_focus()
+
+
+func _link_tab_focus() -> void:
+	var chain: Array = []
+	chain.append_array(UiFocus.focusables(tabs.get_current_tab_control()))
+	chain.append_array([defaults_button, back_button, apply_button])
+	UiFocus.link_chain(chain)
 	UiFocus.link_row([defaults_button, back_button, apply_button])
 	if tabs.current_tab == TAB_CONTROLS:
 		_link_controls_focus()
