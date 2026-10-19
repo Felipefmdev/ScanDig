@@ -61,6 +61,8 @@ var leave_confirm_label: Label = null
 var leave_confirm_button: Button = null
 var leave_cancel_button: Button = null
 var toast_panel: Control = null
+## Foco antes de abrir um painel (#135), devolvido ao fechar.
+var _focus_before: Control = null
 var toast_label: Label = null
 ## Aviso de save: em qualquer tela (título, base, mapa) e por cima do carregamento.
 var save_toast_panel: PanelContainer = null
@@ -122,6 +124,58 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_clear_toasts)
 	# Garante que todos os autoloads já entraram na árvore antes de procurar o CoreSession.
 	_connect_session.call_deferred()
+
+
+## B/Esc (ui_cancel ou pausa) fecha o painel aberto (#135): confirmação de sair, resumo do dia ou
+## queda do host. Em _input, antes da pausa, que não abre por cima deles e engoliria o Esc.
+func _input(event: InputEvent) -> void:
+	if summary_panel == null or not (event.is_action_pressed(&"ui_cancel", false, true) or event.is_action_pressed(&"pause", false, true)):
+		return
+	if leave_confirm_panel.visible:
+		_on_leave_cancel_pressed()
+	elif summary_panel.visible:
+		_on_summary_close_pressed()
+	elif host_lost_panel.visible:
+		_on_host_lost_close_pressed()
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
+## Painel modal com teclado/comando (#135): o foco anda em anel só entre `controls` (as quatro
+## setas e Tab), sem escapar para a Base por baixo, e começa em `first`. Guarda o foco de antes.
+func _focus_panel(controls: Array, first: Control) -> void:
+	var current: Control = get_viewport().gui_get_focus_owner()
+	if current != null and not _is_panel_control(current):
+		_focus_before = current
+	UiFocus.link_chain(controls)
+	for c: Variant in controls:
+		var control: Control = c as Control
+		control.focus_neighbor_left = control.focus_previous
+		control.focus_neighbor_right = control.focus_next
+	first.grab_focus()
+
+
+func _is_panel_control(control: Control) -> bool:
+	for panel: Control in [summary_panel, host_lost_panel, leave_confirm_panel]:
+		if panel.is_ancestor_of(control):
+			return true
+	return false
+
+
+## Painel fechado: o foco volta aonde estava; sem isso (cena trocada), à Base (UiFocus.HOME_GROUP),
+## para o comando não ficar sem foco nenhum.
+func _restore_focus() -> void:
+	if summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible:
+		return
+	var before: Control = _focus_before
+	_focus_before = null
+	if is_instance_valid(before) and before.is_visible_in_tree():
+		before.grab_focus()
+	elif is_inside_tree():
+		var current: Control = get_viewport().gui_get_focus_owner()
+		if current == null or not current.is_visible_in_tree():
+			get_tree().call_group(UiFocus.HOME_GROUP, &"focus_home")
 
 
 ## Resolve os nós únicos; retorna falso (com erro listando os ausentes) se faltar algum.
@@ -237,11 +291,13 @@ func _on_leave_pressed() -> void:
 	leave_confirm_label.text = LEAVE_HOST_TEXT if _is_host() else LEAVE_CLIENT_TEXT
 	leave_confirm_panel.visible = true
 	_update_mouse()
+	_focus_panel([leave_cancel_button, leave_confirm_button], leave_cancel_button)
 
 
 func _on_leave_cancel_pressed() -> void:
 	leave_confirm_panel.visible = false
 	_update_mouse()
+	_restore_focus()
 
 
 func _on_leave_confirm_pressed() -> void:
@@ -307,6 +363,7 @@ func _on_host_lost() -> void:
 	leave_confirm_panel.visible = false
 	host_lost_panel.visible = true
 	_update_mouse()
+	_focus_panel([host_lost_close_button], host_lost_close_button)
 
 
 # --- Avisos de missão e segredo ------------------------------------------------
@@ -480,16 +537,19 @@ func _show_summary(summary: Dictionary) -> void:
 	]
 	summary_panel.visible = true
 	_update_mouse()
+	_focus_panel([summary_list, summary_close_button], summary_close_button)
 
 
 func _on_summary_close_pressed() -> void:
 	summary_panel.visible = false
 	_update_mouse()
+	_restore_focus()
 
 
 func _on_host_lost_close_pressed() -> void:
 	host_lost_panel.visible = false
 	_update_mouse()
+	_restore_focus()
 
 
 # --- Mouse --------------------------------------------------------------------
