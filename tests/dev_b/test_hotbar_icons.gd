@@ -55,7 +55,7 @@ func test_empty_slot_is_only_the_frame() -> void:
 	assert_eq((_slot(1, "Box/Value") as Label).text, "")
 	assert_null((_slot(1, "Overlay/TypeMark") as TextureRect).texture)
 	var style: StyleBoxFlat = _hotbar._slot_panels[1].get_theme_stylebox(&"panel") as StyleBoxFlat
-	assert_eq(style.bg_color.a, 0.0, "vazio sem fundo")
+	assert_gt(style.bg_color.a, 0.0, "vazio mantém o fundo escuro habitual")
 	assert_gt(style.border_width_left, 0, "a moldura fica")
 	var filled: StyleBoxFlat = _hotbar._slot_panels[0].get_theme_stylebox(&"panel") as StyleBoxFlat
 	assert_gt(filled.bg_color.a, 0.0, "slot com item mantém o fundo")

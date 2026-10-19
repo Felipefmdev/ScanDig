@@ -5,7 +5,7 @@ extends HBoxContainer
 ## (acompanha melhorias de capacidade) e destaca o slot selecionado (borda dourada e leve
 ## escala). Cada slot mostra o ícone 3D do item (ItemIcons, #119); até o ícone ficar pronto, e
 ## sempre no headless, fica o quadrado na cor do item. No canto, a marca do tipo (ferramenta ou
-## achado de museu). Slot vazio é só a moldura (#122): sem fundo, quadrado nem traço.
+## achado de museu). Slot vazio mantém o fundo escuro habitual e a moldura, sem quadrado nem traço.
 
 const SLOT_SIZE: Vector2 = Vector2(92, 92)
 ## Com muitos slots (mochila até 8) encolhem até aqui para caber entre a vida e a mão.
@@ -259,8 +259,6 @@ func _on_selected_slot_changed(index: int) -> void:
 		var selected: bool = (i == index)
 		var style: StyleBoxFlat = StyleBoxFlat.new()
 		style.bg_color = Color(UiPalette.INK.r, UiPalette.INK.g, UiPalette.INK.b, 0.85) if selected else COLOR_BG
-		if not selected and inventory != null and inventory.get_item(i) == null:
-			style.bg_color = Color.TRANSPARENT
 		style.border_color = COLOR_SELECTED if selected else COLOR_BORDER
 		var w: int = 3 if selected else 1
 		if selected:
