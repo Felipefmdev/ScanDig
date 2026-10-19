@@ -95,3 +95,30 @@ Leitura:
 - O FPS é da build de debug numa RTX 4060 sem limite; serve para comparar mapas, não como mínimo
   de hardware.
 - A coluna "erros/warnings" é por run do mapa (dia + noite + 3.ª ida juntos).
+
+## N4: otimizações Dev B (#132)
+
+O N1 não achou órfão nem vazamento em `core/` ou `ui/` (telas: 0 órfãos; os degraus por mapa são o
+`ShopOffer`, #128, e os erros são o `HostSync`, #127, ambos Dev A). Do lado Dev B sobrou só custo
+por frame à toa:
+
+- `NightFx` processava todo frame, mesmo de dia, e à noite varria o grupo do jogador local a cada
+  frame; `WeatherFx` processava todo frame mesmo sem clima. Agora só processam ativas, e a
+  `NightFx` guarda o jogador. Microbenchmark (GUT headless, 20 000 chamadas): busca do jogador
+  0,62 → 0,26 µs/frame; `_process` noturno inteiro 1,59 → 1,53 µs/frame; de dia e sem clima, 2
+  chamadas de script a menos por frame.
+
+Antes → depois no jogo, `qa_campo.json` (pior FPS do N1), duas rodadas de cada, alternadas,
+mesma máquina e configuração do N1. FPS méd / mín:
+
+| fase | antes (1) | antes (2) | depois (1) | depois (2) | órfãos (todas) |
+|---|---|---|---|---|---|
+| dia | 528 / 518 | 530 / 507 | 523 / 498 | 527 / 500 | 0 → 5 → 5 |
+| dia + chuva | 531 / 520 | 518 / 506 | 531 / 526 | 525 / 512 | (mesma ida) |
+| noite | 533 / 502 | 534 / 497 | 544 / 513 | 537 / 501 | 5 → 10 → 10 |
+| 3.ª ida | | | | | 15 → 15 |
+
+Leitura: a diferença fica dentro do ruído entre rodadas (±10 FPS). A cena é limitada pela
+renderização, não pelos scripts do Dev B, e os órfãos/erros seguem iguais até #127/#128. Não há
+mais nada do Dev B a cortar sem mudar o visual (as partículas de clima são `CPUParticles3D` com
+400 gotas; passar para GPU fica para quando houver queda real de FPS em máquina fraca).
