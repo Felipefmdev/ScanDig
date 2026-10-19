@@ -11,6 +11,7 @@ extends Node
 ## - save_game() nunca grava por cima de um save que ainda não foi aplicado.
 ## - Cliente em sessão usa o estado do host; ao sair, volta ao próprio save.
 ## - Save corrompido vira scandig_save.corrupt-<unix>.json; versão mais nova bloqueia a gravação.
+## - Cada save leva o tempo de jogo, o último mapa e, com render, uma miniatura <save>.png (#139).
 
 signal game_saved()
 signal game_loaded()
@@ -29,13 +30,15 @@ const SLOT_COUNT: int = 3
 const SLOT_FILE_FORMAT: String = "scandig_save_%d.json"
 ## O save de antes dos slots, depois de copiado para o slot 1.
 const LEGACY_FILE_NAME: String = "scandig_save.legacy.json"
-const SAVE_VERSION: int = 4
+const SAVE_VERSION: int = 5
 ## Pasta dos saves isolados dos testes (use_test_save_dir).
 const TEST_SAVES_DIR: String = "user://test_saves"
 ## Caminho base sob GUT/--script/bot, antes de use_test_save_dir/set_save_path.
 const TEST_SAVE_FILE_PATH: String = "user://test_saves/scandig_save.json"
 const MSG_CORRUPT: String = "O save estava corrompido e foi salvo como backup. Começando um jogo novo."
 const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atualize o ScanDig para continuar."
+## Miniatura do slot (<save>.png), gravada junto com o save quando há render (#139).
+const THUMBNAIL_SIZE: Vector2i = Vector2i(256, 144)
 ## Campos que o apply_snapshot só aceita como Array.
 const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments", "built_shortcuts"]
 ## Campos numéricos opcionais (team_money é obrigatório e conferido à parte).
@@ -60,6 +63,12 @@ var _slot: int = 0
 var _progress_applied: bool = false
 ## Save de versão mais nova nesta sessão: nada é gravado até start_new_game().
 var _write_blocked: bool = false
+
+## Tempo jogado neste save, em segundos (#139): só corre com o progresso aplicado, no host/offline,
+## fora da tela inicial e sem o jogo pausado (solo). Vai para o save como play_time_s.
+var play_time_s: float = 0.0
+## Mapa da expedição atual ou da última ("" = nenhuma ainda). Vai para o save como last_map.
+var last_map: String = ""
 
 
 func _enter_tree() -> void:
@@ -95,30 +104,131 @@ func _ready() -> void:
 	net.server_disconnected.connect(_restore_local_progress)
 
 
+func _process(delta: float) -> void:
+	advance_play_clock(delta)
+
+
+# --- Tempo de jogo (#139) ----------------------------------------------------------
+
+## Soma `delta` ao tempo de jogo se o relógio está correndo; em expedição, guarda o mapa.
+func advance_play_clock(delta: float) -> void:
+	if not is_play_clock_running():
+		return
+	play_time_s += delta
+	var session: SessionManager = SessionManager.instance
+	if session != null and session.is_in_expedition():
+		last_map = session.get_current_map().id
+
+
+## Jogando este save: progresso aplicado, host/offline, fora da tela inicial e sem pausa (o menu
+## de pausa só pausa a árvore no solo; online o tempo segue correndo).
+func is_play_clock_running() -> bool:
+	if not _progress_applied or not is_inside_tree() or get_tree().paused or _on_title_screen():
+		return false
+	var state: GameState = _resolve_game_state()
+	return state != null and state.is_authority()
+
+
+func _on_title_screen() -> bool:
+	var scene: Node = get_tree().current_scene if is_inside_tree() else null
+	return scene != null and scene.scene_file_path == SessionManager.TITLE_SCENE
+
+
+func _load_play_meta(data: Dictionary) -> void:
+	play_time_s = maxf(float(data.get("play_time_s", 0)), 0.0)
+	last_map = str(data.get("last_map", ""))
+
+
+func _reset_play_meta() -> void:
+	play_time_s = 0.0
+	last_map = ""
+
+
 # --- API para a UI -----------------------------------------------------------------
 
 ## Lê o arquivo SEM aplicar. Nunca dá erro.
-## {exists, valid, version, day, money, museum_found, museum_total, saved_at (unix, 0 se não houver), error}
+## {exists, valid, version, day, money, museum_found, museum_total, bosses_defeated, bosses_total,
+## game_completed, saved_at e last_played (unix, 0 se não houver), play_time_s, last_map (id, "" se
+## nenhum), thumbnail (caminho do .png, "" se não houver), error}
 func get_save_summary() -> Dictionary:
-	return _summary_from(_read_save())
+	return _summary_from(_read_save(), save_path)
 
 
-func _summary_from(read: Dictionary) -> Dictionary:
-	var data: Dictionary = read["data"]
+func _summary_from(read: Dictionary, path: String) -> Dictionary:
+	var ok: bool = read["status"] == ReadStatus.OK
+	# Os mesmos padrões da migração: um save antigo mostra 0 de tempo e nenhum mapa.
+	var data: Dictionary = _upgrade_save_data(read["data"]) if ok else {}
 	var state: GameState = _resolve_game_state()
-	var found: Variant = data.get("discovered_items", [])
+	var thumbnail: String = thumbnail_path_for(path)
 	return {
 		"exists": read["status"] != ReadStatus.MISSING,
-		"valid": read["status"] == ReadStatus.OK,
+		"valid": ok,
 		"version": int(read["version"]),
-		"day": int(data.get("current_day", 0)) if read["status"] == ReadStatus.OK else 0,
-		"money": int(data.get("team_money", 0)) if read["status"] == ReadStatus.OK else 0,
-		"museum_found": (found as Array).size() if read["status"] == ReadStatus.OK and found is Array else 0,
+		"day": int(data.get("current_day", 0)),
+		"money": int(data.get("team_money", 0)),
+		"museum_found": (data.get("discovered_items", []) as Array).size(),
 		"museum_total": state.get_total_catalog_items() if state != null else 0,
+		"bosses_defeated": _count_known_bosses(data),
+		"bosses_total": GameState.all_boss_ids().size(),
 		"game_completed": _beat_final_boss(data),
-		"saved_at": int(data.get("saved_at", 0)) if read["status"] == ReadStatus.OK else 0,
+		"saved_at": int(data.get("saved_at", 0)),
+		"last_played": int(data.get("last_played", 0)),
+		"play_time_s": int(data.get("play_time_s", 0)),
+		"last_map": str(data.get("last_map", "")),
+		"thumbnail": thumbnail if ok and FileAccess.file_exists(thumbnail) else "",
 		"error": str(read["error"]),
 	}
+
+
+static func _count_known_bosses(data: Dictionary) -> int:
+	var defeated: Array = data.get("defeated_bosses", [])
+	var count: int = 0
+	for boss_id: String in GameState.all_boss_ids():
+		if defeated.has(boss_id):
+			count += 1
+	return count
+
+
+# --- Miniatura (#139) --------------------------------------------------------------
+
+## <save>.png ao lado do save em `path`.
+static func thumbnail_path_for(path: String) -> String:
+	return "%s.png" % path.get_basename()
+
+
+func get_thumbnail_path() -> String:
+	return thumbnail_path_for(save_path)
+
+
+## Depois de gravar: a tela atual, cortada em 16:9 e reduzida, vira a miniatura. Sem imagem
+## (headless, testes, tela inicial) fica sem miniatura nova, sem erro.
+func _save_thumbnail() -> void:
+	var image: Image = _capture_viewport_image()
+	if image == null or image.is_empty():
+		return
+	var error: Error = make_thumbnail(image).save_png(get_thumbnail_path())
+	if error != OK:
+		push_warning("SaveManager: miniatura não gravada em %s (erro %d)." % [get_thumbnail_path(), error])
+
+
+## `image` cortada no centro em 16:9, sem alfa, em THUMBNAIL_SIZE (cópia nova).
+static func make_thumbnail(image: Image) -> Image:
+	var size: Vector2i = image.get_size()
+	var aspect: float = float(THUMBNAIL_SIZE.x) / THUMBNAIL_SIZE.y
+	var width: int = mini(size.x, int(size.y * aspect))
+	var height: int = mini(size.y, int(size.x / aspect))
+	var thumb: Image = image.get_region(Rect2i(int((size.x - width) * 0.5), int((size.y - height) * 0.5), width, height))
+	thumb.convert(Image.FORMAT_RGB8)
+	thumb.resize(THUMBNAIL_SIZE.x, THUMBNAIL_SIZE.y, Image.INTERPOLATE_BILINEAR)
+	return thumb
+
+
+## A tela atual; null sem render (headless), nos testes/bots e na tela inicial. Separado para os
+## testes simularem a captura.
+func _capture_viewport_image() -> Image:
+	if DisplayServer.get_name() == "headless" or _running_tests() or not is_inside_tree() or _on_title_screen():
+		return null
+	return get_viewport().get_texture().get_image()
 
 
 # --- Slots (#100) ------------------------------------------------------------------
@@ -139,7 +249,7 @@ func current_slot() -> int:
 
 ## Resumo do slot `n` sem trocar nada (mesmo formato do get_save_summary, mais "slot").
 func get_slot_summary(n: int) -> Dictionary:
-	var summary: Dictionary = _summary_from(_read_save(slot_path(n)))
+	var summary: Dictionary = _summary_from(_read_save(slot_path(n)), slot_path(n))
 	summary["slot"] = n
 	return summary
 
@@ -166,6 +276,7 @@ func select_slot(n: int) -> Error:
 		return check
 	_activate_slot(n)
 	_reset_session_flags()
+	_reset_play_meta()
 	if not has_save_file():
 		_resolve_game_state().reset_state()
 	save_state_changed.emit()
@@ -181,7 +292,8 @@ func delete_slot(n: int) -> Error:
 		return check
 	var path: String = slot_path(n)
 	# .old/.tmp de uma gravação interrompida também: senão o .old voltaria como save.
-	for file_path: String in [path, "%s.backup.json" % path.get_basename(), path + ".old", path + ".tmp"]:
+	for file_path: String in [path, "%s.backup.json" % path.get_basename(), path + ".old", path + ".tmp",
+			thumbnail_path_for(path)]:
 		if FileAccess.file_exists(file_path):
 			var error: Error = DirAccess.remove_absolute(file_path)
 			if error != OK:
@@ -189,6 +301,7 @@ func delete_slot(n: int) -> Error:
 				return error
 	if n == _slot:
 		_reset_session_flags()
+		_reset_play_meta()
 		_resolve_game_state().reset_state()
 	save_state_changed.emit()
 	return OK
@@ -266,6 +379,9 @@ func start_new_game() -> Error:
 			_emit_failed(FailReason.WRITE, message)
 			return backup_error
 		DirAccess.remove_absolute(save_path)
+	# A miniatura era do progresso antigo (o jogo novo começa na tela inicial, sem captura).
+	_remove_if_exists(get_thumbnail_path())
+	_reset_play_meta()
 	_write_blocked = false
 	_progress_applied = true
 	_resolve_game_state().reset_state()
@@ -430,9 +546,13 @@ func save_game(target_state: GameState = null) -> Error:
 		_emit_failed(FailReason.NEWER_VERSION, blocked_msg)
 		return ERR_UNAUTHORIZED
 
+	var now: int = int(Time.get_unix_time_from_system())
 	var save_data: Dictionary = {
 		"version": SAVE_VERSION,
-		"saved_at": int(Time.get_unix_time_from_system()),
+		"saved_at": now,
+		"last_played": now,
+		"play_time_s": int(play_time_s),
+		"last_map": last_map,
 		"team_money": state.team_money,
 		"current_day": state.current_day,
 		"discovered_items": Array(state.discovered_items),
@@ -452,6 +572,7 @@ func save_game(target_state: GameState = null) -> Error:
 	var error: Error = save_to_file(save_data)
 	if error == OK:
 		_progress_applied = true
+		_save_thumbnail()
 		game_saved.emit()
 		save_state_changed.emit()
 	else:
@@ -491,7 +612,9 @@ func load_game(target_state: GameState = null) -> Error:
 		_emit_failed(FailReason.NOT_HOST, err_msg)
 		return ERR_UNAUTHORIZED
 
-	state.load_snapshot(_upgrade_save_data(read["data"]))
+	var save_data: Dictionary = _upgrade_save_data(read["data"])
+	state.load_snapshot(save_data)
+	_load_play_meta(save_data)
 	_progress_applied = true
 	game_loaded.emit()
 	save_state_changed.emit()
@@ -507,6 +630,7 @@ func set_save_path(path: String) -> void:
 	_base_path = path
 	_slot = 0
 	_reset_session_flags()
+	_reset_play_meta()
 	save_state_changed.emit()
 
 
@@ -556,11 +680,14 @@ func _apply_saved_progress() -> Error:
 	var read: Dictionary = _read_save()
 	match read["status"]:
 		ReadStatus.MISSING:
+			_reset_play_meta()
 			_progress_applied = true
 			save_state_changed.emit()
 			return OK
 		ReadStatus.OK:
-			state.load_snapshot(_upgrade_save_data(read["data"]))
+			var save_data: Dictionary = _upgrade_save_data(read["data"])
+			state.load_snapshot(save_data)
+			_load_play_meta(save_data)
 			_progress_applied = true
 			game_loaded.emit()
 			save_state_changed.emit()
@@ -568,6 +695,7 @@ func _apply_saved_progress() -> Error:
 		ReadStatus.CORRUPT:
 			push_warning("SaveManager: save corrompido (%s); salvo em %s." % [read["error"], _quarantine_corrupt_save()])
 			_progress_applied = true
+			_reset_play_meta()
 			state.reset_state()
 			save_load_failed.emit(MSG_CORRUPT)
 			save_state_changed.emit()
@@ -576,6 +704,7 @@ func _apply_saved_progress() -> Error:
 			push_warning("SaveManager: %s; gravação bloqueada nesta sessão." % read["error"])
 			_write_blocked = true
 			_progress_applied = true
+			_reset_play_meta()
 			state.reset_state()
 			save_load_failed.emit(MSG_NEWER)
 			save_state_changed.emit()
@@ -640,7 +769,7 @@ func _validate_fields(data: Dictionary) -> String:
 	return ""
 
 
-## Converte saves v1–v3 para o formato do snapshot (v4).
+## Converte saves v1–v4 para o formato atual (v5).
 func _upgrade_save_data(source: Dictionary) -> Dictionary:
 	var save_data: Dictionary = source.duplicate(true)
 	# Ids são texto e níveis são números: o resto (null, objetos) seria "<null>" ou quebraria o int().
@@ -681,6 +810,14 @@ func _upgrade_save_data(source: Dictionary) -> Dictionary:
 	# Conclusão do jogo (#81/#115): sempre pelos chefes vencidos, nunca pelo bool gravado. Saves
 	# antigos concluídos pelo the_sleeper (o final antigo) voltam a "não concluído".
 	save_data["game_completed"] = _beat_final_boss(save_data)
+	# v5 (#139): saves antigos começam com 0 de tempo e sem último mapa; o last_played é o saved_at.
+	# Valor de tipo errado volta ao padrão em vez de invalidar o save (não é progresso).
+	var played: Variant = save_data.get("play_time_s")
+	save_data["play_time_s"] = maxi(int(played), 0) if _is_number(played) else 0
+	if not (save_data.get("last_map") is String):
+		save_data["last_map"] = ""
+	if not _is_number(save_data.get("last_played")):
+		save_data["last_played"] = int(save_data["saved_at"]) if _is_number(save_data.get("saved_at")) else 0
 	return save_data
 
 
@@ -733,6 +870,7 @@ func _restore_local_progress() -> void:
 		return
 	if not has_save_file():
 		state.reset_state()
+		_reset_play_meta()
 		_progress_applied = true
 		save_state_changed.emit()
 		return

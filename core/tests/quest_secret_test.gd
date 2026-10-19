@@ -80,7 +80,7 @@ func _run() -> void:
 	# Save v4: salvar e carregar mantém as listas.
 	_check(save.save_game() == OK, "save_game OK")
 	var saved: Dictionary = save.load_from_file()
-	_check(int(saved.get("version", 0)) == 4, "save versão 4: %s" % str(saved.get("version")))
+	_check(int(saved.get("version", 0)) == 5, "save versão 5: %s" % str(saved.get("version")))
 	gs.reset_state()
 	_check(gs.completed_quests.is_empty() and gs.found_secrets.is_empty(), "reset limpa as listas")
 	_quest_signals.clear()

@@ -536,10 +536,7 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 		return
 	if defeated_bosses.has(boss_id):
 		return
-	var known: bool = EXTRA_BOSSES.has(boss_id)
-	for entry: Dictionary in MAP_UNLOCK_BOSSES.values():
-		known = known or str(entry["boss_id"]) == boss_id
-	if known:
+	if all_boss_ids().has(boss_id):
 		defeated_bosses.append(boss_id)
 		var data: Dictionary = get_snapshot()
 		if boss_id == FINAL_BOSS_ID:
@@ -714,6 +711,17 @@ func _is_host_sender(kind: String, id: String) -> bool:
 		push_warning("GameState: %s '%s' reportado pelo peer %d ignorado (só o host)." % [kind, id, sender])
 		return false
 	return true
+
+
+## Todos os chefes aceitos em defeated_bosses (os que liberam mapa e os extras), sem repetir.
+static func all_boss_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for entry: Dictionary in MAP_UNLOCK_BOSSES.values():
+		ids.append(str(entry["boss_id"]))
+	for boss_id: String in EXTRA_BOSSES:
+		if not ids.has(boss_id):
+			ids.append(boss_id)
+	return ids
 
 
 # --- Sincronização -------------------------------------------------------------

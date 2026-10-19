@@ -67,7 +67,7 @@ Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
 
 **Estado x evento (#81).** `game_completed_changed` é estado: vem de qualquer `apply_snapshot` em que `game_completed` muda, inclusive ao carregar o save, ao entrar no meio da sessão (`_request_full_state`) e ao reconectar. `game_victory` é evento: só sai quando o chefe final (`GameState.FINAL_BOSS_ID` = `gold_colossus`, o Colosso do Tesouro da Ilha, #115) é derrotado **nesta sessão**, uma vez, em todos os peers presentes. O host chama `_receive_game_victory()` localmente e por RPC (`authority`, `call_remote`, `reliable`), **depois** de `_receive_snapshot.rpc`. Como os RPCs reliable do mesmo nó chegam em ordem, o cliente já tem as contagens novas. Quem entra depois recebe só o estado. A tela "Jogo concluído" (`CoreVictoryScreen`) escuta `game_victory`: trava o player (`Player.is_settings_open()`) e o menu de pausa (`PauseMenu.can_open()`), e fecha em "Continuar explorando", no Esc, em `SessionManager.scene_changing` e quando o jogo deixa de estar concluído (reset ou outro save).
 
-**Concluído = venceu o chefe final (#115).** `game_completed` é sempre derivado de `defeated_bosses` (tem `FINAL_BOSS_ID`): no `apply_snapshot`, no `SaveManager._upgrade_save_data` (todo save carregado passa por ele) e no `get_save_summary`/`get_slot_summary` (o ★ do slot). O bool gravado no save não conta. Saves antigos "concluídos" pelo `the_sleeper` (o final até o #115) voltam a não concluídos, sem ★, até o colosso cair; o `the_sleeper` segue em `defeated_bosses` e dá o `cratera_frag_2`. Como a derivação roda em todo carregamento, o `SAVE_VERSION` continua 4. Carregar um save nunca abre a VictoryScreen: ela só ouve `game_victory`.
+**Concluído = venceu o chefe final (#115).** `game_completed` é sempre derivado de `defeated_bosses` (tem `FINAL_BOSS_ID`): no `apply_snapshot`, no `SaveManager._upgrade_save_data` (todo save carregado passa por ele) e no `get_save_summary`/`get_slot_summary` (o ★ do slot). O bool gravado no save não conta. Saves antigos "concluídos" pelo `the_sleeper` (o final até o #115) voltam a não concluídos, sem ★, até o colosso cair; o `the_sleeper` segue em `defeated_bosses` e dá o `cratera_frag_2`. Como a derivação roda em todo carregamento, o #115 não subiu o `SAVE_VERSION` (o v5 veio depois, no #139). Carregar um save nunca abre a VictoryScreen: ela só ouve `game_victory`.
 
 ### Snapshot
 Após cada mudança o host envia a todos `_receive_snapshot` com:
@@ -302,24 +302,28 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 - Visual (`CoreWeatherFx`, `ui/weather_fx.gd`) e aviso/ícone (`CoreWeatherUI`, `ui/weather_hud.gd`): só para o jogador local. As partículas (CPUParticles3D, até 400) seguem a câmera ativa. O `Environment` do mapa é trocado por uma cópia durante o evento (tween de 3 s, valores somados aos do mapa em `WeatherFx.ENV_TARGETS`), e o MESMO recurso original volta no fim; nada é gravado nos `.tres`. A opção `[video] strong_weather_fx` (aba Vídeo) só reduz partículas (metade) e névoa (35 %); os modificadores de jogo não mudam.
 - Bots: `tools/run_bot.sh "<godot>" tools/bot/weather_praia.json` (também `weather_geleira.json` e `weather_cratera.json`) pega o detector, força o evento e captura antes, aviso e ativo.
 
-## 3. Save (`user://scandig_save.json`, versão 4)
+## 3. Save (`user://scandig_save_<n>.json`, versão 5)
 
 ```json
-{ "version": 4, "saved_at": 1792080000, "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"] }
+{ "version": 5, "saved_at": 1792080000, "last_played": 1792080000, "play_time_s": 7500, "last_map": "praia", "team_money": 100, "current_day": 1, "discovered_items": ["moeda_antiga"], "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 }, "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"] }
 ```
 
-Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo e agora libera a Geleira (antes liberava a Cratera). No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save.json`.
+Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo e agora libera a Geleira (antes liberava a Cratera). Saves v1–v4 (#139) carregam com `play_time_s` 0, `last_map` "" (o card mostra "—") e `last_played` = `saved_at`; valor de tipo errado nesses três volta ao padrão sem invalidar o save. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save_<n>.json`.
+
+**Tempo de jogo e miniatura (#139).** `SaveManager.play_time_s` soma no `_process` só com o progresso aplicado, no host/offline, fora da tela inicial e sem a árvore pausada (pausa do solo); em expedição guarda `last_map`. Ao gravar com render, a tela vira `scandig_save_<n>.png` (`THUMBNAIL_SIZE` 256x144, corte 16:9, `make_thumbnail`); no headless, testes, bots e na tela inicial não há captura (`_capture_viewport_image` devolve null, os testes a sobrescrevem). `delete_slot` apaga o .png; `start_new_game` apaga o antigo.
 
 ### Contrato do `SaveManager` (a UI programa contra ele)
 ```gdscript
-const SAVE_VERSION: int = 4
+const SAVE_VERSION: int = 5
 signal save_load_failed(message: String)   # corrompido/versão nova; texto pronto para a UI
 signal new_game_started()
 signal save_state_changed()                # depois de load/new/save/delete: a UI recalcula
 
 ## Lê o arquivo SEM aplicar. Nunca dá erro.
 ## {exists: bool, valid: bool, version: int, day: int, money: int,
-##  museum_found: int, museum_total: int, saved_at: int (unix, 0 se não houver), error: String}
+##  museum_found: int, museum_total: int, bosses_defeated: int, bosses_total: int, game_completed: bool,
+##  saved_at/last_played: int (unix, 0 se não houver), play_time_s: int, last_map: String ("" = nenhum),
+##  thumbnail: String (caminho do .png, "" se não houver), error: String}
 func get_save_summary() -> Dictionary
 func is_progress_applied() -> bool          # true depois de continue_game/start_new_game (ou sem save)
 func continue_game() -> Error               # host/offline, fora de expedição; aplica o save (idempotente)

@@ -98,7 +98,7 @@ func _run() -> void:
 	# Save -> load mantém tudo.
 	var money_saved: int = gs.team_money
 	_check(save.save_game() == OK, "save_game OK")
-	_check(int(save.load_from_file().get("version", 0)) == 4, "save continua na v4")
+	_check(int(save.load_from_file().get("version", 0)) == 5, "save continua na v5")
 	gs.reset_state()
 	_check(gs.completed_quests.is_empty() and gs.found_secrets.is_empty(), "reset limpa")
 	_check(save.load_game() == OK, "load_game OK")
