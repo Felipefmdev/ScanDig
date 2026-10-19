@@ -115,6 +115,9 @@ func _ready() -> void:
 		new_game_dialog.get_ok_button().theme_type_variation = &"DangerButton"
 
 	_setup_collapse()
+	get_viewport().gui_focus_changed.connect(_on_gui_focus_changed)
+	if mode_tabs != null:
+		mode_tabs.tab_changed.connect(func(_tab: int) -> void: _relink_focus.call_deferred())
 
 	# Base aberta pela tela inicial em "Novo jogo/Continuar/Carregar" (solo, #100): o menu de rede
 	# começa oculto. Modo vazio (bots, testes, lobby aberto direto) = como sempre.
@@ -133,12 +136,49 @@ func _ready() -> void:
 
 
 ## Comando/teclado (#102): cima/baixo entre os controles visíveis e foco em "Criar sala online".
+## Não tira o foco de uma camada por cima (o resumo do dia abre antes do lobby, #135).
 func _focus_for_pad() -> void:
-	UiFocus.link_chain(UiFocus.focusables(self))
+	_relink_focus()
+	if UiFocus.modal_open():
+		return
 	if host_online_button.is_visible_in_tree():
 		host_online_button.grab_focus()
 	elif _collapse_button != null and _collapse_button.is_visible_in_tree():
 		_collapse_button.grab_focus()
+
+
+## Cima/baixo/Tab (#135) entre a barra Online/Rede local e os controles visíveis e ativos: o
+## "Entrar" desativado sem código virava armadilha e o "Novo jogo", que aparece depois, ficava fora.
+## Refeito a cada troca de foco dentro do menu e quando os botões mudam.
+func _relink_focus() -> void:
+	if not is_inside_tree():
+		return
+	var focus: Control = get_viewport().gui_get_focus_owner()
+	UiFocus.skip_disabled([host_button, join_button, host_online_button, join_code_button, continue_button, new_game_button])
+	var chain: Array = []
+	if mode_tabs != null and mode_tabs.is_visible_in_tree() and _visible_mode_tabs() > 1:
+		chain.append(mode_tabs.get_tab_bar())
+	for control: Control in UiFocus.focusables(self):
+		if control is BaseButton and (control as BaseButton).disabled and control != focus:
+			continue
+		chain.append(control)
+	UiFocus.link_chain(chain)
+	if code_line_edit != null and join_code_button != null:
+		# Direita no fim do código: só vai ao "Entrar" se ele estiver ativo.
+		code_line_edit.focus_neighbor_right = code_line_edit.get_path_to(join_code_button) if not join_code_button.disabled else NodePath(".")
+
+
+func _visible_mode_tabs() -> int:
+	var count: int = 0
+	for i: int in mode_tabs.get_tab_count():
+		if not mode_tabs.is_tab_hidden(i):
+			count += 1
+	return count
+
+
+func _on_gui_focus_changed(control: Control) -> void:
+	if control != null and is_ancestor_of(control):
+		_relink_focus()
 
 
 func _setup_collapse() -> void:
@@ -183,7 +223,7 @@ func _update_collapse() -> void:
 func _on_collapse_pressed() -> void:
 	_collapsed = not _collapsed
 	_update_collapse()
-	UiFocus.link_chain(UiFocus.focusables(self))
+	_relink_focus()
 	if not _collapsed and host_online_button != null and host_online_button.is_visible_in_tree():
 		host_online_button.grab_focus()
 	else:
@@ -393,6 +433,7 @@ func _refresh_progress_panel() -> void:
 		warning = tr("Save ilegível: %s") % tr(str(summary.get("error", "erro desconhecido")))
 	progress_warning_label.text = tr(warning)
 	progress_warning_label.visible = not warning.is_empty()
+	_relink_focus()
 
 
 ## Depois de aplicado, o estado vivo vale mais que o resumo do arquivo.
@@ -714,6 +755,7 @@ func _refresh_session_buttons() -> void:
 		cancel_button.visible = attempting
 	if retry_button != null and (locked or not _shown_room_code.is_empty()):
 		retry_button.visible = false
+	_relink_focus()
 
 
 func _refresh_players_list() -> void:
