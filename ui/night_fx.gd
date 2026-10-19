@@ -76,10 +76,6 @@ func is_active() -> bool:
 	return not _cfg.is_empty()
 
 
-func get_amount() -> float:
-	return _amount
-
-
 func current_environment_copy() -> Environment:
 	return _env_copy
 

@@ -48,19 +48,6 @@ func _init() -> void:
 	icon_name = icon_name
 
 
-static func make(p_icon: String, p_text: String = "", chip_name: String = "") -> UiChip:
-	var chip: UiChip = UiChip.new()
-	chip.icon_name = p_icon
-	chip.label.text = p_text
-	if not chip_name.is_empty():
-		chip.name = chip_name
-	return chip
-
-
-func set_text(text: String) -> void:
-	label.text = text
-
-
 ## Papel claro, contorno de tinta de 2 px, cantos de 8 e a sombra dura dos painéis.
 static func make_style() -> StyleBoxFlat:
 	var style: StyleBoxFlat = StyleBoxFlat.new()

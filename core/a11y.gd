@@ -252,10 +252,6 @@ static func careful_held() -> bool:
 	return shift or _careful_latched
 
 
-static func is_careful_latched() -> bool:
-	return _careful_latched
-
-
 static func reset_holds() -> void:
 	_hold_polled.clear()
 	_hold_stopped.clear()

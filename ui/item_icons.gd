@@ -39,10 +39,6 @@ static func can_render() -> bool:
 	return DisplayServer.get_name() != "headless"
 
 
-static func cached(key: String) -> Texture2D:
-	return _cache.get(key, null) as Texture2D
-
-
 ## Ícone pronto, ou null (e pede a renderização se der). `tree` é onde o renderizador mora.
 static func get_icon(c: CarriedItem, tree: SceneTree) -> Texture2D:
 	var key: String = key_for(c)

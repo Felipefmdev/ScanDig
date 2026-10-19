@@ -228,10 +228,6 @@ func _check_contrast() -> void:
 
 # --- 4. Layout a 960x540 --------------------------------------------------------------------
 
-func _inside_screen(r: Rect2, screen: Rect2) -> bool:
-	return screen.encloses(r)
-
-
 func _buttons_fit(node: Node, where: String) -> void:
 	var cut: Array[String] = []
 	for b: Node in node.find_children("*", "Button", true, false):
