@@ -359,7 +359,13 @@ func _update_plaques(state: GameState) -> void:
 			if state != null and state.discovered_items.has(id):
 				found += 1
 		var label: Label3D = _plaques[site_id]
-		label.text = "%s  %d/%d" % [str(label.get_meta(&"title")), found, ids.size()]
+		label.text = "%s  %d/%d" % [tr(str(label.get_meta(&"title"))), found, ids.size()]
+
+
+## Idioma trocado (#131): o nome do sítio nas plaquinhas é montado por código.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and not _plaques.is_empty():
+		_update_plaques(GameState.instance)
 
 
 ## Plaquinha na frente de `parent`: moldura de madeira, face de latão e o texto de tinta (o
