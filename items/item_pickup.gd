@@ -380,6 +380,8 @@ func _ready() -> void:
 		add_child(_mesh)
 
 	_label = Label3D.new()
+	# Texto já traduzido aqui e refeito na troca de idioma (_notification).
+	_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_label.text = carried.get_display_name() if carried != null else "?"
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.position.y = 0.35
@@ -388,6 +390,12 @@ func _ready() -> void:
 	_label.no_depth_test = true
 	_label.visible = false
 	add_child(_label)
+
+
+## Idioma trocado ao vivo (#131): o nome se refaz.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _label != null and carried != null:
+		_label.text = carried.get_display_name()
 
 
 ## Mostra/esconde o nome quando o jogador está a olhar para o item.

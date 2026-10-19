@@ -115,6 +115,12 @@ func get_display_label() -> String:
 	return type_name
 
 
+## Idioma trocado ao vivo (#131): "Tipo (dono)" se refaz.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _label_text != null:
+		_label_text.text = get_display_label()
+
+
 func _build_flag_3d() -> void:
 	# 1. Mastro metálico (cilindro)
 	var mast: MeshInstance3D = MeshInstance3D.new()

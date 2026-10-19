@@ -327,6 +327,12 @@ func _on_input_device_changed(_using_gamepad: bool) -> void:
 		_prompt_label.text = _prompt_text()
 
 
+## Idioma trocado ao vivo (#131): o "[E] ..." em foco se refaz.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _focused and _prompt_label != null:
+		_prompt_label.text = _prompt_text()
+
+
 func _set_focused(on: bool) -> void:
 	_focused = on
 	_prompt_label.text = _prompt_text()

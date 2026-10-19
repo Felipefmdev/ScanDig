@@ -45,7 +45,9 @@ func _ready() -> void:
 		add_child(mesh)
 
 	_label = Label3D.new()
-	_label.text = "%s\n%s" % [tr(tool_data.display_name), MoneyFormat.money(tool_data.price)]
+	# Texto já traduzido aqui e refeito na troca de idioma (_notification).
+	_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_label.text = _label_text()
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.position.y = LABEL_HEIGHT + (LABEL_STAGGER if _stall_order() % 2 == 1 else 0.0)
 	_label.font_size = LABEL_FONT_SIZE
@@ -57,6 +59,16 @@ func _ready() -> void:
 	_label.outline_size = 14
 	_label.outline_modulate = UiPalette.INK
 	add_child(_label)
+
+
+func _label_text() -> String:
+	return "%s\n%s" % [tr(tool_data.display_name), MoneyFormat.money(tool_data.price)]
+
+
+## Idioma trocado ao vivo (#131): o rótulo montado por código se refaz.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _label != null and tool_data != null:
+		_label.text = _label_text()
 
 
 ## Posição desta oferta entre as ShopOffer irmãs (a ordem na banca).
