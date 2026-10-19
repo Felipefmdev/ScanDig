@@ -156,7 +156,7 @@ func _update_info() -> void:
 		return
 	var cfg: Dictionary = COOP_MARKER_FLAG_SCRIPT.TYPE_CONFIG.get(_selected_type, {})
 	var icon: String = cfg.get("icon", "🚩")
-	var title: String = cfg.get("name", "Marcador")
+	var title: String = tr(cfg.get("name", "Marcador"))
 	var col: Color = cfg.get("color", Color.WHITE)
 	var desc: String = cfg.get("desc", "")
 

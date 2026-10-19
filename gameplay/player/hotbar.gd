@@ -56,6 +56,12 @@ func _on_icon_ready(_key: String) -> void:
 			_fill_slot(i)
 
 
+## Idioma trocado (#131): os nomes dos espaços são montados por código.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_rebuild()
+
+
 func _rebuild() -> void:
 	if inventory == null:
 		return

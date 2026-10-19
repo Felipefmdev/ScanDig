@@ -413,6 +413,17 @@ func is_alive() -> bool:
 	return health > 0.0 and not is_downed
 
 
+## Idioma trocado (#131): os textos do HUD montados por código se refazem na hora.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or not is_node_ready() or not is_local():
+		return
+	_update_session_hud()
+	_refresh_hunger_hud()
+	_on_health_changed(health, max_health)
+	if is_inspecting:
+		refresh_inspect_card()
+
+
 func _ready() -> void:
 	add_to_group(ALL_GROUP)
 	if net_sync != null:
@@ -606,7 +617,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if selected != null and not selected.is_tool() and bool(wb_target.call("can_add_item")):
 					inventory.remove_item(selected)
 					wb_target.call("add_item", selected)
-					_show_temporary_message("🛒 Guardado no carrinho: %s" % selected.get_display_name(), UiPalette.GOLD, 1.4)
+					_show_temporary_message(tr("🛒 Guardado no carrinho: %s") % selected.get_display_name(), UiPalette.GOLD, 1.4)
 					get_viewport().set_input_as_handled()
 					return
 	# Comando (#102): um botão do controle prende o mouse como o clique; LB/Y (← →) trocam o
@@ -1117,32 +1128,32 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 	var is_perfect: bool = res.get("is_perfect", false)
 
 	if revealed:
-		var rarity_str: String = _get_category_name(item.category if item != null else 0)
-		var item_name: String = item.display_name if item != null else "Artefato Misterioso"
+		var rarity_str: String = tr(_get_category_name(item.category if item != null else 0))
+		var item_name: String = tr(item.display_name) if item != null else tr("Artefato Misterioso")
 		var msg: String = ""
 		var color: Color = UiPalette.GOLD
 		var duration: float = 3.5
 		if is_rare_variant:
-			msg += "✦ RARO ✦\n"
+			msg += tr("✦ RARO ✦") + "\n"
 			color = Color(0.85, 0.55, 1.0)
 			duration = 4.5
-		msg += "★ DESCOBERTA: %s [%s]!\nIntegridade: %d%% | Valor: %s" % [
+		msg += tr("★ DESCOBERTA: %s [%s]!\nIntegridade: %d%% | Valor: %s") % [
 			item_name, rarity_str, int(integrity * 100.0), MoneyFormat.money(final_val)
 		]
 		if is_perfect:
-			msg += "\n✔ ESCAVAÇÃO PERFEITA! (+25%)"
-		msg += "\n[E] pegar"
+			msg += "\n" + tr("✔ ESCAVAÇÃO PERFEITA! (+25%)")
+		msg += "\n" + tr("[E] pegar")
 		_show_temporary_message(msg, color, duration)
 	elif damaged:
 		var layer_num: int = max_layers - dirt_left
-		var msg: String = "💥 CRACK! Você bateu com a pá no objeto!\nIntegridade caiu para %d%% (Camada %d/%d)" % [
+		var msg: String = tr("💥 CRACK! Você bateu com a pá no objeto!\nIntegridade caiu para %d%% (Camada %d/%d)") % [
 			int(integrity * 100.0), layer_num, max_layers
 		]
 		_show_temporary_message(msg, UiPalette.RED_BURNT.lightened(0.2), 2.2)
 	else:
-		var tool_name: String = "Escavação Cuidadosa" if is_careful else "Pá Rápida"
+		var tool_name: String = tr("Escavação Cuidadosa") if is_careful else tr("Pá Rápida")
 		var layer_num: int = max_layers - dirt_left
-		var msg: String = "⛏️ [%s] Escavando terra... (Camada %d/%d)" % [
+		var msg: String = tr("⛏️ [%s] Escavando terra... (Camada %d/%d)") % [
 			tool_name, layer_num, max_layers
 		]
 		_show_temporary_message(msg, Color(0.85, 0.95, 0.85), 1.6)
@@ -1216,7 +1227,7 @@ func get_empty_dig_message() -> String:
 
 static func empty_dig_message_for(map_id: String) -> String:
 	var ground: String = str(EMPTY_DIG_GROUND.get(map_id, EMPTY_DIG_DEFAULT))
-	return "❌ %s nenhum sinal aqui (aproxime-se de um sinal)" % ground
+	return I18n.t("❌ %s nenhum sinal aqui (aproxime-se de um sinal)") % I18n.t(ground)
 
 
 ## Mapa atual: o da sessão (CoreSession) ou, em cenas abertas diretamente (bot, testes), o do
@@ -1248,9 +1259,9 @@ func _update_session_hud() -> void:
 	if bag_info_label != null:
 		bag_info_label.text = "%d/%d  •  %s" % [inventory.get_count(), inventory.capacity, MoneyFormat.money(inventory.get_total_value())]
 	if GameState.instance != null:
-		session_info_label.text = "Dinheiro  %s" % MoneyFormat.money(GameState.instance.team_money)
+		session_info_label.text = tr("Dinheiro  %s") % MoneyFormat.money(GameState.instance.team_money)
 	else:
-		session_info_label.text = "Entregue  %s" % MoneyFormat.money(session_money)
+		session_info_label.text = tr("Entregue  %s") % MoneyFormat.money(session_money)
 
 
 func _on_team_money_changed(_new_amount: int) -> void:
@@ -1430,9 +1441,9 @@ func _die() -> void:
 	if _should_enter_downed():
 		enter_downed()
 		return
-	var msg: String = "💀 Você desmaiou... e acordou de volta no ponto de partida."
+	var msg: String = tr("💀 Você desmaiou... e acordou de volta no ponto de partida.")
 	if lost > 0:
-		msg += "\nA mochila caiu no local da morte (%d itens) — volte para pegar!" % lost
+		msg += "\n" + tr("A mochila caiu no local da morte (%d itens) — volte para pegar!") % lost
 	_show_temporary_message(msg, Color(1.0, 0.4, 0.4), 4.0)
 	_respawn()
 
@@ -1529,7 +1540,7 @@ func _on_is_downed_changed(downed: bool) -> void:
 					detector.visible = false
 			_update_downed_orbit_camera()
 			_update_downed_hud()
-			_show_temporary_message("💀 Você foi derrubado! Aguarde socorro ou segure [%s] para resgate de emergência." % _get_interact_key_label(), Color(1.0, 0.35, 0.35), 5.0)
+			_show_temporary_message(tr("💀 Você foi derrubado! Aguarde socorro ou segure [%s] para resgate de emergência.") % _get_interact_key_label(), Color(1.0, 0.35, 0.35), 5.0)
 	else:
 		if is_in_group(DOWNED_GROUP):
 			remove_from_group(DOWNED_GROUP)
@@ -1642,9 +1653,9 @@ func give_up_downed() -> void:
 			_rpc_sync_downed.rpc(false)
 		else:
 			_rpc_sync_downed.rpc_id(1, false)
-	var msg: String = "🚨 Resgate de emergência acionado! Você voltou à base de expedição."
+	var msg: String = tr("🚨 Resgate de emergência acionado! Você voltou à base de expedição.")
 	if lost > 0:
-		msg += "\nA mochila ficou onde você caiu (%d itens) — volte para buscar!" % lost
+		msg += "\n" + tr("A mochila ficou onde você caiu (%d itens) — volte para buscar!") % lost
 	_show_temporary_message(msg, UiPalette.ORANGE, 4.0)
 	_respawn()
 
@@ -1660,9 +1671,9 @@ func _update_downed_hud() -> void:
 	var key_lbl: String = _get_interact_key_label()
 	var pct: int = int(round(give_up_progress_ratio() * 100.0))
 	if interact_prompt != null:
-		var prefix: String = ("🤝 Sendo carregado por %s... | " % _get_player_name(carried_by)) if (carried_by != null and is_instance_valid(carried_by)) else "💀 Caído! Aguarde socorro ou "
+		var prefix: String = (tr("🤝 Sendo carregado por %s... | ") % _get_player_name(carried_by)) if (carried_by != null and is_instance_valid(carried_by)) else tr("💀 Caído! Aguarde socorro ou ")
 		var suffix: String = (" (%d%%)" % pct) if pct > 0 else ""
-		interact_prompt.text = "%sSegure [%s] para resgate de emergência na base%s" % [prefix, key_lbl, suffix]
+		interact_prompt.text = tr("%sSegure [%s] para resgate de emergência na base%s") % [prefix, key_lbl, suffix]
 	if give_up_bar != null:
 		give_up_bar.visible = is_downed
 		give_up_bar.value = float(pct)
@@ -1866,9 +1877,9 @@ func _perform_carry(carrier: Player, target: Player) -> void:
 	target.carried_by = carrier
 	target.collision_layer = 0
 	if carrier.is_local():
-		carrier._show_temporary_message("🤝 Carregando %s. Leve até a base!" % carrier._get_player_name(target), Color(0.4, 0.8, 1.0), 2.5)
+		carrier._show_temporary_message(tr("🤝 Carregando %s. Leve até a base!") % carrier._get_player_name(target), Color(0.4, 0.8, 1.0), 2.5)
 	if target.is_local():
-		target._show_temporary_message("🤝 %s está carregando você!" % target._get_player_name(carrier), Color(0.4, 0.8, 1.0), 2.5)
+		target._show_temporary_message(tr("🤝 %s está carregando você!") % target._get_player_name(carrier), Color(0.4, 0.8, 1.0), 2.5)
 	carrier.player_carried.emit(carrier, target)
 
 
@@ -1884,7 +1895,7 @@ func _perform_drop(carrier: Player) -> void:
 	dropped.global_position = carrier.global_position + fwd.normalized() * 0.9 + Vector3.UP * 0.1
 	dropped.velocity = Vector3.ZERO
 	if carrier.is_local():
-		carrier._show_temporary_message("Você largou o corpo de %s." % carrier._get_player_name(dropped), Color(0.9, 0.9, 0.9), 1.5)
+		carrier._show_temporary_message(tr("Você largou o corpo de %s.") % carrier._get_player_name(dropped), Color(0.9, 0.9, 0.9), 1.5)
 	carrier.player_dropped.emit(carrier, dropped)
 
 
@@ -1896,7 +1907,7 @@ func _perform_revive(reviver: Player, target: Player) -> void:
 	target.carried_by = null
 	target.revive()
 	if reviver != null and reviver.is_local():
-		reviver._show_temporary_message("✨ Você reanimou %s!" % reviver._get_player_name(target), Color(0.3, 1.0, 0.4), 2.5)
+		reviver._show_temporary_message(tr("✨ Você reanimou %s!") % reviver._get_player_name(target), Color(0.3, 1.0, 0.4), 2.5)
 	target.player_revived.emit(target, reviver)
 
 
@@ -1906,7 +1917,7 @@ func _is_multiplayer_active() -> bool:
 
 func _get_player_name(p: Player) -> String:
 	if p == null:
-		return "Jogador"
+		return tr("Jogador")
 	if p.has_method("get_player_display_name"):
 		return p.get_player_display_name()
 	return p.name
@@ -1915,9 +1926,9 @@ func _get_player_name(p: Player) -> String:
 func get_player_display_name() -> String:
 	var owner_id: int = get_multiplayer_authority()
 	if owner_id == 1:
-		return "Anfitrião"
+		return tr("Anfitrião")
 	elif owner_id > 1:
-		return "Jogador %d" % owner_id
+		return tr("Jogador %d") % owner_id
 	return name
 
 
@@ -2064,9 +2075,9 @@ func _refresh_hunger_hud() -> void:
 	_hunger_bar.max_value = max_hunger
 	_hunger_bar.value = hunger
 	var low: bool = hunger <= max_hunger * 0.25
-	_hunger_label.text = ("Fome   %d/%d" % [int(ceilf(hunger)), int(max_hunger)]) + ("  (com fome!)" if low else "")
+	_hunger_label.text = (tr("Fome   %d/%d") % [int(ceilf(hunger)), int(max_hunger)]) + (tr("  (com fome!)") if low else "")
 	if is_overloaded():
-		_hunger_label.text += "   🎒 pesado"
+		_hunger_label.text += tr("   🎒 pesado")
 	elif backpack_weight_multiplier() < 1.0:
 		_hunger_label.text += "   🎒 -%d%%" % int(round((1.0 - backpack_weight_multiplier()) * 100.0))
 
@@ -2237,7 +2248,7 @@ func _on_health_changed(current: float, max_value: float) -> void:
 		health_bar.max_value = max_value
 		health_bar.value = current
 	if health_label != null:
-		health_label.text = "Vida   %d/%d" % [int(ceilf(current)), int(max_value)]
+		health_label.text = tr("Vida   %d/%d") % [int(ceilf(current)), int(max_value)]
 
 
 # ---------------------------------------------------------------------------
@@ -2517,15 +2528,15 @@ func refresh_inspect_card() -> void:
 		if is_inspecting and shovel_rig != null and (dig_animator == null or not dig_animator.is_playing()):
 			shovel_rig.visible = true
 		var dmg_red: int = int(round((1.0 - get_dig_damage_multiplier()) * 100.0))
-		var title: String = "Pá de Escavação (Nível %d)" % maxi(shovel_level, 1)
+		var title: String = tr("Pá de Escavação (Nível %d)") % maxi(shovel_level, 1)
 		var subtitle: String = "Ferramenta Base • Prospeção e Defesa"
 		var desc: String = "Pá regulamentar da expedição ScanDig. Remove camadas de solo sobre sinais detectados e serve de defesa corpo a corpo contra criaturas."
-		var stats: String = "Dano corpo a corpo: %d  |  Proteção ao achado: +%d%%" % [int(get_attack_damage()), dmg_red]
+		var stats: String = tr("Dano corpo a corpo: %d  |  Proteção ao achado: +%d%%") % [int(get_attack_damage()), dmg_red]
 		var ctrls: PackedStringArray = PackedStringArray([
-			"[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa" % [k_dig, k_dig],
-			"[%s] Golpear com a pá" % k_atk,
-			"[%s] Interagir / Pegar" % k_int,
-			"[%s] Fechar inspeção" % k_insp,
+			tr("[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa") % [k_dig, k_dig],
+			tr("[%s] Golpear com a pá") % k_atk,
+			tr("[%s] Interagir / Pegar") % k_int,
+			tr("[%s] Fechar inspeção") % k_insp,
 		])
 		inspect_card.set_card_content(title, subtitle, desc, stats, ctrls, UiPalette.GREEN_BOTTLE)
 		return
@@ -2535,35 +2546,35 @@ func refresh_inspect_card() -> void:
 
 	if c.tool_id == &"detector":
 		var det_lvl: int = GameState.instance.get_upgrade_level("detector") if GameState.instance != null else 1
-		var title_d: String = "%s (Nível %d)" % [c.tool_name if not c.tool_name.is_empty() else "Detector de Metais", maxi(det_lvl, 1)]
+		var title_d: String = tr("%s (Nível %d)") % [tr(c.tool_name) if not c.tool_name.is_empty() else tr("Detector de Metais"), maxi(det_lvl, 1)]
 		var subtitle_d: String = "Equipamento de Sondagem • ScanDig"
 		var desc_d: String = "Sonda eletromagnética de campo. Emite bipes mais rápidos e agudos e acende o visor conforme se aproxima de um achado enterrado."
 		var stats_d: String = "Estado: Inteiro (equipamento permanente)"
 		var ctrls_d: PackedStringArray = PackedStringArray([
-			"[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa" % [k_dig, k_dig],
-			"[%s] Golpear com a pá" % k_atk,
-			"[%s] Largar / Arremessar" % k_drop,
-			"[%s] Fechar inspeção" % k_insp,
+			tr("[%s] Cavar rápido  |  [Shift + %s] Escavação cuidadosa") % [k_dig, k_dig],
+			tr("[%s] Golpear com a pá") % k_atk,
+			tr("[%s] Largar / Arremessar") % k_drop,
+			tr("[%s] Fechar inspeção") % k_insp,
 		])
 		inspect_card.set_card_content(title_d, subtitle_d, desc_d, stats_d, ctrls_d, UiPalette.GREEN_BOTTLE)
 		return
 
 	if c.is_tool() and c.tool_data != null:
 		var td: ToolData = c.tool_data
-		var title_t: String = td.display_name if not td.display_name.is_empty() else c.get_display_name()
-		var desc_t: String = td.description if not td.description.is_empty() else "Equipamento de expedição."
+		var title_t: String = tr(td.display_name) if not td.display_name.is_empty() else c.get_display_name()
+		var desc_t: String = tr(td.description) if not td.description.is_empty() else tr("Equipamento de expedição.")
 		if td.category == ToolData.Category.FOOD:
 			var sub_f: String = "Provisão de Campo • Alimento"
-			var stats_f: String = "Recupera: +%d Vida  |  +%d Saciedade" % [int(td.heal_amount), int(td.hunger_restore)]
+			var stats_f: String = tr("Recupera: +%d Vida  |  +%d Saciedade") % [int(td.heal_amount), int(td.hunger_restore)]
 			if c.charges > 0:
-				stats_f += "  |  Doses: x%d" % c.charges
+				stats_f += tr("  |  Doses: x%d") % c.charges
 			if td.nausea_chance > 0.0:
-				stats_f += "\n⚠ Alimento cru (%d%% risco de enjoo)" % int(round(td.nausea_chance * 100.0))
+				stats_f += "\n" + tr("⚠ Alimento cru (%d%% risco de enjoo)") % int(round(td.nausea_chance * 100.0))
 			var ctrls_f: PackedStringArray = PackedStringArray([
-				"[Segurar %s] Comer (%0.1fs)" % [k_use, EAT_TIME],
-				"[%s] Largar / Arremessar" % k_drop,
-				"[%s] Cavar com a pá" % k_dig,
-				"[%s] Fechar inspeção" % k_insp,
+				tr("[Segurar %s] Comer (%0.1fs)") % [k_use, EAT_TIME],
+				tr("[%s] Largar / Arremessar") % k_drop,
+				tr("[%s] Cavar com a pá") % k_dig,
+				tr("[%s] Fechar inspeção") % k_insp,
 			])
 			inspect_card.set_card_content(title_t, sub_f, desc_t, stats_f, ctrls_f, UiPalette.GREEN_BOTTLE)
 			return
@@ -2573,42 +2584,42 @@ func refresh_inspect_card() -> void:
 		var stats_col: Color = UiPalette.GREEN_BOTTLE
 		if c.wear >= 0 and td.durability > 0:
 			var pct_w: int = int(ceilf(c.wear_ratio() * 100.0))
-			stats_w = "Estado / Desgaste: %d/%d usos (%d%%)" % [c.wear, td.durability, pct_w]
+			stats_w = tr("Estado / Desgaste: %d/%d usos (%d%%)") % [c.wear, td.durability, pct_w]
 			if pct_w <= 25:
 				stats_col = UiPalette.RED_BURNT
 			elif pct_w <= 50:
 				stats_col = UiPalette.ORANGE
 		elif c.charges >= 0:
-			stats_w = "Cargas restantes: x%d" % c.charges
+			stats_w = tr("Cargas restantes: x%d") % c.charges
 		else:
 			stats_w = "Estado: Pronto a usar"
 		var ctrls_w: PackedStringArray = PackedStringArray()
 		if c.tool_id in [TOOL_FORCADO, TOOL_HARPOON, TOOL_PULSE]:
-			ctrls_w.append("[%s] ou [%s] Usar / Disparar" % [k_use, k_atk])
+			ctrls_w.append(tr("[%s] ou [%s] Usar / Disparar") % [k_use, k_atk])
 		else:
-			ctrls_w.append("[%s] Usar ferramenta" % k_use)
-			ctrls_w.append("[%s] Golpear com a pá" % k_atk)
-		ctrls_w.append("[%s] Cavar rápido" % k_dig)
-		ctrls_w.append("[%s] Largar / Arremessar" % k_drop)
-		ctrls_w.append("[%s] Fechar inspeção" % k_insp)
+			ctrls_w.append(tr("[%s] Usar ferramenta") % k_use)
+			ctrls_w.append(tr("[%s] Golpear com a pá") % k_atk)
+		ctrls_w.append(tr("[%s] Cavar rápido") % k_dig)
+		ctrls_w.append(tr("[%s] Largar / Arremessar") % k_drop)
+		ctrls_w.append(tr("[%s] Fechar inspeção") % k_insp)
 		inspect_card.set_card_content(title_t, sub_w, desc_t, stats_w, ctrls_w, stats_col)
 		return
 
 	if c.item != null:
 		var it: ItemData = c.item
 		var title_i: String = c.get_display_name()
-		var cat_str: String = _get_category_name(it.category)
-		var mat_str: String = _get_material_name(it.material_type)
-		var size_str: String = _get_size_name(it.size_category)
-		var sub_i: String = "Achado do Museu • %s (%s, %s)" % [cat_str, mat_str, size_str]
+		var cat_str: String = tr(_get_category_name(it.category))
+		var mat_str: String = tr(_get_material_name(it.material_type))
+		var size_str: String = tr(_get_size_name(it.size_category))
+		var sub_i: String = tr("Achado do Museu • %s (%s, %s)") % [cat_str, mat_str, size_str]
 		var frag_pct: int = int(round(it.fragility * 100.0))
-		var desc_i: String = "Artefato catalogado de %s (porte %s, profundidade típica %d cm, fragilidade %d%%). Entregue na base para avaliação e exposição no Museu." % [
+		var desc_i: String = tr("Artefato catalogado de %s (porte %s, profundidade típica %d cm, fragilidade %d%%). Entregue na base para avaliação e exposição no Museu.") % [
 			mat_str.to_lower(), size_str.to_lower(), it.depth_cm, frag_pct
 		]
 		var integ_pct: int = int(round(c.integrity * 100.0))
-		var cond_str: String = "✨ Intacto (Selo de Coleção)" if c.is_clean else ("💔 Rachado (%d%% integridade)" % integ_pct if c.integrity < 0.995 else "Conservado (%d%%)" % integ_pct)
-		var rare_str: String = "  |  ✦ Variante Rara" if c.is_rare_variant else ""
-		var stats_i: String = "Valor no Museu: %s (Base: %s)\nEstado: %s%s" % [
+		var cond_str: String = tr("✨ Intacto (Selo de Coleção)") if c.is_clean else (tr("💔 Rachado (%d%% integridade)") % integ_pct if c.integrity < 0.995 else tr("Conservado (%d%%)") % integ_pct)
+		var rare_str: String = tr("  |  ✦ Variante Rara") if c.is_rare_variant else ""
+		var stats_i: String = tr("Valor no Museu: %s (Base: %s)\nEstado: %s%s") % [
 			MoneyFormat.money(c.final_value),
 			MoneyFormat.money(it.base_value),
 			cond_str,
@@ -2616,11 +2627,11 @@ func refresh_inspect_card() -> void:
 		]
 		var col_i: Color = UiPalette.GREEN_BOTTLE if (c.is_clean or c.integrity >= 0.8) else UiPalette.ORANGE
 		var ctrls_i: PackedStringArray = PackedStringArray([
-			"[Segurar %s] Carregar arremesso / Largar" % k_drop,
-			"[%s] Entregar na base" % k_int,
-			"[%s] Cavar rápido" % k_dig,
-			"[%s] Golpear com a pá" % k_atk,
-			"[%s] Fechar inspeção" % k_insp,
+			tr("[Segurar %s] Carregar arremesso / Largar") % k_drop,
+			tr("[%s] Entregar na base") % k_int,
+			tr("[%s] Cavar rápido") % k_dig,
+			tr("[%s] Golpear com a pá") % k_atk,
+			tr("[%s] Fechar inspeção") % k_insp,
 		])
 		inspect_card.set_card_content(title_i, sub_i, desc_i, stats_i, ctrls_i, col_i)
 
@@ -2663,11 +2674,11 @@ func _jostle_fragile_finds(amount: float) -> void:
 		if c == null or c.item == null or c.item.fragility <= 0.0:
 			continue
 		if c.damage_integrity(c.item.fragility * amount * JOSTLE_DAMAGE_PER_HP):
-			lost.append(c.item.display_name)
+			lost.append(tr(c.item.display_name))
 	if not lost.is_empty() or inventory.slots.any(func(c: CarriedItem) -> bool: return c != null and c.item != null and c.item.fragility > 0.0):
 		inventory.notify_changed()
 	if not lost.is_empty():
-		_show_temporary_message("💔 %s rachou com o golpe: já não está intacto." % ", ".join(lost), UiPalette.ORANGE, 1.8)
+		_show_temporary_message(tr("💔 %s rachou com o golpe: já não está intacto.") % ", ".join(lost), UiPalette.ORANGE, 1.8)
 
 
 ## Hitmarker na mira + número de dano no alvo (só no jogador local).
@@ -2731,7 +2742,7 @@ func _interact() -> void:
 				session_money += total
 				_update_session_hud()
 				SFX.play_ui(SFX.DELIVER_COINS)
-				_show_temporary_message("📦 Entregue: carga e mochila, %s" % MoneyFormat.money(total), UiPalette.GREEN_BOTTLE.lightened(0.3), 2.5)
+				_show_temporary_message(tr("📦 Entregue: carga e mochila, %s") % MoneyFormat.money(total), UiPalette.GREEN_BOTTLE.lightened(0.3), 2.5)
 			return
 		stop_pushing_wheelbarrow()
 		return
@@ -2749,7 +2760,7 @@ func _interact() -> void:
 	if _target_crow_nest != null and is_instance_valid(_target_crow_nest):
 		var recovered: int = int(_target_crow_nest.call("search_nest", self))
 		if recovered > 0:
-			_show_temporary_message("🪺 Você recuperou %d %s do ninho de corvo!" % [recovered, "achado" if recovered == 1 else "achados"], UiPalette.GOLD, 2.2)
+			_show_temporary_message(tr_n("🪺 Você recuperou %d achado do ninho de corvo!", "🪺 Você recuperou %d achados do ninho de corvo!", recovered) % recovered, UiPalette.GOLD, 2.2)
 		else:
 			_show_temporary_message("O ninho de corvo está vazio no momento.", Color(0.85, 0.85, 0.85), 1.5)
 		return
@@ -2785,7 +2796,7 @@ func _interact() -> void:
 		session_money += total
 		_update_session_hud()
 		SFX.play_ui(SFX.DELIVER_COINS)
-		_show_temporary_message("📦 Entregue: %d itens, %s" % [items.size(), MoneyFormat.money(total)], UiPalette.GREEN_BOTTLE.lightened(0.3), 2.5)
+		_show_temporary_message(tr("📦 Entregue: %d itens, %s") % [items.size(), MoneyFormat.money(total)], UiPalette.GREEN_BOTTLE.lightened(0.3), 2.5)
 		return
 
 	if _target_pickup == null or not is_instance_valid(_target_pickup):
@@ -2798,7 +2809,7 @@ func _interact() -> void:
 		return
 	if _already_has_unique_tool(_target_pickup.carried):
 		SFX.play_ui(SFX.ERROR, -4.0)
-		_show_temporary_message("Já tem um %s (deixe para outro jogador)." % _target_pickup.carried.get_display_name(),
+		_show_temporary_message(tr("Já tem um %s (deixe para outro jogador).") % _target_pickup.carried.get_display_name(),
 			Color(0.9, 0.9, 0.9), 1.6)
 		return
 	var root: PickupsRoot = PickupsRoot.find(get_tree())
@@ -2834,7 +2845,7 @@ func _add_picked_item(c: CarriedItem) -> void:
 		return
 	SFX.play_ui(SFX.PICKUP)
 	var value: String = "" if c.is_tool() else " (%s)" % MoneyFormat.money(c.final_value)
-	_show_temporary_message("✋ Pegou: %s%s" % [c.get_display_name(), value],
+	_show_temporary_message(tr("✋ Pegou: %s%s") % [c.get_display_name(), value],
 		Color(0.85, 0.55, 1.0) if c.is_rare_variant else Color(0.95, 0.95, 0.85), 1.4)
 
 
@@ -3080,19 +3091,19 @@ func _update_interaction_target() -> void:
 		if sell_point != null:
 			interact_prompt.text = "[E] Entregar carga e mochila na base | [Q] Soltar carrinho"
 		elif not inventory.is_empty() and bool(pushing_wheelbarrow.call("can_add_item")):
-			interact_prompt.text = "[Q] Soltar carrinho | [R] Guardar item (%d/%d)" % [wb_cargo, wb_max]
+			interact_prompt.text = tr("[Q] Soltar carrinho | [R] Guardar item (%d/%d)") % [wb_cargo, wb_max]
 		else:
-			interact_prompt.text = "[Q] Soltar carrinho de mão (%d/%d)" % [wb_cargo, wb_max]
+			interact_prompt.text = tr("[Q] Soltar carrinho de mão (%d/%d)") % [wb_cargo, wb_max]
 	elif carried_player != null:
 		if sell_point != null:
-			interact_prompt.text = "[E] Reanimar %s na base | [Q] Largar" % _get_player_name(carried_player)
+			interact_prompt.text = tr("[E] Reanimar %s na base | [Q] Largar") % _get_player_name(carried_player)
 		else:
-			interact_prompt.text = "[Q] Largar corpo de %s" % _get_player_name(carried_player)
+			interact_prompt.text = tr("[Q] Largar corpo de %s") % _get_player_name(carried_player)
 	elif _target_downed_player != null:
 		if sell_point != null or _is_player_at_base(_target_downed_player):
-			interact_prompt.text = "[E] Reanimar %s" % _get_player_name(_target_downed_player)
+			interact_prompt.text = tr("[E] Reanimar %s") % _get_player_name(_target_downed_player)
 		else:
-			interact_prompt.text = "[E] Carregar %s" % _get_player_name(_target_downed_player)
+			interact_prompt.text = tr("[E] Carregar %s") % _get_player_name(_target_downed_player)
 	elif _target_wheelbarrow != null and is_instance_valid(_target_wheelbarrow):
 		var cargo_arr: Array = _target_wheelbarrow.get("cargo") as Array if _target_wheelbarrow.get("cargo") is Array else []
 		var wb_cargo: int = cargo_arr.size()
@@ -3101,29 +3112,29 @@ func _update_interaction_target() -> void:
 		if is_tip:
 			interact_prompt.text = "[E] Desvirar carrinho de mão"
 		elif not inventory.is_empty() and bool(_target_wheelbarrow.call("can_add_item")):
-			interact_prompt.text = "[E] Empurrar carrinho | [R] Guardar item (%d/%d)" % [wb_cargo, wb_max]
+			interact_prompt.text = tr("[E] Empurrar carrinho | [R] Guardar item (%d/%d)") % [wb_cargo, wb_max]
 		else:
-			interact_prompt.text = "[E] Empurrar carrinho de mão (%d/%d)" % [wb_cargo, wb_max]
+			interact_prompt.text = tr("[E] Empurrar carrinho de mão (%d/%d)") % [wb_cargo, wb_max]
 	elif _target_crow_nest != null and is_instance_valid(_target_crow_nest):
 		var count: int = int(_target_crow_nest.call("get_item_count"))
 		if count > 0:
-			interact_prompt.text = "[E] Vasculhar ninho de corvo (%d %s)" % [count, "achado" if count == 1 else "achados"]
+			interact_prompt.text = tr_n("[E] Vasculhar ninho de corvo (%d achado)", "[E] Vasculhar ninho de corvo (%d achados)", count) % count
 		else:
 			interact_prompt.text = "[E] Ninho de corvo (vazio)"
 	elif _target_zipline != null and is_instance_valid(_target_zipline):
 		interact_prompt.text = "[E] Descer pela tirolesa"
 	elif _target_offer != null:
-		var full: String = "  — mochila cheia!" if inventory.is_full() else ""
+		var full: String = tr("  — mochila cheia!") if inventory.is_full() else ""
 		interact_prompt.text = _target_offer.get_prompt() + full
 	elif sell_point != null and deliverable > 0:
-		interact_prompt.text = "[E] Entregar mochila (%d itens, %s)" % [deliverable, MoneyFormat.money(inventory.get_total_value())]
+		interact_prompt.text = tr("[E] Entregar mochila (%d itens, %s)") % [deliverable, MoneyFormat.money(inventory.get_total_value())]
 	elif _target_pickup != null and _target_pickup.carried != null:
 		var aimed: CarriedItem = _target_pickup.carried
-		var suffix: String = "  — mochila cheia!" if inventory.is_full() else ""
+		var suffix: String = tr("  — mochila cheia!") if inventory.is_full() else ""
 		if _already_has_unique_tool(aimed):
-			suffix = "  — já tem um"
+			suffix = tr("  — já tem um")
 		var value: String = "" if aimed.is_tool() else " (%s)" % MoneyFormat.money(aimed.final_value)
-		interact_prompt.text = "[E] Pegar %s%s%s" % [aimed.get_display_name(), value, suffix]
+		interact_prompt.text = tr("[E] Pegar %s%s%s") % [aimed.get_display_name(), value, suffix]
 	else:
 		interact_prompt.text = ""
 	# "[E]"/"[Q]" viram a tecla configurada ou o botão do comando (#102); refeito a cada frame.
@@ -3368,7 +3379,7 @@ func steal_loot() -> CarriedItem:
 		return null
 	var c: CarriedItem = inventory.remove_at(candidates.pick_random())
 	if c != null:
-		_show_temporary_message("🐦 Uma gaivota roubou %s!" % c.get_display_name(), Color(1.0, 0.55, 0.35), 2.2)
+		_show_temporary_message(tr("🐦 Uma gaivota roubou %s!") % c.get_display_name(), Color(1.0, 0.55, 0.35), 2.2)
 		_shake_camera(0.02, 0.2)
 	return c
 
@@ -3398,12 +3409,12 @@ func wear_tool(c: CarriedItem) -> void:
 		if idx >= 0:
 			inventory.remove_at(idx)
 		SFX.play_ui(SFX.PLAYER_DEATH, -8.0, 0.2)
-		_show_temporary_message("🔧 %s quebrou de tanto uso! Compre outro na banca." % c.tool_name, UiPalette.ORANGE, 2.2)
+		_show_temporary_message(tr("🔧 %s quebrou de tanto uso! Compre outro na banca.") % tr(c.tool_name), UiPalette.ORANGE, 2.2)
 	else:
 		if c.wear_ratio() <= 0.5:
 			show_hint("wear")
 		if c.wear == int(ceilf(float(c.tool_data.durability) * 0.2)):
-			_show_temporary_message("🔧 %s está gasto (20%%)." % c.tool_name, Color(1.0, 0.85, 0.5), 1.6)
+			_show_temporary_message(tr("🔧 %s está gasto (20%%).") % tr(c.tool_name), Color(1.0, 0.85, 0.5), 1.6)
 		inventory.notify_changed()
 
 
@@ -3425,7 +3436,7 @@ func _dispatch_tool_use(c: CarriedItem) -> void:
 				return
 			heal(medkit_heal)
 			SFX.play_ui(SFX.MEDKIT)
-			_show_temporary_message("🩹 +%d de vida" % int(medkit_heal), Color(0.5, 1.0, 0.55), 1.2)
+			_show_temporary_message(tr("🩹 +%d de vida") % int(medkit_heal), Color(0.5, 1.0, 0.55), 1.2)
 			_consume(c)
 		TOOL_FORCADO:
 			_attack_pitchfork()
@@ -3449,7 +3460,7 @@ func _flash_lantern(c: CarriedItem) -> void:
 		_consume(c)
 		_use_cooldown = LANTERN_COOLDOWN
 	if hit > 0:
-		_show_temporary_message("Flash! %d atordoado%s" % [hit, "" if hit == 1 else "s"], Color(1.0, 0.95, 0.6), 1.2)
+		_show_temporary_message(tr_n("Flash! %d atordoado", "Flash! %d atordoados", hit) % hit, Color(1.0, 0.95, 0.6), 1.2)
 
 
 ## Lança uma dinamite acesa na direção da mira (soma a velocidade do jogador).
@@ -3568,14 +3579,14 @@ func eat(c: CarriedItem) -> bool:
 		set_hunger(hunger - c.tool_data.hunger_restore)
 		_shake_camera(0.03, 0.4)
 		SFX.play_ui(SFX.PLAYER_HURT, -8.0)
-		_show_temporary_message("🤢 %s caiu mal... -%d saciedade" % [c.tool_name, int(c.tool_data.hunger_restore)],
+		_show_temporary_message(tr("🤢 %s caiu mal... -%d saciedade") % [tr(c.tool_name), int(c.tool_data.hunger_restore)],
 			UiPalette.ORANGE, 1.6)
 		_remove_eaten(c)
 		return true
 	heal(amount)
 	set_hunger(hunger + c.tool_data.hunger_restore)
 	SFX.play_ui(SFX.MEDKIT, -6.0, 0.15)
-	_show_temporary_message("😋 %s: +%d vida, +%d saciedade" % [c.tool_name, int(amount), int(c.tool_data.hunger_restore)],
+	_show_temporary_message(tr("😋 %s: +%d vida, +%d saciedade") % [tr(c.tool_name), int(amount), int(c.tool_data.hunger_restore)],
 		Color(0.5, 1.0, 0.55), 1.2)
 	_remove_eaten(c)
 	return true
@@ -3644,12 +3655,12 @@ static func roll_dig_food(map_id: String, careful: bool, roll: float = -1.0) -> 
 
 func _give_dug_food(food: ToolData) -> void:
 	if inventory.is_full():
-		_show_temporary_message("🪱 Saiu %s, mas a mochila está cheia e escapou." % food.display_name.to_lower(),
+		_show_temporary_message(tr("🪱 Saiu %s, mas a mochila está cheia e escapou.") % tr(food.display_name).to_lower(),
 			Color(1.0, 0.6, 0.3), 1.6)
 		return
 	inventory.add_item(CarriedItem.create_from_tool_data(food))
 	SFX.play_ui(SFX.PICKUP, -4.0)
-	_show_temporary_message("🪱 Achou: %s! (segure o clique para comer)" % food.display_name, Color(0.75, 0.95, 0.55), 1.8)
+	_show_temporary_message(tr("🪱 Achou: %s! (segure o clique para comer)") % tr(food.display_name), Color(0.75, 0.95, 0.55), 1.8)
 
 
 ## Gasta uma carga do item selecionado; remove-o do slot quando acaba.
@@ -3659,7 +3670,7 @@ func _consume(c: CarriedItem) -> void:
 		var idx: int = inventory.slots.find(c)
 		if idx >= 0:
 			inventory.remove_at(idx)
-		_show_temporary_message("%s acabou." % c.tool_name, Color(0.9, 0.9, 0.9), 1.2)
+		_show_temporary_message(tr("%s acabou.") % tr(c.tool_name), Color(0.9, 0.9, 0.9), 1.2)
 	else:
 		inventory.notify_changed()
 
@@ -3967,7 +3978,7 @@ func fire_harpoon() -> int:
 
 			_shake_camera(0.025, 0.16)
 			SFX.play_ui(SFX.STONE_IMPACT, -1.0, 0.1)
-			_show_temporary_message("⚓ Arpão cravado! Inimigo puxado e atordoado! (%d de dano)" % int(harpoon_damage), Color(0.5, 0.85, 1.0), 1.0)
+			_show_temporary_message(tr("⚓ Arpão cravado! Inimigo puxado e atordoado! (%d de dano)") % int(harpoon_damage), Color(0.5, 0.85, 1.0), 1.0)
 	else:
 		SFX.play_ui(SFX.SLINGSHOT_FIRE, -4.0, 0.2)
 
@@ -4015,7 +4026,7 @@ func _use_repellent() -> void:
 			fled += 1
 	if DisturbanceMeter.instance != null:
 		DisturbanceMeter.instance.add_noise(-repellent_noise_reduction, global_position)
-	_show_temporary_message("💨 Repelente! %d criatura(s) fugiram. A ameaça baixou." % fled, Color(0.5, 1.0, 0.45), 1.6)
+	_show_temporary_message(tr("💨 Repelente! %d criatura(s) fugiram. A ameaça baixou.") % fled, Color(0.5, 1.0, 0.45), 1.6)
 
 
 func _spawn_spray(pos: Vector3, dir: Vector3) -> void:
@@ -4438,7 +4449,7 @@ func fire_magnetic_pulse() -> int:
 	_shake_camera(0.04, 0.22)
 	SFX.play_ui(SFX.STONE_IMPACT, 2.0, 0.15)
 	if enemy_hits > 0 or pulled_pickups > 0:
-		_show_temporary_message("⚡ Pulso Magnético! (%d repelidos, %d atraídos)" % [enemy_hits, pulled_pickups], Color(0.65, 0.85, 1.0), 1.1)
+		_show_temporary_message(tr("⚡ Pulso Magnético! (%d repelidos, %d atraídos)") % [enemy_hits, pulled_pickups], Color(0.65, 0.85, 1.0), 1.1)
 	else:
 		_show_temporary_message("⚡ Pulso Magnético disparado!", Color(0.6, 0.8, 1.0), 0.8)
 

@@ -123,8 +123,8 @@ func _update_label() -> void:
 	if _label == null:
 		return
 	if _is_downed:
-		var txt: String = _base_display_name if not _base_display_name.is_empty() else "Jogador"
-		_label.text = "💀 %s (Caído)" % txt
+		var txt: String = tr(_base_display_name) if not _base_display_name.is_empty() else tr("Jogador")
+		_label.text = tr("💀 %s (Caído)") % txt
 		_label.position = Vector3(0, 0.6, 0)
 	else:
 		_label.text = _base_display_name

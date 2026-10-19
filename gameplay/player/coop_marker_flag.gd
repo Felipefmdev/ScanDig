@@ -109,7 +109,7 @@ func get_type_config() -> Dictionary:
 
 func get_display_label() -> String:
 	var cfg: Dictionary = get_type_config()
-	var type_name: String = cfg.get("name", "Marcador")
+	var type_name: String = tr(cfg.get("name", "Marcador"))
 	if not owner_player_name.is_empty():
 		return "%s (%s)" % [type_name, owner_player_name]
 	return type_name

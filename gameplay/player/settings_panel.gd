@@ -87,5 +87,5 @@ func _set_value(key: String, v: Variant) -> void:
 
 func _refresh_labels() -> void:
 	var sens: float = float(values.get("mouse_sensitivity", 0.0025))
-	_sens_label.text = "Sensibilidade do mouse: %d%%" % int(round(sens / 0.0025 * 100.0))
-	_fov_label.text = "Campo de visão: %d°" % int(values.get("fov", 75.0))
+	_sens_label.text = tr("Sensibilidade do mouse: %d%%") % int(round(sens / 0.0025 * 100.0))
+	_fov_label.text = tr("Campo de visão: %d°") % int(values.get("fov", 75.0))
