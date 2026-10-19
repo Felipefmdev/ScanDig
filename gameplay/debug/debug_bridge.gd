@@ -12,7 +12,7 @@ const STEP_KEYS: PackedStringArray = [
 	"loop", "dig_spot", "pickup", "goto_sell", "sell", "set_state", "explore", "fight",
 	"host", "join", "start_expedition", "sleep", "face_player", "goto_player",
 	"interact", "call", "ui_tab", "ui_select", "ui_press", "rescue",
-	"give", "use_item", "set_boss_time", "seagull_poop", "spawn_enemy",
+	"give", "use_item", "set_boss_time", "seagull_poop", "spawn_enemy", "ui_nav", "nav_audit",
 ]
 ## Campos que set_state pode alterar (fundidos no snapshot do CoreGameState).
 const SET_STATE_KEYS: PackedStringArray = ["team_money", "upgrade_levels", "unlocked_maps", "defeated_bosses", "map_fragments"]
@@ -72,6 +72,7 @@ var _screenshots: PackedStringArray = []
 var _dumps: PackedStringArray = []
 var _waits: Array[Dictionary] = []
 var _loops: Array[Dictionary] = []
+var _nav: Array[Dictionary] = []
 var _dump_every: float = 0.0
 var _screenshot_every: float = 0.0
 var _next_dump: float = 0.0
@@ -388,6 +389,22 @@ static func parse_step(raw: Variant, nested: bool = false) -> Variant:
 			step["target"] = value
 			step["walk"] = d.get("walk", false) == true
 			step["timeout"] = timeout
+		"ui_nav":
+			# #135: ação de menu injetada por teclado ou comando (UiNavAudit.events).
+			step["device"] = str(d.get("device", UiNavAudit.KEYBOARD))
+			if not value is String or UiNavAudit.events(StringName(value), step["device"]).is_empty():
+				return "'ui_nav' deve ser ui_up/down/left/right/accept/cancel, ui_focus_next/prev ou tab_next/prev do 'device' (keyboard|pad)"
+			step["action"] = value
+		"nav_audit":
+			# #135: {"nav_audit": "<rótulo>", "root": "<nó ou /root/...>", "devices": [...],
+			# "allow_leave": bool, "cancel": "<nó que B/Esc deve fechar>"}; grava nav_<rótulo>.json.
+			if not value is String or (value as String).is_empty() or not d.get("root", "") is String or (d.get("root", "") as String).is_empty():
+				return "'nav_audit' deve ser o rotulo da tela, com 'root' (nome do no ou caminho /root/...)"
+			step["label"] = value
+			step["root"] = d["root"]
+			step["devices"] = d.get("devices", [UiNavAudit.KEYBOARD, UiNavAudit.PAD])
+			step["allow_leave"] = d.get("allow_leave", false) == true
+			step["cancel"] = str(d.get("cancel", ""))
 		"call":
 			if not value is String or (value as String).is_empty():
 				return "'call' deve ser o nome do no"
@@ -701,6 +718,10 @@ func _execute(step: Dictionary) -> void:
 			await _interact_with(step["target"], step["walk"], step["timeout"])
 		"call":
 			_debug_call(step["target"], step["method"])
+		"ui_nav":
+			await UiNavAudit.inject(get_viewport(), StringName(step["action"]), step["device"])
+		"nav_audit":
+			await _nav_audit(step)
 		"rescue":
 			await _rescue(step["timeout"])
 		"give":
@@ -1633,6 +1654,30 @@ func _ui_press(target: String) -> void:
 	_log("  carregou '%s'" % ((btn as Button).text if btn is Button else String(btn.name)))
 
 
+## #135: navegação da tela por teclado/comando (UiNavAudit), em nav_<rótulo>.json e no summary.
+func _nav_audit(step: Dictionary) -> void:
+	var root_name: String = step["root"]
+	var root: Control = (get_node_or_null(root_name) if root_name.begins_with("/") else _find_control(root_name)) as Control
+	var cancel_name: String = step["cancel"]
+	var layer: Control = null
+	if not cancel_name.is_empty():
+		layer = (get_node_or_null(cancel_name) if cancel_name.begins_with("/") else _find_control(cancel_name)) as Control
+	if root == null or (not cancel_name.is_empty() and layer == null):
+		_fail("nav_audit %s: no '%s'/'%s' nao encontrado/visivel" % [step["label"], root_name, cancel_name])
+		return
+	var report: Dictionary = await UiNavAudit.screen_report(root, step["devices"], step["allow_leave"], layer)
+	report["label"] = step["label"]
+	_nav.append(report)
+	var f: FileAccess = FileAccess.open(_run_dir.path_join("nav_%s.json" % step["label"]), FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(report, "	"))
+		f.close()
+	for device: Variant in step["devices"]:
+		var r: Dictionary = report.get(device, {})
+		_log("  nav %s [%s]: %s, armadilhas %d, sem borda %d" % [step["label"], device, UiNavAudit.score(r),
+			(r.get("traps", []) as Array).size(), (r.get("no_focus_style", []) as Array).size()])
+
+
 ## Control visível com este nome de nó.
 func _find_control(node_name: String) -> Node:
 	for n: Node in _find_all(get_tree().root, func(x: Node) -> bool:
@@ -2001,6 +2046,7 @@ func _finish(code: int) -> void:
 		"waits": _waits,
 		"loops": _loops,
 		"errors": _errors,
+		"nav": _nav,
 	}
 	if _monitoring:
 		summary["metrics"] = _build_metrics()

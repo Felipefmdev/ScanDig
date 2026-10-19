@@ -1,0 +1,547 @@
+{
+	"scene": "res://world/title_screen.tscn",
+	"steps": [
+		{
+			"t": 2.0,
+			"screenshot": "00_titulo"
+		},
+		{
+			"t": 0,
+			"nav_audit": "titulo",
+			"root": "MainCard",
+			"devices": [
+				"pad"
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Carregar"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "slots",
+			"root": "SlotsPanel",
+			"devices": [
+				"pad"
+			],
+			"cancel": "SlotsPanel"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Configurações"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "config_video",
+			"root": "SettingsMenu",
+			"devices": [
+				"pad"
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"nav_audit": "config_audio",
+			"root": "SettingsMenu",
+			"devices": [
+				"pad"
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"nav_audit": "config_controles",
+			"root": "SettingsMenu",
+			"devices": [
+				"pad"
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"nav_audit": "config_jogabilidade",
+			"root": "SettingsMenu",
+			"devices": [
+				"pad"
+			],
+			"cancel": "SettingsMenu"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Multiplayer"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"ui_press": "Slot 1"
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0.3,
+			"set_state": {
+				"unlocked_maps": [
+					"praia",
+					"campo",
+					"ruinas",
+					"geleira",
+					"cratera",
+					"ilha_tesouro"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole",
+					"ancient_guardian",
+					"frozen_mammoth"
+				],
+				"upgrade_levels": {
+					"detector": 5,
+					"backpack": 2,
+					"shovel": 2
+				},
+				"team_money": 5000,
+				"map_fragments": [
+					"praia_frag_1",
+					"campo_frag_1"
+				]
+			}
+		},
+		{
+			"sleep": 1.0
+		},
+		{
+			"t": 0,
+			"screenshot": "10_lobby"
+		},
+		{
+			"t": 0,
+			"nav_audit": "menu_coop",
+			"root": "MultiplayerMenu",
+			"devices": [
+				"pad"
+			],
+			"allow_leave": true
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_tab": "Mapa do Tesouro"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "base_loja",
+			"root": "BaseStationUI",
+			"devices": [
+				"pad"
+			],
+			"allow_leave": true
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "base_museu",
+			"root": "BaseStationUI",
+			"devices": [
+				"pad"
+			],
+			"allow_leave": true
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "base_expedicoes",
+			"root": "BaseStationUI",
+			"devices": [
+				"pad"
+			],
+			"allow_leave": true
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "base_diario",
+			"root": "BaseStationUI",
+			"devices": [
+				"pad"
+			],
+			"allow_leave": true
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_nav": "tab_next",
+			"device": "pad"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "base_mapa",
+			"root": "BaseStationUI",
+			"devices": [
+				"pad"
+			],
+			"allow_leave": true
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_tab": "Museu de Achados"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"ui_press": "ViewMuseumButton"
+		},
+		{
+			"sleep": 2.5
+		},
+		{
+			"t": 0,
+			"nav_audit": "ver_museu",
+			"root": "BackButton",
+			"devices": [
+				"pad"
+			],
+			"cancel": "BackButton"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"call": "CorePauseMenu",
+			"method": "toggle"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"nav_audit": "pausa",
+			"root": "PauseCard",
+			"devices": [
+				"pad"
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Sair do jogo"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"nav_audit": "pausa_sair",
+			"root": "QuitPanel",
+			"devices": [
+				"pad"
+			],
+			"cancel": "QuitPanel"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Configurações"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "pausa_config",
+			"root": "SettingsMenu",
+			"devices": [
+				"pad"
+			],
+			"cancel": "SettingsMenu"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"nav_audit": "pausa_fecha",
+			"root": "PauseCard",
+			"devices": [
+				"pad"
+			],
+			"cancel": "/root/CorePauseMenu/Root"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"call": "CoreVictoryScreen",
+			"method": "open"
+		},
+		{
+			"sleep": 1.5
+		},
+		{
+			"t": 0,
+			"nav_audit": "vitoria",
+			"root": "VictoryCard",
+			"devices": [
+				"pad"
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Créditos"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"nav_audit": "creditos",
+			"root": "VictoryCard",
+			"devices": [
+				"pad"
+			],
+			"cancel": "CreditsView"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"nav_audit": "vitoria_fecha",
+			"root": "VictoryCard",
+			"devices": [
+				"pad"
+			],
+			"cancel": "/root/CoreVictoryScreen/Root"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"start_expedition": "praia",
+			"timeout": 60
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"screenshot": "20_resumo"
+		},
+		{
+			"t": 0,
+			"nav_audit": "resumo",
+			"root": "SummaryPanel",
+			"devices": [
+				"pad"
+			],
+			"cancel": "SummaryPanel"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"dump": "21_lobby_depois"
+		},
+		{
+			"t": 0,
+			"call": "CorePauseMenu",
+			"method": "toggle"
+		},
+		{
+			"sleep": 0.5
+		},
+		{
+			"t": 0,
+			"ui_press": "Sair para o menu principal"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Ir para o menu"
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"screenshot": "30_titulo"
+		},
+		{
+			"t": 0,
+			"dump": "30_titulo"
+		},
+		{
+			"t": 0,
+			"ui_press": "Carregar"
+		},
+		{
+			"sleep": 0.4
+		},
+		{
+			"t": 0,
+			"nav_audit": "slots_save",
+			"root": "SlotsPanel",
+			"devices": [
+				"pad"
+			]
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"ui_press": "Apagar"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"nav_audit": "apagar",
+			"root": "ConfirmPanel",
+			"devices": [
+				"pad"
+			],
+			"cancel": "ConfirmPanel"
+		},
+		{
+			"sleep": 0.3
+		},
+		{
+			"t": 0,
+			"screenshot": "31_slots_fim"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}

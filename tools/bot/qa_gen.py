@@ -2,7 +2,8 @@
 
 Uso: python tools/bot/qa_gen.py
 Matriz: 6 mapas x (dia, noite onde houver) x (clima forcado onde houver), mais
-Base (abas + Ver museu), pausa, titulo + slots e vitoria. Os dumps trazem fps,
+Base (abas + Ver museu), pausa, titulo + slots, vitoria e navegacao por teclado e comando
+(qa_nav_keyboard/qa_nav_pad, #135). Os dumps trazem fps,
 orphans e nodes; tools/bot/qa_report.py junta tudo numa tabela.
 """
 import json
@@ -220,8 +221,75 @@ def victory_script():
 	return {"scene": LOBBY, "steps": steps}
 
 
+def nav(label, root, device, cancel="", allow_leave=False):
+	step = {"t": 0, "nav_audit": label, "root": root, "devices": [device]}
+	if cancel:
+		step["cancel"] = cancel
+	if allow_leave:
+		step["allow_leave"] = True
+	return [step, {"sleep": 0.3}]
+
+
+def nav_script(device):
+	"""#135: foco inicial, alcance (setas/Tab ou direcional), armadilhas e B/Esc em cada tela, só
+	com eventos de teclado ou de comando (passos ui_nav/nav_audit do DebugBridge). Começa no título
+	com os slots vazios (save isolado do bot) e entra no lobby pelo Multiplayer (menu de rede visível)."""
+	d = device
+	tab = {"t": 0, "ui_nav": "tab_next", "device": d}
+	steps = [{"t": 2.0, "screenshot": "00_titulo"}]
+	steps += nav("titulo", "MainCard", d)
+	steps += [{"t": 0, "ui_press": "Carregar"}, {"sleep": 0.4}]
+	steps += nav("slots", "SlotsPanel", d, cancel="SlotsPanel")
+	steps += [{"t": 0, "ui_press": "Configurações"}, {"sleep": 0.4}]
+	for i, name in enumerate(["video", "audio", "controles", "jogabilidade"]):
+		if i > 0:
+			steps += [tab, {"sleep": 0.3}]
+		steps += nav("config_" + name, "SettingsMenu", d, cancel="SettingsMenu" if i == 3 else "")
+	steps += [{"t": 0, "ui_press": "Multiplayer"}, {"sleep": 0.4}, {"t": 0, "ui_press": "Slot 1"}, {"sleep": 3.0},
+		{"t": 0.3, "set_state": STATE}, {"sleep": 1.0}, {"t": 0, "screenshot": "10_lobby"}]
+	steps += nav("menu_coop", "MultiplayerMenu", d, allow_leave=True)
+	# A aba inicial depende do save; da última, tab_next dá a volta para a Loja (e foca a página).
+	steps += [{"t": 0, "ui_tab": "Mapa do Tesouro"}, {"sleep": 0.3}]
+	for i, name in enumerate(["loja", "museu", "expedicoes", "diario", "mapa"]):
+		steps += [tab, {"sleep": 0.4}]
+		steps += nav("base_" + name, "BaseStationUI", d, allow_leave=True)
+	steps += [{"t": 0, "ui_tab": "Museu de Achados"}, {"sleep": 0.4}, {"t": 0, "ui_press": "ViewMuseumButton"}, {"sleep": 2.5}]
+	steps += nav("ver_museu", "BackButton", d, cancel="BackButton")
+	steps += [{"sleep": 2.0}, {"t": 0, "call": "CorePauseMenu", "method": "toggle"}, {"sleep": 0.5}]
+	steps += nav("pausa", "PauseCard", d)
+	steps += [{"t": 0, "ui_press": "Sair do jogo"}, {"sleep": 0.3}]
+	steps += nav("pausa_sair", "QuitPanel", d, cancel="QuitPanel")
+	steps += [{"t": 0, "ui_press": "Configurações"}, {"sleep": 0.4}]
+	steps += nav("pausa_config", "SettingsMenu", d, cancel="SettingsMenu")
+	steps += nav("pausa_fecha", "PauseCard", d, cancel="/root/CorePauseMenu/Root")
+	steps += [{"t": 0, "call": "CoreVictoryScreen", "method": "open"}, {"sleep": 1.5}]
+	steps += nav("vitoria", "VictoryCard", d)
+	steps += [{"t": 0, "ui_press": "Créditos"}, {"sleep": 0.5}]
+	steps += nav("creditos", "VictoryCard", d, cancel="CreditsView")
+	steps += nav("vitoria_fecha", "VictoryCard", d, cancel="/root/CoreVictoryScreen/Root")
+	steps += [
+		{"t": 0, "start_expedition": "praia", "timeout": 60},
+		{"sleep": 3.0},
+		{"t": 0, "call": "CoreSessionUI", "method": "request_return_to_base"},
+		{"wait_until": "in_expedition==0", "timeout": 40},
+		{"sleep": 3.0},
+		{"t": 0, "screenshot": "20_resumo"},
+	]
+	steps += nav("resumo", "SummaryPanel", d, cancel="SummaryPanel")
+	steps += [{"t": 0, "dump": "21_lobby_depois"}]
+	steps += to_title("30_titulo")
+	steps += [{"t": 0, "ui_press": "Carregar"}, {"sleep": 0.4}]
+	steps += nav("slots_save", "SlotsPanel", d)
+	steps += [{"t": 0, "ui_press": "Apagar"}, {"sleep": 0.3}]
+	steps += nav("apagar", "ConfirmPanel", d, cancel="ConfirmPanel")
+	steps += [{"t": 0, "screenshot": "31_slots_fim"}, {"t": 0, "quit": True}]
+	return {"scene": "res://world/title_screen.tscn", "steps": steps}
+
+
 def main():
 	scripts = {"qa_%s" % m: map_script(m) for m in MAPS}
+	scripts["qa_nav_keyboard"] = nav_script("keyboard")
+	scripts["qa_nav_pad"] = nav_script("pad")
 	scripts.update({
 		"qa_base": base_script(),
 		"qa_pause": pause_script(),

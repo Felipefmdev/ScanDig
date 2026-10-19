@@ -67,3 +67,11 @@ Top
 Column
 Cap
 Box
+# Mensagens do UiNavAudit (#135): só no relatório do bot e nos testes.
+<nenhum>
+sem foco inicial na tela (%s)
+foco perdido
+foco em controle oculto %s
+foco em controle desativado %s
+foco saiu da camada para %s
+sem volta ao foco inicial a partir de %s

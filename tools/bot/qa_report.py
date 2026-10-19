@@ -96,6 +96,57 @@ def uniq(items, limit=6):
 	return seen[:limit]
 
 
+NAV_NAMES = {
+	"titulo": "título", "slots": "slots (vazios)", "config_video": "configurações: Vídeo",
+	"config_audio": "configurações: Áudio", "config_controles": "configurações: Controles",
+	"config_jogabilidade": "configurações: Jogabilidade", "menu_coop": "menu Multiplayer (lobby coop)",
+	"base_loja": "Base: Loja", "base_museu": "Base: Museu", "base_expedicoes": "Base: Expedições",
+	"base_diario": "Base: Diário", "base_mapa": "Base: Mapa do Tesouro (pergaminho)", "ver_museu": "Ver museu",
+	"pausa": "pausa", "pausa_sair": "pausa: confirmar sair", "pausa_config": "pausa: configurações",
+	"pausa_fecha": "pausa (fechar)", "vitoria": "vitória", "creditos": "créditos", "vitoria_fecha": "vitória (fechar)",
+	"resumo": "resumo do dia", "slots_save": "slots (com save)", "apagar": "apagar slot",
+}
+
+
+def nav_section():
+	"""#135: qa_nav_keyboard / qa_nav_pad (passo nav_audit do DebugBridge)."""
+	runs = {}
+	for device in ("keyboard", "pad"):
+		run = latest_run("qa_nav_" + device)
+		summary = load(os.path.join(run, "summary.json")) if run else None
+		runs[device] = {r["label"]: r for r in (summary or {}).get("nav", [])}
+	if not any(runs.values()):
+		return ["", "## Navegação", "", "sem runs de qa_nav_keyboard/qa_nav_pad"]
+	out = ["", "## Navegação", "",
+		"Alcançados/total = controles interativos visíveis e ativos alcançados só com setas/Tab (teclado) ou o "
+		"direcional (comando), a partir do foco inicial. Armadilhas = foco perdido, em controle oculto/desativado, "
+		"fora da camada ou sem volta. Esc/B: \"—\" quando a tela é a camada de baixo (título, Base, menu de rede).", "",
+		"| tela | teclado | comando | armadilhas | Esc/B ok |", "|---|---|---|---|---|"]
+	labels = list(runs["keyboard"]) or list(runs["pad"])
+	for label in labels:
+		cols, traps, cancel = [], [], []
+		for device in ("keyboard", "pad"):
+			r = runs[device].get(label)
+			res = (r or {}).get(device)
+			if not res:
+				cols.append("sem run")
+				continue
+			total = len(res["existing"])
+			reached = total - len(res["missing"])
+			cell = "%d/%d" % (reached, total)
+			if not res["initial_ok"]:
+				cell += " (foco inicial errado)"
+			if res["no_focus_style"]:
+				cell += " (%d sem borda)" % len(res["no_focus_style"])
+			cols.append(cell)
+			traps += res["traps"]
+			if r.get("cancel"):
+				cancel.append(bool(r["cancel"].get("closed")) and bool(r["cancel"].get("focus_ok")))
+		esc = "—" if not cancel else ("ok" if all(cancel) else "falhou")
+		out.append("| %s | %s | %s | %s | %s |" % (NAV_NAMES.get(label, label), cols[0], cols[1], len(traps), esc))
+	return out
+
+
 def main():
 	sys.stdout.reconfigure(encoding="utf-8")
 	out = ["# Runs de QA (gerado por tools/bot/qa_report.py)", ""]
@@ -128,7 +179,7 @@ def main():
 		if se or er or wa or bridge_errors:
 			details.append((name, se, er, wa, bridge_errors, summary.get("metrics", {}).get("step_failures", 0)))
 	out += ["", "## Telas", "", "| roteiro | SCRIPT ERROR | erros | warnings | erros do bot | avisos de passo | órfãos (dumps) |", "|---|---|---|---|---|---|---|"]
-	for name in ["qa_base", "qa_pause", "qa_title_slots", "qa_victory"]:
+	for name in ["qa_base", "qa_pause", "qa_title_slots", "qa_victory", "qa_nav_keyboard", "qa_nav_pad"]:
 		run = latest_run(name)
 		issues = log_issues(name)
 		if run is None or issues is None:
@@ -137,11 +188,13 @@ def main():
 		se, er, wa, ex = issues
 		summary = load(os.path.join(run, "summary.json")) or {}
 		dumps = sorted(glob.glob(os.path.join(run, "*.json")))
-		orf = " → ".join("%s" % (load(p) or {}).get("orphans", "?") for p in dumps if not p.endswith("summary.json"))
+		orf = " → ".join("%s" % (load(p) or {}).get("orphans", "?") for p in dumps
+			if not p.endswith("summary.json") and not os.path.basename(p).startswith("nav_"))
 		out.append("| %s | %d | %d | %d (+%d à saída) | %d | %s | %s |" % (name, len(se), len(er), len(wa), ex, len(summary.get("errors", [])),
 			summary.get("metrics", {}).get("step_failures", 0), orf))
 		if se or er or wa or summary.get("errors"):
 			details.append((name, se, er, wa, summary.get("errors", []), summary.get("metrics", {}).get("step_failures", 0)))
+	out += nav_section()
 	out += ["", "## Detalhes", ""]
 	for name, se, er, wa, be, sf in details:
 		out.append("### %s" % name)

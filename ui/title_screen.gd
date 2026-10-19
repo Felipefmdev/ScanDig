@@ -452,6 +452,7 @@ func _build() -> void:
 	stack.add_child(message_label)
 
 	settings_menu = SettingsMenu.new()
+	settings_menu.name = "SettingsMenu"
 	settings_menu.visible = false
 	stack.add_child(settings_menu)
 
