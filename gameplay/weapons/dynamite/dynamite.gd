@@ -145,5 +145,18 @@ static func apply_blast(tree: SceneTree, center: Vector3, thrower: Node3D) -> Di
 			else:
 				s.dig(false, 1.0, false, thrower)
 		out["spots"] += 1
+	out["ice_floes"] = 0
+	for n: Node in tree.get_nodes_in_group(&"ice_floes"):
+		var floe: Node3D = n as Node3D
+		if floe == null or not is_instance_valid(floe):
+			continue
+		var to_floe: Vector3 = floe.global_position - center
+		var r: float = float(floe.get("floe_radius")) if "floe_radius" in floe else 1.8
+		if to_floe.length() <= PUSH_RADIUS + r * 0.5:
+			if floe.has_method("apply_blast_damage"):
+				floe.call("apply_blast_damage", center, PUSH_RADIUS)
+			elif floe.has_method("shatter"):
+				floe.call("shatter")
+			out["ice_floes"] += 1
 	DisturbanceMeter.report(NOISE, center)
 	return out

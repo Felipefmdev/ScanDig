@@ -65,6 +65,7 @@ const PIECES: Array = [
 ]
 
 const SHORTCUT_SCRIPT: Script = preload("res://gameplay/objects/shortcuts/rope_shortcut.gd")
+const FROZEN_LAKE_SCRIPT: Script = preload("res://gameplay/environment/frozen_lake.gd")
 
 ## Atalhos de Arpão (#105): [id, display_name, type, x1, z1, x2, z2]
 const SHORTCUTS: Array = [
@@ -110,4 +111,8 @@ func rebuild() -> void:
 		var p1: Vector3 = Vector3(sc_info[3], GlacierTerrain.height_at(sc_info[3], sc_info[4]), sc_info[4])
 		var p2: Vector3 = Vector3(sc_info[5], GlacierTerrain.height_at(sc_info[5], sc_info[6]), sc_info[6])
 		SHORTCUT_SCRIPT.call("create_shortcut", self, s_id, s_name, s_type, p1, p2)
+
+	var lake: Node3D = FROZEN_LAKE_SCRIPT.new() as Node3D
+	lake.name = "FrozenLake"
+	add_child(lake)
 

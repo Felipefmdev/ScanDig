@@ -3855,6 +3855,13 @@ func fire_harpoon() -> int:
 				best_target = col as Node3D
 				is_pickup = false
 				hit_point = hit["position"]
+			elif col is Node3D and (col as Node3D).is_in_group(&"ice_floes"):
+				hit_point = hit["position"]
+				if (col as Node3D).has_method("take_stress"):
+					(col as Node3D).call("take_stress", 0.35)
+				_show_temporary_message("⚓ Arpão cravou no gelo!", Color(0.7, 0.9, 1.0), 0.8)
+				SFX.play_ui(SFX.STONE_IMPACT, -1.0, 0.1)
+				hit_count = 1
 			else:
 				hit_point = hit["position"]
 
@@ -3920,6 +3927,13 @@ func fire_harpoon() -> int:
 			t_p.tween_property(pickup, "global_position", pull_dest, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			SFX.play_ui(SFX.PICKUP, -2.0)
 			_show_temporary_message("⚓ Item fisgado pelo arpão!", Color(0.45, 0.85, 1.0), 1.0)
+			for n: Node in get_tree().get_nodes_in_group(&"ice_floes"):
+				var floe: Node3D = n as Node3D
+				if floe != null and is_instance_valid(floe) and floe.has_method("take_stress"):
+					var dist_floe: float = Vector2(pickup.global_position.x - floe.global_position.x, pickup.global_position.z - floe.global_position.z).length()
+					var r: float = float(floe.get("floe_radius")) if "floe_radius" in floe else 1.8
+					if dist_floe <= r:
+						floe.call("take_stress", 0.4)
 		else:
 			var enemy: Node3D = best_target
 			# Suporte a coop: no cliente sem autoridade usa request_hit/request_stun para o host
