@@ -93,3 +93,50 @@ func test_item_pickup_contact_monitoring() -> void:
 	add_child_autofree(pickup)
 	assert_true(pickup.contact_monitor, "ItemPickup deve ter contact_monitor ativado para tocar som de aterragem")
 	assert_gt(pickup.max_contacts_reported, 0, "ItemPickup deve reportar contatos")
+
+
+## Velocidade de queda ao aterrar de um pulo no plano, quadro a quadro como no _physics_process
+## (gravidade x fall_gravity_multiplier na descida).
+func _flat_jump_fall_speed(player: Player) -> float:
+	var g: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
+	var dt: float = 1.0 / float(Engine.physics_ticks_per_second)
+	var vy: float = player.jump_velocity
+	var y: float = vy * dt
+	while y > 0.0:
+		vy -= g * (player.fall_gravity_multiplier if vy < 0.0 else 1.0) * dt
+		y += vy * dt
+	return -vy
+
+
+func test_normal_jump_lands_with_step_only() -> void:
+	var player: Player = (load("res://gameplay/player/player.tscn") as PackedScene).instantiate() as Player
+	add_child_autofree(player)
+	var fall: float = _flat_jump_fall_speed(player)
+	gut.p("pulo no plano aterra a %.2f m/s" % fall)
+	assert_gt(fall, Player.LAND_SOUND_SPEED, "o pulo aterra com o passo")
+	assert_lt(fall, Player.LAND_IMPACT_SPEED, "sem baque num pulo normal")
+	for surface: StringName in [&"sand", &"grass", &"snow", &"water"]:
+		var sounds: Array[Dictionary] = Player.land_sounds(surface, fall, -16.0)
+		assert_eq(sounds.size(), 1, "%s: só o passo" % surface)
+		assert_eq(sounds[0]["sound"], SFX.footstep_sound_for_surface(surface))
+		assert_almost_eq(float(sounds[0]["db"]), -16.0 + SFX.footstep_volume_offset(surface) + Player.LAND_STEP_DB, 0.01)
+	assert_eq(Player.land_sounds(&"sand", 3.0, -16.0).size(), 0, "degrau pequeno: nada além dos passos")
+
+
+func test_high_fall_adds_quiet_impact() -> void:
+	var sounds: Array[Dictionary] = Player.land_sounds(&"sand", 12.0, -16.0)
+	assert_eq(sounds.size(), 2, "queda alta: passo + baque")
+	assert_eq(sounds[1]["sound"], SFX.LAND)
+	assert_lt(float(sounds[1]["db"]), float(sounds[0]["db"]) - 10.0, "baque bem abaixo do passo")
+
+
+## A "bolha" na areia (#123): na Praia só é água abaixo do mar (-0.15). Areia seca do spawn ao
+## fim da praia (x < 26) nunca é água; depois da linha da maré, sim.
+func test_praia_dry_sand_is_not_water() -> void:
+	var sea_y: float = Player.SEA_FALLBACK_Y
+	var x: float = -30.0
+	while x < 26.0:
+		for z: float in [-20.0, 0.0, 2.0, 15.0]:
+			assert_false(Player.is_in_sea(BeachTerrain.height_at(x, z), sea_y), "areia em (%.0f, %.0f)" % [x, z])
+		x += 0.5
+	assert_true(Player.is_in_sea(BeachTerrain.height_at(29.0, 2.0), sea_y), "x=29: dentro do mar")

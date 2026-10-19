@@ -297,8 +297,16 @@ var _held_museum_key: String = ""
 ## Distância percorrida desde o último passo (sons de passos na areia).
 var _step_distance: float = 0.0
 const STEP_LENGTH: float = 1.15
-## Velocidade de queda (m/s) a partir da qual a aterrissagem faz som (um pulo normal chega a ~4.5).
+## Velocidade de queda (m/s) a partir da qual a aterrissagem faz som: o passo da superfície mais
+## forte. Um pulo no plano chega a ~5.4 (a descida usa fall_gravity_multiplier); descer um degrau
+## de 30 cm, a ~3.1 (sem som de queda, só os passos).
 const LAND_SOUND_SPEED: float = 3.5
+## Só acima disto (queda de ~2.6 m) entra também o baque (impactSoft_heavy), baixo.
+const LAND_IMPACT_SPEED: float = 9.0
+const LAND_STEP_DB: float = 4.0
+const LAND_IMPACT_DB: float = -14.0
+## Abaixo da superfície do mar (nó Sea da Praia, que desce na maré) o passo é na água.
+const SEA_FALLBACK_Y: float = -0.15
 ## Fase do balanço da câmera (rad): avança PI por passo, o passo toca no vale.
 var _bob_phase: float = 0.0
 ## Passos de jogador remoto (#123): última posição vista e distância desde o último passo.
@@ -4133,15 +4141,26 @@ func _update_footsteps(delta: float) -> void:
 	_apply_head_bob(horizontal)
 
 
-## Queda (#123): passo da superfície mais forte + baque, mais alto quanto maior a queda.
+## Queda (#123): passo da superfície mais forte; em queda alta, também um baque baixo.
 func _play_land_sound(fall_speed: float) -> void:
 	if not footsteps_enabled:
 		return
-	var surface: StringName = _detect_surface_type()
-	var extra: float = clampf((fall_speed - LAND_SOUND_SPEED) * 1.2, 0.0, 8.0)
-	SFX.play_at(SFX.footstep_sound_for_surface(surface), global_position,
-		footsteps_volume_db + SFX.footstep_volume_offset(surface) + 4.0 + extra, 0.06)
-	SFX.play_at(SFX.LAND, global_position, footsteps_volume_db - 4.0 + extra, 0.1)
+	for s: Dictionary in land_sounds(_detect_surface_type(), fall_speed, footsteps_volume_db):
+		SFX.play_at(s["sound"], global_position, float(s["db"]), 0.06)
+
+
+## Sons da aterrissagem: [{sound, db}]. Pulo normal = só o passo (+LAND_STEP_DB); queda acima de
+## LAND_IMPACT_SPEED = passo + baque, este LAND_IMPACT_DB abaixo dos passos.
+static func land_sounds(surface: StringName, fall_speed: float, base_db: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if fall_speed <= LAND_SOUND_SPEED:
+		return out
+	var step_db: float = base_db + SFX.footstep_volume_offset(surface) + LAND_STEP_DB
+	out.append({"sound": SFX.footstep_sound_for_surface(surface), "db": step_db})
+	if fall_speed > LAND_IMPACT_SPEED:
+		var extra: float = clampf(fall_speed - LAND_IMPACT_SPEED, 0.0, 6.0)
+		out.append({"sound": SFX.LAND, "db": base_db + LAND_IMPACT_DB + extra})
+	return out
 
 
 ## Passos de outro jogador (#123): o _physics_process dele não corre neste peer, então o passo
@@ -4169,8 +4188,9 @@ func _update_remote_footsteps(delta: float) -> void:
 ## Deteta a superfície por baixo do jogador (How to Fish SurfaceManager).
 func _detect_surface_type() -> StringName:
 	var map_id: String = _current_map_id()
-	# 1. Água rasa na praia (cota próxima ou abaixo da linha da água)
-	if map_id == "praia" and global_position.y <= 0.08:
+	# 1. Na praia, só com os pés abaixo da superfície do mar (as zonas planas de areia ficam em
+	#    y=0 e o ruído do terreno desce a -0.2: o antigo y <= 0.08 punha água na areia seca)
+	if map_id == "praia" and is_in_sea(global_position.y, _sea_surface_y()):
 		return &"water"
 
 	# 2. Inspecionar o collider físico do chão pisado
@@ -4194,6 +4214,16 @@ func _detect_surface_type() -> StringName:
 			return &"crystal"
 		_:
 			return &"sand"
+
+
+static func is_in_sea(feet_y: float, sea_y: float) -> bool:
+	return feet_y < sea_y
+
+
+func _sea_surface_y() -> float:
+	var scene: Node = get_tree().current_scene if is_inside_tree() else null
+	var sea: Node3D = scene.get_node_or_null(^"Sea") as Node3D if scene != null else null
+	return sea.global_position.y if sea != null else SEA_FALLBACK_Y
 
 
 func _get_floor_collider() -> Object:
