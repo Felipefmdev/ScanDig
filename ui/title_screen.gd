@@ -410,7 +410,10 @@ func _build() -> void:
 	root_control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui_layer.add_child(root_control)
 
-	var center: CenterContainer = CenterContainer.new()
+	# Encolhe para caber em telas baixas com ui_scale 1.3 (#146).
+	var center: FitCenterContainer = FitCenterContainer.new()
+	# Folga para o balanço do logo (±2°) não passar da borda.
+	center.margin = 16.0
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root_control.add_child(center)
 	# Com o mouse, o foco inicial no primeiro botão não acende borda (#122).

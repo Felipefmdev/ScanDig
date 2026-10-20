@@ -210,7 +210,8 @@ static func campaign_value_text(gs: GameState, key: String) -> String:
 # --- Montagem ------------------------------------------------------------------
 
 func _build() -> void:
-	var center: CenterContainer = CenterContainer.new()
+	# Encolhe para caber em telas baixas com ui_scale 1.3 (#146).
+	var center: FitCenterContainer = FitCenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root_control.add_child(center)
 
