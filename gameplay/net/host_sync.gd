@@ -49,13 +49,19 @@ static func send_to(node: Node, peer_id: int, method: StringName, args: Array = 
 
 ## Host: `callback(peer_id)` sempre que um peer acaba de carregar o mapa (para lhe mandar o
 ## estado completo). Sem SessionManager (cena aberta direto, bot) não faz nada.
+## A ligação é desfeita quando o nó sai da árvore (#127: senão as lambdas se acumulavam a
+## cada ida e davam "Lambda capture freed").
 static func on_peer_ready(node: Node, callback: Callable) -> void:
 	var sm: SessionManager = SessionManager.instance
 	if sm == null:
 		return
-	sm.peer_scene_ready.connect(func(peer_id: int, _map_id: String) -> void:
+	var relay: Callable = func(peer_id: int, _map_id: String) -> void:
 		if is_instance_valid(node) and node.is_inside_tree() and node.multiplayer.is_server():
-			callback.call(peer_id))
+			callback.call(peer_id)
+	sm.peer_scene_ready.connect(relay)
+	node.tree_exiting.connect(func() -> void:
+		if is_instance_valid(sm) and sm.peer_scene_ready.is_connected(relay):
+			sm.peer_scene_ready.disconnect(relay), CONNECT_ONE_SHOT)
 
 
 ## Jogador (nó em "players") do peer `peer_id`; em solo (peer 1) cai no jogador local.
