@@ -187,6 +187,9 @@ func _make_slot_panel() -> PanelContainer:
 	var key: Label = _make_label("Key", 11, Color(1, 1, 1, 0.6))
 	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	key.custom_minimum_size = Vector2.ZERO
+	# Sem largura própria: com o clip do _make_label o número sumia (#146).
+	key.clip_text = false
+	key.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	key.position = Vector2(2.0, -2.0)
 	overlay.add_child(key)
 	var mark: TextureRect = TextureRect.new()
