@@ -1,0 +1,149 @@
+[
+	{
+		"contributors": [],
+		"files": 59,
+		"generated": false,
+		"name": "Kenney",
+		"recordings": [],
+		"works": [
+			{
+				"title": "Impact Sounds 1.0",
+				"url": "https://kenney.nl/assets/impact-sounds"
+			},
+			{
+				"title": "Interface Sounds",
+				"url": "https://kenney.nl/assets/interface-sounds"
+			},
+			{
+				"title": "RPG Audio",
+				"url": "https://kenney.nl/assets/rpg-audio"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 3,
+		"generated": false,
+		"name": "AntumDeluge",
+		"recordings": [
+			"polymorpheva"
+		],
+		"works": [
+			{
+				"title": "Bat Screeches",
+				"url": "https://opengameart.org/node/132771"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 3,
+		"generated": false,
+		"name": "Darsycho",
+		"recordings": [],
+		"works": [
+			{
+				"title": "Monster snarls",
+				"url": "https://opengameart.org/content/monster-snarls"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 3,
+		"generated": false,
+		"name": "jasinski",
+		"recordings": [],
+		"works": [
+			{
+				"title": "Beach Ocean Waves",
+				"url": "https://opengameart.org/content/beach-ocean-waves"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 3,
+		"generated": false,
+		"name": "transitking",
+		"recordings": [],
+		"works": [
+			{
+				"title": "Water Waves",
+				"url": "https://opengameart.org/content/water-waves"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 3,
+		"generated": false,
+		"name": "zeroisnotnull",
+		"recordings": [],
+		"works": [
+			{
+				"title": "Crow caw",
+				"url": "https://opengameart.org/content/crow-caw"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 1,
+		"generated": false,
+		"name": "CaveboyTup",
+		"recordings": [],
+		"works": [
+			{
+				"title": "Wolf Monster Sound",
+				"url": "https://opengameart.org/node/118896"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 1,
+		"generated": false,
+		"name": "Ylmir",
+		"recordings": [],
+		"works": [
+			{
+				"title": "rain loopable",
+				"url": "https://opengameart.org/content/rain-loopable"
+			}
+		]
+	},
+	{
+		"contributors": [],
+		"files": 1,
+		"generated": false,
+		"name": "Écrivain",
+		"recordings": [],
+		"works": [
+			{
+				"title": "Icy Heights",
+				"url": "https://opengameart.org/content/icy-heights"
+			}
+		]
+	},
+	{
+		"contributors": [
+			"Dev B",
+			"Felipe Mayer"
+		],
+		"files": 54,
+		"generated": true,
+		"name": "ScanDig",
+		"recordings": [],
+		"works": [
+			{
+				"title": "tools/gen_audio.py",
+				"url": ""
+			},
+			{
+				"title": "tools/gen_sand_sfx.py",
+				"url": ""
+			}
+		]
+	}
+]

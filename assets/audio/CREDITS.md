@@ -10,6 +10,11 @@ Todos os arquivos passam por `python tools/gen_audio.py normalize <arquivos>` (m
 RMS ~-18 dBFS; loops -20). Ao regerar com `tools/gen_sand_sfx.py`, normalize de novo.
 Um teste GUT (`tests/dev_b/test_audio_credits.gd`) falha se um arquivo de áudio não estiver aqui.
 
+A seção "Sons (CC0)" dos créditos do jogo (`ui/credits_view.gd`, #149) sai desta tabela, agrupada
+pelo autor: como o `.md` não vai no export, depois de mexer nela rode
+`"$G" --headless --path . --script res://tools/gen_audio_credits.gd` para regravar
+`core/data/audio_credits.json` (o `tests/dev_b/test_credits_view.gd` falha se esquecer).
+
 | Arquivo | Origem | Autor | Licença |
 |---|---|---|---|
 | `generated/amb_base.ogg` | gerado: `tools/gen_audio.py gen amb_base.ogg` | ScanDig (Dev B) | CC0 1.0 |

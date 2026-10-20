@@ -76,3 +76,7 @@ foco em controle desativado %s
 foco saiu da camada para %s
 sem volta ao foco inicial a partir de %s
 Control
+# Créditos dos sons (#149): nome da licença (igual nos dois idiomas) e marcador da coluna Autor
+# do assets/audio/CREDITS.md lido pelo AudioCredits.
+CC0 1.0
+gravação:
