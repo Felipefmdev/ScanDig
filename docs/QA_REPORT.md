@@ -78,6 +78,9 @@ Leitura:
 - #129: Geleira usa `specular` (nome do Godot 3) em `frozen_lake.gd` e `ice_floe.gd` → 75 warnings
   por run e o brilho do gelo não se aplica (no Godot 4 é `metallic_specular`).
 
+As três foram corrigidas pelo Dev B no S2 (#145, edição mínima autorizada; ver "Resistência →
+Correções aplicadas"). Ficam abertas até o Felipe confirmar.
+
 ## Correções Dev B
 
 - `fix(core)`: `--resolution` da linha de comando volta a valer sobre a janela salva.
@@ -289,3 +292,27 @@ Headless (mesmo roteiro, renderer dummy: o FPS não vale) e depois com as corre�
   em 400–500, menos na Praia (≈ 190–220 em 4 das 5 idas): um soluço de uma janela de 1 s
   logo após a carga que não piora com as idas (não é vazamento; o mapa é do Dev A).
 - Memória estática na janela: 172 MB na Base inicial, 214 MB depois da 1.ª volta, 217 MB na ida 22.
+
+### Correções aplicadas (S2, #145)
+
+Edição mínima nos arquivos do Dev A, autorizada pelo usuário:
+- #127 `HostSync.on_peer_ready` guarda a lambda e a desliga no `tree_exiting` do nó (API igual;
+  teste `tests/dev_b/test_host_sync_disconnect.gd`).
+- #128 `ShopOffer` só cria a caixa quando a oferta não tem `world_scene` (visual igual).
+- #129 `specular` → `metallic_specular` em `frozen_lake.gd` (água e bloco de gelo) e `ice_floe.gd`.
+
+Soak curto headless, 8 idas (`python tools/bot/soak_gen.py 8 && bash tools/bot/run_soak.sh "$G" --headless`):
+
+| | órfãos ida 8 | objetos/ida (após ida 5) | carga 2.ª volta (idas 6–8) | `Lambda capture` | warnings `specular` |
+|---|---|---|---|---|---|
+| antes | 49 | +20,7 | 1,56–1,99 s | 526 | 25 |
+| depois | 0 | +5,0 | 1,14–1,58 s | 0 | 0 |
+
+Visual da Geleira na mesma câmera (`tests/dev_b/geleira_ice_snapshots.gd -- --tag=<antes|depois>`,
+960x540, sem clima): diferença média 0,7/255 no lago e 2,9/255 no close da placa (ruído entre duas
+execuções iguais: 0,03/255). O gelo fica um pouco mais brilhante, como o Felipe pretendia; a cor e
+as formas não mudam.
+
+Os 5 `Lambda capture` que ainda aparecem no GUT saem perto de `tests/test_gameplay_theme_money.gd`
+e `tests/test_harpoon_and_geleira.gd` e já
+saíam sem a correção (mesma contagem com e sem o patch): não são do `HostSync`.
