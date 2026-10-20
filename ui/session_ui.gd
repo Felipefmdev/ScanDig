@@ -26,8 +26,15 @@ const SAVE_TOAST_WIDTH: float = 560.0
 const SAVE_TOAST_MIN_WIDTH: float = 240.0
 const SAVE_TOAST_TOP: float = 180.0
 const SAVE_TOAST_GAP: float = 8.0
+## Fora da expedição (Base) o aviso sobe para a faixa do topo, entre os chips do HUD e o menu
+## Multiplayer, sem cobrir o título da Base (#146). Os nós desse grupo (Control) e os do
+## MultiplayerMenu.SAVE_NOTICE_GROUP são evitados.
+const TOAST_AVOID_GROUP: StringName = &"toast_avoid"
+const TOAST_BASE_TOP: float = 12.0
 
 static var instance: SessionUI = null
+## Lugar do ToastPanel na cena (offsets), o da expedição.
+var _toast_home: Rect2 = Rect2()
 
 ## Nós únicos (%Nome) exigidos pela cena; resolvidos em _bind_nodes().
 const REQUIRED_NODES: Array[String] = [
@@ -113,6 +120,11 @@ func _ready() -> void:
 	leave_confirm_panel.visible = false
 	expedition_bar.visible = false
 	toast_panel.visible = false
+	_toast_home = Rect2(toast_panel.offset_left, toast_panel.offset_top,
+		toast_panel.offset_right - toast_panel.offset_left, toast_panel.offset_bottom - toast_panel.offset_top)
+	get_viewport().size_changed.connect(func() -> void:
+		if toast_panel.visible:
+			_place_toast())
 	_build_save_toast()
 	# Mapa/dia sem cartão, como o resto do HUD de jogo (#122); o botão de sair segue do theme.
 	expedition_bar.add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
@@ -449,6 +461,7 @@ func _show_next_toast() -> void:
 		return
 	toast_label.text = _toast_queue.pop_front()
 	toast_panel.visible = true
+	_place_toast()
 	_toast_token += 1
 	var token: int = _toast_token
 	var tree: SceneTree = get_tree()
@@ -458,6 +471,47 @@ func _show_next_toast() -> void:
 	if not is_inside_tree() or token != _toast_token:
 		return
 	_show_next_toast()
+
+
+## Na expedição o aviso fica no lugar da cena; na Base sobe para o topo, centrado no vão livre
+## entre o que está à esquerda (chips) e à direita (menu Multiplayer), e estreita se faltar espaço.
+func _place_toast() -> void:
+	var home: Rect2 = _toast_home
+	toast_panel.offset_left = home.position.x
+	toast_panel.offset_right = home.end.x
+	toast_panel.offset_top = home.position.y
+	toast_panel.offset_bottom = home.end.y
+	if bool(_session_call(&"is_in_expedition", false)):
+		return
+	var view: Rect2 = toast_panel.get_viewport_rect()
+	var strip_bottom: float = TOAST_BASE_TOP + maxf(home.size.y, toast_panel.get_combined_minimum_size().y)
+	var free_left: float = 0.0
+	var free_right: float = view.size.x
+	for rect: Rect2 in _toast_avoid_rects():
+		if not rect.has_area() or rect.position.y > strip_bottom + SAVE_TOAST_GAP or rect.end.y < TOAST_BASE_TOP:
+			continue
+		if rect.get_center().x < view.size.x * 0.5:
+			free_left = maxf(free_left, rect.end.x + SAVE_TOAST_GAP)
+		else:
+			free_right = minf(free_right, rect.position.x - SAVE_TOAST_GAP)
+	var width: float = minf(home.size.x, free_right - free_left)
+	var center: float = (free_left + free_right) * 0.5 - view.size.x * 0.5
+	toast_panel.offset_left = center - width * 0.5
+	toast_panel.offset_right = center + width * 0.5
+	toast_panel.offset_top = TOAST_BASE_TOP
+	toast_panel.offset_bottom = TOAST_BASE_TOP + home.size.y
+
+
+func _toast_avoid_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for node: Node in get_tree().get_nodes_in_group(MultiplayerMenu.SAVE_NOTICE_GROUP):
+		if node.has_method(&"get_save_notice_rect"):
+			out.append(node.call(&"get_save_notice_rect"))
+	for node: Node in get_tree().get_nodes_in_group(TOAST_AVOID_GROUP):
+		var c: Control = node as Control
+		if c != null and c.is_visible_in_tree():
+			out.append(c.get_global_rect())
+	return out
 
 
 # --- Aviso de save -------------------------------------------------------------

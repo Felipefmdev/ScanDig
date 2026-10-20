@@ -17,7 +17,7 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="Chips" type="VBoxContainer" parent="MarginContainer"]
+[node name="Chips" type="VBoxContainer" parent="MarginContainer" groups=["toast_avoid"]]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
