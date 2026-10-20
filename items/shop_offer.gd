@@ -31,17 +31,18 @@ func _ready() -> void:
 	add_to_group(GROUP)
 	if tool_data == null:
 		return
-	var mesh: MeshInstance3D = MeshInstance3D.new()
-	var box: BoxMesh = BoxMesh.new()
-	box.size = Vector3(0.22, 0.22, 0.22)
-	mesh.mesh = box
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = tool_data.color
-	mesh.material_override = mat
-	mesh.position.y = 0.15
 	if tool_data.world_scene != null:
 		add_child(tool_data.world_scene.instantiate())
 	else:
+		# Caixa só quando não há modelo (#128: antes ficava órfã nas ofertas com world_scene).
+		var mesh: MeshInstance3D = MeshInstance3D.new()
+		var box: BoxMesh = BoxMesh.new()
+		box.size = Vector3(0.22, 0.22, 0.22)
+		mesh.mesh = box
+		var mat: StandardMaterial3D = StandardMaterial3D.new()
+		mat.albedo_color = tool_data.color
+		mesh.material_override = mat
+		mesh.position.y = 0.15
 		add_child(mesh)
 
 	_label = Label3D.new()
