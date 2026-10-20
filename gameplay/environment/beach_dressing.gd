@@ -97,13 +97,13 @@ func _build_camp() -> void:
 			LowPolyMesh.quad(st, a, b, c, d, (a + c) * 0.5 - Vector3.UP, color)
 			LowPolyMesh.quad(st, d, c, b, a, (a + c) * 0.5 + Vector3.UP, color.darkened(0.12))
 			LowPolyMesh.box(st, (a + b) * 0.5 - Vector3.UP * 0.09, Vector3(0.55, 0.18, 0.025), frame.basis, color)
-	# Bancada de triagem baixa ao lado da entrega, dentro da zona já bloqueada a spots.
-	for x: float in [1.7, 3.3]:
-		for z: float in [5.5, 6.0]:
+	# Triagem lateral: corredor frontal da entrega e da banca permanece livre.
+	for x: float in [8.2, 9.8]:
+		for z: float in [6.75, 7.25]:
 			LowPolyMesh.prism(st, _at(x, z), _at(x, z, 0.65), 0.045, 0.04, 5, WOOD)
 	for i: int in 4:
-		LowPolyMesh.box(st, _at(2.5, 5.48 + float(i) * 0.18, 0.69), Vector3(1.9, 0.08, 0.16), Basis.IDENTITY, WOOD.lightened(0.1))
-	_block_box("TriagemCollision", _at(2.5, 5.75, 0.36), Vector3(1.9, 0.72, 0.7))
+		LowPolyMesh.box(st, _at(9.0, 6.73 + float(i) * 0.18, 0.69), Vector3(1.9, 0.08, 0.16), Basis.IDENTITY, WOOD.lightened(0.1))
+	_block_box("TriagemCollision", _at(9.0, 7.0, 0.36), Vector3(1.9, 0.72, 0.7))
 	# Mastro de pano no posto: marco de retorno visível sem outro texto flutuante.
 	_pennant(st, _at(4.8, 5.0), 4.7, TEAL)
 	_lantern(st, _at(4.8, 5.0, 2.25))

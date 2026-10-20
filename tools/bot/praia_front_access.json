@@ -1,0 +1,26 @@
+{
+	"scene": "res://world/map_praia.tscn",
+	"steps": [
+		{"t": 0.3, "set_state": {"team_money": 1000}},
+		{"t": 0.5, "teleport": [5.3, 0.2, -0.85]},
+		{"t": 0.6, "look_at": [6.95, 0.69, -0.85]},
+		{"sleep": 0.5},
+		{"t": 0, "screenshot": "01_loja_frente"},
+		{"t": 0, "tap": "interact"},
+		{"wait_until": "money<1000", "timeout": 5},
+		{"t": 0, "dump": "02_compra_por_e"},
+		{"t": 0, "goto_spot": "nearest", "walk": true, "timeout": 40},
+		{"t": 0, "dig_spot": true, "mode": "careful", "timeout": 30},
+		{"t": 0, "pickup": true, "radius": 4, "timeout": 8},
+		{"wait_until": "deliverable>=1", "timeout": 5},
+		{"t": 0, "teleport": [3.5, 0.2, 8.0]},
+		{"t": 0, "goto_sell": true, "timeout": 15},
+		{"t": 0, "look_at": [3.5, 0.5, 3.5]},
+		{"sleep": 0.5},
+		{"t": 0, "screenshot": "03_entrega_frente"},
+		{"t": 0, "tap": "interact"},
+		{"wait_until": "deliverable==0", "timeout": 5},
+		{"t": 0, "dump": "04_entrega_por_e"},
+		{"t": 0, "quit": true}
+	]
+}
