@@ -143,7 +143,7 @@ func test_victory_and_credits() -> void:
 	assert_eq(_focus(), screen.credits_button)
 	await _action(&"ui_accept")
 	assert_true(screen.credits_view.visible)
-	assert_eq(_focus(), screen.credits_back_button, "créditos: foco em Voltar")
+	assert_eq(_focus(), screen.credits_view.scroll, "créditos: foco na área com rolagem")
 	var cancel: InputEventAction = InputEventAction.new()
 	cancel.action = &"ui_cancel"
 	cancel.pressed = true

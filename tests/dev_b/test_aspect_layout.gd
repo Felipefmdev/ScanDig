@@ -78,6 +78,8 @@ func test_title_and_slots_fit() -> void:
 	await _check_all(title.root_control, "título")
 	title.show_slots("load")
 	await _check_all(title.root_control, "slots")
+	title.show_credits()
+	await _check_all(title.root_control, "créditos do título")
 
 
 func test_settings_tabs_fit() -> void:

@@ -181,7 +181,7 @@ func test_credits_button_swaps_card_view() -> void:
 	screen.credits_button.pressed.emit()
 	assert_true(screen.credits_view.is_visible_in_tree(), "Créditos mostra os créditos")
 	assert_false(screen.summary_view.visible, "e esconde as contagens")
-	assert_string_contains(screen.credits_label.text, VictoryScreen.CREDITS_TEXT)
+	assert_string_contains(screen.credits_label.text, CreditsView.TEAM_TEXT)
 	assert_true(VictoryScreen.is_open(), "Créditos não fecha a tela")
 	screen.credits_back_button.pressed.emit()
 	assert_true(screen.summary_view.is_visible_in_tree(), "Voltar mostra as contagens")

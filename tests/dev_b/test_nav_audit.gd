@@ -133,6 +133,18 @@ func test_title_slot_cards_with_save_folder() -> void:
 		assert_true(back["closed"] and title.main_card.visible, "%s: Esc/B volta ao cartão" % device)
 
 
+func test_title_credits() -> void:
+	var title: TitleScreen = _title()
+	await _frames()
+	title.show_credits()
+	await _frames()
+	assert_eq(_focus(), title.credits_view.scroll, "créditos: foco na área com rolagem")
+	await _assert_nav("créditos do título", title.credits_panel)
+	var back: Dictionary = await UiNavAudit.check_cancel(title.credits_panel, UiNavAudit.PAD)
+	assert_true(back["closed"] and title.main_card.visible, "B volta ao menu")
+	assert_eq(_focus(), title.credits_button)
+
+
 func test_title_settings_every_tab() -> void:
 	var title: TitleScreen = _title()
 	await _frames()

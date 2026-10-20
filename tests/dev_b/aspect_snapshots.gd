@@ -1,10 +1,12 @@
 # QA de proporções de tela (#146): passa as telas principais por 5 resoluções × ui_scale 1.0/1.3,
 # confere o layout por retângulos (layout_audit.gd) e grava as capturas:
-# "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 1280x800 --windowed --script res://tests/dev_b/aspect_snapshots.gd -- [--only=titulo,slots,...] [--res=1280x800,...] [--ui=1.0,1.3] [--no-shots]
-# Com --headless e --no-shots só confere. Telas: titulo, slots, pausa, config_{video,audio,controles,
-# jogabilidade,acessibilidade}, base_{loja,museu,expedicoes,diario,mapa,conquistas}, ver_museu,
-# toast_conquista, vitoria, creditos, hud_praia. Grava .bot_runs/aspect/<WxH>_ui<escala>/<tela>.png e
-# .bot_runs/aspect/report.json ({tela: {combo: [problemas]}}); imprime "LAYOUT <tela> <combo> ok|N".
+# "C:/Godot/Godot_v4.3-stable_win64_console.exe" --path . --resolution 1280x800 --windowed --script res://tests/dev_b/aspect_snapshots.gd -- [--only=titulo,slots,...] [--res=1280x800,...] [--ui=1.0,1.3] [--no-shots] [--lang=en]
+# Com --headless e --no-shots só confere. Telas: titulo, slots, creditos_titulo, creditos_sons, pausa,
+# config_{video,audio,controles,jogabilidade,acessibilidade}, base_{loja,museu,expedicoes,diario,mapa,
+# conquistas}, ver_museu, toast_conquista, vitoria, creditos, hud_praia. Grava
+# .bot_runs/aspect/<WxH>_ui<escala>/<tela>.png (com --lang=en, <tela>_en.png: o idioma muda só no
+# TranslationServer, sem gravar o settings) e .bot_runs/aspect/report.json ({tela: {combo:
+# [problemas]}}); imprime "LAYOUT <tela> <combo> ok|N".
 # Save isolado (use_test_save_dir).
 extends SceneTree
 
@@ -19,6 +21,8 @@ var _only: PackedStringArray = []
 var _resolutions: Array[Vector2i] = RESOLUTIONS.duplicate()
 var _scales: Array[float] = UI_SCALES.duplicate()
 var _shots: bool = true
+## Sufixo das capturas ("_en" com --lang=en).
+var _lang_suffix: String = ""
 var _report: Dictionary = {}
 var _total: int = 0
 ## Avisos que não podem cruzar painel de nenhuma camada (layout_audit `floating`).
@@ -57,11 +61,14 @@ func _run() -> void:
 				_scales.append(s.to_float())
 		elif arg == "--no-shots":
 			_shots = false
+		elif arg.begins_with("--lang="):
+			TranslationServer.set_locale(arg.trim_prefix("--lang="))
+			_lang_suffix = "_" + arg.trim_prefix("--lang=")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	SaveManager.instance.use_test_save_dir("aspect_snapshots")
 	GameState.instance.reset_state()
 	_campaign_state()
-	if _wants("titulo") or _wants("slots"):
+	if _wants("titulo") or _wants("slots") or _wants("creditos_titulo") or _wants("creditos_sons"):
 		await _title()
 	change_scene_to_file("res://world/lobby_base.tscn")
 	await _frames(40)
@@ -130,7 +137,7 @@ func _sweep(screen: String, prepare: Callable = Callable(), ignore: Array[NodePa
 				await RenderingServer.frame_post_draw
 				var dir: String = OUT_DIR + combo + "/"
 				DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
-				root.get_texture().get_image().save_png(ProjectSettings.globalize_path(dir + screen + ".png"))
+				root.get_texture().get_image().save_png(ProjectSettings.globalize_path(dir + screen + _lang_suffix + ".png"))
 
 
 func _title() -> void:
@@ -149,6 +156,14 @@ func _title() -> void:
 	title.show_slots("load")
 	await _frames(20)
 	await _sweep("slots")
+	title.show_credits()
+	await _frames(10)
+	await _sweep("creditos_titulo")
+	# Rolada até "Sons (CC0)": a lista de autores.
+	var view: CreditsView = title.credits_view
+	await _sweep("creditos_sons", func() -> void:
+		await _frames(2)
+		view.scroll.scroll_vertical = int((view.find_child("SoundsTitle", true, false) as Control).position.y))
 	current_scene = null
 	title.queue_free()
 	await _frames(2)
