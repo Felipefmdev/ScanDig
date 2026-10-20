@@ -2,8 +2,8 @@ class_name TitleScreen
 extends Node3D
 
 ## Tela inicial (#100), a main scene do projeto: Continuar (só com save), Novo jogo, Carregar,
-## Multiplayer, Configurações e Sair, sobre uma vista lenta da base (fundo 3D só de enfeite: sem
-## jogador, rede nem spawners). Solo ativa o slot, aplica e abre a base sem o MultiplayerMenu;
+## Multiplayer, Configurações, Créditos (#149) e Sair, sobre uma vista lenta da base (fundo 3D
+## só de enfeite: sem jogador, rede nem spawners). Solo ativa o slot, aplica e abre a base sem o MultiplayerMenu;
 ## Multiplayer abre a base com ele, usando o slot escolhido. Com --bot=, --script/-s (GUT, testes,
 ## capturas) a tela é pulada e a base abre como antes.
 
@@ -48,7 +48,11 @@ var new_game_button: Button = null
 var load_button: Button = null
 var coop_button: Button = null
 var settings_button: Button = null
+var credits_button: Button = null
 var quit_button: Button = null
+## Créditos (#149): a mesma CreditsView da vitória, num cartão no lugar do principal.
+var credits_panel: PanelContainer = null
+var credits_view: CreditsView = null
 var slots_panel: PanelContainer = null
 var slots_title: Label = null
 var slot_buttons: Array[Button] = []
@@ -156,6 +160,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		settings_menu.call(&"_on_back_pressed")
 	elif slots_panel.visible:
 		show_main()
+	elif credits_panel.visible:
+		_close_credits()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -168,6 +174,7 @@ func show_main() -> void:
 	slots_panel.visible = false
 	confirm_panel.visible = false
 	settings_menu.visible = false
+	credits_panel.visible = false
 	main_card.visible = true
 	_focus_first([continue_button, new_game_button])
 
@@ -193,6 +200,21 @@ func show_settings() -> void:
 	settings_menu.focus_first()
 
 
+func show_credits() -> void:
+	main_card.visible = false
+	slots_panel.visible = false
+	confirm_panel.visible = false
+	settings_menu.visible = false
+	credits_panel.visible = true
+	credits_view.focus_start()
+
+
+## Voltar (ou Esc/B) dos créditos: o foco volta ao botão Créditos.
+func _close_credits() -> void:
+	show_main()
+	credits_button.grab_focus()
+
+
 ## Continuar só aparece com um save válido; o foco vai para o primeiro botão visível.
 func refresh() -> void:
 	var save: SaveManager = _save()
@@ -200,7 +222,7 @@ func refresh() -> void:
 	if continue_button.visible:
 		var summary: Dictionary = save.get_slot_summary(save.last_used_slot())
 		continue_button.tooltip_text = _slot_line(summary)
-	_link_focus([continue_button, new_game_button, load_button, coop_button, settings_button, quit_button])
+	_link_focus([continue_button, new_game_button, load_button, coop_button, settings_button, credits_button, quit_button])
 
 
 ## Idioma trocado (#131): as linhas dos slots e a dica do Continuar são montadas por código.
@@ -470,8 +492,9 @@ func _build() -> void:
 	load_button = _button("Carregar", &"", "load")
 	coop_button = _button("Multiplayer", &"", "multiplayer")
 	settings_button = _button("Configurações", &"", "gear")
+	credits_button = _button("Créditos", &"", "heart")
 	quit_button = _button("Sair", &"DangerButton", "door")
-	for button: Button in [continue_button, new_game_button, load_button, coop_button, settings_button, quit_button]:
+	for button: Button in [continue_button, new_game_button, load_button, coop_button, settings_button, credits_button, quit_button]:
 		box.add_child(button)
 	main_card = _card(box)
 	main_card.name = "MainCard"
@@ -541,6 +564,13 @@ func _build() -> void:
 	message_label.visible = false
 	stack.add_child(message_label)
 
+	credits_view = CreditsView.new()
+	credits_view.back_pressed.connect(_close_credits)
+	credits_panel = _card(credits_view)
+	credits_panel.name = "CreditsPanel"
+	credits_panel.visible = false
+	stack.add_child(credits_panel)
+
 	settings_menu = SettingsMenu.new()
 	settings_menu.name = "SettingsMenu"
 	settings_menu.visible = false
@@ -567,6 +597,7 @@ func _build() -> void:
 	load_button.pressed.connect(show_slots.bind("load"))
 	coop_button.pressed.connect(show_slots.bind("coop"))
 	settings_button.pressed.connect(show_settings)
+	credits_button.pressed.connect(show_credits)
 	quit_button.pressed.connect(func() -> void: get_tree().quit())
 
 

@@ -7,7 +7,7 @@ extends CanvasLayer
 ## Mostra Peças do museu, Peças intactas (#93), Fragmentos do mapa (#115), Segredos e Diário, ao
 ## lado as estatísticas da campanha (#141: GameState.stats, tempo de jogo e conquistas) e tem
 ## os botões "Continuar explorando" e "Créditos" (o mesmo
-## cartão troca para os créditos; "Voltar" ou Esc volta às contagens). Enquanto está aberta,
+## cartão troca para a CreditsView, com os sons CC0 #149; "Voltar" ou Esc volta às contagens). Enquanto está aberta,
 ## o player não se mexe (is_settings_open) e o menu de pausa não abre. Fecha na troca de cena.
 ## Autoload CoreVictoryScreen, camada 46: acima da pausa (45), abaixo da SessionUI (50) para o
 ## carregamento cobrir.
@@ -25,9 +25,6 @@ const CAMPAIGN_ROWS: Array[Array] = [
 	["digs", "Pazadas"], ["dig_depth_cm", "Profundidade escavada"],
 	["play_time", "Tempo de jogo"], ["achievements", "Conquistas"],
 ]
-const CREDITS_TITLE: String = "— CRÉDITOS —"
-## Fonte única dos créditos (veio do overlay do gameplay/environment/crater_altar.gd).
-const CREDITS_TEXT: String = "Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral\nBroca (Dev_Player) — Controle em 1ª Pessoa, Ferramentas, Terrenos e Segredos\nSonda (Dev_Enemies) — Inteligência Artificial, Inimigos e Chefes\nDev B — Sistemas Core, Interface, HUD e Multiplayer Cooperativo\nFelipe — Concepção, Arte Low-Poly Toon e Direção Criativa"
 
 static var instance: VictoryScreen = null
 
@@ -45,7 +42,7 @@ var credits_button: Button = null
 var credits_back_button: Button = null
 ## Vistas do mesmo cartão: contagens (padrão ao abrir) e créditos.
 var summary_view: Control = null
-var credits_view: Control = null
+var credits_view: CreditsView = null
 ## Foco antes de abrir (#135), devolvido ao fechar.
 var _focus_before: Control = null
 var credits_label: Label = null
@@ -161,8 +158,7 @@ func close() -> void:
 func show_credits() -> void:
 	summary_view.visible = false
 	credits_view.visible = true
-	if credits_back_button.is_visible_in_tree():
-		credits_back_button.grab_focus()
+	credits_view.focus_start()
 
 
 func show_summary() -> void:
@@ -294,32 +290,12 @@ func _build() -> void:
 	views.add_child(credits_view)
 
 
-func _build_credits() -> VBoxContainer:
-	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 14)
-	var title: Label = Label.new()
-	title.text = CREDITS_TITLE
-	title.theme_type_variation = &"TitleLabel"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
-	box.add_child(title)
-	box.add_child(HSeparator.new())
-	credits_label = Label.new()
-	credits_label.text = CREDITS_TEXT
-	credits_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	credits_label.add_theme_color_override(&"font_color", UiPalette.INK)
-	credits_label.add_theme_constant_override(&"line_spacing", 6)
-	box.add_child(credits_label)
-	box.add_child(HSeparator.new())
-	credits_back_button = Button.new()
-	credits_back_button.text = "Voltar"
-	credits_back_button.theme_type_variation = &"PrimaryButton"
-	credits_back_button.custom_minimum_size = Vector2(320, 48)
-	credits_back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	credits_back_button.focus_mode = Control.FOCUS_ALL
-	credits_back_button.pressed.connect(show_summary)
-	box.add_child(credits_back_button)
-	return box
+func _build_credits() -> CreditsView:
+	var view: CreditsView = CreditsView.new()
+	credits_label = view.team_label
+	credits_back_button = view.back_button
+	view.back_pressed.connect(show_summary)
+	return view
 
 
 ## Coluna com título e grade (columns = 2 × pares rótulo/valor).
