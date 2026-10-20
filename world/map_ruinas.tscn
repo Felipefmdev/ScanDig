@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3 uid="uid://cf54jvjy1668h"]
+[gd_scene load_steps=41 format=3 uid="uid://cf54jvjy1668h"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://gameplay/enemies/boss/boss_altar.gd" id="b_boss_altar"]
 [ext_resource type="PackedScene" path="res://gameplay/enemies/boss/ancient_guardian.tscn" id="b_guardian_scene"]
 [ext_resource type="Script" path="res://gameplay/environment/decoration_scatter.gd" id="deco_scatter"]
+[ext_resource type="Script" path="res://gameplay/environment/night_landmarks.gd" id="night_landmarks"]
 [ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="d_detector_spawn"]
 [ext_resource type="Script" path="res://gameplay/environment/grass_field.gd" id="env_grass"]
 [ext_resource type="Script" path="res://gameplay/environment/ruins_layout.gd" id="env_layout"]
@@ -284,3 +285,7 @@ label_text = "O guardião dorme debaixo das lajes... [cavar]"
 script = ExtResource("deco_scatter")
 theme = "ruinas"
 seed_value = 303
+
+[node name="NightLandmarks" type="Node3D" parent="."]
+script = ExtResource("night_landmarks")
+theme = "ruinas"

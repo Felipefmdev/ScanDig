@@ -1,0 +1,30 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{"t":0.3,"set_state":{"unlocked_maps":["praia","campo","ruinas","geleira"],"defeated_bosses":["king_crab","giant_mole","ancient_guardian"],"upgrade_levels":{"detector":5},"team_money":5000}},
+		{"t":1,"start_expedition":"praia","night":true},
+		{"sleep":4},
+		{"t":0,"teleport":[0,0.3,0]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"praia_chegada"}, {"t":0,"dump":"praia_chegada"},
+		{"t":0,"teleport":[14,0.5,12]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"praia_retorno"}, {"t":0,"dump":"praia_retorno"},
+		{"t":0,"call":"CoreSessionUI","method":"request_return_to_base"}, {"wait_until":"in_expedition==0","timeout":40}, {"sleep":3}, {"t":0,"ui_press":"SummaryCloseButton"},
+		{"t":0,"start_expedition":"campo","night":true}, {"sleep":4},
+		{"t":0,"teleport":[0,0.3,0]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"campo_chegada"}, {"t":0,"dump":"campo_chegada"},
+		{"t":0,"teleport":[14,0.5,12]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"campo_retorno"}, {"t":0,"dump":"campo_retorno"},
+		{"t":0,"call":"CoreSessionUI","method":"request_return_to_base"}, {"wait_until":"in_expedition==0","timeout":40}, {"sleep":3}, {"t":0,"ui_press":"SummaryCloseButton"},
+		{"t":0,"start_expedition":"ruinas","night":true}, {"sleep":4},
+		{"t":0,"teleport":[0,0.3,0]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"ruinas_chegada"}, {"t":0,"dump":"ruinas_chegada"},
+		{"t":0,"teleport":[14,0.5,12]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"ruinas_retorno"}, {"t":0,"dump":"ruinas_retorno"},
+		{"t":0,"call":"CoreSessionUI","method":"request_return_to_base"}, {"wait_until":"in_expedition==0","timeout":40}, {"sleep":3}, {"t":0,"ui_press":"SummaryCloseButton"},
+		{"t":0,"start_expedition":"geleira","night":true}, {"sleep":4},
+		{"t":0,"teleport":[0,0.3,0]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"geleira_chegada"}, {"t":0,"dump":"geleira_chegada"},
+		{"t":0,"teleport":[14,0.5,12]}, {"t":0,"look_at":[4.5,1.2,4.5]}, {"sleep":1},
+		{"t":0,"screenshot":"geleira_retorno"}, {"t":0,"dump":"geleira_retorno"}, {"t":0,"quit":true}
+	]
+}
