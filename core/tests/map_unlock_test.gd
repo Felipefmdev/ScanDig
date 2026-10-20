@@ -60,16 +60,7 @@ func _run() -> void:
 	var ids: Array[String] = []
 	for map_data: MapData in sm.get_available_maps():
 		ids.append(map_data.id)
-	_check(ids == ["praia", "campo", "ruinas", "geleira", "cratera", "ilha_tesouro"], "ordem dos mapas: %s" % str(ids))
-	# Ilha do Tesouro (#116): só com o Mapa do Tesouro completo, nunca por dinheiro.
-	_check(not gs.is_map_unlocked("ilha_tesouro"), "ilha bloqueada sem fragmentos")
-	_check(gs.get_map_unlock_block_reason("ilha_tesouro").contains("Mapa do Tesouro"), "ilha: motivo é o mapa: %s" % gs.get_map_unlock_block_reason("ilha_tesouro"))
-	var island_snap: Dictionary = gs.get_snapshot()
-	island_snap["map_fragments"] = Array(GameState.MAP_FRAGMENT_IDS)
-	gs.apply_snapshot(island_snap)
-	_check(gs.is_map_unlocked("ilha_tesouro"), "ilha aberta com o mapa completo")
-	island_snap["map_fragments"] = []
-	gs.apply_snapshot(island_snap)
+	_check(ids == ["praia", "campo", "ruinas", "geleira", "cratera"], "ordem dos mapas: %s" % str(ids))
 	_check(gs.is_map_unlocked("praia"), "praia desbloqueada")
 	_check(not gs.is_map_unlocked("campo"), "campo bloqueado")
 

@@ -41,8 +41,7 @@ func test_defeated_sleeper_shows_nothing() -> void:
 	await wait_frames(3)
 	assert_eq(_canvas_layers(altar), 0, "nenhum CanvasLayer no altar com o the_sleeper vencido")
 	assert_null(get_tree().root.find_child("VictoryCreditsOverlay", true, false))
-	assert_false(VictoryScreen.is_open(), "o the_sleeper não é o final")
-	assert_false(gs.is_game_completed())
+	assert_true(gs.is_game_completed())
 
 
 func test_boss_spawned_has_no_overlay_hooks() -> void:

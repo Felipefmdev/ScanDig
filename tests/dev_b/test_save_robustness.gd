@@ -75,7 +75,7 @@ func _full_save(money: int) -> Dictionary:
 		"discovered_items": ["alianca_ouro", "moeda_antiga"], "upgrade_levels": {"detector": 1},
 		"unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"], "completed_quests": [],
 		"found_secrets": [], "seen_creatures": ["crab"], "intact_items": ["alianca_ouro"],
-		"rare_items": [], "map_fragments": [], "built_shortcuts": [], "game_completed": false,
+		"rare_items": [], "built_shortcuts": [], "game_completed": false,
 	}
 
 
@@ -185,7 +185,7 @@ func test_old_versions_load_with_defaults() -> void:
 func test_current_version_missing_new_fields() -> void:
 	var save: SaveManager = SaveManager.instance
 	var data: Dictionary = _full_save(900)
-	for key: String in ["rare_items", "map_fragments", "intact_items", "seen_creatures", "built_shortcuts", "game_completed", "saved_at", "current_day", "upgrade_levels"]:
+	for key: String in ["rare_items", "intact_items", "seen_creatures", "built_shortcuts", "game_completed", "saved_at", "current_day", "upgrade_levels"]:
 		data.erase(key)
 	_write(BASE, data)
 	assert_eq(save.continue_game(), OK)

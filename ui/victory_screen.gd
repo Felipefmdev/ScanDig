@@ -2,9 +2,9 @@ class_name VictoryScreen
 extends CanvasLayer
 
 ## Tela "Jogo concluído" (#81). Abre só na vitória ao vivo (GameState.game_victory: o chefe final
-## GameState.FINAL_BOSS_ID, o Colosso do Tesouro da Ilha, vencido nesta sessão; #115). Carregar um
+## GameState.FINAL_BOSS_ID vencido nesta sessão). Carregar um
 ## save concluído, entrar no meio ou reconectar não abre.
-## Mostra Peças do museu, Peças intactas (#93), Fragmentos do mapa (#115), Segredos e Diário, ao
+## Mostra Peças do museu, Peças intactas (#93), Segredos e Diário, ao
 ## lado as estatísticas da campanha (#141: GameState.stats, tempo de jogo e conquistas) e tem
 ## os botões "Continuar explorando" e "Créditos" (o mesmo
 ## cartão troca para a CreditsView, com os sons CC0 #149; "Voltar" ou Esc volta às contagens). Enquanto está aberta,
@@ -15,7 +15,7 @@ extends CanvasLayer
 signal open_changed(open: bool)
 
 const TITLE_TEXT: String = "Jogo concluído"
-const SUBTITLE_TEXT: String = "O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.\nLeve o Ídolo de Ouro, o tesouro principal, ao Museu.\nAinda há peças, segredos e bichos por achar."
+const SUBTITLE_TEXT: String = "O Que Dorme foi vencido no altar da Cratera.\nLeve o Ídolo de Ouro, o tesouro principal, ao Museu.\nAinda há peças, segredos e bichos por achar."
 ## Linhas "Campanha" (#141): chave -> rótulo. Chaves de Achievements.STAT_KEYS vêm do
 ## GameState.stats; "play_time" é o tempo do save (só o host sabe) e "achievements" a contagem.
 const CAMPAIGN_ROWS: Array[Array] = [
@@ -32,7 +32,6 @@ var root_control: Control = null
 var card: PanelContainer = null
 var items_value: Label = null
 var intact_value: Label = null
-var fragments_value: Label = null
 var secrets_value: Label = null
 var creatures_value: Label = null
 ## Estatísticas da campanha (#141): chave de CAMPAIGN_ROWS -> Label do valor.
@@ -176,7 +175,6 @@ func refresh() -> void:
 	items_value.text = "%d / %d" % [gs.discovered_items.size(), gs.get_total_catalog_items()]
 	var intact: Variant = gs.get(&"intact_items")
 	intact_value.text = "%d / %d" % [(intact as Array).size() if intact is Array else 0, gs.get_total_catalog_items()]
-	fragments_value.text = "%d / %d" % [gs.map_fragments.size(), GameState.MAP_FRAGMENT_IDS.size()]
 	secrets_value.text = "%d / %d" % [gs.found_secrets.size(), GameState.SECRETS.size()]
 	creatures_value.text = "%d / %d" % [gs.seen_creatures.size(), GameState.CREATURES.size()]
 	for row: Array in CAMPAIGN_ROWS:
@@ -258,7 +256,6 @@ func _build() -> void:
 	var grid: GridContainer = _stats_column(columns, "Coleção", 2)
 	items_value = _count_row(grid, "Peças do museu")
 	intact_value = _count_row(grid, "Peças intactas")
-	fragments_value = _count_row(grid, "Fragmentos do mapa")
 	secrets_value = _count_row(grid, "Segredos")
 	creatures_value = _count_row(grid, "Diário de campo")
 	columns.add_child(VSeparator.new())

@@ -54,9 +54,7 @@ func _run() -> void:
 	gs.load_snapshot({"team_money": campo_data.unlock_cost + 1300, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(3)
 
-	_check(map_list.item_count == 6, "6 mapas na lista: %d" % map_list.item_count)
-	var island_row: String = map_list.get_item_text(5)
-	_check(island_row.contains("🔒"), "item 5 Ilha do Tesouro bloqueada: %s" % island_row)
+	_check(map_list.item_count == 5, "5 mapas na lista: %d" % map_list.item_count)
 	var row3: String = map_list.get_item_text(3)
 	_check(row3.contains("🔒 Geleira Eterna"), "item 3 Geleira bloqueada: %s" % row3)
 	_check(map_list.get_item_text(4).contains("Cratera"), "item 4 Cratera: %s" % map_list.get_item_text(4))

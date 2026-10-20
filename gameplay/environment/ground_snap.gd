@@ -46,6 +46,4 @@ func _height(x: float, z: float) -> float:
 			return GlacierTerrain.height_at(x, z)
 		4:
 			return CraterTerrain.height_at(x, z)
-		5:
-			return IslandTerrain.height_at(x, z)
 	return BeachTerrain.height_at(x, z)

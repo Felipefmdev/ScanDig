@@ -19,7 +19,7 @@ const STAT_KEYS: Array[String] = ["expeditions", "night_expeditions", "flawless_
 	"items_sold", "items_donated", "money_earned", "creatures_defeated", "digs", "dig_depth_cm"]
 ## Listas do GameState aceitas em "count"/"all".
 const LISTS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests",
-	"found_secrets", "seen_creatures", "intact_items", "rare_items", "map_fragments", "built_shortcuts"]
+	"found_secrets", "seen_creatures", "intact_items", "rare_items", "built_shortcuts"]
 
 static var instance: Achievements = null
 static var _defs: Array[Dictionary] = []
@@ -202,14 +202,12 @@ static func all_ids_of(list_name: String) -> Array[String]:
 		"completed_quests":
 			for quest: String in GameState.QUESTS.keys():
 				out.append(quest)
-		"map_fragments":
-			out = GameState.MAP_FRAGMENT_IDS.duplicate()
 		"unlocked_maps":
 			out = paid_map_ids()
 	return out
 
 
-## Mapas que se compram (unlock_cost > 0, sem os que abrem pelo Mapa do Tesouro), na ordem do jogo.
+## Mapas que se compram (unlock_cost > 0), na ordem do jogo.
 static func paid_map_ids() -> Array[String]:
 	var out: Array[String] = []
 	for map_id: String in SessionManager.MAP_ORDER:
@@ -217,7 +215,7 @@ static func paid_map_ids() -> Array[String]:
 		if not ResourceLoader.exists(path):
 			continue
 		var map_data: MapData = load(path) as MapData
-		if map_data != null and map_data.unlock_cost > 0 and not map_data.requires_map_fragments:
+		if map_data != null and map_data.unlock_cost > 0:
 			out.append(map_id)
 	return out
 

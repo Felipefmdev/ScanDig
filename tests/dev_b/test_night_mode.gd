@@ -100,8 +100,6 @@ func test_table_has_night_option_per_unlocked_map() -> void:
 	assert_string_contains(ui.depart_btn.text, "noite")
 	_select_map(ui, "campo")
 	assert_false(ui.night_check.visible, "Campo ainda bloqueado: sem opção")
-	_select_map(ui, "ilha_tesouro")
-	assert_false(ui.night_check.visible, "Ilha não tem noite")
 	_select_map(ui, "praia")
 	assert_true(ui.night_check.button_pressed, "a escolha fica por mapa")
 	GameState.instance.load_snapshot({"unlocked_maps": ["praia", "campo"]})
@@ -124,9 +122,9 @@ func test_start_carries_night_and_lobby_clears_it() -> void:
 
 
 func test_night_ignored_for_map_without_night() -> void:
-	GameState.instance.load_snapshot({"unlocked_maps": ["praia", "ilha_tesouro"]})
-	sm._rpc_enter_map("ilha_tesouro", true)
-	assert_false(SessionManager.is_night(), "Ilha não tem noite")
+	GameState.instance.load_snapshot({"unlocked_maps": ["praia"]})
+	sm._rpc_enter_map("mapa_sem_noite", true)
+	assert_false(SessionManager.is_night(), "Mapa sem config não tem noite")
 
 
 func test_late_client_sync_receives_night() -> void:

@@ -13,6 +13,10 @@ var _player: Player = null
 
 
 func before_each() -> void:
+	if VictoryScreen.instance != null and VictoryScreen.is_open():
+		VictoryScreen.instance.close()
+	if PauseMenu.instance != null and PauseMenu.is_open():
+		PauseMenu.instance.close()
 	_player = PLAYER_SCENE.instantiate() as Player
 	add_child_autofree(_player)
 

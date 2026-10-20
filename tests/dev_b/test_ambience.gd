@@ -36,7 +36,7 @@ func _assert_loop(path: String) -> void:
 
 func test_every_map_has_a_looping_ambience() -> void:
 	var ids: Array[String] = _map_ids()
-	assert_gte(ids.size(), 6, "os seis mapas")
+	assert_gte(ids.size(), 5, "os cinco mapas")
 	for id: String in ids:
 		assert_true(AmbienceManager.AMBIENT_BY_MAP.has(id), "ambiente de %s" % id)
 		_assert_loop(AmbienceManager.ambient_path(id, false))
@@ -51,7 +51,7 @@ func test_every_map_has_a_looping_ambience() -> void:
 func test_night_variant_and_scene_parsing() -> void:
 	assert_ne(AmbienceManager.ambient_path("campo", true), AmbienceManager.ambient_path("campo", false), "grilos à noite")
 	assert_eq(AmbienceManager.ambient_path("ruinas", true), AmbienceManager.ambient_path("ruinas", false), "sem variante: o de dia")
-	assert_eq(AmbienceManager.map_id_from_scene("res://world/map_ilha_tesouro.tscn"), "ilha_tesouro")
+	assert_eq(AmbienceManager.map_id_from_scene("res://world/map_cratera.tscn"), "cratera")
 	assert_eq(AmbienceManager.map_id_from_scene("res://world/lobby_base.tscn"), "")
 
 

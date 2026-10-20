@@ -70,9 +70,7 @@ var _purchase_timer: SceneTreeTimer = null
 var _pending_unlock: bool = false
 var _unlock_timer: SceneTreeTimer = null
 
-# Mapa do Tesouro (#112): aba criada em runtime (sem mexer na cena).
-const TREASURE_TAB_TITLE: String = "Mapa do Tesouro"
-## Rótulos curtos das abas (nome do nó -> rótulo): com os 5 nomes completos a TabBar passava
+## Rótulos curtos das abas (nome do nó -> rótulo): com os nomes completos a TabBar passava
 ## da largura da Base e aparecia a seta, com a Loja fora da vista. O nome do nó (usado nos
 ## caminhos do _resolve_node e no ui_tab dos bots) fica igual e vira a dica (tooltip) da aba.
 const TAB_SHORT_TITLES: Dictionary = {
@@ -80,15 +78,10 @@ const TAB_SHORT_TITLES: Dictionary = {
 	"Museu de Achados": "Museu",
 	"Expedições": "Expedições",
 	"Diário": "Diário",
-	TREASURE_TAB_TITLE: "Mapa",
 	AchievementsTab.TAB_NAME: "Conquistas",
 }
 const MUSEUM_DONE_MARK: String = " ★"
-const TREASURE_MAX_HINTS: int = 3
-var _treasure_count_label: Label = null
-var _treasure_scroll: TreasureMapScroll = null
-var _treasure_hints_label: Label = null
-## Aba Conquistas (#141), também criada em runtime.
+## Aba Conquistas (#141), criada em runtime.
 var achievements_tab: AchievementsTab = null
 
 ## Cor das linhas de mapas que ainda não podem ser jogados.
@@ -129,7 +122,6 @@ func _ready() -> void:
 	_setup_museum_controls()
 	# A loja já usa o CoreSession (nome dos mapas) no primeiro refresh.
 	_session = get_node_or_null(SESSION_PATH)
-	_build_treasure_tab()
 	_build_achievements_tab()
 	_wrap_pages_in_scroll()
 	_apply_tab_titles()
@@ -158,7 +150,6 @@ func _notification(what: int) -> void:
 		_refresh_shop_buttons()
 		_refresh_museum_display()
 		_refresh_secrets_label()
-		_refresh_treasure_map()
 		_refresh_journal_display()
 
 
@@ -616,7 +607,6 @@ func _resolve_game_state() -> void:
 	_refresh_secrets_label()
 	_refresh_shop_buttons()
 	_refresh_journal_display()
-	_refresh_treasure_map()
 
 
 func _connect_game_state_signal(signal_name: StringName, callable: Callable) -> void:
@@ -1112,7 +1102,6 @@ func _on_creature_discovered(_kind: String) -> void:
 func _on_state_synced() -> void:
 	_refresh_secrets_label()
 	_refresh_journal_display()
-	_refresh_treasure_map()
 
 
 func _on_state_updated(_amount: int) -> void:
@@ -1152,54 +1141,6 @@ func _build_achievements_tab() -> void:
 	tab_container.add_child(achievements_tab)
 
 
-# --- Mapa do Tesouro (#112) ---------------------------------------------------
-
-func _build_treasure_tab() -> void:
-	if tab_container == null or tab_container.has_node(TREASURE_TAB_TITLE):
-		return
-	var page: VBoxContainer = VBoxContainer.new()
-	page.name = TREASURE_TAB_TITLE
-	page.add_theme_constant_override(&"separation", 8)
-	_treasure_count_label = Label.new()
-	_treasure_count_label.name = "TreasureCountLabel"
-	page.add_child(_treasure_count_label)
-	_treasure_scroll = TreasureMapParchment.new()
-	_treasure_scroll.name = "TreasureMapScroll"
-	_treasure_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	page.add_child(_treasure_scroll)
-	_treasure_hints_label = Label.new()
-	_treasure_hints_label.name = "TreasureHintsLabel"
-	_treasure_hints_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	page.add_child(_treasure_hints_label)
-	tab_container.add_child(page)
-	_refresh_treasure_map()
-
-
-func _refresh_treasure_map() -> void:
-	if _treasure_scroll == null:
-		return
-	var found: Array[String] = []
-	if _game_state != null:
-		found = _game_state.map_fragments.duplicate()
-	_treasure_scroll.found = found
-	var total: int = GameState.MAP_FRAGMENT_IDS.size()
-	if found.size() >= total:
-		_treasure_count_label.text = tr("🗺️ Mapa completo! %d/%d fragmentos — a Ilha do Tesouro espera pela equipe.") % [found.size(), total]
-	else:
-		_treasure_count_label.text = tr("🗺️ Fragmentos do mapa:") + UiFormat.NBSP + "%d/%d" % [found.size(), total]
-	# Só as próximas dicas: a Base tem a altura da maior aba e tem de caber em 1152x648.
-	var hints: PackedStringArray = []
-	var missing: int = 0
-	for id: String in GameState.MAP_FRAGMENT_IDS:
-		if not found.has(id):
-			missing += 1
-			if hints.size() < TREASURE_MAX_HINTS:
-				hints.append("• " + tr(str(GameState.MAP_FRAGMENTS[id]["hint"])))
-	if missing > hints.size():
-		hints.append(tr("… e mais %d por descobrir.") % (missing - hints.size()))
-	_treasure_hints_label.text = tr("Onde procurar:") + "\n" + "\n".join(hints) if not hints.is_empty() else ""
-
-
 # --- Diário de Campo (#86) ----------------------------------------------------
 
 const CREATURE_ORDER: Array[String] = [
@@ -1229,7 +1170,7 @@ const CREATURE_FIELD_META: Dictionary = {
 const BOSS_ORDER: Array[String] = [
 	"king_crab", "giant_mole", "ancient_guardian", "frozen_mammoth",
 	"octopus", "crow_king", "scarecrow", "idol_mummy",
-	"cave_yeti", "ancient_walrus", "the_sleeper", "the_echo", "gold_colossus",
+	"cave_yeti", "ancient_walrus", "the_sleeper", "the_echo",
 ]
 
 const BOSS_FIELD_META: Dictionary = {
@@ -1245,7 +1186,6 @@ const BOSS_FIELD_META: Dictionary = {
 	"ancient_walrus": {"name": "Morsa Anciã", "region": "Geleira", "color": Color(0.58, 0.44, 0.36)},
 	"the_sleeper": {"name": "O Adormecido", "region": "Cratera", "color": Color(0.88, 0.32, 0.52)},
 	"the_echo": {"name": "O Eco", "region": "Cratera", "color": Color(0.38, 0.90, 0.78)},
-	"gold_colossus": {"name": "Colosso do Tesouro", "region": "Ilha do Tesouro", "color": Color(0.96, 0.76, 0.28)},
 }
 
 var _journal_slot_labels: Dictionary = {}

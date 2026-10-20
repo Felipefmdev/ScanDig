@@ -39,8 +39,6 @@ func _ready() -> void:
 	_net_spawner.spawn_path = NodePath("..")
 	_net_spawner.spawn_function = _create_spot
 	add_child(_net_spawner)
-	# Aviso dos fragmentos do Mapa do Tesouro (#112): o spawner existe em todos os mapas e peers.
-	add_child(FragmentNotice.new())
 	if not multiplayer.is_server():
 		return
 	if map_data == null:
@@ -180,19 +178,6 @@ func _is_position_valid(pos: Vector3) -> bool:
 func _on_spot_revealed(_item: ItemData, _final_value: int, _final_integrity: float, spot: BuriedSpot) -> void:
 	_active_spots.erase(spot)
 	_schedule_respawn()
-	if is_instance_valid(spot) and spot.is_rare_variant:
-		_award_dig_fragment()
-
-
-## Mapa do Tesouro (#112): a escavação profunda rara (achado variante rara) deste mapa traz o
-## fragmento com origem "dig:<mapa>", se ainda faltar. O GameState do host valida.
-func _award_dig_fragment() -> void:
-	if map_data == null or GameState.instance == null:
-		return
-	for id: String in GameState.MAP_FRAGMENT_IDS:
-		if str(GameState.MAP_FRAGMENTS[id]["source"]) == "dig:" + map_data.id 				and not GameState.instance.has_map_fragment(id):
-			GameState.instance.request_award_fragment(id)
-			return
 
 
 func _schedule_respawn() -> void:

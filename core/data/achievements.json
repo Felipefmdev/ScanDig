@@ -7,7 +7,7 @@
 		"type stat: estatística acumulada 'stat' (GameState.stats) >= target. 'scale' opcional só muda o número mostrado (ex.: cm -> m).",
 		"type museum: % do catálogo doado ao Museu >= target.",
 		"type count: tamanho da lista 'list' do GameState >= target (ex.: rare_items).",
-		"type all: a lista 'list' tem todos os ids possíveis (defeated_bosses, found_secrets, seen_creatures, completed_quests, map_fragments, unlocked_maps).",
+		"type all: a lista 'list' tem todos os ids possíveis (defeated_bosses, found_secrets, seen_creatures, completed_quests, unlocked_maps).",
 		"type boss: o chefe 'boss' foi vencido; 'final' = GameState.FINAL_BOSS_ID (o chefe final, seja qual for)."
 	],
 	"achievements": [
@@ -43,8 +43,6 @@
 			"name": "Caçador de segredos", "desc": "Encontre todos os segredos."},
 		{"id": "all_quests", "icon": "backpack", "type": "all", "list": "completed_quests",
 			"name": "Amigo de todos", "desc": "Conclua todas as missões dos moradores."},
-		{"id": "treasure_map", "icon": "map", "type": "all", "list": "map_fragments",
-			"name": "O mapa inteiro", "desc": "Junte todos os fragmentos do Mapa do Tesouro."},
 		{"id": "all_maps", "icon": "map", "type": "all", "list": "unlocked_maps",
 			"name": "Desbravador", "desc": "Desbloqueie todos os sítios de escavação."},
 		{"id": "boss_king_crab", "icon": "trophy", "type": "boss", "boss": "king_crab",

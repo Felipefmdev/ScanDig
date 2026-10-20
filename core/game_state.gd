@@ -23,13 +23,11 @@ signal quest_completed(quest_id: String, reward: int)
 signal secret_found(secret_id: String)
 ## Em todos os peers, uma vez por criatura nova no Diário de campo (seen_creatures).
 signal creature_discovered(kind: String)
-## Em todos os peers, quando o jogo é concluído (derrota do FINAL_BOSS_ID, o colosso da ilha).
+## Em todos os peers, quando o jogo é concluído (derrota do FINAL_BOSS_ID).
 signal game_completed_changed(completed: bool)
 ## Vitória ao vivo: só quando o FINAL_BOSS_ID é derrotado nesta sessão (em todos os peers presentes).
 ## Carregar save, entrar no meio ou reconectar não emite: isso é estado (game_completed_changed).
 signal game_victory()
-## Em todos os peers, uma vez por fragmento novo do Mapa do Tesouro (#112).
-signal map_fragment_found(fragment_id: String)
 ## Em todos os peers, quando um atalho de tirolesa ou ponte de corda é construído com o arpão (#105).
 signal shortcut_built(shortcut_id: String)
 ## Em todos os peers, uma vez por conquista nova (#141). Não emite ao carregar um save no host
@@ -73,31 +71,6 @@ const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", 
 	"ruinas_mumia", "ruinas_ovo_esqueleto", "ruinas_ovo_pintura", "ruinas_reliquia_altar", "ruinas_reliquia_nicho", "ruinas_reliquia_parede",
 	"geleira_morsa_ancia", "geleira_ovo_boneco", "geleira_ovo_pinguim", "geleira_reliquia_iglu", "geleira_reliquia_lago", "geleira_reliquia_mamute", "geleira_yeti",
 	"cratera_o_eco", "cratera_ovo_disco", "cratera_ovo_sonda", "cratera_reliquia_engrenagem", "cratera_reliquia_geodo", "cratera_reliquia_orbe"]
-## Mapa do Tesouro (#103/#112): a premissa do jogo. Fragmentos de um mapa antigo enterrados nos 5
-## sítios; com todos, a equipa navega até à Ilha do Tesouro. Cada um sai de uma origem no mundo
-## do host: "quest:<id>" (fim de missão), "boss:<id>", "secret:<id>" ou "dig:<mapa>" (escavação
-## profunda rara, pedida pelo gameplay com request_award_fragment). `piece` é a posição da peça
-## no pergaminho (coluna, linha numa grelha de 4 x 2) e `hint` a dica do painel na base.
-const MAP_FRAGMENTS: Dictionary = {
-	"praia_frag_1": {"map": "praia", "source": "quest:ze_anzol", "piece": Vector2i(0, 1),
-		"hint": "O Pescador Zé guarda um pedaço de papel velho no barco: ajude o pescador."},
-	"campo_frag_1": {"map": "campo", "source": "boss:giant_mole", "piece": Vector2i(1, 1),
-		"hint": "Algo grande cava túneis debaixo do círculo de pedras do Campo."},
-	"ruinas_frag_1": {"map": "ruinas", "source": "quest:ines_camara", "piece": Vector2i(1, 0),
-		"hint": "A arqueóloga Inês procura a câmara selada das Ruínas."},
-	"ruinas_frag_2": {"map": "ruinas", "source": "secret:ruinas_reliquia_parede", "piece": Vector2i(0, 0),
-		"hint": "Nas Ruínas, uma parede soa a oco."},
-	"geleira_frag_1": {"map": "geleira", "source": "quest:bjorn_expedicao", "piece": Vector2i(2, 0),
-		"hint": "O Velho Björn ainda espera notícias da expedição perdida."},
-	"geleira_frag_2": {"map": "geleira", "source": "dig:geleira", "piece": Vector2i(2, 1),
-		"hint": "Bem fundo no gelo da Geleira: um achado raro pode trazer mais do que parece."},
-	"cratera_frag_1": {"map": "cratera", "source": "quest:vega_sinal", "piece": Vector2i(3, 1),
-		"hint": "A Dra. Vega capta um sinal estranho no fundo da Cratera."},
-	"cratera_frag_2": {"map": "cratera", "source": "boss:the_sleeper", "piece": Vector2i(3, 0),
-		"hint": "O que dorme no altar da Cratera guarda a última peça."},
-}
-const MAP_FRAGMENT_IDS: Array[String] = ["praia_frag_1", "campo_frag_1", "ruinas_frag_1", "ruinas_frag_2",
-	"geleira_frag_1", "geleira_frag_2", "cratera_frag_1", "cratera_frag_2"]
 ## Diário de campo (estudo How to Fish: o diário de peixes). Kind do EnemySpawner -> nome.
 ## Chefes ficam em defeated_bosses; aqui só as criaturas comuns.
 const CREATURES: Dictionary = {
@@ -107,16 +80,15 @@ const CREATURES: Dictionary = {
 	"ice_wolf": "Lobo do Gelo", "penguin": "Pinguim-ladrão", "walrus": "Morsa",
 	"crawler": "Rastejante", "floater": "Flutuante",
 }
-## Final do jogo (#103/#115): o Colosso do Tesouro, o chefe disfarçado na Ilha do Tesouro. O
-## the_sleeper (Cratera) é um chefe como os outros (dá o cratera_frag_2).
-const FINAL_BOSS_ID: String = "gold_colossus"
+## Final do jogo: provisoriamente O Que Dorme, no altar da Cratera (#121 removeu a Ilha do
+## Tesouro). Passa a ser o chefe lunar quando o final na Lua entrar (#120).
+const FINAL_BOSS_ID: String = "the_sleeper"
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
 ## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
 ## Mapas 3-5: idol_mummy, cave_yeti, ancient_walrus, the_sleeper, the_echo (#75).
 const EXTRA_BOSSES: Array[String] = [
 	"octopus", "crow_king", "scarecrow",
 	"idol_mummy", "cave_yeti", "ancient_walrus", "the_sleeper", "the_echo",
-	"gold_colossus",
 ]
 
 const UPGRADES: Dictionary = {
@@ -151,8 +123,7 @@ var seen_creatures: Array[String] = []
 var intact_items: Array[String] = []
 ## Peças doadas ao museu na variante rara (#111): vitrine em pedestal. Só a primeira doação conta.
 var rare_items: Array[String] = []
-## Fragmentos do Mapa do Tesouro já encontrados (#112), ids de MAP_FRAGMENT_IDS.
-var map_fragments: Array[String] = []
+
 ## Atalhos construídos com o arpão (#105): ids dos atalhos completados.
 var built_shortcuts: Array[String] = []
 var game_completed: bool = false
@@ -289,9 +260,6 @@ func is_map_unlocked(map_id: String) -> bool:
 	var map_data: MapData = _load_map(map_id)
 	if map_data == null:
 		return false
-	# Ilha do Tesouro (#113/#116): abre só com o Mapa do Tesouro completo, não se compra.
-	if map_data.requires_map_fragments:
-		return has_all_map_fragments()
 	return map_data.unlock_cost <= 0 or unlocked_maps.has(map_id)
 
 
@@ -307,18 +275,6 @@ func is_secret_found(secret_id: String) -> bool:
 	return found_secrets.has(secret_id)
 
 
-func has_map_fragment(fragment_id: String) -> bool:
-	return map_fragments.has(fragment_id)
-
-
-## A equipa tem o Mapa do Tesouro completo (desbloqueia a Ilha do Tesouro, #113).
-func has_all_map_fragments() -> bool:
-	for id: String in MAP_FRAGMENT_IDS:
-		if not map_fragments.has(id):
-			return false
-	return true
-
-
 func is_game_completed() -> bool:
 	return game_completed
 
@@ -330,9 +286,6 @@ func get_map_unlock_block_reason(map_id: String) -> String:
 		return I18n.t("Mapa desconhecido.")
 	if is_map_unlocked(map_id):
 		return I18n.t("%s já está desbloqueado.") % I18n.t(map_data.display_name)
-	if map_data.requires_map_fragments:
-		return I18n.t("Complete o Mapa do Tesouro (%d/%d fragmentos) para navegar até %s no barco da Praia.") % [
-			map_fragments.size(), MAP_FRAGMENT_IDS.size(), I18n.t(map_data.display_name)]
 	if MAP_UNLOCK_BOSSES.has(map_id):
 		var boss: Dictionary = MAP_UNLOCK_BOSSES[map_id]
 		if not is_boss_defeated(str(boss["boss_id"])):
@@ -398,11 +351,6 @@ func request_complete_quest(quest_id: String) -> void:
 ## Chamado pelo gameplay (no host) quando um segredo de SECRETS é encontrado.
 func request_report_secret(secret_id: String) -> void:
 	_send_to_host(&"_host_report_secret", [secret_id])
-
-
-## Gameplay (no host): um fragmento com origem "dig:<mapa>" foi desenterrado (#112).
-func request_award_fragment(fragment_id: String) -> void:
-	_send_to_host(&"_host_award_fragment", [fragment_id])
 
 
 ## Compra de ferramenta (ToolData). A resposta chega por item_purchase_result.
@@ -552,7 +500,6 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 		var data: Dictionary = get_snapshot()
 		if boss_id == FINAL_BOSS_ID:
 			data["game_completed"] = true
-		_add_earned_fragments(data)
 		Achievements.award(data)
 		apply_snapshot(data)
 		if _is_online():
@@ -578,51 +525,11 @@ func _host_complete_quest(quest_id: String) -> void:
 	var quests: Array = Array(completed_quests).duplicate()
 	quests.append(quest_id)
 	data["completed_quests"] = quests
-	_add_earned_fragments(data)
 	data["team_money"] = team_money + int(QUESTS[quest_id]["reward"])
 	_bump_stats({"money_earned": int(QUESTS[quest_id]["reward"])})
 	data["stats"] = stats.duplicate()
 	apply_snapshot(data)
 	_broadcast_snapshot()
-
-
-@rpc("any_peer", "call_remote", "reliable")
-func _host_award_fragment(fragment_id: String) -> void:
-	if not is_authority() or not _is_host_sender("fragmento", fragment_id):
-		return
-	var entry: Dictionary = MAP_FRAGMENTS.get(fragment_id, {})
-	if entry.is_empty() or not str(entry["source"]).begins_with("dig:") or map_fragments.has(fragment_id):
-		return
-	var data: Dictionary = get_snapshot()
-	var frags: Array = Array(map_fragments).duplicate()
-	frags.append(fragment_id)
-	data["map_fragments"] = frags
-	apply_snapshot(data)
-	_broadcast_snapshot()
-
-
-## Host: junta a `data` os fragmentos cuja origem (missão, chefe, segredo) já está cumprida em
-## `data`. Chamado onde essas origens se validam e ao carregar um save (saves antigos).
-func _add_earned_fragments(data: Dictionary) -> void:
-	var frags: Array = Array(data.get("map_fragments", map_fragments)).duplicate()
-	var quests: Array = data.get("completed_quests", completed_quests)
-	var bosses: Array = data.get("defeated_bosses", defeated_bosses)
-	var secrets: Array = data.get("found_secrets", found_secrets)
-	for id: String in MAP_FRAGMENT_IDS:
-		if frags.has(id):
-			continue
-		var source: PackedStringArray = str(MAP_FRAGMENTS[id]["source"]).split(":")
-		var earned: bool = false
-		match source[0]:
-			"quest":
-				earned = quests.has(source[1])
-			"boss":
-				earned = bosses.has(source[1])
-			"secret":
-				earned = secrets.has(source[1])
-		if earned:
-			frags.append(id)
-	data["map_fragments"] = frags
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -635,7 +542,6 @@ func _host_report_secret(secret_id: String) -> void:
 	var secrets: Array = Array(found_secrets).duplicate()
 	secrets.append(secret_id)
 	data["found_secrets"] = secrets
-	_add_earned_fragments(data)
 	apply_snapshot(data)
 	_broadcast_snapshot()
 
@@ -758,7 +664,6 @@ func get_snapshot() -> Dictionary:
 		"seen_creatures": Array(seen_creatures),
 		"intact_items": Array(intact_items),
 		"rare_items": Array(rare_items),
-		"map_fragments": Array(map_fragments),
 		"built_shortcuts": Array(built_shortcuts).duplicate(),
 		"game_completed": game_completed,
 		"stats": stats.duplicate(),
@@ -801,14 +706,6 @@ func apply_snapshot(data: Dictionary) -> void:
 		intact_items = _to_id_list(data["intact_items"])
 	if data.get("rare_items") is Array:
 		rare_items = _to_id_list(data["rare_items"])
-	var new_fragments: Array[String] = []
-	if data.get("map_fragments") is Array:
-		var frags: Array[String] = []
-		for id: String in _to_id_list(data["map_fragments"]):
-			if MAP_FRAGMENTS.has(id):
-				frags.append(id)
-		new_fragments = _new_ids(map_fragments, frags)
-		map_fragments = frags
 	var new_shortcuts: Array[String] = []
 	if data.get("built_shortcuts") is Array:
 		var scs: Array[String] = _to_id_list(data["built_shortcuts"])
@@ -841,8 +738,6 @@ func apply_snapshot(data: Dictionary) -> void:
 		secret_found.emit(secret_id)
 	for kind: String in new_creatures:
 		creature_discovered.emit(kind)
-	for fragment_id: String in new_fragments:
-		map_fragment_found.emit(fragment_id)
 	for shortcut_id: String in new_shortcuts:
 		shortcut_built.emit(shortcut_id)
 	if not _silent_achievements:
@@ -858,9 +753,7 @@ func load_snapshot(data: Dictionary) -> void:
 	if not is_authority():
 		push_warning("GameState: load_snapshot ignorado em cliente.")
 		return
-	# Saves de antes do Mapa do Tesouro: dá os fragmentos de origens já cumpridas.
 	data = data.duplicate()
-	_add_earned_fragments(data)
 	# Saves de antes das conquistas (#141): ganham as que já cumprem, sem aviso.
 	Achievements.award(data)
 	_silent_achievements = true
@@ -1000,7 +893,6 @@ func reset_state() -> void:
 	seen_creatures.clear()
 	intact_items.clear()
 	rare_items.clear()
-	map_fragments.clear()
 	built_shortcuts.clear()
 	game_completed = false
 	stats.clear()

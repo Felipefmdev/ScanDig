@@ -5,8 +5,8 @@ extends GutTest
 ## do _resolve_node e ui_tab dos bots), que viram a dica da aba; LB/RB continuam a trocar de aba.
 
 const BASE_STATION_SCENE: PackedScene = preload("res://ui/base_station_ui.tscn")
-const PAGE_NAMES: Array[String] = ["Loja de Equipamentos", "Museu de Achados", "Expedições", "Diário", "Mapa do Tesouro", "Conquistas"]
-const SHORT_TITLES: Array[String] = ["Loja", "Museu", "Expedições", "Diário", "Mapa", "Conquistas"]
+const PAGE_NAMES: Array[String] = ["Loja de Equipamentos", "Museu de Achados", "Expedições", "Diário", "Conquistas"]
+const SHORT_TITLES: Array[String] = ["Loja", "Museu", "Expedições", "Diário", "Conquistas"]
 
 var ui: BaseStationUI = null
 

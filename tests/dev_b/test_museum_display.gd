@@ -45,7 +45,7 @@ func test_every_catalog_item_has_a_site() -> void:
 	assert_eq(museum.get_site_items().size(), MuseumDisplay.SITES.size(), "uma seção por sítio")
 	assert_eq(museum.get_site_of("lata_enferrujada"), "praia")
 	assert_eq(museum.get_site_of("garra_toupeira"), "campo")
-	assert_eq(museum.get_site_of(MuseumDisplay.HIGHLIGHT_ID), "ilha_tesouro", "ídolo de ouro é o tesouro da Ilha")
+	assert_eq(museum.get_site_of(MuseumDisplay.HIGHLIGHT_ID), MuseumDisplay.HIGHLIGHT_SITE, "ídolo de ouro no pedestal de destaque")
 	assert_eq(museum.get_piece_count(), 0, "museu vazio, nenhuma peça")
 
 

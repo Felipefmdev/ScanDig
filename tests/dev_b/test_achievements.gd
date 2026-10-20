@@ -84,7 +84,7 @@ func test_definitions_are_valid_and_translated() -> void:
 func test_final_boss_follows_constant() -> void:
 	var def: Dictionary = Achievements.get_definition("final_boss")
 	assert_eq(str(def["boss"]), Achievements.FINAL_BOSS, "o JSON não fixa o id do chefe final")
-	assert_false(Achievements.is_met(def, {"defeated_bosses": ["the_sleeper"]}))
+	assert_false(Achievements.is_met(def, {"defeated_bosses": ["king_crab"]}))
 	assert_true(Achievements.is_met(def, {"defeated_bosses": [GameState.FINAL_BOSS_ID]}))
 
 

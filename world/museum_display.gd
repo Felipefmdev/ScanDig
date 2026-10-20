@@ -19,7 +19,6 @@ const SITES: Array[Dictionary] = [
 	{"id": "ruinas", "name": "Ruínas"},
 	{"id": "geleira", "name": "Geleira"},
 	{"id": "cratera", "name": "Cratera"},
-	{"id": "ilha_tesouro", "name": "Ilha"},
 ]
 const EXTRA_SITES: Dictionary = {
 	"alianca_ouro": "praia", "bussola_naufragio": "praia", "concha_dourada": "praia",
@@ -34,9 +33,9 @@ const EXTRA_SITES: Dictionary = {
 	"cristal_eco": "cratera", "geodo_estrelar": "cratera", "nucleo_adormecido": "cratera",
 	"orbe_vibrante": "cratera",
 }
-## Tesouro da Ilha (GoldColossus.TROPHY_ITEM_ID): fora das prateleiras, no pedestal da frente.
+## Tesouro principal: fora das prateleiras, no pedestal da frente.
 const HIGHLIGHT_ID: String = "idolo_ouro"
-const HIGHLIGHT_SITE: String = "ilha_tesouro"
+const HIGHLIGHT_SITE: String = "ruinas"
 
 const COLUMNS: int = 3
 const SECTION_WIDTH: float = 2.0
@@ -282,7 +281,7 @@ func _build_highlight() -> void:
 	stand.add_child(slot)
 	_slots[HIGHLIGHT_ID] = slot
 	var label: Label3D = _add_plaque(stand, Vector3(0.0, 0.32, 0.2), Vector2(0.64, 0.1))
-	label.text = "Tesouro da Ilha"
+	label.text = "Tesouro das Ruínas"
 	label.font_size = 28
 	_highlight_light = OmniLight3D.new()
 	_highlight_light.name = "Light"

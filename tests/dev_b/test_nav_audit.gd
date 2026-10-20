@@ -215,7 +215,7 @@ func test_pause_card_and_settings() -> void:
 
 
 func test_victory_and_credits() -> void:
-	GameState.instance._host_report_boss_defeated("gold_colossus")
+	GameState.instance._host_report_boss_defeated(GameState.FINAL_BOSS_ID)
 	var screen: VictoryScreen = VictoryScreen.instance
 	await _frames()
 	assert_eq(_focus(), screen.continue_button, "vitória: foco em Continuar explorando")

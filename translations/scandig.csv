@@ -374,11 +374,11 @@ Slot %d,Slot %d,Slot %d
 Apagar,Apagar,Delete
 Confirmar,Confirmar,Confirm
 Jogo concluído,Jogo concluído,Game complete
-"O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.
+"O Que Dorme foi vencido no altar da Cratera.
 Leve o Ídolo de Ouro, o tesouro principal, ao Museu.
-Ainda há peças, segredos e bichos por achar.","O Colosso do Tesouro foi vencido e o mapa do tesouro está completo.
+Ainda há peças, segredos e bichos por achar.","O Que Dorme foi vencido no altar da Cratera.
 Leve o Ídolo de Ouro, o tesouro principal, ao Museu.
-Ainda há peças, segredos e bichos por achar.","The Treasure Colossus has been defeated and the treasure map is complete.
+Ainda há peças, segredos e bichos por achar.","The Sleeper has been defeated at the Crater altar.
 Take the Golden Idol, the main treasure, to the Museum.
 There are still pieces, secrets and critters to find."
 — CRÉDITOS —,— CRÉDITOS —,— CREDITS —
@@ -860,7 +860,7 @@ Mochila cheia! Liberte um slot antes de comprar.,Mochila cheia! Liberte um slot 
 Loja fechada (sem GameState nesta cena).,Loja fechada (sem GameState nesta cena).,Shop closed (no GameState in this scene).
 Compra em curso...,Compra em curso...,Purchase in progress...
 Sem resposta do anfitrião. Tente de novo.,Sem resposta do anfitrião. Tente de novo.,No response from the host. Try again.
-Tesouro da Ilha,Tesouro da Ilha,Island Treasure
+Tesouro das Ruínas,Tesouro das Ruínas,Ruins Treasure
 Só areia...,Só areia...,Just sand...
 Só terra...,Só terra...,Just dirt...
 Nada aqui...,Nada aqui...,Nothing here...

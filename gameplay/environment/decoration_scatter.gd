@@ -5,7 +5,7 @@ extends Node3D
 ## veem o mesmo chão. Perto das paredes (Bounds) põe rochas maiores que escondem a borda reta.
 ## Tudo é criado em runtime sem owner (#47): o editor nunca grava estas malhas no .tscn.
 
-## Conjunto de props: praia, campo, ruinas, geleira, cratera, ilha.
+## Conjunto de props: praia, campo, ruinas, geleira, cratera.
 @export var theme: String = "praia"
 @export var count: int = 700
 ## Os props foram modelados a ~10 cm; no chão, a 1,7 m de altura, isso some. Aumenta tudo.
@@ -70,9 +70,6 @@ func build() -> int:
 		var hit: Variant = _ground_at(p)
 		if hit == null:
 			continue
-		# Ilha: nada no fundo do mar (fica tudo em terra firme).
-		if theme == "ilha" and (hit as Vector3).y < -0.15:
-			continue
 		var s: float = rng.randf_range(spec[2], spec[3]) * size_boost
 		_add(spec[0], spec[1], Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * s), hit))
 		placed += 1
@@ -127,8 +124,7 @@ func _border_row(half: Vector2, rng: RandomNumberGenerator, builders: Array[Call
 				1: p = Vector3(t, 0.0, half.y + 1.0 + out)
 				2: p = Vector3(-half.x - 1.0 - out, 0.0, t)
 				_: p = Vector3(half.x + 1.0 + out, 0.0, t)
-			var hit: Variant = _ground_at(p)
-			var y: float = (hit as Vector3).y if hit != null else 0.0
+			var y: float = _border_height(p)
 			var s: float = rng.randf_range(1.3, 3.0) * grow
 			if theme == "praia":
 				# Silhuetas baixas e largas; a segunda fila é encosta, não um muro de cones.
@@ -143,6 +139,24 @@ func _border_row(half: Vector2, rng: RandomNumberGenerator, builders: Array[Call
 			n += 1
 			t += border_step * rng.randf_range(0.7, 1.3)
 	return n
+
+
+## #151: Bounds e aderecos usam layer 1 e nao sao suporte para as rochas.
+## A segunda fila fica fora da colisao: prolonga o relevo analitico do mapa.
+func _border_height(p: Vector3) -> float:
+	match theme:
+		"praia":
+			return BeachTerrain.height_at(p.x, p.z)
+		"campo":
+			return FieldTerrain.height_at(p.x, p.z)
+		"ruinas":
+			return RuinsTerrain.height_at(p.x, p.z)
+		"geleira":
+			return preload("res://gameplay/environment/glacier_terrain.gd").height_at(p.x, p.z)
+		"cratera":
+			return preload("res://gameplay/environment/crater_terrain.gd").height_at(p.x, p.z)
+	var hit: Variant = _ground_at(p)
+	return (hit as Vector3).y if hit != null else 0.0
 
 
 func _ground_at(p: Vector3) -> Variant:
@@ -221,20 +235,12 @@ func _palette() -> Array:
 				["basalt", _pebble.bind(Color("#3a3444")), 1.0, 2.4],
 				["tiny_pebble", _pebble.bind(Color("#5a5068")), 0.6, 1.2],
 				["fungus", _mushroom.bind(Color("#60e0b0")), 0.6, 1.0]]
-		"ilha":
-			# Moedas perdidas na areia: a ilha deixa adivinhar o que esconde.
-			return [["tiny_coin", _shell.bind(Color("#f0c040"), Color("#c89020")), 0.7, 1.1],
-				["tiny_shell", _shell.bind(Color("#f4e0d0"), Color("#f0a0a0")), 0.8, 1.4],
-				["tiny_pebble", _pebble.bind(Color("#d0c4a8")), 0.6, 1.3],
-				["fern", _tuft.bind(Color("#3a8a3a"), 6, 0.24), 0.9, 1.6],
-				["plank", _stick.bind(Color("#8a6440")), 0.9, 1.6],
-				["flower_red", _flower.bind(Color("#e04a5a")), 0.8, 1.3]]
 	return []
 
 
 func _border_builder(shade: float) -> Callable:
 	var c: Color = {"praia": Color("#e0c890"), "campo": Color("#7a7468"), "ruinas": Color("#c0b090"),
-		"geleira": Color("#dce8f0"), "cratera": Color("#3a3444"), "ilha": Color("#d8c49a")}.get(theme, Color("#808080"))
+		"geleira": Color("#dce8f0"), "cratera": Color("#3a3444")}.get(theme, Color("#808080"))
 	return _boulder.bind(Color(c.r * shade, c.g * shade, c.b * shade))
 
 
