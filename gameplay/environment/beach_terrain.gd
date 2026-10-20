@@ -119,6 +119,13 @@ static func height_at(x: float, z: float) -> float:
 static func color_at(x: float, z: float, h: float) -> Color:
 	var n: float = _get_noise().get_noise_2d(z * 1.7 + 30.0, x * 1.7)
 	var c: Color = SAND_DRY.lerp(SAND_DRY_ALT, clampf(0.5 + n, 0.0, 1.0))
+	# #150: raízes e vegetação formam manchas, em vez de tufos colados em areia uniforme.
+	var grove: float = 0.0
+	for center: Vector3 in [Vector3(-18.0, 10.0, 5.3), Vector3(-26.0, 2.0, 4.8),
+			Vector3(6.0, 18.0, 4.4), Vector3(-14.0, -12.0, 4.0), Vector3(16.0, -22.0, 3.2)]:
+		var distance: float = Vector2(x - center.x, z - center.y).length()
+		grove = maxf(grove, 1.0 - smoothstep(center.z * 0.35, center.z, distance + n * 1.5))
+	c = c.lerp(Color(0.46, 0.53, 0.27), grove * 0.65)
 	# areia molhada junto ao mar e por baixo de água
 	var wet: float = smoothstep(SHORE_START_X - 1.0, SHORE_START_X + 2.5, x)
 	c = c.lerp(SAND_WET, wet)

@@ -62,6 +62,11 @@ func build() -> int:
 		var p: Vector3 = Vector3(rng.randf_range(-half.x, half.x), 0.0, rng.randf_range(-half.y, half.y))
 		if Vector2(p.x, p.z).length() < clear_radius:
 			continue
+		# #150: a Praia tem clareiras e corredores de circulação entre os destinos.
+		if theme == "praia" and _beach_path(p.x, p.z):
+			continue
+		if theme == "praia" and spec[0] == "seaweed" and p.x > 24.5:
+			continue  # Sem tufos atravessando o cais ou o barco na faixa submersa.
 		var hit: Variant = _ground_at(p)
 		if hit == null:
 			continue
@@ -125,7 +130,14 @@ func _border_row(half: Vector2, rng: RandomNumberGenerator, builders: Array[Call
 			var hit: Variant = _ground_at(p)
 			var y: float = (hit as Vector3).y if hit != null else 0.0
 			var s: float = rng.randf_range(1.3, 3.0) * grow
+			if theme == "praia":
+				# Silhuetas baixas e largas; a segunda fila é encosta, não um muro de cones.
+				p.x += rng.randf_range(-0.8, 0.8)
+				p.z += rng.randf_range(-0.8, 0.8)
+				y = BeachTerrain.height_at(p.x, p.z)
 			var b: Basis = Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s * rng.randf_range(0.8, 1.3), s * rng.randf_range(0.6, 2.0), s))
+			if theme == "praia":
+				b = b.scaled(Vector3(1.4, 0.7, 1.25))
 			var k: int = rng.randi() % 2
 			_add("border_%d" % k, builders[k], Transform3D(b, Vector3(p.x, y - 0.3, p.z)))
 			n += 1
@@ -134,10 +146,26 @@ func _border_row(half: Vector2, rng: RandomNumberGenerator, builders: Array[Call
 
 
 func _ground_at(p: Vector3) -> Variant:
+	# Bounds também usa layer 1: o raycast colocava a fila de rochas a 5,5 m de altura.
+	# A função analítica serve inclusive a segunda fila, fora da malha de colisão.
+	if theme == "praia":
+		return Vector3(p.x, BeachTerrain.height_at(p.x, p.z), p.z)
 	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 	var q: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(p + Vector3.UP * 30.0, p + Vector3.DOWN * 30.0, GROUND_MASK)
 	var hit: Dictionary = space.intersect_ray(q)
 	return hit["position"] if not hit.is_empty() else null
+
+
+func _beach_path(x: float, z: float) -> bool:
+	var p: Vector2 = Vector2(x, z)
+	for prop: Vector3 in BeachTerrain.PROP_ZONES:
+		if p.distance_to(Vector2(prop.x, prop.y)) < prop.z:
+			return true
+	for end: Vector2 in [Vector2(25.0, 12.0), Vector2(22.0, -11.0), Vector2(-15.0, -15.0)]:
+		var t: float = clampf(p.dot(end) / end.length_squared(), 0.0, 1.0)
+		if p.distance_to(end * t) < 1.5:
+			return true
+	return p.distance_to(Vector2(-22.0, -22.0)) < 8.5
 
 
 func _arena_half() -> Vector2:

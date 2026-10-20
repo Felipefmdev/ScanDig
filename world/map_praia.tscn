@@ -1,4 +1,4 @@
-[gd_scene load_steps=75 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=76 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://gameplay/environment/palm_model.gd" id="env_palm"]
 [ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="env_snap"]
 [ext_resource type="Script" path="res://gameplay/environment/beach_terrain.gd" id="env_terrain"]
+[ext_resource type="Script" path="res://gameplay/environment/beach_dressing.gd" id="env_dressing"]
 [ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
 [ext_resource type="PackedScene" uid="uid://cv33lw4gpdbbx" path="res://assets/models/kenney_pirate/boat-row-small.glb" id="k_boat_row_small"]
 [ext_resource type="PackedScene" uid="uid://bluwbs4vyj4mu" path="res://assets/models/kenney_pirate/bottle.glb" id="k_bottle"]
@@ -48,7 +49,7 @@
 [ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
 [ext_resource type="PackedScene" path="res://gameplay/quests/praia/praia_secrets.tscn" id="q_praia_secrets"]
 [ext_resource type="Environment" uid="uid://d17jqai7gcjjd" path="res://world/environment_praia.tres" id="w_env_praia"]
-[ext_resource type="Shader" path="res://world/shaders/water_stylized.gdshader" id="w_water_shader"]
+[ext_resource type="Shader" path="res://world/shaders/beach_water.gdshader" id="w_water_shader"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(1.502, 0.949, 1.514)
@@ -972,3 +973,6 @@ script = ExtResource("art_toon_override")
 script = ExtResource("deco_scatter")
 seed_value = 101
 open_sides = PackedInt32Array(3)
+
+[node name="BeachDressing" type="Node3D" parent="."]
+script = ExtResource("env_dressing")

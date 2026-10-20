@@ -1,0 +1,24 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{"t": 1.0, "start_expedition": "praia", "night": true, "timeout": 30},
+		{"sleep": 3.0},
+		{"t": 0, "teleport": [-2.0, 0.6, 10.0]},
+		{"t": 0, "look_at": [5.0, 0.6, 1.5]},
+		{"sleep": 1.0},
+		{"t": 0, "screenshot": "01_posto_noite"},
+		{"t": 0, "teleport": [22.0, 0.6, -6.0]},
+		{"t": 0, "look_at": [34.0, 0.5, -13.0]},
+		{"sleep": 1.0},
+		{"t": 0, "screenshot": "02_enseada_noite"},
+		{"t": 0, "call": "Tide", "method": "force_low_tide"},
+		{"sleep": 1.0},
+		{"t": 0, "screenshot": "03_mare_baixa_noite"},
+		{"t": 0, "teleport": [25.0, 0.6, 9.0]},
+		{"t": 0, "look_at": [35.0, 0.0, 15.0]},
+		{"sleep": 1.0},
+		{"t": 0, "screenshot": "04_cais_noite"},
+		{"t": 0, "dump": "final"},
+		{"t": 0, "quit": true}
+	]
+}

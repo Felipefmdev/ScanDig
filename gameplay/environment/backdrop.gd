@@ -94,7 +94,11 @@ func build() -> int:
 	hills.material_override = ToonKit.vertex_material(true, true)
 	_far(hills)
 	add_child(hills)
-	if theme == "praia" or theme == "ilha":
+	var continuous_sea: bool = false
+	if theme == "praia" and get_parent() != null and get_parent().get_parent() != null:
+		var near_sea: Node = get_parent().get_parent().get_node_or_null("Sea")
+		continuous_sea = near_sea != null and bool(near_sea.get_meta(&"continuous_sea", false))
+	if (theme == "praia" and not continuous_sea) or theme == "ilha":
 		add_child(_sea(SEA_START_X if theme == "praia" else -SEA_EXTENT))
 	return placed
 
