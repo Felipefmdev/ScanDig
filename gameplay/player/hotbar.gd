@@ -31,6 +31,8 @@ const COLOR_RARE: Color = Color(0.85, 0.55, 1.0)
 const COLOR_TOOL: Color = Color(0.32, 0.8, 1.0)
 const SELECTED_SCALE: float = 1.08
 const MARK_SIDE: float = 16.0
+const NAME_BASE_FONT_SIZE: int = 13
+const NAME_MIN_FONT_SIZE: int = 9
 
 var inventory: Inventory = null
 var _slot_panels: Array[PanelContainer] = []
@@ -174,7 +176,9 @@ func _make_slot_panel() -> PanelContainer:
 	icon.visible = false
 	art.add_child(icon)
 
-	box.add_child(_make_label("Name", 13, Color.WHITE))
+	var name_label: Label = _make_label("Name", NAME_BASE_FONT_SIZE, Color.WHITE)
+	name_label.resized.connect(_shrink_name_label.bind(name_label))
+	box.add_child(name_label)
 	box.add_child(_make_label("Value", 12, UiPalette.GREEN_BOTTLE.lightened(0.4)))
 	for l: Node in [box.get_node("Name"), box.get_node("Value")]:
 		(l as Label).visible = not _is_compact()
@@ -261,6 +265,34 @@ func _fill_slot(i: int) -> void:
 		name_label.text = c.get_display_name().replace("✦ ", "")
 		name_label.add_theme_color_override("font_color", COLOR_RARE if c.is_rare_variant else Color.WHITE)
 		value_label.text = MoneyFormat.money(c.final_value)
+	_shrink_name_label(name_label)
+
+
+## Linha do nome mais larga que o slot: reduz a fonte antes de cair nas reticências (#147).
+func _shrink_name_label(lbl: Label) -> void:
+	if lbl == null or not is_instance_valid(lbl):
+		return
+	var text: String = lbl.text
+	if text.is_empty():
+		if lbl.get_theme_font_size(&"font_size") != NAME_BASE_FONT_SIZE:
+			lbl.add_theme_font_size_override(&"font_size", NAME_BASE_FONT_SIZE)
+		return
+	var font: Font = lbl.get_theme_font(&"font")
+	if font == null:
+		return
+	var display_text: String = lbl.tr(text) if lbl.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED else text
+	if lbl.uppercase:
+		display_text = display_text.to_upper()
+	lbl.custom_minimum_size.x = _slot_size.x - 10.0
+	var avail: float = minf(lbl.size.x, _slot_size.x - 10.0) if lbl.size.x > 0.0 else (_slot_size.x - 10.0)
+	var font_size: int = NAME_BASE_FONT_SIZE
+	while font_size > NAME_MIN_FONT_SIZE:
+		var w: float = font.get_string_size(display_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		if w <= avail:
+			break
+		font_size -= 1
+	if lbl.get_theme_font_size(&"font_size") != font_size:
+		lbl.add_theme_font_size_override(&"font_size", font_size)
 
 
 func _on_selected_slot_changed(index: int) -> void:

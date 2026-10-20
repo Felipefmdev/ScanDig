@@ -121,3 +121,15 @@ func test_models_build_for_items_and_tools() -> void:
 			model.free()
 	assert_eq(ItemIcons.key_for(_item("bussola_naufragio", true)), "item:bussola_naufragio:rare")
 	assert_eq(ItemIcons.key_for(_tool("dinamite")), "tool:dinamite")
+
+
+func test_name_label_shrinks_to_fit_narrow_slot() -> void:
+	# #147: nome do item em slot estreito diminui a fonte antes de truncar
+	_inv.add_item(_item("concha_dourada"))
+	var name_label: Label = _slot(0, "Box/Name") as Label
+	assert_eq(name_label.get_theme_font_size(&"font_size"), Hotbar.NAME_BASE_FONT_SIZE, "slot padrão largo: fonte base 13")
+	# Simula slot estreito onde 75px não cabe (ex: 62px)
+	_hotbar._slot_size = Vector2(72.0, 72.0)
+	_hotbar._shrink_name_label(name_label)
+	assert_lt(name_label.get_theme_font_size(&"font_size"), Hotbar.NAME_BASE_FONT_SIZE, "fonte encolhe para caber no slot")
+	assert_gte(name_label.get_theme_font_size(&"font_size"), Hotbar.NAME_MIN_FONT_SIZE, "respeita o piso mínimo")
