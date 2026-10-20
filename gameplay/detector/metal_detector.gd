@@ -516,6 +516,7 @@ func _start_ping(spot: BuriedSpot, signal_strength: float) -> void:
 	_ping_freq *= 1.0 + _weather_rng.randf_range(-1.0, 1.0) * WeatherManager.now_detector_noise() * WEATHER_PING_WOBBLE
 	_ping_t = 0.0
 	_reset_oscillators()
+	Rumble.on_detector_ping(signal_strength, self)  # vibração do comando (#148)
 
 	var noise_origin: Vector3 = coil_tip.global_position if coil_tip != null else global_position
 	DisturbanceMeter.report(NOISE_PER_SECOND * sweep_period, noise_origin)

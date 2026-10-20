@@ -1126,6 +1126,8 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 	var final_val: int = res.get("final_value", 0)
 	var is_rare_variant: bool = res.get("is_rare_variant", false)
 	var is_perfect: bool = res.get("is_perfect", false)
+	if item != null and bool(res.get("revealed_now", false)):
+		Rumble.on_dig_found(is_rare_variant)  # vibração do comando (#148)
 
 	if revealed:
 		var rarity_str: String = tr(_get_category_name(item.category if item != null else 0))
@@ -1401,6 +1403,7 @@ func apply_knockback(impulse: Vector3, shake: float = 0.0) -> void:
 	_knockback_time = clampf(impulse.length() * KNOCKBACK_TIME_PER_SPEED, 0.15, KNOCKBACK_TIME_MAX)
 	if shake > 0.0:
 		_shake_camera(shake, 0.3)
+		Rumble.on_heavy_hit(shake)  # vibração do comando (#148)
 
 
 func take_damage(amount: float) -> void:
@@ -1419,6 +1422,7 @@ func take_damage(amount: float) -> void:
 	health_changed.emit(health, max_health)
 	_jostle_fragile_finds(amount)
 	_shake_camera(0.03, 0.25)
+	Rumble.on_damage(amount, max_health)  # vibração do comando (#148)
 	if health > 0.0:
 		SFX.play_ui(SFX.PLAYER_HURT, -2.0)
 	if health <= 0.0:
@@ -3526,6 +3530,7 @@ func show_explosion(center: Vector3) -> void:
 			var d: float = local.global_position.distance_to(center)
 			if d < 14.0:
 				local.call("_shake_camera", lerpf(0.12, 0.02, d / 14.0), 0.45)
+				Rumble.on_explosion(d)  # vibração do comando (#148)
 
 
 ## How to Fish (PlayerEating): comer leva EAT_TIME a segurar o clique; largar, trocar de
