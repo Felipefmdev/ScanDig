@@ -3,6 +3,7 @@ extends GutTest
 ## ShopOffer.try_buy() compra pelo host (CoreGameState). Offline este processo é o host.
 
 const SLINGSHOT: ToolData = preload("res://items/tools/estilingue.tres")
+const PITCHFORK: ToolData = preload("res://items/tools/forcado.tres")
 
 var offer: ShopOffer
 var inv: Inventory
@@ -67,3 +68,20 @@ func test_unknown_tool_is_unavailable() -> void:
 	var r: Dictionary = await offer.try_buy(inv)
 	assert_false(r["ok"])
 	assert_eq(state.team_money, 1000)
+
+
+func test_world_scene_offer_does_not_add_fallback_box() -> void:
+	var world_scene_offer: ShopOffer = ShopOffer.new()
+	world_scene_offer.tool_data = PITCHFORK
+	add_child_autofree(world_scene_offer)
+
+	var fallback_boxes: Array[MeshInstance3D] = []
+	var has_world_model: bool = false
+	for child: Node in world_scene_offer.get_children():
+		if child is MeshInstance3D:
+			fallback_boxes.append(child as MeshInstance3D)
+		if child.scene_file_path == PITCHFORK.world_scene.resource_path:
+			has_world_model = true
+
+	assert_true(has_world_model, "A oferta deve instanciar o modelo da ferramenta.")
+	assert_eq(fallback_boxes.size(), 0, "Uma world_scene não deve deixar a caixa MeshInstance3D órfã.")
