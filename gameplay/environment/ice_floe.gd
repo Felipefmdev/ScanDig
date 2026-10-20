@@ -250,7 +250,7 @@ func _build_visuals() -> void:
 	ice_mat.albedo_color = Color(0.52, 0.76, 0.88, 0.92)
 	ice_mat.roughness = 0.12
 	ice_mat.metallic = 0.05
-	ice_mat.specular = 0.8
+	ice_mat.metallic_specular = 0.8
 	_ice_mesh.material_override = ice_mat
 	_mesh_root.add_child(_ice_mesh)
 

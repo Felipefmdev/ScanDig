@@ -129,7 +129,7 @@ func _build_water_surface() -> void:
 	mat.albedo_color = Color(0.02, 0.16, 0.25, 0.75)
 	mat.roughness = 0.08
 	mat.metallic = 0.05
-	mat.specular = 0.95
+	mat.metallic_specular = 0.95
 	_water_mesh.material_override = mat
 	add_child(_water_mesh)
 
@@ -260,7 +260,7 @@ func _add_sunken_item_glow(pickup: ItemPickup) -> void:
 	ice_mat.albedo_color = Color(0.70, 0.92, 1.0, 0.30)
 	ice_mat.roughness = 0.08
 	ice_mat.metallic = 0.05
-	ice_mat.specular = 0.95
+	ice_mat.metallic_specular = 0.95
 	ice_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	ice_block.material_override = ice_mat
 	pickup.add_child(ice_block)
