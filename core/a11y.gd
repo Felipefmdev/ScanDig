@@ -378,7 +378,8 @@ func _on_weather_changed(kind: String, phase: String) -> void:
 
 
 func _on_node_added(node: Node) -> void:
-	if node is EnemyBase and captions_enabled():
+	# A vibração da entrada do chefe (#148) também sai daqui, com ou sem legendas.
+	if node is EnemyBase:
 		_check_enemy.call_deferred(node)
 
 
@@ -393,7 +394,8 @@ func _check_enemy(node: Node) -> void:
 		reset_captions()
 	if node.is_in_group(BOSS_GROUP):
 		caption(CAPTION_BOSS)
-	elif Time.get_ticks_msec() - _scene_since_ms >= SCENE_SETTLE_MS and near_local_player((node as Node3D).global_position):
+		Rumble.on_boss_entry()
+	elif captions_enabled() and Time.get_ticks_msec() - _scene_since_ms >= SCENE_SETTLE_MS and near_local_player((node as Node3D).global_position):
 		caption(CAPTION_CREATURE)
 
 

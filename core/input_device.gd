@@ -26,6 +26,8 @@ static var instance: InputDevice = null
 var _using_gamepad: bool = false
 ## Começa no mouse: o foco inicial dos menus não acende a borda até alguém navegar.
 var _using_pointer: bool = true
+## Último comando que mexeu (id do Input; -1 = nenhum ainda). A vibração (Rumble) vai nele.
+var _pad_device: int = -1
 
 
 func _enter_tree() -> void:
@@ -65,6 +67,8 @@ func observe(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion:
 		if (event as InputEventMouseMotion).relative.length() > MOUSE_ACTIVITY_PX:
 			gamepad = 0
+	if gamepad == 1:
+		_pad_device = event.device
 	if gamepad >= 0:
 		set_using_gamepad(gamepad == 1)
 		set_using_pointer(gamepad == 0 and (event is InputEventMouseButton or event is InputEventMouseMotion))
@@ -96,6 +100,14 @@ static func using_pointer() -> bool:
 ## Atalho seguro (sem o autoload: teclado/mouse).
 static func using_gamepad() -> bool:
 	return instance != null and instance._using_gamepad
+
+
+## Comando para vibrar: o último que mexeu, ou o primeiro ligado (-1 = nenhum).
+static func pad_device() -> int:
+	if instance != null and instance._pad_device >= 0:
+		return instance._pad_device
+	var pads: Array[int] = Input.get_connected_joypads()
+	return pads[0] if not pads.is_empty() else -1
 
 
 ## "E", "Q", "Espaço"... ou, no comando, "X", "B", "RT"... A coluna do dispositivo em uso; se a

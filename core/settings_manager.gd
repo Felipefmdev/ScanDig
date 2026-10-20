@@ -87,6 +87,8 @@ const DEFAULTS: Dictionary = {
 		"show_hints": true,
 		"hud_text_scale": 1.0,
 		"pad_look_sensitivity": 180.0,
+		# Vibração do comando (#148): 0 = desligada, 1 = como o jogo foi feito.
+		"pad_vibration": 1.0,
 		"controller_aim_assist": true,
 		"weather_effects": true,
 	},
@@ -249,6 +251,9 @@ static func sanitize(section: String, values: Dictionary) -> Dictionary:
 			var pad_look: Variant = values.get("pad_look_sensitivity")
 			if pad_look is float or pad_look is int:
 				out["pad_look_sensitivity"] = clampf(float(pad_look), PAD_LOOK_SENSITIVITY_RANGE.x, PAD_LOOK_SENSITIVITY_RANGE.y)
+			var vibration: Variant = values.get("pad_vibration")
+			if vibration is float or vibration is int:
+				out["pad_vibration"] = clampf(float(vibration), 0.0, 1.0)
 		ACCESSIBILITY:
 			var colorblind: Variant = values.get("colorblind_mode")
 			if colorblind is String and COLORBLIND_MODES.has(colorblind):
