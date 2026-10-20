@@ -316,3 +316,61 @@ as formas não mudam.
 Os 5 `Lambda capture` que ainda aparecem no GUT saem perto de `tests/test_gameplay_theme_money.gd`
 e `tests/test_harpoon_and_geleira.gd` e já
 saíam sem a correção (mesma contagem com e sem o patch): não são do `HostSync`.
+
+## Proporções (S3, #146)
+
+Cinco resoluções × ui_scale 1.0 e 1.3, num processo só (o script troca `root.size` e
+`content_scale_factor`; vale também em `--headless`). Com `canvas_items` + `expand` sobre 1152x648, a
+área lógica fica: 1280x800 → 1152x720 (ui 1.3: 886x553); 2560x1080 → 1536x648 (1181x498); 1024x768
+→ 1152x864 (886x664); 3840x2160 e 1366x768 → 1152x648 (886x498). O mais apertado é a altura de 498
+(16:9 e 21:9 com ui 1.3).
+
+```
+G=/c/Godot/Godot_v4.3-stable_win64_console.exe
+$G --path . --windowed --resolution 1280x800 --script res://tests/dev_b/aspect_snapshots.gd   # PNGs + checagem
+$G --headless --path . --script res://tests/dev_b/aspect_snapshots.gd -- --no-shots          # só checagem
+```
+
+PNGs em `.bot_runs/aspect/<WxH>_ui<escala>/<tela>.png`, problemas em `.bot_runs/aspect/report.json`.
+A checagem (`tests/dev_b/layout_audit.gd`) olha os Controls visíveis: **fora** da viewport (o que está
+em rolagem conta pelo pai), painéis de topo **sobrepostos** na mesma camada (o toast contra qualquer
+camada) e texto **cortado** (Label/Button com clip ou reticências, linhas escondidas, texto passando do
+painel). Guarda no GUT: `tests/dev_b/test_aspect_layout.gd` (título, slots, Configurações 5 abas, 6 abas
+da Base, vitória/créditos e o toast na Base, em 4:3 e 21:9 com ui 1.0 e 1.3).
+
+Legenda: ok / **corr.** (corrigido neste lote) / **#147** (issue dev-a). Cada célula é "ui 1.0 · ui 1.3".
+
+| Tela | 1280x800 | 2560x1080 | 1024x768 | 3840x2160 | 1366x768 |
+|---|---|---|---|---|---|
+| Título | ok · **corr.** | ok · **corr.** | ok · ok | ok · **corr.** | ok · **corr.** |
+| Slots | ok · **corr.** | ok · **corr.** | ok · ok | ok · **corr.** | ok · **corr.** |
+| Pausa | ok · ok | ok · ok | ok · ok | ok · ok | ok · ok |
+| Configurações (5 abas) | ok · ok | ok · ok | ok · ok | ok · ok | ok · ok |
+| Base: Loja, Museu, Expedições, Mapa, Conquistas | ok · ok | ok · ok | ok · ok | ok · ok | ok · ok |
+| Base: Diário | **corr.** · **corr.** | **corr.** · **corr.** | **corr.** · **corr.** | **corr.** · **corr.** | **corr.** · **corr.** |
+| Ver museu | ok · ok | ok · ok | ok · ok | ok · ok | ok · ok |
+| Toast de conquista (Base) | **corr.** · **corr.** | **corr.** · **corr.** | **corr.** · **corr.** | **corr.** · **corr.** | **corr.** · **corr.** |
+| Vitória | ok · ok | ok · **corr.** | ok · ok | ok · **corr.** | ok · **corr.** |
+| Créditos | ok · ok | ok · ok | ok · ok | ok · ok | ok · ok |
+| HUD de jogo (Praia) | **corr.** + **#147** · **corr.** | **corr.** · **corr.** + **#147** | **corr.** · **corr.** | **corr.** + **#147** · **corr.** | **corr.** + **#147** · **corr.** |
+
+O que foi achado e corrigido:
+- **Título e slots** (ui 1.3, altura ≤ 553): logo + 6 botões pediam 636 px (slots 619) e passavam da
+  borda de baixo (Sair/Configurações e o Slot 3 fora da tela). Novo `ui/fit_center_container.gd`
+  (`FitCenterContainer`): centra como o CenterContainer e, se o mínimo não cabe, encolhe por igual até
+  caber (escala 0.76 em 886x498). Folga de 16 px no título para o balanço do logo.
+- **Vitória** (ui 1.3, altura 498): o cartão pedia 546 px e o botão "Continuar explorando" ficava rente
+  à borda/fora; mesmo `FitCenterContainer`.
+- **Diário** (todas): o card do guardião "??? / Ilha do Tesouro • Guardião" pedia 123 px e tinha 112
+  (reticências). A fonte do card desce até 10 antes das reticências (`_shrink_slot_label`).
+- **Toast de conquista na Base** (todas): ficava em y=132, por cima do título da Base (e do menu
+  Multiplayer aberto em 4:3). Na Base sobe para y=12, centrado no vão entre os chips do HUD (grupo
+  `toast_avoid`) e o menu Multiplayer; na expedição fica onde estava.
+- **Hotbar** (todas, arquivo do Dev A, edição mínima): o número do slot (1-6) tinha largura 0 com o
+  clip do `_make_label` e não aparecia. `key.clip_text = false`.
+
+Issue dev-a: **#147** (nome do item na hotbar com reticências em 16:9/16:10/21:9 com ui 1.0 e 21:9 com
+ui 1.3; baixa prioridade). Olhando os PNGs: em 21:9 os painéis da Base ficam nos cantos e o vão do meio
+(a tenda) cresce, e em 4:3 sobra espaço abaixo da Base (altura = conteúdo da aba, lote E);
+nenhum dos dois corta ou sobrepõe nada. O aviso de falha de save (y=180) ainda pode cobrir a Base; só
+aparece em erro de disco e ficou fora deste lote.
