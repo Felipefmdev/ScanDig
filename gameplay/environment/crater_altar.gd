@@ -61,9 +61,9 @@ func _build_totem() -> void:
 	_label.name = "Label"
 	_label.text = label_text
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.position = Vector3(0.0, 3.4, 0.0)
-	_label.font_size = 40
-	_label.outline_size = 10
-	_label.pixel_size = 0.005
+	_label.position = Vector3(0.0, 3.5, 0.0)
+	_label.font_size = 48
+	_label.outline_size = 14
+	_label.pixel_size = 0.007
 	_label.modulate = Color(0.85, 0.55, 1.0)
 	add_child(_label)

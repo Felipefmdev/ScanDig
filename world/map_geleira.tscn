@@ -194,7 +194,7 @@ mesh = SubResource("Mesh_hay")
 transform = Transform3D(0.43879, 0, 0.23971, 0, 0.5, 0, -0.23971, 0, 0.43879, -1.4, 0, 0.6)
 
 [node name="Label" type="Label3D" parent="BaseEntrega"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 2, 0.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 2.5, 0.75)
 pixel_size = 0.008
 billboard = 1
 modulate = Color(0.55, 0.88, 1, 1)
@@ -249,6 +249,15 @@ tool_data = ExtResource("t_arpao_corda")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 2.8)
 script = ExtResource("9_shop_offer")
 tool_data = ExtResource("t_dinamite")
+
+[node name="Label" type="Label3D" parent="Banca"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+pixel_size = 0.008
+billboard = 1
+modulate = Color(0.55, 0.9, 1, 1)
+text = "LOJA"
+font_size = 64
+outline_size = 14
 
 [node name="Players" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
