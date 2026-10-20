@@ -1307,6 +1307,22 @@ func _refresh_journal_display() -> void:
 			bosses_header_label.text = tr("Guardiões e Chefes de Sítio (%d/%d):") % [defeated_count, BOSS_ORDER.size()]
 
 
+## Linha mais larga que o card (ex.: "Ilha do Tesouro • Guardião" na grade de 3 colunas): a fonte
+## desce até 10 antes de cair nas reticências (#146).
+func _shrink_slot_label(lbl: Label, base_size: int) -> void:
+	var font: Font = lbl.get_theme_font(&"font")
+	var font_size: int = base_size
+	while font_size > 10:
+		var widest: float = 0.0
+		for line: String in lbl.text.split("
+"):
+			widest = maxf(widest, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+		if widest <= lbl.size.x:
+			break
+		font_size -= 1
+	lbl.add_theme_font_size_override(&"font_size", font_size)
+
+
 func _build_journal_slot(id: String, title_text: String, sub_text: String, discovered: bool, accent: Color, is_boss: bool) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.name = ("BossSlot_" if is_boss else "JournalSlot_") + id
@@ -1340,6 +1356,7 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 	lbl.text = "%s\n%s" % [title_text, sub_text]
 	lbl.clip_text = true
 	lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	lbl.resized.connect(_shrink_slot_label.bind(lbl, 13))
 	if not discovered:
 		lbl.modulate = Color(0.68, 0.64, 0.58, 0.92)
 	row.add_child(lbl)
