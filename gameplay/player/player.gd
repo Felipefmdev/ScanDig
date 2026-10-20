@@ -962,6 +962,7 @@ func _process(_delta: float) -> void:
 	update_tool_sway(_delta)
 	_update_extra_hud()
 	_update_interaction_target()
+	_update_first_cycle_hint(_delta)
 
 
 ## Botão direito saca a pá e cava: sozinho = pá rápida, com Shift = escavação cuidadosa.
@@ -2090,6 +2091,28 @@ func _refresh_hunger_hud() -> void:
 
 
 const HINTS: Script = preload("res://gameplay/player/player_hints.gd")
+var _first_cycle_hint_wait: float = 3.0
+
+
+## #153: dicas locais espaçadas; não muda autoridade, inventário ou progressão.
+func _update_first_cycle_hint(delta: float) -> void:
+	if not is_local() or health <= 0.0 or is_downed or is_settings_open() or _current_map_id().is_empty():
+		return
+	_first_cycle_hint_wait -= delta
+	if _first_cycle_hint_wait > 0.0:
+		return
+	_first_cycle_hint_wait = 6.0
+	var has_detector: bool = false
+	for carried: CarriedItem in inventory.slots:
+		if carried != null and carried.tool_id == &"detector":
+			has_detector = true
+	var selected: CarriedItem = inventory.get_selected()
+	var equipped: bool = selected != null and selected.tool_id == &"detector"
+	var target: BuriedSpot = detector.get_current_target() if equipped and detector != null else null
+	var can_dig: bool = target != null and global_position.distance_to(target.global_position) <= dig_range
+	var hint: String = HINTS.first_cycle_hint(has_detector, equipped, target != null, can_dig, _count_deliverable(), session_items_count > 0)
+	if not hint.is_empty():
+		show_hint(hint)
 
 
 ## Cocô de gaivota na cara: manchas brancas por cima da vista que somem aos poucos.
