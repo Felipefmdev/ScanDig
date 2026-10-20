@@ -78,6 +78,9 @@ var review_hints_button: Button = null
 var hud_text_slider: HSlider = null
 var pad_look_slider: HSlider = null
 var pad_look_value: Label = null
+## Vibração do comando (#148), no topo da aba Controles; grava em gameplay/pad_vibration.
+var vibration_slider: HSlider = null
+var vibration_value: Label = null
 var hud_text_value: Label = null
 var language_option: OptionButton = null
 var colorblind_option: OptionButton = null
@@ -281,11 +284,24 @@ func _build() -> void:
 			else:
 				control_buttons[action] = bind_button
 			controls.add_child(bind_button)
+	# Vibração (#148): 0 a 100 %, aplicada com o resto (Aplicar); mexer no controle deslizante
+	# com o comando dá uma prévia.
+	var vibration_grid: GridContainer = _grid()
+	vibration_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var vibration_row: Array = _slider_row(vibration_grid, "Vibração", 0.0, 100.0, 5.0)
+	vibration_slider = vibration_row[0]
+	vibration_value = vibration_row[1]
+	vibration_slider.value_changed.connect(_on_vibration_changed)
+	var controls_box: VBoxContainer = VBoxContainer.new()
+	controls_box.add_theme_constant_override("separation", 18)
+	controls_box.add_child(vibration_grid)
+	controls_box.add_child(controls)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var controls_page: MarginContainer = _margin(controls, 14)
+	controls_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var controls_page: MarginContainer = _margin(controls_box, 14)
 	controls_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(controls_page)
 	scroll.name = "Controles"
@@ -524,6 +540,8 @@ func refresh() -> void:
 	invert_y_check.button_pressed = bool(gameplay["invert_y"])
 	pad_look_slider.value = float(gameplay["pad_look_sensitivity"])
 	pad_look_value.text = "%d°/s" % int(pad_look_slider.value)
+	vibration_slider.set_value_no_signal(roundf(float(gameplay["pad_vibration"]) * 100.0))
+	_show_vibration_value()
 	fov_slider.value = float(gameplay["fov"])
 	fov_value.text = "%d°" % int(fov_slider.value)
 	bobbing_check.button_pressed = bool(gameplay["view_bobbing"])
@@ -549,6 +567,7 @@ func pending_gameplay() -> Dictionary:
 		"mouse_sensitivity": sensitivity_slider.value / 100.0 * SENSITIVITY_UNIT,
 		"invert_y": invert_y_check.button_pressed,
 		"pad_look_sensitivity": pad_look_slider.value,
+		"pad_vibration": vibration_slider.value / 100.0,
 		"fov": fov_slider.value,
 		"view_bobbing": bobbing_check.button_pressed,
 		"controller_aim_assist": aim_assist_check.button_pressed,
@@ -642,6 +661,8 @@ func _on_defaults_pressed() -> void:
 	if tabs.current_tab == TAB_CONTROLS:
 		_end_capture()
 		sm.reset_controls()
+		var vibration: float = (SettingsManager.DEFAULTS[SettingsManager.GAMEPLAY] as Dictionary)["pad_vibration"]
+		sm.set_section(SettingsManager.GAMEPLAY, {"pad_vibration": vibration})
 	elif tabs.current_tab == TAB_GAMEPLAY:
 		sm.restore_defaults(SettingsManager.GAMEPLAY)
 	elif tabs.current_tab == TAB_ACCESSIBILITY:
@@ -731,6 +752,8 @@ func _link_controls_focus() -> void:
 		UiFocus.link_row([control_buttons[action], pad_buttons[action]])
 	keyboard.append(apply_button)
 	pad.append(apply_button)
+	keyboard.push_front(vibration_slider)
+	pad.push_front(vibration_slider)
 	UiFocus.link_chain(pad)
 	UiFocus.link_chain(keyboard)
 
@@ -813,6 +836,15 @@ func _on_video_trial_finished(kept: bool) -> void:
 
 
 # --- Controles (etapa 2) -------------------------------------------------------
+
+func _on_vibration_changed(value: float) -> void:
+	_show_vibration_value()
+	Rumble.preview(value / 100.0)
+
+
+func _show_vibration_value() -> void:
+	vibration_value.text = "Desligada" if vibration_slider.value <= 0.0 else "%d %%" % int(vibration_slider.value)
+
 
 func _refresh_controls() -> void:
 	var sm: SettingsManager = SettingsManager.instance
