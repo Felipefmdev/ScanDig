@@ -28,9 +28,9 @@ const GRIP_TOP: Vector3 = Vector3(0.0, -0.038, 0.075)
 const GRIP_BOTTOM: Vector3 = Vector3(0.0, -0.14, 0.04)
 
 ## Caixa de controlo: centro, tamanho e inclinação (o topo vira-se para o jogador).
-const BOX_CENTER: Vector3 = Vector3(0.0, 0.05, -0.08)
+const BOX_CENTER: Vector3 = Vector3(0.0, 0.085, -0.105)
 const BOX_SIZE: Vector3 = Vector3(0.15, 0.05, 0.21)
-const BOX_TILT_DEG: float = 45.0
+const BOX_TILT_DEG: float = 57.0
 ## Tamanho do ecrã (proporção igual à do SubViewport do radar: 256x368).
 const SCREEN_SIZE: Vector2 = Vector2(0.125, 0.1797)
 
@@ -89,10 +89,10 @@ func _build_body(st: SurfaceTool) -> void:
 	var box_basis: Basis = Basis(Vector3.RIGHT, deg_to_rad(BOX_TILT_DEG))
 
 	# Apoio de braço em U (azul) com correia de fita por cima
-	var cuff_c: Vector3 = Vector3(0.0, -0.07, 0.17)
-	_box(st, cuff_c, Vector3(0.09, 0.012, 0.09), Basis.IDENTITY, BLUE)
+	var cuff_c: Vector3 = Vector3(0.0, -0.08, 0.145)
+	_box(st, cuff_c, Vector3(0.085, 0.012, 0.075), Basis.IDENTITY, BLUE)
 	for sx: float in [-1.0, 1.0]:
-		_box(st, cuff_c + Vector3(sx * 0.048, 0.03, 0.0), Vector3(0.012, 0.065, 0.09), Basis(Vector3.FORWARD, sx * 0.12), BLUE)
+		_box(st, cuff_c + Vector3(sx * 0.048, 0.03, 0.0), Vector3(0.012, 0.052, 0.075), Basis(Vector3.FORWARD, sx * 0.12), BLUE)
 	_box(st, cuff_c + Vector3(0.0, 0.068, 0.0), Vector3(0.1, 0.006, 0.03), Basis.IDENTITY, TAPE)
 	_box(st, cuff_c + Vector3(0.0, -0.025, -0.02), Vector3(0.03, 0.04, 0.05), Basis(Vector3.RIGHT, 0.4), BLUE_DARK)
 
@@ -108,6 +108,7 @@ func _build_body(st: SurfaceTool) -> void:
 	_prism(st, GRIP_BOTTOM, GRIP_BOTTOM + (GRIP_BOTTOM - GRIP_TOP).normalized() * 0.016, 0.021, 0.019, 7, STEEL)
 
 	# Caixa de controlo azul, cantos com fita, botão rodado e botões vermelhos, cabo
+	_prism(st, Vector3(0.0, 0.005, -0.05), BOX_CENTER + box_basis * Vector3(0.0, -BOX_SIZE.y * 0.5, 0.0), 0.014, 0.014, 8, STEEL)
 	_box(st, BOX_CENTER, BOX_SIZE, box_basis, BLUE)
 	_box(st, BOX_CENTER + box_basis * Vector3(0.0, -BOX_SIZE.y * 0.5 - 0.004, 0.0), Vector3(BOX_SIZE.x - 0.02, 0.008, BOX_SIZE.z - 0.02), box_basis, BLUE_DARK)
 	for c: Vector3 in [Vector3(0.06, 0.0, 0.09), Vector3(-0.065, 0.0, -0.08), Vector3(0.07, 0.0, -0.05)]:

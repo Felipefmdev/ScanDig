@@ -28,8 +28,10 @@ const RARE_COLOR: Color = Color(1.0, 0.85, 0.3)
 const PIN_COLOR: Color = Color(0.4, 0.95, 1.0)
 ## Linhas do rodapé: 4 até ao Nv.3, 5 com a faixa de valor (Nv.4+).
 const FOOTER_LINES: int = 4
-const FOOTER_LINE_HEIGHT: float = 17.0
-const FOOTER_FONT_SIZE: int = 14
+const FOOTER_LINE_HEIGHT: float = 14.0
+const FOOTER_FONT_SIZE: int = 12
+const ACTION_HEIGHT: float = 24.0
+const ACTION_FONT_SIZE: int = 20
 ## Profundidade (cm) a partir da qual o blip do Nv3 fica no tamanho/brilho mínimo.
 const DEEP_CM: float = 60.0
 ## Opacidade dos blips falsos da chuva (#99), relativa a um blip real.
@@ -68,6 +70,49 @@ static func get_material_color(material: ItemData.MaterialType) -> Color:
 	return LEVEL1_COLOR
 
 
+## Presentation only: never grant the precision of an unpurchased pinpointer.
+func get_primary_action() -> String:
+	if detector == null or detector.get_current_target() == null:
+		return tr("Procurar").to_upper()
+	if detector.get_pinpointer_level() >= 1 and detector.is_pinpointing() and detector.get_target_distance() <= MetalDetector.PINPOINT_DIG_DISTANCE:
+		return tr("Cavar").to_upper()
+	return tr("Aproximar").to_upper()
+
+
+## The provider remains authoritative about upgrades, climate and item knowledge.
+func get_secondary_lines() -> PackedStringArray:
+	var result: PackedStringArray = PackedStringArray()
+	if detector == null:
+		return result
+	var unavailable: PackedStringArray = PackedStringArray([I18n.t("Mat: ") + "---", I18n.t("Prof: ") + "---", I18n.t("Val: ") + "---"])
+	for line: String in detector.get_footer_lines():
+		if not line.is_empty() and not line in unavailable:
+			result.append(line)
+	return result
+
+
+static func get_blip_shape(blip: MetalDetector.RadarBlip) -> StringName:
+	if blip.is_enemy:
+		return &"diamond"
+	return &"cross" if blip.is_noise else &"circle"
+
+
+func get_radar_bounds(vsize: Vector2) -> Rect2:
+	var rows: int = 5 if detector != null and detector.get_detector_level() >= MetalDetector.VALUE_RANGE_LEVEL else FOOTER_LINES
+	var footer_h: float = FOOTER_LINE_HEIGHT * float(rows) + 7.0
+	var radius: float = minf(vsize.x, vsize.y - footer_h - ACTION_HEIGHT) * 0.5 - 3.0
+	return Rect2(Vector2(vsize.x * 0.5 - radius, ACTION_HEIGHT + 3.0), Vector2.ONE * radius * 2.0)
+
+
+static func fit_readout_line(font: Font, text: String, width: float, font_size: int) -> String:
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= width:
+		return text
+	var shortened: String = text
+	while not shortened.is_empty() and font.get_string_size(shortened + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width:
+		shortened = shortened.left(shortened.length() - 1)
+	return shortened + "…"
+
+
 func _draw() -> void:
 	if detector == null:
 		return
@@ -78,14 +123,15 @@ func _draw() -> void:
 	if fill_background:
 		draw_rect(Rect2(Vector2.ZERO, vsize), SCREEN_BG_COLOR)
 
-	var lines: PackedStringArray = detector.get_footer_lines()
-	var footer_h: float = FOOTER_LINE_HEIGHT * float(maxi(lines.size(), FOOTER_LINES)) + 4.0
-	var radius: float = minf(vsize.x, vsize.y - footer_h) * 0.5 - 3.0
+	var lines: PackedStringArray = get_secondary_lines()
+	var bounds: Rect2 = get_radar_bounds(vsize)
+	var radius: float = bounds.size.x * 0.5
 	if radius <= 4.0:
 		return
-	var center: Vector2 = Vector2(vsize.x * 0.5, radius + 3.0)
+	var center: Vector2 = bounds.get_center()
 	var level: int = detector.get_detector_level()
 
+	_draw_action(vsize.x)
 	_draw_background(center, radius)
 	_draw_sweep(center, radius)
 
@@ -103,7 +149,7 @@ func _draw() -> void:
 			continue  # o alvo do pinpointer é desenhado ao vivo por _draw_pinpoint
 		var p: Vector2 = center + Vector2(radar_pos.x, -radar_pos.y) * scale_px
 		var alpha: float = detector.get_blip_alpha(blip)
-		if blip.is_enemy:
+		if get_blip_shape(blip) == &"diamond":
 			_draw_enemy_blip(p, alpha)
 		else:
 			_draw_item_blip(p, alpha, blip, level)
@@ -148,9 +194,12 @@ func _angle_dir(angle: float) -> Vector2:
 
 
 func _draw_item_blip(p: Vector2, alpha: float, blip: MetalDetector.RadarBlip, level: int) -> void:
-	if blip.is_noise:
-		# Chuva (#99): blip falso pequeno e esmaecido, sem cor de material.
-		draw_circle(p, BLIP_RADIUS * 0.6, Color(LEVEL1_COLOR, alpha * NOISE_BLIP_ALPHA))
+	if get_blip_shape(blip) == &"cross":
+		# Interference stays faint, but differs by shape as well as opacity.
+		var noise_color: Color = Color(LEVEL1_COLOR, alpha * NOISE_BLIP_ALPHA)
+		var arm: Vector2 = Vector2(2.5, 2.5)
+		draw_line(p - arm, p + arm, noise_color, 1.2, true)
+		draw_line(p + Vector2(-2.5, 2.5), p + Vector2(2.5, -2.5), noise_color, 1.2, true)
 		return
 	var color: Color = LEVEL1_COLOR
 	var r: float = BLIP_RADIUS
@@ -232,12 +281,22 @@ func _draw_rare_compass(center: Vector2, radius: float, compass: Vector2) -> voi
 
 ## Texto por baixo do círculo (MetalDetector.get_footer_lines: nível/alcance/inimigos/raro,
 ## sinal ou pinpointer, material ou nome, profundidade, valor).
+func _draw_action(width: float) -> void:
+	var color: Color = A11y.color(&"radar_rare") if get_primary_action() == tr("Cavar").to_upper() else TEXT_COLOR
+	draw_rect(Rect2(1.0, 1.0, width - 2.0, ACTION_HEIGHT - 2.0), Color(color, 0.12))
+	draw_string(ThemeDB.fallback_font, Vector2(0.0, 19.0), get_primary_action(), HORIZONTAL_ALIGNMENT_CENTER, width, ACTION_FONT_SIZE, color)
+
+
 func _draw_footer(center: Vector2, radius: float, lines: PackedStringArray, width: float) -> void:
 	var font: Font = ThemeDB.fallback_font
 	var y: float = center.y + radius + FOOTER_LINE_HEIGHT
 	for line: String in lines:
+		var font_size: int = FOOTER_FONT_SIZE
+		while font_size > 9 and font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width - 4.0:
+			font_size -= 1
+		var displayed: String = fit_readout_line(font, line, width - 4.0, font_size)
 		var pos: Vector2 = Vector2(0.0, y)
 		if not fill_background:
-			draw_string(font, pos + Vector2(1.0, 1.0), line, HORIZONTAL_ALIGNMENT_CENTER, width, FOOTER_FONT_SIZE, Color(0, 0, 0, 0.8))
-		draw_string(font, pos, line, HORIZONTAL_ALIGNMENT_CENTER, width, FOOTER_FONT_SIZE, TEXT_COLOR)
+			draw_string(font, pos + Vector2(1.0, 1.0), displayed, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, Color(0, 0, 0, 0.8))
+		draw_string(font, pos, displayed, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, TEXT_COLOR)
 		y += FOOTER_LINE_HEIGHT

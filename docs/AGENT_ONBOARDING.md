@@ -24,6 +24,7 @@ Lê isto ao entrares no projeto. Primeiro ganhas contexto e só depois montas a 
 ### Regras da casa
 
 - **Coordenação (Felipe, 21/10/2026):** Codex é o terminal principal; Bússola e Farol são os ajudantes principais e Antigravity #2 fica com tarefas básicas. Não usar Claude nem retomar rotinas antigas de transferência de liderança.
+- **Delegação de tarefas básicas (Felipe, 21/10/2026):** Antigravity #2 deve distribuir as tarefas que receber entre Sonda e Broca, seus agentes já conectados, revisar os resultados e reportar ao Codex. Registrar responsáveis e evidências na issue. Não recrutar substitutos nem usar Claude; comunicar indisponibilidade real de algum agente.
 - **Kanban obrigatório:** todo trabalho deve estar associado a uma issue no GitHub Project #1 antes de editar. Atualize o status e registre escopo, responsável, verificações e evidências na issue; nunca descarte alterações locais de outro agente para limpar o checkout.
 - **Ambientação dos mapas:** usar o MCP Godot para inspeção, aplicação e diagnóstico, com capturas atuais antes/depois. Um roteiro antigo ou leitura de código não substitui validação visual atual.
 - **Testes:**
