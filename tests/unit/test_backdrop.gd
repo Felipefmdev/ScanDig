@@ -61,3 +61,17 @@ func test_same_seed_same_layout_and_rebuild_is_idempotent() -> void:
 	assert_eq(ma.get_aabb(), mb.get_aabb(), "determinístico")
 	a.call("build")
 	assert_eq(a.get_child_count(), 1, "rebuild não duplica filhos")
+
+
+func test_regional_surroundings_are_integrated_without_collision_or_persistent_owner() -> void:
+	for theme_name: String in ["ruinas", "geleira", "cratera"]:
+		var backdrop: Node3D = _make(theme_name)
+		var surroundings: MeshInstance3D = backdrop.get_node_or_null("Hills/RegionalSurroundings") as MeshInstance3D
+		assert_not_null(surroundings, theme_name + ": faixa intermediária integrada")
+		if surroundings == null:
+			continue
+		assert_not_null(surroundings.mesh)
+		assert_null(surroundings.owner)
+		assert_eq(surroundings.get_child_count(), 0, "Apenas malha cosmética")
+		backdrop.call("build")
+		assert_eq(backdrop.find_children("RegionalSurroundings", "MeshInstance3D", true, false).size(), 1, "Rebuild sem duplicação")

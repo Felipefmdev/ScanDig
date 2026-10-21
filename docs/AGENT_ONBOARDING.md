@@ -23,6 +23,9 @@ Lê isto ao entrares no projeto. Primeiro ganhas contexto e só depois montas a 
 
 ### Regras da casa
 
+- **Coordenação (Felipe, 21/10/2026):** Codex é o terminal principal; Bússola e Farol são os ajudantes principais e Antigravity #2 fica com tarefas básicas. Não usar Claude nem retomar rotinas antigas de transferência de liderança.
+- **Kanban obrigatório:** todo trabalho deve estar associado a uma issue no GitHub Project #1 antes de editar. Atualize o status e registre escopo, responsável, verificações e evidências na issue; nunca descarte alterações locais de outro agente para limpar o checkout.
+- **Ambientação dos mapas:** usar o MCP Godot para inspeção, aplicação e diagnóstico, com capturas atuais antes/depois. Um roteiro antigo ou leitura de código não substitui validação visual atual.
 - **Testes:**
   - O GUT e o `bash tools/run_headless_tests.sh "<godot>"` têm de passar antes de cada commit.
   - O binário é `C:/Users/felip/Downloads/Godot_v4.3-stable_win64.exe/Godot_v4.3-stable_win64_console.exe`.

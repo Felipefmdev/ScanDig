@@ -79,9 +79,11 @@ Regra do projeto: preferir **CC0**; qualquer asset CC-BY precisa de crédito num
 - **Godot Shaders** (godotshaders.com) — shaders prontos (água estilizada, contornos, vento nas palmeiras).
 - Documentação oficial: docs.godotengine.org (versão 4.3).
 
-## 6. Integração com IA (Claude Code)
+## 6. Integração com IA (Codex)
 
-- Hoje: os terminais correm o Godot em headless, leem erros, tiram capturas e correm os testes GUT.
-- Existem servidores MCP para Godot (ex.: *godot-mcp-pilot*, *godot-test-mcp*) que dão ao
-  Claude ferramentas diretas de "correr o projeto e ler erros". Ainda não foram avaliados
-  quanto a segurança e manutenção — não estão instalados.
+- Codex coordena o projeto; Bússola e Farol são os ajudantes principais, e Antigravity #2 executa tarefas básicas. Claude não é usado.
+- Toda tarefa deve estar no GitHub Project #1 antes de editar, com responsável, status e evidências na issue.
+- **Godot MCP (#157):** servidor [koltyakov/godot-mcp](https://github.com/koltyakov/godot-mcp), instalado fora do jogo em `C:/Users/felip/.codex/tools/godot-mcp`, com transporte stdio e `GODOT_PATH` apontando ao console 4.3. A configuração pessoal do Codex registra o servidor `godot`; novas sessões devem confirmar a descoberta e executar `get_godot_version` antes de usá-lo.
+- Quando a sessão já aberta não expõe o servidor recém-registrado, o cliente SDK local `call-mcp.mjs` no diretório da ferramenta permite chamadas MCP reais por stdio. Recebe um JSON com `name` e `arguments` e, opcionalmente, um caminho de saída. Não é um addon do jogo nem deve ser exportado com ele.
+- Para ambientação: inspeção e aplicação por MCP (`read_script`, `edit_script`, `create_script`, `run_godot_script`); comparar capturas atuais com janela e rodar GUT/headless. `edit_script` aceita `expected_sha256` para impedir sobrescrever alterações concorrentes. A captura pode ser iniciada por `run_godot_script`, que lança o DebugBridge com janela e save isolado.
+- O renderer dummy headless da Godot 4.3 não permite validar os transforms de `MultiMesh` usados neste passe. Esse contrato tem teste com janela; o teste correspondente fica explicitamente pendente em headless. Não tratar uma captura headless como evidência visual.

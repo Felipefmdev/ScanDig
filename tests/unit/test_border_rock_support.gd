@@ -54,3 +54,19 @@ func test_both_border_rows_follow_terrain_beneath_bounds_and_beyond_collision() 
 		assert_gt(inner_count, 0, theme_name + ": cobre a fila junto a Bounds")
 		assert_gt(outer_count, 0, theme_name + ": cobre a fila fora da colisao")
 		assert_lt(worst_error, 0.001, theme_name + ": apoio no terreno, com enterro de 0.3 m")
+
+
+func test_campo_border_rocks_leave_the_landscape_visible() -> void:
+	var scatter: Node3D = BorderScatter.new()
+	scatter.set("theme", "campo")
+	autofree(scatter)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 157
+	scatter.call("_border", Vector2(29.0, 29.0), rng)
+	var kinds: Dictionary = scatter.get("_kinds")
+	var maximum_height: float = 0.0
+	for kind: String in kinds:
+		for pose: Transform3D in kinds[kind]["xforms"]:
+			# O modelo termina em y=0.75; limitar a silhueta acima do apoio.
+			maximum_height = maxf(maximum_height, pose.basis.y.length() * 0.75)
+	assert_lt(maximum_height, 1.5, "Borda rural baixa deixa ver bosques e lavoura externa")

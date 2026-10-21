@@ -41,6 +41,7 @@ func _ready() -> void:
 	_build_arena()
 	_build_groves()
 	_build_headlands()
+	_build_outer_palms()
 	_extend_sea()
 
 
@@ -272,3 +273,31 @@ func _extend_sea() -> void:
 	sea.mesh = st.commit()
 	sea.mesh.surface_set_material(0, material)
 	_continuous_sea_mesh = sea.mesh
+
+
+## #157: palmeiras externas em três grupos, apoiadas nas costuras da ContinuidadeCosta.
+## Não extrapolar BeachTerrain em X: a malha exterior interpola entre -31 e -150.
+func _build_outer_palms() -> void:
+	var grove: Node3D = Node3D.new()
+	grove.name = "PalmeiralExterior"
+	add_child(grove)
+	var specs: Array[Vector3] = [
+		Vector3(-40.0, -24.0, 5.8), Vector3(-48.0, -24.0, 6.7), Vector3(-44.0, -16.0, 5.2),
+		Vector3(-38.0, 0.0, 6.3), Vector3(-47.0, 0.0, 5.6),
+		Vector3(-55.0, 8.0, 6.8), Vector3(-42.0, 8.0, 5.1),
+		Vector3(-39.0, 24.0, 5.9), Vector3(-50.0, 24.0, 6.5),
+	]
+	for i: int in specs.size():
+		var spec: Vector3 = specs[i]
+		var palm: PalmModel = PalmModel.new()
+		palm.name = "PalmaExterior%d" % i
+		palm.height = spec.z
+		palm.bend = 0.55 + float(i % 4) * 0.18
+		palm.frond_length = 2.6
+		palm.seed_value = 1570 + i * 37
+		# Z múltiplo de 8 coincide com uma borda dos strips: interpolação linear exata.
+		var y: float = lerpf(BeachTerrain.height_at(-31.0, spec.y) - 0.15, -1.0, (-31.0 - spec.x) / 119.0) - 0.04
+		palm.position = Vector3(spec.x, y, spec.y)
+		palm.rotation.y = float(i) * 2.399963
+		palm.add_to_group("praia_exterior_roots")
+		grove.add_child(palm)

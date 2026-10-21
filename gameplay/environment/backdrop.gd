@@ -9,6 +9,7 @@ extends Node3D
 ## Cores alinhadas com world/environment_<mapa>.tres (o nevoeiro funde-as no céu).
 
 const THEMES: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera", "ilha"]
+const REGIONAL_SURROUNDINGS: Script = preload("res://gameplay/environment/regional_surroundings.gd")
 const MIN_RADIUS: float = 60.0
 const MAX_RADIUS: float = 140.0
 const SEA_COLOR: Color = Color(0.2, 0.5, 0.66)
@@ -94,6 +95,15 @@ func build() -> int:
 	hills.material_override = ToonKit.vertex_material(true, true)
 	_far(hills)
 	add_child(hills)
+	# #157: costura regional entre o relevo existente e as silhuetas distantes.
+	var regional_mesh: Mesh = REGIONAL_SURROUNDINGS.build(theme)
+	if regional_mesh != null:
+		var regional: MeshInstance3D = MeshInstance3D.new()
+		regional.name = "RegionalSurroundings"
+		regional.mesh = regional_mesh
+		regional.material_override = ToonKit.vertex_material(false, true)
+		_far(regional)
+		hills.add_child(regional)
 	var continuous_sea: bool = false
 	if theme == "praia" and get_parent() != null and get_parent().get_parent() != null:
 		var near_sea: Node = get_parent().get_parent().get_node_or_null("Sea")
