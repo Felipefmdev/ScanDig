@@ -21,6 +21,7 @@ extends Node3D
 const GROUND_MASK: int = 1
 const BACKDROP: Script = preload("res://gameplay/environment/backdrop.gd")
 const AMBIENT_LIFE: Script = preload("res://gameplay/environment/ambient_life.gd")
+const WORKSITES: Script = preload("res://gameplay/environment/map_worksites.gd")
 const DEFAULT_HALF: float = 28.0
 
 var _kinds: Dictionary = {}  # nome -> {mesh, transforms}
@@ -48,6 +49,9 @@ func _ready() -> void:
 func build() -> int:
 	for c: Node in get_children():
 		if c.owner == null:
+			# Liberar o nome do conjunto antes de reconstruir, mesmo no mesmo frame.
+			if c.name == &"MapWorksites":
+				remove_child(c)
 			c.queue_free()
 	_kinds.clear()
 	var half: Vector2 = _arena_half()
@@ -89,6 +93,10 @@ func build() -> int:
 		mmi.material_override = ToonKit.vertex_material()
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if kind.begins_with("tiny") else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		add_child(mmi)
+	var worksites: Node3D = WORKSITES.new()
+	worksites.name = &"MapWorksites"
+	worksites.set("theme", theme)
+	add_child(worksites)
 	return placed
 
 
