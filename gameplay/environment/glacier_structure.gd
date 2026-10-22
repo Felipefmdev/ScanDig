@@ -207,11 +207,29 @@ func _cabin(st: SurfaceTool, shapes: Array) -> void:
 	var wall_h: float = 2.4
 	var roof_h: float = 1.3
 
-	# Paredes de toros de madeira
-	var wall_box: BoxShape3D = BoxShape3D.new()
-	wall_box.size = Vector3(width, wall_h, depth)
-	LowPolyMesh.box(st, Vector3(0.0, wall_h * 0.5, 0.0), wall_box.size, Basis.IDENTITY, WOOD_LOG)
-	shapes.append([wall_box, Transform3D(Basis.IDENTITY, Vector3(0.0, wall_h * 0.5, 0.0))])
+	# #167: hollow cabin with an actual -Z entry, not a solid box with a painted door.
+	# Same footprint/roof/chimney, standard .8m player capsule fits a 1.55 x 2.10m opening.
+	var wall_t: float = 0.18
+	var door_w: float = 1.55
+	var door_h: float = 2.10
+	var front_w: float = (width - door_w) * 0.5
+	for side: float in [-1.0, 1.0]:
+		_cabin_wall(st, shapes, Vector3(side * (width - wall_t) * 0.5, wall_h * 0.5, 0), Vector3(wall_t, wall_h, depth), WOOD_LOG)
+		_cabin_wall(st, shapes, Vector3(side * (door_w + front_w) * 0.5, wall_h * 0.5, -depth * 0.5 + wall_t * 0.5), Vector3(front_w, wall_h, wall_t), WOOD_LOG)
+	_cabin_wall(st, shapes, Vector3(0, wall_h * 0.5, depth * 0.5 - wall_t * 0.5), Vector3(width, wall_h, wall_t), WOOD_LOG)
+	_cabin_wall(st, shapes, Vector3(0, door_h + (wall_h - door_h) * 0.5, -depth * 0.5 + wall_t * 0.5), Vector3(door_w, wall_h - door_h, wall_t), WOOD_DARK)
+	# A grounded .10m floor supplies readable interior support and a conservative threshold.
+	var floor_size: Vector3 = Vector3(width - wall_t * 2, 0.10, depth - wall_t * 2)
+	var floor_shape: BoxShape3D = BoxShape3D.new()
+	floor_shape.size = floor_size
+	shapes.append([floor_shape, Transform3D(Basis.IDENTITY, Vector3(0, 0.05, 0))])
+	for plank: int in range(8):
+		var plank_w: float = floor_size.x / 8.0
+		var plank_x: float = -floor_size.x * 0.5 + (float(plank) + 0.5) * plank_w
+		LowPolyMesh.box(st, Vector3(plank_x, 0.05, 0), Vector3(plank_w - 0.012, 0.1, floor_size.z), Basis.IDENTITY, WOOD_LOG.lightened(0.08 if plank % 3 == 0 else 0.0))
+	# Narrow jambs outside the clear opening, never a panel across the passage.
+	for side: float in [-1.0, 1.0]:
+		LowPolyMesh.box(st, Vector3(side * (door_w * 0.5 + 0.04), door_h * 0.5, -depth * 0.5 - 0.015), Vector3(0.08, door_h, 0.08), Basis.IDENTITY, WOOD_DARK)
 
 	# Teto de duas águas inclinado com camada espessa de neve
 	var roof_peak: Vector3 = Vector3(0.0, wall_h + roof_h, 0.0)
@@ -243,9 +261,17 @@ func _cabin(st: SurfaceTool, shapes: Array) -> void:
 	chim_shape.size = chimney_size
 	shapes.append([chim_shape, Transform3D(Basis.IDENTITY, chimney_pos)])
 
-	# Moldura da porta da frente (-Z)
-	var door_c: Vector3 = Vector3(0.0, 1.0, -depth * 0.51)
-	LowPolyMesh.box(st, door_c, Vector3(0.9, 2.0, 0.06), Basis.IDENTITY, WOOD_DARK)
+	# Close only the gables above wall height; the doorway/interior remain genuinely open.
+	for side: float in [-1.0, 1.0]:
+		var gable_z: float = side * depth * 0.5
+		LowPolyMesh.tri(st, Vector3(-width * 0.5, wall_h, gable_z), Vector3(0, wall_h + roof_h, gable_z), Vector3(width * 0.5, wall_h, gable_z), Vector3(0, wall_h + roof_h * 0.3, 0), WOOD_LOG)
+
+
+func _cabin_wall(st: SurfaceTool, shapes: Array, center: Vector3, dimensions: Vector3, color: Color) -> void:
+	LowPolyMesh.box(st, center, dimensions, Basis.IDENTITY, color)
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = dimensions
+	shapes.append([shape, Transform3D(Basis.IDENTITY, center)])
 
 
 ## Iglu esférico facetado de blocos de neve
