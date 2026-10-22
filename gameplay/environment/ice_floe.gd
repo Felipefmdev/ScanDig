@@ -30,6 +30,11 @@ const REFREEZE_SPEED: float = 0.20
 @export var floe_radius: float = 1.65
 @export var ice_thickness: float = 0.22
 
+## Enabled by FrozenLake; isolated floes retain the offline test/tool contract.
+var host_authoritative: bool = false
+var _sync_left: float = 0.0
+var _last_snapshot: Array = []
+
 var health: float = 1.0
 var state: int = STATE_INTACT
 
@@ -56,9 +61,21 @@ func _ready() -> void:
 	_build_visuals()
 	_build_stepper_area()
 	_update_visual_state()
+	if host_authoritative and HostSync.is_host(self):
+		HostSync.on_peer_ready(self, _send_network_state)
 
 
 func _physics_process(delta: float) -> void:
+	if host_authoritative:
+		if not HostSync.is_host(self):
+			return
+		_sync_left -= delta
+		if _sync_left <= 0.0:
+			_sync_left = 0.25
+			var snapshot: Array = [state, health, _time_broken]
+			if snapshot != _last_snapshot:
+				_last_snapshot = snapshot
+				HostSync.broadcast(self, &"_rpc_network_state", snapshot)
 	if state == STATE_BROKEN:
 		_time_broken += delta
 		if _time_broken >= REFREEZE_DELAY:
@@ -98,6 +115,8 @@ func _physics_process(delta: float) -> void:
 
 
 func take_stress(amount: float) -> void:
+	if host_authoritative and not HostSync.is_host(self):
+		return
 	if state == STATE_BROKEN:
 		return
 	health = clampf(health - amount, 0.0, 1.0)
@@ -105,6 +124,8 @@ func take_stress(amount: float) -> void:
 
 
 func shatter() -> void:
+	if host_authoritative and not HostSync.is_host(self):
+		return
 	if state == STATE_BROKEN:
 		return
 	health = 0.0
@@ -114,10 +135,15 @@ func shatter() -> void:
 func apply_blast_damage(epicenter: Vector3, radius: float) -> void:
 	var dist: float = global_position.distance_to(epicenter)
 	if dist <= radius + floe_radius * 0.5:
-		shatter()
+		if host_authoritative and not HostSync.is_host(self):
+			_rpc_request_blast.rpc_id(1, epicenter, radius)
+		else:
+			shatter()
 
 
 func repair(amount: float) -> void:
+	if host_authoritative and not HostSync.is_host(self):
+		return
 	health = clampf(health + amount, 0.0, 1.0)
 	_evaluate_state_transition()
 
@@ -159,6 +185,38 @@ func _set_state(new_state: int) -> void:
 		elif old_state < new_state:
 			SFX.play_at(SFX.FOOTSTEP_SNOW, global_position, -2.0, 0.2)
 			cracked.emit(self, state)
+
+
+func _send_network_state(peer_id: int) -> void:
+	HostSync.send_to(self, peer_id, &"_rpc_network_state", [state, health, _time_broken])
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_network_state(new_state: int, new_health: float, broken_time: float) -> void:
+	apply_network_state(new_state, new_health, broken_time)
+
+
+func apply_network_state(new_state: int, new_health: float, broken_time: float) -> void:
+	if new_state < STATE_INTACT or new_state > STATE_BROKEN or not is_finite(new_health) or not is_finite(broken_time):
+		return
+	if state != new_state:
+		_set_state(new_state)
+	health = clampf(new_health, 0.0, 1.0)
+	_time_broken = maxf(broken_time, 0.0)
+	if state == STATE_BROKEN and health > 0.0 and _mesh_root != null:
+		_mesh_root.visible = true
+		_mesh_root.position.y = -(1.0 - health / 0.35) * 0.15
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_request_blast(epicenter: Vector3, radius: float) -> void:
+	if not HostSync.is_host(self) or not host_authoritative or not epicenter.is_finite() or not is_finite(radius):
+		return
+	var player: Node3D = HostSync.player_of(get_tree(), multiplayer.get_remote_sender_id())
+	if player == null or player.global_position.distance_to(epicenter) > 25.0 or radius <= 0.0 or radius > 5.0:
+		return
+	# Defer the host-only mutation out of the client's RPC context.
+	apply_blast_damage.call_deferred(epicenter, radius)
 
 
 func _process_refreeze(delta: float) -> void:

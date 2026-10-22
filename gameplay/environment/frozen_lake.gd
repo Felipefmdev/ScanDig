@@ -97,9 +97,11 @@ func apply_blast_damage(epicenter: Vector3, radius: float) -> int:
 	var shattered_count: int = 0
 	for floe: IceFloe in floes:
 		if is_instance_valid(floe) and not floe.is_broken():
-			if floe.global_position.distance_to(epicenter) <= radius + floe.floe_radius:
-				floe.shatter()
-				shattered_count += 1
+			if floe.global_position.distance_to(epicenter) <= radius + floe.floe_radius * 0.5:
+				floe.apply_blast_damage(epicenter, radius)
+				# A client only requests the blast; do not report a confirmed break yet.
+				if floe.is_broken():
+					shattered_count += 1
 	return shattered_count
 
 
@@ -196,6 +198,7 @@ func _generate_ice_floes() -> void:
 
 func _spawn_floe(local_offset: Vector2, id: int, radius: float) -> IceFloe:
 	var floe: IceFloe = ICE_FLOE_SCRIPT.new() as IceFloe
+	floe.host_authoritative = true
 	floe.floe_id = id
 	floe.floe_radius = radius
 	var world_x: float = CENTER_OFFSET.x + local_offset.x
@@ -213,6 +216,8 @@ func _spawn_floe(local_offset: Vector2, id: int, radius: float) -> IceFloe:
 
 
 func _spawn_sunken_items() -> void:
+	if not HostSync.is_host(self):
+		return
 	sunken_pickups.clear()
 
 	for i: int in mini(SUNKEN_ITEM_PATHS.size(), SUNKEN_OFFSETS.size()):
