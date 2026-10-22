@@ -61,6 +61,14 @@ const GEAR_BRONZE: Color = Color(0.55, 0.38, 0.28)
 
 @export var seed_value: int = 1
 
+## #168: identity is redundant in silhouette, relief bands, color and the scene's note.
+## No animation/flashing, no change to SequencePuzzle's existing input order.
+@export_enum("Violeta", "Ciano", "Ambar") var resonance_identity: int = 0:
+	set(value):
+		resonance_identity = clampi(value, 0, 2)
+		if is_inside_tree() and kind == Kind.RESONANT_CRYSTAL:
+			rebuild()
+
 
 func _ready() -> void:
 	rebuild()
@@ -246,12 +254,30 @@ func _build_antenna_relay(st: SurfaceTool) -> void:
 
 ## Cristal ressonante que emite frequência harmónica
 func _build_resonant_crystal(st: SurfaceTool, rng: RandomNumberGenerator) -> void:
-	# Base de rocha cósmica
-	LowPolyMesh.prism(st, Vector3.ZERO, Vector3(0.0, 0.25, 0.0), 0.5, 0.4, 6, METEOR_CRUST)
-	# Coluna de cristal principal
-	var h: float = rng.randf_range(1.6, 2.1)
-	LowPolyMesh.prism(st, Vector3(0.0, 0.2, 0.0), Vector3(0.0, h * 0.8, 0.0), 0.28, 0.22, 6, CRYSTAL_PURPLE)
-	LowPolyMesh.prism(st, Vector3(0.0, h * 0.8, 0.0), Vector3(0.0, h, 0.0), 0.22, 0.015, 6, CRYSTAL_CYAN)
+	# Existing crystal_eco.jpg rock/crystal language, three deliberately different outlines.
+	LowPolyMesh.prism(st, Vector3.ZERO, Vector3(0, 0.28, 0), 0.52, 0.43, 6, METEOR_CRUST)
+	var palettes: Array[Color] = [Color("#9869cf"), Color("#43c6df"), Color("#d89a45")]
+	var crystal: Color = palettes[resonance_identity]
+	match resonance_identity:
+		0: # One tall, narrow main crystal: low note.
+			_resonant_shard(st, Vector3(0, 0.2, 0), Vector3(0.02, 2.05, -0.02), 0.26, crystal)
+		1: # Two separated peaks and wider fork: high note.
+			_resonant_shard(st, Vector3(-0.19, 0.2, 0), Vector3(-0.36, 1.8, -0.02), 0.19, crystal)
+			_resonant_shard(st, Vector3(0.2, 0.2, 0.03), Vector3(0.36, 1.55, 0.04), 0.19, crystal.darkened(0.08))
+		2: # Three squat, splayed peaks: middle note; identity survives grayscale/palette changes.
+			_resonant_shard(st, Vector3(-0.27, 0.2, 0), Vector3(-0.51, 1.13, -0.02), 0.18, crystal.darkened(0.06))
+			_resonant_shard(st, Vector3(0, 0.21, -0.02), Vector3(0.01, 1.49, -0.04), 0.23, crystal)
+			_resonant_shard(st, Vector3(0.28, 0.2, 0.02), Vector3(0.51, 1.06, 0.05), 0.18, crystal.lightened(0.06))
+	# 1/2/3 raised bands around the rock are countable from every approach without color/audio.
+	for band: int in range(resonance_identity + 1):
+		var y: float = 0.055 + float(band) * 0.075
+		LowPolyMesh.prism(st, Vector3(0, y, 0), Vector3(0, y + 0.035, 0), 0.55, 0.55, 6, Color("#d8d1b9"))
+
+
+func _resonant_shard(st: SurfaceTool, base: Vector3, tip: Vector3, radius: float, color: Color) -> void:
+	var shoulder: Vector3 = base.lerp(tip, 0.72)
+	LowPolyMesh.prism(st, base, shoulder, radius, radius * 0.77, 6, color)
+	LowPolyMesh.prism(st, shoulder, tip, radius * 0.77, 0.012, 6, color.lightened(0.16))
 
 
 ## Fragmento de meteorito com fendas roxas (fiel a fragmento_meteorito.jpg)
