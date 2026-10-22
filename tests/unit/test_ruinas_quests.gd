@@ -4,6 +4,16 @@ extends GutTest
 ## Cobre NPC Arqueóloga Inês, 3 tábuas com glifos, WaveEvent de 4 ondas,
 ## pedestal da cripta (Múmia do Ídolo), 3 relíquias e 2 easter eggs.
 
+class RitualPlayer extends Player:
+	func _ready() -> void:
+		add_to_group(ALL_GROUP)
+		add_to_group(LOCAL_GROUP)
+		set_physics_process(false)
+		set_process(false)
+		set_process_input(false)
+		set_process_unhandled_input(false)
+
+
 const RUINAS_SECRETS_SCENE: PackedScene = preload("res://gameplay/quests/ruinas/ruinas_secrets.tscn")
 const MAP_RUINAS_SCENE: PackedScene = preload("res://world/map_ruinas.tscn")
 
@@ -123,12 +133,28 @@ func test_crypt_pedestal_triggers_mummy_boss() -> void:
 	assert_false(trigger.triggered)
 	assert_false(flags.has_flag(&"pedestal_idolo"))
 
+	# #170: this boss-wiring test must fulfil the ritual rather than bypass possession.
+	var saved_quests: Array[String] = GameState.instance.completed_quests.duplicate()
+	GameState.instance.completed_quests.append("ines_camara")
+	var player: Player = load("res://gameplay/player/player.tscn").instantiate() as Player
+	player.set_script(RitualPlayer)
+	player.name = "1"
+	world.add_child(player)
+	player.global_position = pedestal.global_position + Vector3(1, 0, 0)
+	pedestal.request_interact()
+	assert_false(flags.has_flag(&"pedestal_idolo"), "Empty inventory cannot awaken the Mummy")
+	var data: ItemData = load("res://items/catalog/idolo_jade.tres") as ItemData
+	var idol: CarriedItem = CarriedItem.create(data, data.base_value, 1.0, false, false)
+	player.inventory.add_item(idol)
 	pedestal.request_interact()
 	await wait_frames(1)
 	assert_true(flags.has_flag(&"pedestal_idolo"))
 	assert_true(trigger.triggered, "pedestal aciona o BossTrigger da Múmia")
 	assert_not_null(trigger.boss)
 	assert_true(trigger.boss is IdolMummy)
+
+	assert_true(player.inventory.slots.has(idol), "Ritual keeps the unique reward for the museum")
+	GameState.instance.completed_quests = saved_quests
 
 
 func test_easter_eggs() -> void:
