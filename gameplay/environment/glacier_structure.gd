@@ -277,33 +277,97 @@ func _cabin_wall(st: SurfaceTool, shapes: Array, center: Vector3, dimensions: Ve
 ## Iglu esférico facetado de blocos de neve
 func _igloo(st: SurfaceTool, shapes: Array, radius: float) -> void:
 	var igloo_r: float = radius if radius > 1.0 else 2.6
-	var rings: int = 4
-	for r: int in rings:
-		var lat0: float = (PI * 0.5) * float(r) / float(rings)
-		var lat1: float = (PI * 0.5) * float(r + 1) / float(rings)
-		var y0: float = sin(lat0) * igloo_r
-		var y1: float = sin(lat1) * igloo_r
-		var rad0: float = cos(lat0) * igloo_r
-		var rad1: float = cos(lat1) * igloo_r
-		var segs: int = 8
-		for s: int in segs:
-			var a0: float = TAU * float(s) / float(segs)
-			var a1: float = TAU * float(s + 1) / float(segs)
-			var v0: Vector3 = Vector3(cos(a0) * rad0, y0, sin(a0) * rad0)
-			var v1: Vector3 = Vector3(cos(a1) * rad0, y0, sin(a1) * rad0)
-			var v2: Vector3 = Vector3(cos(a1) * rad1, y1, sin(a1) * rad1)
-			var v3: Vector3 = Vector3(cos(a0) * rad1, y1, sin(a0) * rad1)
-			LowPolyMesh.quad(st, v0, v1, v2, v3, Vector3(0.0, igloo_r * 0.5, 0.0), SNOW_WHITE)
+	# #172: shell geometry IS its collision. No solid sphere or capped tunnel.
+	# Retain original dome radius/height and front extent; entry rises for a standing player.
+	var shell: SurfaceTool = SurfaceTool.new()
+	shell.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var inside_r: float = igloo_r - 0.20
+	var rings: int = 6
+	var sectors: int = 16
+	for ring: int in range(rings):
+		var low: float = PI * 0.5 * float(ring) / rings
+		var high: float = PI * 0.5 * float(ring + 1) / rings
+		for sector: int in range(sectors):
+			# Opening in front (-Z), with inner head clearance >2.07m at the join.
+			if (sector == 7 or sector == 8) and ring < 4:
+				continue
+			var a: float = TAU * float(sector) / sectors
+			var b: float = TAU * float(sector + 1) / sectors
+			var o0: Vector3 = _igloo_point(igloo_r, low, a)
+			var o1: Vector3 = _igloo_point(igloo_r, low, b)
+			var o2: Vector3 = _igloo_point(igloo_r, high, b)
+			var o3: Vector3 = _igloo_point(igloo_r, high, a)
+			var i0: Vector3 = _igloo_point(inside_r, low, a)
+			var i1: Vector3 = _igloo_point(inside_r, low, b)
+			var i2: Vector3 = _igloo_point(inside_r, high, b)
+			var i3: Vector3 = _igloo_point(inside_r, high, a)
+			LowPolyMesh.quad(shell, o0, o1, o2, o3, Vector3.ZERO, SNOW_WHITE)
+			LowPolyMesh.quad(shell, i0, i1, i2, i3, (i0 + i1 + i2 + i3) * 0.5, SNOW_WHITE.darkened(0.04))
+			if ring == 0:
+				LowPolyMesh.quad(shell, o0, o1, i1, i0, Vector3.UP, SNOW_WHITE)
+	# Boundaries of the cut remain snow blocks with actual thickness.
+	for ring: int in range(4):
+		var low: float = PI * 0.5 * float(ring) / rings
+		var high: float = PI * 0.5 * float(ring + 1) / rings
+		for angle: float in [TAU * 7.0 / sectors, TAU * 9.0 / sectors]:
+			LowPolyMesh.quad(shell, _igloo_point(igloo_r, low, angle), _igloo_point(igloo_r, high, angle), _igloo_point(inside_r, high, angle), _igloo_point(inside_r, low, angle), Vector3.ZERO, SNOW_WHITE)
+	var lip_lat: float = PI * 0.5 * 4.0 / rings
+	for sector: int in [7, 8]:
+		var a: float = TAU * sector / sectors
+		var b: float = TAU * (sector + 1) / sectors
+		LowPolyMesh.quad(shell, _igloo_point(igloo_r, lip_lat, a), _igloo_point(igloo_r, lip_lat, b), _igloo_point(inside_r, lip_lat, b), _igloo_point(inside_r, lip_lat, a), Vector3.UP * igloo_r, SNOW_WHITE)
+	_igloo_tunnel(shell, igloo_r)
+	# Low snow floor, not an interior-filling collision primitive.
+	LowPolyMesh.prism(shell, Vector3.ZERO, Vector3(0, 0.05, 0), inside_r, inside_r, sectors, SNOW_WHITE)
+	var front: float = -igloo_r - 1.4
+	var back: float = -1.1
+	LowPolyMesh.box(shell, Vector3(0, 0.025, (front + back) * 0.5), Vector3(1.76, 0.05, back - front), Basis.IDENTITY, SNOW_WHITE)
+	var mesh: ArrayMesh = shell.commit()
+	var arrays: Array = mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	for vertex: int in range(vertices.size()):
+		st.set_normal(normals[vertex])
+		st.set_color(colors[vertex])
+		st.add_vertex(vertices[vertex])
+	var shell_shape: ConcavePolygonShape3D = ConcavePolygonShape3D.new()
+	shell_shape.backface_collision = true
+	shell_shape.set_faces(mesh.get_faces())
+	shapes.append([shell_shape, Transform3D.IDENTITY])
 
-	# Túnel de entrada arqueado virado para -Z
-	var tunnel_len: float = 1.4
-	var tunnel_r: float = 0.8
-	var tunnel_c: Vector3 = Vector3(0.0, 0.0, -igloo_r)
-	LowPolyMesh.prism(st, tunnel_c, tunnel_c - Vector3(0.0, 0.0, tunnel_len), tunnel_r, tunnel_r * 0.9, 5, SNOW_WHITE)
 
-	var dome_shape: SphereShape3D = SphereShape3D.new()
-	dome_shape.radius = igloo_r * 0.95
-	shapes.append([dome_shape, Transform3D(Basis.IDENTITY, Vector3(0.0, 0.4, 0.0))])
+func _igloo_point(radius: float, latitude: float, angle: float) -> Vector3:
+	return Vector3(sin(angle) * cos(latitude) * radius, sin(latitude) * radius, cos(angle) * cos(latitude) * radius)
+
+
+func _igloo_tunnel(st: SurfaceTool, radius: float) -> void:
+	var front: float = -radius - 1.4
+	var back: float = -1.1
+	var inside: Array[Vector2] = [Vector2(0.88, 0)]
+	var outside_front: Array[Vector2] = [Vector2(1.08, 0)]
+	var outside_back: Array[Vector2] = [Vector2(1.24, 0)]
+	for step: int in range(9):
+		var angle: float = PI * float(step) / 8.0
+		inside.append(Vector2(cos(angle) * 0.88, 1.25 + sin(angle) * 0.88))
+		outside_front.append(Vector2(cos(angle) * 1.08, 1.25 + sin(angle) * 1.08))
+		outside_back.append(Vector2(cos(angle) * 1.24, 1.25 + sin(angle) * 1.24))
+	inside.append(Vector2(-0.88, 0))
+	outside_front.append(Vector2(-1.08, 0))
+	outside_back.append(Vector2(-1.24, 0))
+	for segment: int in range(inside.size() - 1):
+		var ia: Vector3 = Vector3(inside[segment].x, inside[segment].y, front)
+		var ib: Vector3 = Vector3(inside[segment + 1].x, inside[segment + 1].y, front)
+		var ja: Vector3 = Vector3(inside[segment].x, inside[segment].y, back)
+		var jb: Vector3 = Vector3(inside[segment + 1].x, inside[segment + 1].y, back)
+		var oa: Vector3 = Vector3(outside_front[segment].x, outside_front[segment].y, front)
+		var ob: Vector3 = Vector3(outside_front[segment + 1].x, outside_front[segment + 1].y, front)
+		var pa: Vector3 = Vector3(outside_back[segment].x, outside_back[segment].y, back)
+		var pb: Vector3 = Vector3(outside_back[segment + 1].x, outside_back[segment + 1].y, back)
+		LowPolyMesh.quad(st, oa, ob, pb, pa, Vector3(0, 0.6, (front + back) * 0.5), SNOW_WHITE)
+		LowPolyMesh.quad(st, ia, ib, jb, ja, Vector3(inside[segment].x * 2, inside[segment].y * 2, (front + back) * 0.5), SNOW_WHITE.darkened(0.04))
+		LowPolyMesh.quad(st, oa, ob, ib, ia, Vector3(0, 0.6, front + 0.1), SNOW_WHITE)
+		LowPolyMesh.quad(st, pa, pb, jb, ja, Vector3(0, 0.6, back - 0.1), SNOW_WHITE)
 
 
 ## Boca da gruta de gelo (gruta do Yeti)
