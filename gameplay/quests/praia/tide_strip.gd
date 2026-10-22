@@ -322,9 +322,16 @@ func _add_debris(kind: int, pos: Vector3, yaw: float) -> void:
 	mi.position = pos
 	mi.rotation.y = yaw
 	_debris_root.add_child(mi)
-	get_tree().create_timer(DEBRIS_LIFETIME).timeout.connect(func() -> void:
-		if is_instance_valid(mi):
-			mi.queue_free())
+	# The expiry belongs to the debris, so leaving the map cancels it too.
+	# SceneTreeTimer outlived the mesh and invoked a lambda with a freed capture.
+	var expiry: Timer = Timer.new()
+	expiry.name = &"Expiry"
+	expiry.process_mode = Node.PROCESS_MODE_ALWAYS  # Match SceneTreeTimer during pause.
+	expiry.one_shot = true
+	expiry.wait_time = DEBRIS_LIFETIME
+	expiry.timeout.connect(mi.queue_free)
+	mi.add_child(expiry)
+	expiry.start()
 
 
 func get_debris_count() -> int:
