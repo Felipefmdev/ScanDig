@@ -9,8 +9,7 @@
 					"campo",
 					"ruinas",
 					"geleira",
-					"cratera",
-					"ilha_tesouro"
+					"cratera"
 				],
 				"defeated_bosses": [
 					"king_crab",
@@ -23,11 +22,7 @@
 					"backpack": 2,
 					"shovel": 2
 				},
-				"team_money": 5000,
-				"map_fragments": [
-					"praia_frag_1",
-					"campo_frag_1"
-				]
+				"team_money": 5000
 			}
 		},
 		{
