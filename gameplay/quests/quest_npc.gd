@@ -45,6 +45,7 @@ enum QuestState { OFFER, ACTIVE, READY, EVENT, DONE }
 const HOLDING_DETECT_RANGE: float = 4.0
 const HOLDING_REACT_COOLDOWN: float = 10.0
 const DEFAULT_HOLDING_LINE: String = "É isso! Traga aqui!"
+const ASSOCIATED_HOLDING_LINE: String = "Bom achado! Guarde com cuidado."
 const QUEST_HOLDING_ITEMS: Dictionary = {
 	"ze_anzol": ["concha_dourada", "alianca_ouro", "bussola_naufragio", "medalhao_sereia", "mapa_na_garrafa", "tatuira", "marisco"],
 	"lurdes_chaves": ["chave_enferrujada", "sino_bronze", "anel_do_poco", "ferradura_velha"],
@@ -201,11 +202,28 @@ func _check_holding_reaction(delta: float = 0.0, local_player: Node3D = null) ->
 		return
 	var should_trigger: bool = (not _was_holding_in_range) or (held_id != _last_held_item_id) or (_holding_cooldown_left <= 0.0)
 	if should_trigger and _say_left <= 0.0:
-		var text: String = line_holding if not line_holding.is_empty() else DEFAULT_HOLDING_LINE
+		var text: String = _holding_line_for(held_id)
 		show_say(text, 4.0)
 		_holding_cooldown_left = HOLDING_REACT_COOLDOWN
 		_was_holding_in_range = true
 		_last_held_item_id = held_id
+
+
+## Association is not an objective: rewards/family items must never request delivery.
+func _holding_line_for(item_id: String) -> String:
+	if state == QuestState.DONE:
+		return line_done if not line_done.is_empty() else ASSOCIATED_HOLDING_LINE
+	var requested: bool = false
+	if item_id != reward_item_id:
+		for part: String in holding_item_id.split(","):
+			if part.strip_edges() == item_id:
+				requested = true
+				break
+	if not requested:
+		return ASSOCIATED_HOLDING_LINE
+	if state == QuestState.READY:
+		return line_ready if not line_ready.is_empty() else ASSOCIATED_HOLDING_LINE
+	return line_holding if not line_holding.is_empty() else DEFAULT_HOLDING_LINE
 
 
 func _process_npc_life(delta: float, p_local_player: Node3D = null) -> void:
