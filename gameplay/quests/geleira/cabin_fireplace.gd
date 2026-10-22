@@ -14,7 +14,7 @@ func _ready() -> void:
 	monitoring = true
 	monitorable = false
 	collision_layer = 0
-	collision_mask = 2  # Jogadores (layer 2)
+	collision_mask = 1  # Player.tscn uses layer 1.
 
 
 func _process(delta: float) -> void:
@@ -25,9 +25,17 @@ func _process(delta: float) -> void:
 
 
 func _apply_healing() -> void:
-	for body: Node3D in get_overlapping_bodies():
-		if body.has_method("heal") and body.get("health") != null and body.get("max_health") != null:
-			var h: float = float(body.get("health"))
-			var mh: float = float(body.get("max_health"))
-			if h < mh:
-				body.call("heal", heal_per_second)
+	# Health belongs to its player. Do not heal remote replicas on every peer.
+	# Use the comfort radius directly: the authored Area overlap cache can be empty
+	# after map setup even when a fresh shape query detects the same player.
+	for body: Node3D in get_tree().get_nodes_in_group(&"player"):
+		if not body.has_method(&"is_local") or not bool(body.call(&"is_local")):
+			continue
+		if not body.has_method(&"heal") or body.get("health") == null or body.get("max_health") == null:
+			continue
+		if bool(body.get("is_downed")) or float(body.get("health")) <= 0.0:
+			continue
+		if (body.global_position + Vector3.UP * 0.9).distance_to(global_position + Vector3.UP * 0.5) > heal_radius:
+			continue
+		if float(body.get("health")) < float(body.get("max_health")):
+			body.call(&"heal", heal_per_second)
