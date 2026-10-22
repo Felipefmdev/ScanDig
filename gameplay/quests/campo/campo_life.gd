@@ -54,11 +54,18 @@ var _glint_pos: Vector3 = Vector3(15.5, 0.0, -14.0)
 var _glint_node: Node3D = null
 var _glint_light: OmniLight3D = null
 var _wheat_spot: BuriedSpot = null
+var _wheat_spawner: MultiplayerSpawner = null
+var _wheat_spawn_counter: int = 0
 var _time: float = 0.0
 
 
 func _ready() -> void:
 	add_to_group(&"campo_life")
+	_wheat_spawner = MultiplayerSpawner.new()
+	_wheat_spawner.name = "WheatSpotSpawner"
+	_wheat_spawner.spawn_path = NodePath("..")
+	_wheat_spawner.spawn_function = _create_wheat_spot
+	add_child(_wheat_spawner)
 	_mat = ToonKit.vertex_material(true, true)
 	_unshaded_mat = StandardMaterial3D.new()
 	_unshaded_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -451,6 +458,8 @@ func get_glint_position() -> Vector3:
 
 ## Dispara uma rajada de vento na seara e revela o brilho/sinal metálico escondido.
 func trigger_wind_gust(custom_pos: Vector3 = Vector3.INF) -> Vector3:
+	if not HostSync.is_host(self):
+		return Vector3.INF
 	var target_pos: Vector3 = custom_pos
 	if target_pos == Vector3.INF:
 		var candidates: Array[Vector3] = [
@@ -460,12 +469,15 @@ func trigger_wind_gust(custom_pos: Vector3 = Vector3.INF) -> Vector3:
 		]
 		target_pos = candidates[randi() % candidates.size()]
 	target_pos.y = FieldTerrain.height_at(target_pos.x, target_pos.z)
+	_ensure_wheat_spot(target_pos)
+	if is_instance_valid(_wheat_spot) and not _wheat_spot.is_queued_for_deletion():
+		# Never move a live target under a digging player or away from its spawn data.
+		target_pos = _wheat_spot.global_position
 	var dir: Vector3 = Vector3(1.0, 0.0, 0.25).normalized()
 
 	_apply_wind_gust(dir, target_pos)
 	if HostSync.is_host(self):
 		HostSync.broadcast(self, &"_rpc_wind_gust", [dir, target_pos])
-		_ensure_wheat_spot(target_pos)
 	wind_gust_started.emit(dir, target_pos)
 	return target_pos
 
@@ -489,16 +501,25 @@ func _apply_wind_gust(dir: Vector3, target_pos: Vector3) -> void:
 
 
 func _ensure_wheat_spot(pos: Vector3) -> void:
-	if _wheat_spot != null and is_instance_valid(_wheat_spot) and not _wheat_spot.is_queued_for_deletion():
-		_wheat_spot.global_position = pos
+	if not is_inside_tree() or not HostSync.is_host(self) or _wheat_spawner == null:
 		return
-	var parent: Node = get_tree().current_scene if is_inside_tree() and get_tree().current_scene != null else self
+	if _wheat_spot != null and is_instance_valid(_wheat_spot) and not _wheat_spot.is_queued_for_deletion():
+		return
+	_wheat_spawn_counter += 1
+	_wheat_spawner.spawn({"n": _wheat_spawn_counter, "pos": to_local(pos)})
+
+
+## Runs on host and every receiving peer, including late join. BuriedSpot owns dig/sync.
+func _create_wheat_spot(data: Variant) -> Node:
+	var spec: Dictionary = data as Dictionary
 	var spot: BuriedSpot = BURIED_SPOT_SCENE.instantiate() as BuriedSpot
+	spot.name = "WheatSpot%d" % int(spec["n"])
+	spot.networked = true
 	spot.item = load("res://items/catalog/medalha_militar.tres") as ItemData
 	spot.rare_decided = true
-	parent.add_child(spot)
-	spot.global_position = pos
+	spot.position = spec["pos"]
 	_wheat_spot = spot
+	return spot
 
 
 func _update_wheat_wind(delta: float) -> void:
@@ -514,7 +535,7 @@ func _update_wheat_wind(delta: float) -> void:
 			stalk.rotation.z = -_gust_dir.x * (lean + ripple)
 			stalk.rotation.x = _gust_dir.z * (lean + ripple)
 		if _glint_node != null:
-			_glint_node.visible = _gust_left > 0.0
+			_glint_node.visible = _gust_left > 0.0 and is_instance_valid(_wheat_spot) and _wheat_spot.dirt_layers > 0
 			_glint_node.rotation.y += delta * 2.8
 	else:
 		if _glint_node != null and _glint_node.visible:
