@@ -17,6 +17,13 @@ const CraterTerrain = preload("res://gameplay/environment/crater_terrain.gd")
 ## Que chão usar: Praia (BeachTerrain), Campo (FieldTerrain), Ruinas, Geleira, Cratera ou Ilha.
 @export_enum("Praia", "Campo", "Ruinas", "Geleira", "Cratera", "Ilha") var terrain: int = 0
 
+## Explicit semantic exceptions only; authored Y is never implicitly added.
+## Keys are direct child names. Values are metres above terrain or the named support.
+@export var height_offsets: Dictionary = {}
+## Keys are direct child names; NodePaths are relative to this GroundSnap.
+## Example: {"RelicChalice": NodePath("NicheTower/Step3")} with offset .3.
+@export var support_paths: Dictionary = {}
+
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -26,14 +33,31 @@ func _ready() -> void:
 
 ## Assenta os filhos diretos no chão (x/z e rotação ficam).
 func snap() -> void:
-	if not is_inside_tree():
+	if Engine.is_editor_hint() or not is_inside_tree():
 		return
+	# First settle ordinary nodes/support roots; their dependents follow in a second pass.
 	for c: Node in get_children():
 		var n: Node3D = c as Node3D
 		if n == null:
 			continue
+		if support_paths.has(String(n.name)):
+			continue
 		var p: Vector3 = n.global_position
-		n.global_position = Vector3(p.x, _height(p.x, p.z) - sink, p.z)
+		var offset: float = float(height_offsets.get(String(n.name), 0.0))
+		n.global_position = Vector3(p.x, _height(p.x, p.z) - sink + offset, p.z)
+	for c: Node in get_children():
+		var n: Node3D = c as Node3D
+		if n == null or not support_paths.has(String(n.name)):
+			continue
+		var path: NodePath = NodePath(str(support_paths[String(n.name)]))
+		var support: Node3D = get_node_or_null(path) as Node3D
+		if support == null:
+			push_warning("GroundSnap: missing explicit support %s for %s" % [path, n.name])
+			continue # Keep placement rather than silently dropping a relic into terrain.
+		var p: Vector3 = n.global_position
+		# sink belongs to the ground/support root; do not apply it twice on stacked pieces.
+		var offset: float = float(height_offsets.get(String(n.name), 0.0))
+		n.global_position = Vector3(p.x, support.global_position.y + offset, p.z)
 
 
 func _height(x: float, z: float) -> float:
