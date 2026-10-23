@@ -133,7 +133,9 @@ Só depois se abre a issue de implementação (ex.: #180) e se altera `build_the
   (`docs/TOOLCHAIN_MANIFEST.md`) não autoriza servidores MCP de terceiros sem validação,
   e esta sessão não consegue registar ferramentas MCP novas.
 - **Caminho de escrita:** plugin local (`tools/figma_plugin/`) + tokens. Corre dentro do
-  Figma, com a Plugin API, e é auditável no repo.
+  Figma, com a Plugin API, e é auditável no repo. Para automação assistida,
+  [`tools/figma_bridge/`](../../tools/figma_bridge/README.md) expõe uma fila local: o
+  plugin aberto executa `build`/`export` enviados pelo terminal.
 
 Se quiseres leitura automática do ficheiro (para comparar com capturas), o caminho é um
 token pessoal da REST API e um script `GET /v1/files/...`; isso não substitui o plugin

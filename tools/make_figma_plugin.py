@@ -113,6 +113,130 @@ async function textStyles(styles, warnings) {
 """
 
 
+BRIDGE_TEMPLATE = r"""// Gerado por tools/make_figma_plugin.py. Ponte local; não editar à mão.
+const TOKENS = __TOKENS__;
+const FRAMES = __FRAMES__;
+
+function rgb(hex) {
+  const clean = hex.replace("#", "");
+  const value = (start) => parseInt(clean.slice(start, start + 2), 16) / 255;
+  return {
+    color: { r: value(0), g: value(2), b: value(4) },
+    opacity: clean.length >= 8 ? value(6) : 1,
+  };
+}
+
+function paintStyle(name, hex) {
+  const { color, opacity } = rgb(hex);
+  const style = figma.createPaintStyle();
+  style.name = name;
+  style.paints = [{ type: "SOLID", color, opacity }];
+  return style;
+}
+
+async function makeTextStyles(warnings) {
+  let made = 0;
+  for (const entry of TOKENS.typography) {
+    try {
+      await figma.loadFontAsync(entry.fontName);
+      const style = figma.createTextStyle();
+      style.name = entry.name;
+      style.fontName = entry.fontName;
+      style.fontSize = entry.fontSize;
+      style.lineHeight = { unit: "PERCENT", value: entry.lineHeight };
+      made += 1;
+    } catch (error) {
+      warnings.push(entry.name + ": " + error.message);
+    }
+  }
+  return made;
+}
+
+async function buildKit() {
+  const warnings = [];
+  await figma.loadAllPagesAsync();
+  for (const [name, hex] of Object.entries(TOKENS.palette)) {
+    paintStyle("ScanDig/palette/" + name, hex);
+  }
+  for (const [name, hex] of Object.entries(TOKENS.semantic)) {
+    paintStyle("ScanDig/semantic/" + name, hex);
+  }
+  const styles = await makeTextStyles(warnings);
+
+  const existing = figma.root.children.map((page) => page.name);
+  let pageName = "ScanDig Kit";
+  let suffix = 2;
+  while (existing.includes(pageName)) {
+    pageName = "ScanDig Kit " + suffix;
+    suffix += 1;
+  }
+  const page = figma.createPage();
+  page.name = pageName;
+  figma.currentPage = page;
+
+  const spots = [
+    { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 0, y: 820 },
+    { x: 1000, y: 820 }, { x: 2260, y: 0 },
+  ];
+  const created = [];
+  for (let index = 0; index < FRAMES.length; index += 1) {
+    const frame = figma.createNodeFromSvg(FRAMES[index].svg);
+    frame.name = FRAMES[index].name;
+    const spot = spots[index % spots.length];
+    frame.x = spot.x;
+    frame.y = spot.y;
+    page.appendChild(frame);
+    created.push(frame);
+  }
+  figma.viewport.scrollAndZoomIntoView(created.slice(0, 2));
+  return "página " + pageName + ": " + created.length + " frames, " +
+    Object.keys(TOKENS.palette).length + " cores, " + styles + " estilos" +
+    (warnings.length ? " | avisos: " + warnings.join("; ") : "");
+}
+
+async function exportFrame(name) {
+  await figma.loadAllPagesAsync();
+  let node = null;
+  for (const page of figma.root.children) {
+    node = page.findOne((candidate) => candidate.name === name);
+    if (node) break;
+  }
+  if (!node) {
+    for (const page of figma.root.children) {
+      const needle = String(name).toLowerCase();
+      node = page.findOne((candidate) => candidate.name.toLowerCase().includes(needle));
+      if (node) break;
+    }
+  }
+  if (!node) throw new Error("frame não encontrado: " + name);
+  const bytes = await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
+  return { name: node.name, png: figma.base64Encode(bytes) };
+}
+
+figma.showUI(__html__, { width: 360, height: 250 });
+
+figma.ui.onmessage = async (message) => {
+  if (!message || message.type === "ui-ready") return;
+  const id = message.id;
+  try {
+    if (message.type === "build") {
+      const text = await buildKit();
+      figma.ui.postMessage({ type: "result", id, ok: true, text });
+    } else if (message.type === "export") {
+      const data = await exportFrame(message.name);
+      figma.ui.postMessage({ type: "result", id, ok: true, kind: "export", name: data.name, png: data.png });
+    } else if (message.type === "ping") {
+      figma.ui.postMessage({ type: "result", id, ok: true, text: "pong", page: figma.currentPage.name });
+    } else {
+      throw new Error("comando desconhecido: " + message.type);
+    }
+  } catch (error) {
+    figma.ui.postMessage({ type: "result", id, ok: false, error: String((error && error.message) || error) });
+  }
+};
+"""
+
+
 def deref(value, groups: dict):
     if isinstance(value, str) and value.startswith("{") and value.endswith("}"):
         group, key = value[1:-1].split(".")
@@ -167,11 +291,16 @@ def build_frames() -> list[dict]:
     return chunks
 
 
-def render() -> str:
+def render() -> dict[Path, str]:
     tokens = build_tokens()
     frames = build_frames()
-    code = TEMPLATE.replace("__TOKENS__", json.dumps(tokens, ensure_ascii=False))
-    return code.replace("__FRAMES__", json.dumps(frames, ensure_ascii=False))
+    data = (json.dumps(tokens, ensure_ascii=False), json.dumps(frames, ensure_ascii=False))
+    return {
+        OUT / "code.js": TEMPLATE.replace("__TOKENS__", data[0]).replace("__FRAMES__", data[1]),
+        OUT.parent / "figma_bridge/code.js": BRIDGE_TEMPLATE.replace("__TOKENS__", data[0]).replace(
+            "__FRAMES__", data[1]
+        ),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -179,18 +308,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
 
-    code = render()
-    target = OUT / "code.js"
+    outputs = render()
     if args.check:
-        if not target.exists() or target.read_text(encoding="utf-8") != code:
-            print("code.js desatualizado; corre sem --check", file=sys.stderr)
+        stale = [
+            str(path.relative_to(REPO))
+            for path, code in outputs.items()
+            if not path.exists() or path.read_text(encoding="utf-8") != code
+        ]
+        if stale:
+            print("desatualizados: " + ", ".join(stale) + "; corre sem --check", file=sys.stderr)
             return 1
-        print("code.js atualizado")
+        print("code.js do plugin e da ponte atualizados")
         return 0
 
-    OUT.mkdir(parents=True, exist_ok=True)
-    target.write_text(code, encoding="utf-8")
-    print(f"ok {target.relative_to(REPO)} ({len(code) // 1024} KB)")
+    for path, code in outputs.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(code, encoding="utf-8", newline="\n")
+        print(f"ok {path.relative_to(REPO)} ({len(code) // 1024} KB)")
     return 0
 
 
