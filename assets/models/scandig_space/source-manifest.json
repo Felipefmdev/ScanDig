@@ -1,0 +1,137 @@
+[
+  {
+    "file": "lunar_rocket.glb",
+    "source_parts": [
+      [
+        "rocket_baseA",
+        0.0
+      ],
+      [
+        "rocket_fuelA",
+        0.6
+      ],
+      [
+        "rocket_finsA",
+        1.1
+      ],
+      [
+        "rocket_topA",
+        1.8
+      ]
+    ],
+    "min_blender": [
+      -0.8999999761581421,
+      -0.8999999761581421,
+      0.0
+    ],
+    "max_blender": [
+      0.8999999761581421,
+      0.8999999761581421,
+      2.5999999046325684
+    ],
+    "mesh_count": 4,
+    "mesh_count_meaning": "Mesh object instances, not unique GLB meshes",
+    "triangles": 607,
+    "blend_source": "source/lunar_rocket.blend",
+    "blend_sha256": "99597f8d0afb9e3983aa9aa3e36cfc4f267f3edef489bb116c3ef1c0d265c3c2",
+    "glb_sha256": "f819c53020f226a7f83d54513d5ff1bbb67a9a5810b5e873ce171f4201d44ba7",
+    "source_zip_sha256": "d5d7cdf2635ed5a43a9187deaf409b6f47484e402321128341d3c3698e9ef4d9",
+    "source_url": "https://kenney.nl/assets/space-kit",
+    "license": "CC0",
+    "source_files": [
+      {
+        "file": "rocket_baseA.glb",
+        "sha256": "cd1e61105d70a6d8ae4d5245b7c8655e6f13c879af9e4db7195191d64f01e2bd"
+      },
+      {
+        "file": "rocket_fuelA.glb",
+        "sha256": "093c94f292a974d4765224d7704c948d4b33d8e7e891489d4c66eb4b0b263868"
+      },
+      {
+        "file": "rocket_finsA.glb",
+        "sha256": "656c530940f3a50a1ea9107a67452252ea6b00a8a3d24bbe84faed1f9f086e01"
+      },
+      {
+        "file": "rocket_topA.glb",
+        "sha256": "29cd77e5f86546e46947781cec63dcb29b56b8f4cc66262bf1b52928eecc2c19"
+      }
+    ],
+    "repairs": [
+      "Removed numerically degenerate triangles in assembly space",
+      "Repaired collapsed unused UV triangles; solid material colors retained",
+      "Fuel sleeve scaled radially 1.006 (3mm at radius0.5m) to separate coplanar walls; total bounds retained"
+    ]
+  },
+  {
+    "file": "lunar_generator.glb",
+    "source_parts": [
+      [
+        "machine_generator",
+        0.0
+      ]
+    ],
+    "min_blender": [
+      -0.3999999761581421,
+      -0.20000000298023224,
+      0.0
+    ],
+    "max_blender": [
+      0.30000001192092896,
+      0.32500001788139343,
+      0.4000000059604645
+    ],
+    "mesh_count": 2,
+    "mesh_count_meaning": "Mesh object instances, not unique GLB meshes",
+    "triangles": 403,
+    "blend_source": "source/lunar_generator.blend",
+    "blend_sha256": "dcae256a04e27fb494f6b350b110bb180ae4f678366804612c7d6bb139adf388",
+    "glb_sha256": "3d6f3d98aab5b923f5f40dfaa6ab3010669bc9d6f5671ca8e030155b0b5c03d7",
+    "source_zip_sha256": "d5d7cdf2635ed5a43a9187deaf409b6f47484e402321128341d3c3698e9ef4d9",
+    "source_url": "https://kenney.nl/assets/space-kit",
+    "license": "CC0",
+    "source_files": [
+      {
+        "file": "machine_generator.glb",
+        "sha256": "98e8ac6aceada3b2483ed1eceb59bff7190ee774edac799350ccc11ad140f7f3"
+      }
+    ],
+    "repairs": [
+      "Removed numerically degenerate triangles in assembly space",
+      "Repaired collapsed unused UV triangles; solid material colors retained"
+    ]
+  },
+  {
+    "file": "lunar_supplies.glb",
+    "source_parts": [
+      [
+        "barrels",
+        0.0
+      ]
+    ],
+    "min_blender": [
+      -0.2750000059604645,
+      -0.24820508062839508,
+      0.0
+    ],
+    "max_blender": [
+      0.2750000059604645,
+      0.24820508062839508,
+      0.3499999940395355
+    ],
+    "mesh_count": 5,
+    "mesh_count_meaning": "Mesh object instances, not unique GLB meshes",
+    "triangles": 268,
+    "blend_source": "source/lunar_supplies.blend",
+    "blend_sha256": "21b51e76cab057550af97d65c71586f63bcd0bc9baed28e4286424e993bded71",
+    "glb_sha256": "1cf7b6eb6244449099cdd812791670702e31f73d9e7e1c61ff55d7690a37b9e7",
+    "source_zip_sha256": "d5d7cdf2635ed5a43a9187deaf409b6f47484e402321128341d3c3698e9ef4d9",
+    "source_url": "https://kenney.nl/assets/space-kit",
+    "license": "CC0",
+    "source_files": [
+      {
+        "file": "barrels.glb",
+        "sha256": "5eefdb7cb192863ac6b6709293e196ae97e7cceb29c6ab754850a738f3b2379b"
+      }
+    ]
+  }
+]
