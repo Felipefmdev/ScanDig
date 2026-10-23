@@ -67,6 +67,13 @@ declarativa, não a fonte de verdade.
 > fechar, o Figma pode mostrar 26, mas a implementação continua a 21 — a diferença tem de
 > estar visível na comparação, não escondida.
 
+### Atalho: plugin local
+
+[`tools/figma_plugin/`](../../tools/figma_plugin/README.md) importa os tokens e os SVGs e
+cria, numa página nova, os estilos `ScanDig/palette/*`, `ScanDig/type/*` e os 5 frames.
+Instala-se uma vez por *Import plugin from manifest* e corre-se por
+*Plugins → Development → ScanDig UI Kit*. É local e não usa rede.
+
 ## 5. Handoff para o Godot
 
 | Figma | Godot (`Theme`) | Nota |
@@ -115,3 +122,19 @@ Só depois se abre a issue de implementação (ex.: #180) e se altera `build_the
 - Inventar cores fora de `ui_palette.gd`.
 - Implementar no Figma comportamentos que o Godot não replica (scroll infinito, hover
   em toque) sem marcar como protótipo.
+
+## 9. MCP — o que não resolve
+
+- **MCP oficial (Dev Mode):** servidor local do app Figma, exige desktop e assento
+  Dev/Full. Expõe leitura do design para código (metadados, variáveis, imagem, screenshot);
+  **não cria nós, estilos nem páginas**. Não é um pacote que se descarregue para o repo.
+- **MCPs de terceiros:** ou são read-only sobre a REST API, ou precisam de um plugin
+  Figma + bridge local para escrever. A política do projeto
+  (`docs/TOOLCHAIN_MANIFEST.md`) não autoriza servidores MCP de terceiros sem validação,
+  e esta sessão não consegue registar ferramentas MCP novas.
+- **Caminho de escrita:** plugin local (`tools/figma_plugin/`) + tokens. Corre dentro do
+  Figma, com a Plugin API, e é auditável no repo.
+
+Se quiseres leitura automática do ficheiro (para comparar com capturas), o caminho é um
+token pessoal da REST API e um script `GET /v1/files/...`; isso não substitui o plugin
+para criar.
