@@ -58,7 +58,7 @@ async function textStyles(styles, warnings) {
   }
   const page = figma.createPage();
   page.name = pageName;
-  figma.currentPage = page;
+  await figma.setCurrentPageAsync(page);
 
   const positions = [
     { x: 0, y: 0 },

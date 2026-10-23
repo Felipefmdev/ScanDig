@@ -57,7 +57,7 @@ async function buildKit() {
   }
   const page = figma.createPage();
   page.name = pageName;
-  figma.currentPage = page;
+  await figma.setCurrentPageAsync(page);
 
   const spots = [
     { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 0, y: 820 },
