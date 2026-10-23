@@ -91,6 +91,18 @@ class Handler(BaseHTTPRequestHandler):
                 since = int(match.group(1))
             _json(self, {"results": RESULTS[since:], "cursor": len(RESULTS)})
             return
+        if self.path.startswith("/frames") or self.path.startswith("/tokens"):
+            try:
+                import make_figma_plugin
+                payload = (
+                    make_figma_plugin.build_tokens()
+                    if self.path.startswith("/tokens")
+                    else {"frames": make_figma_plugin.build_frames()}
+                )
+                _json(self, payload)
+            except Exception as error:  # noqa: BLE001
+                _json(self, {"error": str(error)}, 500)
+            return
         _json(self, {"error": "rota desconhecida"}, 404)
 
     def do_POST(self) -> None:  # noqa: N802

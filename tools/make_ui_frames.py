@@ -67,7 +67,7 @@ def button(x: float, y: float, w: float, label: str, size: int = 18,
     if focus:
         parts.append(
             f'<rect x="{x - 4}" y="{y - 4}" width="{w + 8}" height="52" rx="5" '
-            f'fill="none" stroke="{{accent}}" stroke-width="3"/>'
+            f'fill="none" stroke="{{text}}" stroke-width="3"/>'
         )
     parts.append(box(x, y, w, 44, "surface-sunken" if disabled else fill))
     parts.append(
@@ -157,7 +157,7 @@ def loja() -> str:
     parts.append(text(564, 414, "Bom contra caranguejos à distância.", 18, "text"))
     parts.append(text(564, 466, "R$ 120", 26, "text", weight="bold"))
     parts.append(button(836, 440, 168, "Comprar", 18, "action", "text", focus=True))
-    parts.append(text(564, 500, "Saldo depois: R$ 1.120", 15, "text-muted"))
+    parts.append(text(564, 490, "Saldo depois: R$ 1.120", 15, "text-muted"))
     parts.append(button(124, 528, 150, "Voltar"))
     parts.append(text(540, 560, "Enter compra · Esc volta", 15, "text-muted"))
     return frame("".join(parts))

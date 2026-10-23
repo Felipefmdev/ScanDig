@@ -134,9 +134,9 @@ function paintStyle(name, hex) {
   return style;
 }
 
-async function makeTextStyles(warnings) {
+async function makeTextStyles(warnings, tokens) {
   let made = 0;
-  for (const entry of TOKENS.typography) {
+  for (const entry of tokens.typography) {
     try {
       await figma.loadFontAsync(entry.fontName);
       const style = figma.createTextStyle();
@@ -152,16 +152,29 @@ async function makeTextStyles(warnings) {
   return made;
 }
 
+async function loadData() {
+  try {
+    const tokens = await (await fetch("http://127.0.0.1:8765/tokens")).json();
+    const frames = await (await fetch("http://127.0.0.1:8765/frames")).json();
+    return { tokens, frames: frames.frames };
+  } catch (error) {
+    return { tokens: TOKENS, frames: FRAMES };
+  }
+}
+
 async function buildKit() {
   const warnings = [];
+  const data = await loadData();
+  const tokens = data.tokens;
+  const frames = data.frames;
   await figma.loadAllPagesAsync();
-  for (const [name, hex] of Object.entries(TOKENS.palette)) {
+  for (const [name, hex] of Object.entries(tokens.palette)) {
     paintStyle("ScanDig/palette/" + name, hex);
   }
-  for (const [name, hex] of Object.entries(TOKENS.semantic)) {
+  for (const [name, hex] of Object.entries(tokens.semantic)) {
     paintStyle("ScanDig/semantic/" + name, hex);
   }
-  const styles = await makeTextStyles(warnings);
+  const styles = await makeTextStyles(warnings, tokens);
 
   const existing = figma.root.children.map((page) => page.name);
   let pageName = "ScanDig Kit";
@@ -179,9 +192,9 @@ async function buildKit() {
     { x: 1000, y: 820 }, { x: 2260, y: 0 },
   ];
   const created = [];
-  for (let index = 0; index < FRAMES.length; index += 1) {
-    const frame = figma.createNodeFromSvg(FRAMES[index].svg);
-    frame.name = FRAMES[index].name;
+  for (let index = 0; index < frames.length; index += 1) {
+    const frame = figma.createNodeFromSvg(frames[index].svg);
+    frame.name = frames[index].name;
     const spot = spots[index % spots.length];
     frame.x = spot.x;
     frame.y = spot.y;
@@ -190,7 +203,7 @@ async function buildKit() {
   }
   figma.viewport.scrollAndZoomIntoView(created.slice(0, 2));
   return "página " + pageName + ": " + created.length + " frames, " +
-    Object.keys(TOKENS.palette).length + " cores, " + styles + " estilos" +
+    Object.keys(tokens.palette).length + " cores, " + styles + " estilos" +
     (warnings.length ? " | avisos: " + warnings.join("; ") : "");
 }
 
