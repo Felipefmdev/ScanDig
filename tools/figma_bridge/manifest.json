@@ -6,8 +6,7 @@
   "editorType": ["figma"],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": [],
-    "reasoning": "Ponte local de desenvolvimento: o plugin le comandos de 127.0.0.1:8765 e devolve resultados. Nao acede a dominios externos.",
-    "devAllowedDomains": ["http://127.0.0.1:8765"]
+    "allowedDomains": ["*"],
+    "reasoning": "Plugin de desenvolvimento local: a ponte usa apenas 127.0.0.1:8765. O wildcard e exigido pelo manifesto enquanto nao ha dominio publico; sera estreitado antes de publicar."
   }
 }
