@@ -52,7 +52,13 @@ o frame em todas as páginas e grava `docs/ui/exports/<nome>.png` (ignorado pelo
 ## Se o Figma bloquear localhost
 
 A UI tem um campo manual: cola `{"type":"build"}` e carrega em **Executar comando**.
-O manifesto declara `networkAccess` só para `127.0.0.1`/`localhost`; não há acesso externo.
+O manifesto declara `networkAccess.allowedDomains: []` (nenhum domínio externo) e
+`devAllowedDomains: ["http://127.0.0.1:8765"]`. `allowedDomains` só aceita domínios
+sem esquema/porta; URLs locais vão em `devAllowedDomains`.
+
+Se o Figma mostrar `Invalid value for allowedDomains…`, o manifesto importado está
+velho: **Plugins → Development → Import plugin from manifest…** outra vez (ou
+**Edit manifest**), e volta a correr. O plugin só recarrega o manifesto ao reimportar.
 
 ## Limites
 

@@ -6,7 +6,8 @@
   "editorType": ["figma"],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["http://127.0.0.1:8765", "http://localhost:8765"],
-    "reasoning": "Ponte local de desenvolvimento: recebe comandos do terminal e devolve resultados. Sem acesso a dominios externos."
+    "allowedDomains": [],
+    "reasoning": "Ponte local de desenvolvimento: o plugin le comandos de 127.0.0.1:8765 e devolve resultados. Nao acede a dominios externos.",
+    "devAllowedDomains": ["http://127.0.0.1:8765"]
   }
 }
