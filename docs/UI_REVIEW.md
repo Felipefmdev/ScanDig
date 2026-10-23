@@ -42,21 +42,23 @@ Comando: `python tools/ui_contrast_audit.py`. Resultado em 13 pares:
 | PAPER/RED_BURNT | botão de perigo | 4,95 | 4,5 | ok |
 | PAPER/GREEN_BOTTLE | toast | **4,64** | 4,5 | ok (limite) |
 | GOLD/INK | código da sala | 7,36 | 4,5 | ok |
-| ORANGE/PAPER_LIGHT | **borda de foco** | **2,65** | 3,0 | falha |
+| INK/PAPER_LIGHT | anel de foco | 13,14 | 3,0 | ok |
+| INK/ORANGE | foco no botão primário | 4,97 | 3,0 | ok |
 | METAL/PAPER_DARK | borda desativada | 3,42 | 3,0 | ok |
 
 ## 3. Achados
 
-### F1 — Foco abaixo de 3:1 (P1)
+### F1 — Foco abaixo de 3:1 (P1) — **corrigido**
 
-`build_theme.gd:333` pinta a borda de foco com `ORANGE` sobre `PAPER_LIGHT`: **2,65:1**.
+`build_theme.gd:333` pintava a borda de foco com `ORANGE` sobre `PAPER_LIGHT`: **2,65:1**.
 Como o foco é o único sinal de navegação por comando, isto é um problema de
 acessibilidade, não de gosto.
 
-**Correção sugerida:** borda exterior `INK` de 2 px + interior `ORANGE` de 1 px (o
-contraste passa a vir da tinta), ou `ORANGE.darkened(0.25)` até medir ≥ 3:1.
-**Aceite:** `ui_contrast_audit.py` verde para o par de foco; captura com foco visível a
-720p.
+**Correção aplicada:** `_focus_box()` passou a usar `INK` com 3 px e margem de expansão 3;
+o override laranja do `LineEdit` foi removido. O anel passa a 13,14:1 sobre papel e
+4,97:1 sobre o laranja do botão primário. `scandig_theme.tres` foi atualizado nos 7
+styleboxes de foco.
+**Falta:** captura com foco visível a 720p e comando (protocolo §5).
 
 ### F2 — Hierarquia fraca nos títulos (P1)
 
@@ -126,7 +128,7 @@ outros a ícone + número; medir com o teste dos 5 s.
 
 | P | Item | Ficheiro | Esforço |
 |---|---|---|---|
-| P1 | Borda de foco com contraste ≥ 3:1 | `build_theme.gd:333` | B |
+| P1 | Borda de foco com contraste ≥ 3:1 | `build_theme.gd:139` | feito; falta captura |
 | P1 | Escala tipográfica 18/21/26 | `build_theme.gd:12,212` | B |
 | P2 | Toast com contorno e texto claro | `build_theme.gd:288-292` | B |
 | P2 | Chip primário do HUD | `hud.tscn`, `hud.gd` | M |
