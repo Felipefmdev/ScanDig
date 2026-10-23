@@ -209,14 +209,17 @@ async function buildKit() {
 
 async function exportFrame(name) {
   await figma.loadAllPagesAsync();
-  let node = null;
-  for (const page of figma.root.children) {
-    node = page.findOne((candidate) => candidate.name === name);
-    if (node) break;
-  }
+  let node = figma.currentPage.findOne((candidate) => candidate.name === name);
   if (!node) {
     for (const page of figma.root.children) {
-      const needle = String(name).toLowerCase();
+      if (page === figma.currentPage) continue;
+      node = page.findOne((candidate) => candidate.name === name);
+      if (node) break;
+    }
+  }
+  if (!node) {
+    const needle = String(name).toLowerCase();
+    for (const page of [figma.currentPage, ...figma.root.children]) {
       node = page.findOne((candidate) => candidate.name.toLowerCase().includes(needle));
       if (node) break;
     }
