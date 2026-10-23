@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "destination": "docs/learning/_refs",
+  "items": [
+    {
+      "id": "cyclops_level_builder",
+      "title": "Cyclops Level Builder 1.0.4 (Godot 4.x, blockout)",
+      "url": "https://github.com/blackears/cyclopsLevelBuilder/releases/download/v1.0.4/cyclops_level_builder_1_0_4.zip",
+      "license": "MIT",
+      "kind": "zip",
+      "file": "cyclops_level_builder_1_0_4.zip",
+      "extract": "cyclops_level_builder",
+      "note": "Versao de jun/2024, anterior ao salto para Godot 4.7. Testar na oficina 4.3 antes de usar; nao entra no jogo."
+    },
+    {
+      "id": "level_design_book",
+      "title": "The Level Design Book - indice",
+      "url": "https://book.leveldesignbook.com/",
+      "license": "ver licenca no site (livro aberto)",
+      "kind": "html",
+      "file": "level_design_book.html",
+      "note": "Copia do indice para estudo offline; o site e a fonte viva."
+    },
+    {
+      "id": "gag",
+      "title": "Game Accessibility Guidelines",
+      "url": "https://gameaccessibilityguidelines.com/",
+      "license": "ver licenca no site",
+      "kind": "html",
+      "file": "game_accessibility_guidelines.html",
+      "note": "O site carrega as diretrizes por JavaScript: a copia guarda a moldura, nao a lista completa. Consultar online."
+    },
+    {
+      "id": "xag",
+      "title": "Xbox Accessibility Guidelines",
+      "url": "https://learn.microsoft.com/en-us/gaming/accessibility/guidelines",
+      "license": "Microsoft Learn, uso de referencia",
+      "kind": "html",
+      "file": "xbox_accessibility_guidelines.html"
+    },
+    {
+      "id": "godot_gui_skinning",
+      "title": "Godot 4.3 - GUI skinning",
+      "url": "https://docs.godotengine.org/en/4.3/tutorials/ui/gui_skinning.html",
+      "license": "CC BY 3.0 (Godot docs)",
+      "kind": "html",
+      "file": "godot_gui_skinning.html"
+    },
+    {
+      "id": "godot_resolutions",
+      "title": "Godot 4.3 - Multiple resolutions",
+      "url": "https://docs.godotengine.org/en/4.3/tutorials/rendering/multiple_resolutions.html",
+      "license": "CC BY 3.0 (Godot docs)",
+      "kind": "html",
+      "file": "godot_multiple_resolutions.html"
+    },
+    {
+      "id": "godot_custom_controls",
+      "title": "Godot 4.3 - Custom GUI controls",
+      "url": "https://docs.godotengine.org/en/4.3/tutorials/ui/custom_gui_controls.html",
+      "license": "CC BY 3.0 (Godot docs)",
+      "kind": "html",
+      "file": "godot_custom_gui_controls.html"
+    }
+  ]
+}
