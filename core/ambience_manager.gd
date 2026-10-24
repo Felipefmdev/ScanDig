@@ -23,6 +23,8 @@ const AMBIENT_BY_MAP: Dictionary = {
 	"ruinas": {"day": _GEN + "amb_ruinas.ogg", "db": -17.0},
 	"geleira": {"day": _GEN + "amb_geleira.ogg", "db": -18.0},
 	"cratera": {"day": _GEN + "amb_cratera.ogg", "db": -15.0},
+	# Reuse the existing extraterrestrial bed at a quieter final-map level.
+	"lua": {"day": _GEN + "amb_cratera.ogg", "db": -20.0},
 	BASE_ID: {"day": _GEN + "amb_base.ogg", "db": -21.0},
 }
 ## Por tipo de clima (WeatherManager.KIND_*): loop e volume no auge, nunca acima do passo no chão

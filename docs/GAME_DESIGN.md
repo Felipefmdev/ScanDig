@@ -6,17 +6,15 @@ Tudo o que está aqui é o alvo: afinem com o bot e com testes humanos e atualiz
 
 ## 1. Regras gerais
 
-- **Premissa: o Mapa do Tesouro (#103).** Um mapa antigo foi partido em **8 fragmentos** e enterrado
-  nos 5 sítios de escavação (Praia 1, Campo 1, Ruínas 2, Geleira 2, Cratera 2). Saem de missões
-  de NPC, chefes, segredos e escavações fundas raras (`GameState.MAP_FRAGMENTS`; as `hint` aparecem
-  no painel da base e nas falas dos NPCs, `line_map_hint`). Com os 8, o barco no cais da Praia leva
-  a equipa à **Ilha do Tesouro**, o 6.º mapa e o final.
-- **6 mapas**: 5 sítios de escavação, cada um único (inimigos próprios, itens próprios, chefe com
-  uma mecânica diferente, cenário com que se interage), e a Ilha do Tesouro no fim.
-- **Final (#115):** vencer o **Colosso do Tesouro** (`gold_colossus`, `GameState.FINAL_BOSS_ID`) na
-  Ilha. Ele solta o tesouro principal, o **Ídolo de Ouro** (`idolo_ouro`), que vai para o Museu, e
-  abre a tela "Jogo concluído" com os créditos. O Que Dorme Lá Em Baixo é o chefe da Cratera e dá o
-  último fragmento.
+- **Premissa: a Expedição e a Origem do Sinal (#120).** A jornada avança através de 5 sítios de escavação
+  terrestres (Praia, Campo, Ruínas, Geleira, Cratera). Ao desvendar os mistérios da Cratera, a equipa
+  repara o foguete de pesquisa para alcançar a **Lua** (`world/map_lua.tscn`), o 6.º mapa e o final da campanha.
+- **6 mapas**: 5 sítios de escavação terrestres, cada um único (inimigos próprios, itens próprios, chefe com
+  uma mecânica diferente, cenário com que se interage), e a Lua no fim.
+- **Final (#120):** vencer o **Guardião do Sinal** (`lunar_warden`, `GameState.FINAL_BOSS_ID`) na
+  Lua. A sua derrota dispara a vitória ao vivo (`GameState.game_victory`) para todos os jogadores na sessão
+  e abre a tela "Jogo concluído" com as estatísticas da campanha e os créditos. Na Cratera, vencer O Que Dorme Lá Em Baixo
+  (`the_sleeper`) e concluir a missão da Dra. Vega libera as tarefas de reparo do foguete (`vega_foguete`).
 - **Duração total 7–9 h** (história principal ~7,5 h + missões e segredos ~1 h). Ninguém precisa de
   fazer 100 % para acabar.
 - **Armas:** cada mapa tem uma banca. A banca vende **todas as armas dos mapas anteriores + 1 arma
@@ -54,9 +52,9 @@ Referências: `caranguejo.jpg`, `pa.jpg`, `kit_medico.jpg`, `repelente.jpg`, `es
 | 3 | Ruínas | 90–100 min | Guardião de pedra, Morcego | Guardião Ancestral (pontos fracos que acendem, placas) | Múmia do Ídolo | **Lanterna de Magnésio** (flash em cone que atordoa; morcegos fogem) | R$ 8.000 + Toupeira Gigante |
 | 4 | **Geleira Eterna** (novo) | 90–100 min | Lobo do gelo, Pinguim-ladrão, Morsa | Mamute Congelado (gelo que racha, avalanche) | Yeti da Gruta | **Arpão de Corda** (puxa inimigos e itens) | R$ 70.000 + Guardião Ancestral |
 | 5 | Cratera | 100–120 min | Criaturas estranhas (rastejantes, flutuantes) | O Que Dorme Lá Em Baixo (fases no fundo da cratera) | O Eco | **Pulso Magnético** (empurra criaturas, puxa metal) | R$ 190.000 + Mamute Congelado |
-| 6 | **Ilha do Tesouro** (final) | 30–45 min (alvo) | Caranguejo, Ermitão, Cobra | **Colosso do Tesouro** (disfarçado de pilha de ouro; murro no chão, jorro de moedas) | — | — (banca com as armas anteriores) | Os 8 fragmentos do mapa (barco no cais da Praia) |
+| 6 | **Lua** (final, #120) | — (duração não medida) | — | **Guardião do Sinal** (`lunar_warden`; telegraph em faixa, núcleo exposto) | — | — (sem banca) | Foguete da Cratera (missão `vega_foguete` após `the_sleeper` e `vega_sinal`) |
 
-Total da história ≈ 7–8 h com a Ilha; com missões e segredos ≈ 8–9 h (alvo 7–9 h no total).
+O alvo global de 7–9 h permanece uma intenção de design; a duração do final lunar e da campanha completa ainda não foi medida. Os tempos do antigo final na Ilha não se transferem para a Lua.
 
 ## 4. Conteúdo por mapa
 
@@ -112,20 +110,14 @@ Total da história ≈ 7–8 h com a Ilha; com missões e segredos ≈ 8–9 h (
 - **Relíquias escondidas:** dentro de um geodo, no topo de um pilar (gravidade baixa), atrás de uma
   cortina de cristal.
 - **Chefe escondido:** O Eco: tocar os cristais com a sequência do Cristal Eco.
-- **Chefe principal:** O Que Dorme Lá Em Baixo. Vencê-lo dá o último fragmento do mapa
-  (`cratera_frag_2`); já não é o final (#115).
+- **Chefe principal:** O Que Dorme Lá Em Baixo (`the_sleeper`). Vencê-lo, juntamente com a conclusão da missão da Dra. Vega (`vega_sinal`), desbloqueia os reparos do foguete na estação (`crater_rocket_station.gd`) para a missão `vega_foguete` rumo à Lua (#120).
 - **Easter eggs:** uma sonda espacial com bandeira; um disco de vinil "Greatest Hits of Earth".
 
-### 6. Ilha do Tesouro (final)
-- **Chegada:** com os 8 fragmentos, o barco no cais da Praia zarpa para a ilha (`IslandBoat`).
-- **Banca:** as armas dos mapas anteriores (sem arma exclusiva).
-- **Tesouros à vista:** pilhas, baús e ídolos espalham achados de topo apanháveis sem cavar
-  (`TreasureHoard`); os spots do detector dão achados de ouro e jade (`items/maps/ilha_tesouro.tres`,
-  detector Nv.6).
-- **Chefe final:** o maior tesouro, no planalto do monte, é o **Colosso do Tesouro** disfarçado.
-  Mexer no tesouro certo (ou desenterrar demais) acorda-o. Vencido, solta o **Ídolo de Ouro** e
-  abre a tela "Jogo concluído" (contagens, fragmentos 8 / 8 e créditos). Depois disso o jogo
-  continua aberto para completar o museu.
+### 6. Lua (final, #120)
+- **Chegada:** após reparar os 3 pontos do foguete na Cratera (`clear_base`, `secure_connection`, `align_receiver`) na missão `vega_foguete`, a ação de embarque (`board`) transporta a equipa para a superfície lunar (`world/map_lua.tscn`, `items/maps/lua.tres`).
+- **Ambiente:** superfície lunar com terreno procedural de crateras (`lunar_terrain.gd`), iluminação própria (`world/environment_lua.tres`), sem banca de armas e sem spots normais de detector (`spot_count = 0`).
+- **Chefe final:** no centro da área, o altar lunar (`lunar_altar.gd`) requer três pazadas para invocar o **Guardião do Sinal** (`lunar_warden`, `GameState.FINAL_BOSS_ID`). O combate utiliza ataques telegrafados em faixa (`GroundWarning`) e janelas de vulnerabilidade do seu núcleo.
+- **Vitória:** derrotar o Guardião do Sinal emite `GameState.game_victory` para todos os peers e exibe a tela de vitória ao vivo (`VictoryScreen`) com o resumo das estatísticas da campanha e créditos. Após a conclusão, a sessão pode continuar aberta para exploração e conclusão do museu.
 
 ## 5. Sistemas a construir (Dev A)
 

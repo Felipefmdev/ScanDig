@@ -220,10 +220,8 @@ func test_intact_items_row() -> void:
 	gs.intact_items = before
 
 
-# --- Final do jogo (#81) --------------------------------------------------------
+# --- Final lunar (#120; tradução/widget em test_lunar_victory_copy.gd) ------------
 
 func test_subtitle_tells_the_ending() -> void:
 	var text: String = VictoryScreen.SUBTITLE_TEXT
-	assert_string_contains(text, "O Que Dorme")
-	assert_string_contains(text, "Ídolo de Ouro")
-	assert_string_contains(text, "Museu")
+	assert_eq(text, "O Guardião do Sinal foi vencido na Lua.\nA expedição chegou ao destino do sinal.\nAinda há peças, segredos e bichos por achar.")

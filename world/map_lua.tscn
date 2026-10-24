@@ -1,0 +1,96 @@
+[gd_scene load_steps=12 format=3 uid="uid://bb2q6rv1nwoai"]
+
+[ext_resource type="Script" path="res://gameplay/environment/lunar_altar.gd" id="altar"]
+[ext_resource type="Script" path="res://gameplay/environment/lunar_arrival.gd" id="arrival"]
+[ext_resource type="Script" path="res://gameplay/detector/detector_spawn.gd" id="detector"]
+[ext_resource type="Script" path="res://gameplay/enemies/enemy_spawner.gd" id="enemies"]
+[ext_resource type="Environment" uid="uid://dkuybkwy6vicf" path="res://world/environment_lua.tres" id="environment"]
+[ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="pickups"]
+[ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="players"]
+[ext_resource type="Script" path="res://gameplay/environment/lunar_terrain.gd" id="terrain"]
+
+[sub_resource type="BoxShape3D" id="WallX"]
+size = Vector3(1, 40, 62)
+
+[sub_resource type="BoxShape3D" id="WallZ"]
+size = Vector3(62, 40, 1)
+
+[sub_resource type="BoxShape3D" id="FloorSafety"]
+size = Vector3(62, 1, 62)
+
+[node name="MapLua" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("environment")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.743145, 0.354585, -0.567455, 0, 0.848048, 0.529919, 0.669131, -0.393807, 0.630223, 0, 0, 0)
+light_color = Color(1, 0.97, 0.9, 1)
+shadow_enabled = true
+
+[node name="Terrain" type="Node3D" parent="."]
+
+[node name="Ground" type="StaticBody3D" parent="Terrain"]
+collision_mask = 0
+script = ExtResource("terrain")
+
+[node name="Bounds" type="StaticBody3D" parent="."]
+
+[node name="East" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.5, 5, 0)
+shape = SubResource("WallX")
+
+[node name="West" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30.5, 5, 0)
+shape = SubResource("WallX")
+
+[node name="North" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -30.5)
+shape = SubResource("WallZ")
+
+[node name="South" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 30.5)
+shape = SubResource("WallZ")
+
+[node name="Safety" type="CollisionShape3D" parent="Bounds"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -8, 0)
+shape = SubResource("FloorSafety")
+
+[node name="Arrival" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 18)
+
+[node name="Arena" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.8, -15)
+
+[node name="Players" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 18)
+script = ExtResource("players")
+
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="Players"]
+spawn_path = NodePath("..")
+
+[node name="Pickups" type="Node3D" parent="."]
+script = ExtResource("pickups")
+
+[node name="DetectorSpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0.05, 18)
+script = ExtResource("detector")
+
+[node name="LunarArrival" type="Node3D" parent="."]
+script = ExtResource("arrival")
+
+[node name="EnemySpawner" type="Node3D" parent="."]
+script = ExtResource("enemies")
+primary_kind = &""
+secondary_kind = &""
+max_alive = 1
+max_seagulls = 0
+use_player_scaling = false
+spawns_per_level = Array[int]([0, 0, 0])
+hermits_per_level = Array[int]([0, 0, 0])
+seagulls_per_level = Array[int]([0, 0, 0])
+ambient_enabled = false
+
+[node name="LunarAltar" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.8, -15)
+script = ExtResource("altar")

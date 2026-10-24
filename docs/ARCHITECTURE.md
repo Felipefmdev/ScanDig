@@ -59,6 +59,9 @@ title_screen.tscn ──(Solo/Coop: select_slot + continue/new)──▶ lobby_b
 - Só o host começa e termina a expedição. A troca de cena vai por RPC para todos; quem entra no meio recebe a cena atual. Ordem dos sinais (`scene_changing`, `expedition_started`, `scene_loaded`, `peer_scene_ready`, `expedition_ending`, `expedition_ended`, `host_lost`): "Ciclo do `SessionManager`" em `CORE_AND_NETWORK.md` §2.
 - Noite: o host escolhe na aba Expedições; `SessionManager.is_night()` vai no mesmo RPC do mapa. A config por mapa fica toda em `core/night_mode.gd`.
 
+- A viagem Cratera → Lua permanece na mesma expedição, sem avançar o dia nem abrir resumo intermediário. Lua fica fora da seleção da Base. `CraterRocketStation` valida reparos, atores, segurança e save antes do embarque; `CoreSession` coordena prepare/ACK/commit com token e roster fixos. Ready da cena continua separado dos ACKs e governa spawn/visibilidade (#173).
+- O payload owner-local é capturado uma vez e atualizado por sinais do ator antigo até sua saída; o novo Player o consome uma vez. Dano, cura, revive e downed não são anulados pela cópia inicial. Cancel antes do cleanup devolve flags e permite retry explícito. O cache não é save durável, não transporta pickups físicos abandonados e não oferece rollback geral após commit.
+
 ## 3. Estado e snapshot (o host decide)
 
 - Todo pedido de mudança passa por `GameState.request_*` (vender, doar, comprar, desbloquear, missão, segredo…). No host roda direto; no cliente vira RPC `any_peer` para o host, que valida.
@@ -67,12 +70,14 @@ title_screen.tscn ──(Solo/Coop: select_slot + continue/new)──▶ lobby_b
 - Formato do snapshot e regras de RPC: `CORE_AND_NETWORK.md` §2. Sistemas do Dev A que precisam mandar estado a quem entra usam `gameplay/net/host_sync.gd` (`HostSync.broadcast`/`on_peer_ready`), como o `CoreWeather`.
 - Sem RPC novo para coisas derivadas: estatísticas e conquistas viajam no snapshot.
 
+- Final atual: `lunar_warden` (Guardião do Sinal). `game_completed` deriva desse ID nos chefes derrotados. `game_victory` é evento ao vivo para os presentes; carregar/sincronizar estado não reproduz a tela. Chefes e conquistas legados permanecem sem equivaler ao final lunar.
+
 ## 4. Save: formato, versões e migrações
 
 - Arquivos: `user://scandig_save_<1..3>.json` (3 slots) + `.png` da miniatura. No Windows, `%APPDATA%\Godot\app_userdata\ScanDig\`. Tabela de todos os arquivos (`.backup`, `.tmp`, `.old`, `.corrupt-*`, `.legacy`) em `CORE_AND_NETWORK.md` §3.
 - `SaveManager.SAVE_VERSION = 6`. O JSON é o snapshot do `GameState` mais os metadados (`version`, `saved_at`, `last_played`, `play_time_s`, `last_map`).
 - Só o host/offline grava; o cliente volta ao próprio save quando sai.
-- Toda migração está em `SaveManager._upgrade_save_data`, aplicada ao ler qualquer versão até a atual. Ela só **acrescenta** o padrão do campo que falta e descarta valor de tipo errado; nunca reescreve o arquivo sozinha:
+- Toda migração está em `SaveManager._upgrade_save_data`, aplicada ao ler qualquer versão até a atual. Ela acrescenta o padrão do campo que falta e descarta valor de tipo errado; campos derivados, como `game_completed`, são recalculados a partir dos chefes registrados. Isso pode invalidar a conclusão de um final legado sem apagar seus itens ou chefes. A migração nunca reescreve o arquivo sozinha:
 
   | Versão | O que entrou |
   | :-- | :--- |
@@ -85,6 +90,8 @@ title_screen.tscn ──(Solo/Coop: select_slot + continue/new)──▶ lobby_b
   Campos sem número de versão próprio (`seen_creatures`, `intact_items`, `rare_items`, `map_fragments`) também começam vazios. `game_completed` é sempre recalculado pelos chefes vencidos.
 - Save mais novo que o jogo: não aplica e bloqueia a gravação. Save corrompido: vai para `.corrupt-<unix>.json` e começa jogo novo. Regras e testes em `CORE_AND_NETWORK.md` §3 e `tests/dev_b/test_save_robustness.gd`.
 - **Ao mudar o formato:** suba `SAVE_VERSION`, acrescente o caso em `_upgrade_save_data`, um teste que carrega o save da versão anterior e atualize a tabela acima.
+
+- A estação exige save OK antes de preparar a viagem. O save final é solicitado após o evento de vitória, mas seu retorno não é verificado: UI aberta não prova sucesso de disco. Não há retomada durável no meio da viagem.
 
 ## 5. i18n
 

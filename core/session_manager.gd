@@ -10,6 +10,8 @@ signal expedition_ended(summary: Dictionary)
 signal host_lost()
 ## Só no host: um peer (inclusive o próprio host, id 1) terminou de carregar o mapa atual.
 signal peer_scene_ready(peer_id: int, map_id: String)
+## Preparation was cancelled; the same station can offer boarding again.
+signal rocket_travel_cancelled(token: int)
 ## Só no host: a expedição vai terminar AGORA. Emitido dentro de request_end_expedition(),
 ## depois de advance_day() + save_game() e ANTES de avisar os peers (_rpc_return_to_lobby).
 ## Quem escuta pode remover nós replicados de forma síncrona (remove_child + queue_free)
@@ -53,6 +55,24 @@ var _pending_scene_path: String = ""
 var _awaiting_scene_frame: bool = false
 ## request_end_expedition() em andamento: impede reentrada vinda de quem ouve expedition_ending.
 var _ending: bool = false
+## Owner-local carried references survive only the rocket scene transition.
+var _rocket_payload: Dictionary = {}
+const ROCKET_SPAWN_META: StringName = &"_rocket_spawn_spawner"
+const ROCKET_PREPARE_TIMEOUT_MSEC: int = 10000
+var _rocket_sequence: int = 0
+var _rocket_phase: String = "IDLE"
+var _rocket_token: int = 0
+var _rocket_roster: Array[int] = []
+var _rocket_acked: Array[int] = []
+var _rocket_owner_prepared: bool = false
+var _rocket_cleanup_started: bool = false
+var _rocket_prepare_started_msec: int = 0
+var _rocket_owner_flags: Dictionary = {}
+## Payload observation outlives action/publication suspension and the commit RPC.
+## The old owner can still receive damage until it leaves the scene tree.
+var _rocket_payload_owner: WeakRef = null
+var _rocket_payload_token: int = 0
+var _rocket_payload_connections: Array[Dictionary] = []
 
 
 func _enter_tree() -> void:
@@ -83,6 +103,8 @@ func _ready() -> void:
 
 ## A Godot 4.3 não avisa quando change_scene_to_file termina: compara a cena atual com a pedida.
 func _process(_delta: float) -> void:
+	if multiplayer.is_server() and _rocket_phase == "PREPARING" and Time.get_ticks_msec() - _rocket_prepare_started_msec >= ROCKET_PREPARE_TIMEOUT_MSEC:
+		cancel_rocket_transition(_rocket_token)
 	if _pending_scene_path.is_empty() or _awaiting_scene_frame:
 		return
 	var tree: SceneTree = get_tree()
@@ -119,13 +141,16 @@ func get_available_maps() -> Array[MapData]:
 		if not clean_name.ends_with(".tres"):
 			continue
 		var map_data: MapData = ResourceLoader.load("%s/%s" % [MAPS_DIR, clean_name]) as MapData
-		if map_data != null and not map_data.id.is_empty():
+		if map_data != null and not map_data.id.is_empty() and map_data.id != "lua":
 			maps.append(map_data)
 	maps.sort_custom(_compare_map_order)
 	return maps
 
 
 func can_start_map(map_id: String) -> bool:
+	# The Moon is reached from the Cratera rocket during the same expedition.
+	if map_id == "lua":
+		return false
 	var map_data: MapData = _find_map(map_id)
 	var state: GameState = GameState.instance
 	if map_data == null or state == null:
@@ -163,7 +188,9 @@ func get_map_status(map_id: String) -> Dictionary:
 	var block_reason: String = state.get_map_unlock_block_reason(map_id)
 
 	var reason: String = ""
-	if not unlocked:
+	if map_id == "lua":
+		reason = block_reason
+	elif not unlocked:
 		reason = block_reason if not block_reason.is_empty() else I18n.t("Desbloqueie por %s.") % MoneyFormat.money(map_data.unlock_cost)
 	elif not has_scene:
 		reason = "Em breve."
@@ -259,6 +286,10 @@ func request_end_expedition() -> void:
 		return
 	if not is_in_expedition() or _ending:
 		return
+	if _rocket_phase == "COMMITTING":
+		return
+	if _rocket_phase == "PREPARING":
+		cancel_rocket_transition(_rocket_token)
 	_ending = true
 	var map_id: String = _current_map.id
 	var summary: Dictionary = _pending_summary.duplicate(true)
@@ -280,6 +311,373 @@ func request_end_expedition() -> void:
 	_ending = false
 
 
+## Local owner only: inventory never crosses the network or a disk save here.
+func capture_rocket_payload(player: Player) -> bool:
+	if player == null or not player.is_local() or player.inventory == null:
+		return false
+	_rocket_payload = _rocket_payload_state(player)
+	return true
+
+
+func _rocket_payload_state(player: Player) -> Dictionary:
+	return {
+		"slots": player.inventory.slots.duplicate(),
+		"selected": player.inventory.selected_slot,
+		"health": player.health, "hunger": player.hunger,
+		"money": player.session_money, "count": player.session_items_count,
+		"downed": player.is_downed,
+	}
+
+
+func _observe_rocket_payload(player: Player) -> void:
+	_stop_observing_rocket_payload()
+	_rocket_payload_owner = weakref(player)
+	_rocket_payload_token = _rocket_token
+	var refresh: Callable = _refresh_rocket_payload
+	_observe_rocket_signal(player, &"health_changed", func(_value: float, _maximum: float) -> void: refresh.call())
+	_observe_rocket_signal(player, &"hunger_changed", func(_value: float, _maximum: float) -> void: refresh.call())
+	_observe_rocket_signal(player.inventory, &"inventory_changed", refresh)
+	_observe_rocket_signal(player.inventory, &"selected_slot_changed", func(_slot: int) -> void: refresh.call())
+	_observe_rocket_signal(player, &"player_downed", func(_actor: Player) -> void: refresh.call())
+	# died precedes the actual drop/downed/respawn consequences; never snapshot it
+	# as final state. Exit observes the completed owner state even after commit.
+	_observe_rocket_signal(player, &"tree_exiting", _rocket_payload_owner_exiting)
+
+
+func _observe_rocket_signal(source: Object, signal_name: StringName, callback: Callable) -> void:
+	source.connect(signal_name, callback)
+	_rocket_payload_connections.append({"source":weakref(source),"signal":signal_name,"callback":callback})
+
+
+func _refresh_rocket_payload() -> void:
+	if _rocket_payload.is_empty() or _rocket_payload_token != _rocket_token or _rocket_payload_owner == null:
+		return
+	var player: Player = _rocket_payload_owner.get_ref() as Player
+	if is_instance_valid(player) and is_instance_valid(player.inventory) and player.is_local():
+		_rocket_payload = _rocket_payload_state(player)
+
+
+func _rocket_payload_owner_exiting() -> void:
+	_refresh_rocket_payload()
+	_stop_observing_rocket_payload()
+
+
+func _stop_observing_rocket_payload() -> void:
+	for connection: Dictionary in _rocket_payload_connections:
+		var source_ref: WeakRef = connection["source"] as WeakRef
+		var source: Object = source_ref.get_ref() if source_ref != null else null
+		var signal_name: StringName = connection["signal"]
+		var callback: Callable = connection["callback"]
+		if is_instance_valid(source) and source.is_connected(signal_name, callback):
+			source.disconnect(signal_name, callback)
+	_rocket_payload_connections.clear()
+	_rocket_payload_owner = null
+	_rocket_payload_token = 0
+
+
+## Called after the new owner's Player finishes its normal initialization.
+func restore_rocket_payload(player: Player) -> bool:
+	if _rocket_payload.is_empty() or player == null or not player.is_local() or player.inventory == null:
+		return false
+	_refresh_rocket_payload()
+	_stop_observing_rocket_payload()
+	var payload: Dictionary = _rocket_payload
+	_rocket_payload = {}
+	var slots: Array = payload["slots"]
+	player.inventory.capacity = maxi(player.inventory.capacity, slots.size())
+	for index: int in player.inventory.slots.size():
+		player.inventory.slots[index] = slots[index] if index < slots.size() else null
+	player.inventory.selected_slot = clampi(int(payload["selected"]),0,player.inventory.capacity-1)
+	player.health = clampf(float(payload["health"]),0.0,player.max_health)
+	player.hunger = clampf(float(payload["hunger"]),0.0,player.max_hunger)
+	player.session_money = int(payload["money"])
+	player.session_items_count = int(payload["count"])
+	# Apply the real setter (groups/avatar/HUD), without replaying death/drop/RPC.
+	player.is_downed = bool(payload.get("downed", false))
+	player.inventory.inventory_changed.emit()
+	player.inventory.selected_slot_changed.emit(player.inventory.selected_slot)
+	player.health_changed.emit(player.health,player.max_health)
+	player._refresh_hunger_hud()
+	player._update_session_hud()
+	if _rocket_phase == "COMMITTING":
+		_reset_rocket_transition(false, false)
+	return true
+
+
+## Internal host entry after the rocket validates participants, tools and proximity.
+## This is deliberately not an any-peer RPC and does not end/restart the day.
+func request_rocket_travel() -> bool:
+	if not multiplayer.is_server() or _ending or _current_map == null or _rocket_phase != "IDLE":
+		return false
+	if _current_map.id != "cratera" or GameState.instance == null:
+		return false
+	if not GameState.instance.is_quest_completed("vega_foguete"):
+		return false
+	if _find_map("lua") == null or not ResourceLoader.exists(MAP_SCENE_FORMAT % "lua"):
+		return false
+	var roster: Array[int] = _rocket_connected_roster()
+	for peer_id: int in roster:
+		if not is_peer_scene_ready(peer_id):
+			return false
+	_rocket_sequence += 1
+	_rocket_token = _rocket_sequence
+	_rocket_roster = roster
+	_rocket_acked.clear()
+	_rocket_phase = "PREPARING"
+	_rocket_prepare_started_msec = Time.get_ticks_msec()
+	_call_all(&"_rpc_prepare_rocket", [_rocket_token, _rocket_roster.duplicate()])
+	return true
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_rocket_travel() -> void:
+	# Compatibility entry cannot bypass preparation or recapture inventory.
+	if multiplayer.is_server():
+		request_rocket_travel()
+
+
+func get_rocket_transition() -> Dictionary:
+	return {"phase":_rocket_phase,"token":_rocket_token,"roster":_rocket_roster.duplicate(),"acked":_rocket_acked.duplicate()}
+
+
+func _rocket_connected_roster() -> Array[int]:
+	var roster: Array[int] = [HOST_PEER_ID]
+	if _is_online():
+		for peer_id: int in multiplayer.get_peers():
+			roster.append(peer_id)
+	roster.sort()
+	return roster
+
+
+func _rocket_local_player() -> Player:
+	for node: Node in get_tree().get_nodes_in_group(Player.LOCAL_GROUP):
+		var player: Player = node as Player
+		if player != null and player.is_node_ready() and player.is_local() and player.get_multiplayer() == multiplayer:
+			return player
+	return null
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_prepare_rocket(token: int, roster: Array) -> void:
+	if token <= 0 or _current_map == null or _current_map.id != "cratera":
+		return
+	var participants: Array[int] = []
+	for value: Variant in roster:
+		if not value is int or int(value) <= 0 or participants.has(int(value)):
+			return
+		participants.append(int(value))
+	participants.sort()
+	if not participants.has(HOST_PEER_ID) or not participants.has(multiplayer.get_unique_id()):
+		return
+	if _rocket_phase == "IDLE":
+		if multiplayer.is_server() or token <= _rocket_sequence:
+			return
+		_rocket_sequence = token
+		_rocket_token = token
+		_rocket_roster = participants
+		_rocket_phase = "PREPARING"
+		_rocket_prepare_started_msec = Time.get_ticks_msec()
+	if _rocket_phase != "PREPARING" or token != _rocket_token or participants != _rocket_roster:
+		return
+	if _rocket_owner_prepared:
+		return
+	var player: Player = _rocket_local_player()
+	if player == null or not player.is_alive() or not capture_rocket_payload(player):
+		return
+	_observe_rocket_payload(player)
+	_suspend_rocket_owner(player)
+	_rocket_owner_prepared = true
+	_send_rocket_prepare_ack(token)
+
+
+func _send_rocket_prepare_ack(token: int) -> void:
+	if multiplayer.is_server():
+		_accept_rocket_prepare_ack.call_deferred(HOST_PEER_ID, token)
+	elif _is_online():
+		_rpc_ack_rocket.rpc_id(HOST_PEER_ID, token)
+
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func _rpc_ack_rocket(token: int) -> void:
+	if multiplayer.is_server():
+		_accept_rocket_prepare_ack.call_deferred(multiplayer.get_remote_sender_id(), token)
+
+
+func _accept_rocket_prepare_ack(sender: int, token: int) -> bool:
+	if not multiplayer.is_server() or _rocket_phase != "PREPARING" or token != _rocket_token:
+		return false
+	if sender <= 0 or not _rocket_roster.has(sender) or _rocket_acked.has(sender):
+		return false
+	if _rocket_connected_roster() != _rocket_roster:
+		cancel_rocket_transition(token)
+		return false
+	if sender == HOST_PEER_ID and (not _rocket_owner_prepared or _rocket_payload.is_empty()):
+		return false
+	_rocket_acked.append(sender)
+	_rocket_acked.sort()
+	if _rocket_acked == _rocket_roster:
+		# No yield between the final roster check, cleanup and ordered commit.
+		_rocket_phase = "COMMITTING"
+		_rocket_cleanup_started = true
+		if not _cleanup_rocket_generation():
+			return false
+		_call_all(&"_rpc_commit_rocket", [token])
+	return true
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_commit_rocket(token: int) -> void:
+	if token != _rocket_token or not _rocket_owner_prepared or _rocket_payload.is_empty():
+		return
+	if multiplayer.is_server():
+		if _rocket_phase != "COMMITTING" or not _rocket_cleanup_started or _rocket_acked != _rocket_roster:
+			return
+	elif _rocket_phase != "PREPARING":
+		return
+	var destination: MapData = _find_map("lua")
+	if destination == null:
+		return
+	_rocket_phase = "COMMITTING"
+	# Old owner remains frozen until removal. The new Player restores the cache once.
+	_release_rocket_owner(false)
+	_current_map = destination
+	_night = false
+	_change_scene(MAP_SCENE_FORMAT % "lua")
+
+
+func cancel_rocket_transition(token: int) -> bool:
+	if not multiplayer.is_server() or _rocket_phase != "PREPARING" or token != _rocket_token or _rocket_cleanup_started:
+		return false
+	_call_all(&"_rpc_cancel_rocket", [token])
+	# Held transport in tests (and synchronous disconnect hooks) still needs local cancel.
+	if _rocket_phase == "PREPARING" and _rocket_token == token:
+		_rpc_cancel_rocket(token)
+	return true
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_cancel_rocket(token: int) -> void:
+	if _rocket_phase == "PREPARING" and token == _rocket_token and not _rocket_cleanup_started:
+		_reset_rocket_transition(true, true)
+		rocket_travel_cancelled.emit(token)
+
+
+func _suspend_rocket_owner(player: Player) -> void:
+	var sync: MultiplayerSynchronizer = player.net_sync
+	_rocket_owner_flags = {"player":weakref(player),"physics":player.is_physics_processing(),"input":player.is_processing_input(),"unhandled":player.is_processing_unhandled_input()}
+	player.set_physics_process(false)
+	player.set_process_input(false)
+	player.set_process_unhandled_input(false)
+	if player.dig_animator != null:
+		# Its process emits delayed dig/swing impacts independently of Player physics.
+		_rocket_owner_flags["animator"] = weakref(player.dig_animator)
+		_rocket_owner_flags["animator_process"] = player.dig_animator.is_processing()
+		player.dig_animator.set_process(false)
+	if sync != null and sync.is_multiplayer_authority():
+		var grants: Dictionary = {}
+		var peers: Array[int] = [HOST_PEER_ID]
+		for peer_id: int in multiplayer.get_peers():
+			if not peers.has(peer_id): peers.append(peer_id)
+		for peer_id: int in peers: grants[peer_id] = sync.get_visibility_for(peer_id)
+		_rocket_owner_flags["sync"] = weakref(sync)
+		_rocket_owner_flags["public"] = sync.public_visibility
+		_rocket_owner_flags["grants"] = grants
+		# A false filter vetoes even explicit peer grants; public=false alone does not.
+		sync.add_visibility_filter(_rocket_owner_can_publish)
+		sync.public_visibility = false
+		for peer_id: int in peers: sync.set_visibility_for(peer_id, false)
+		sync.update_visibility()
+
+
+func _rocket_owner_can_publish(_peer_id: int) -> bool:
+	return false
+
+
+func _release_rocket_owner(restore_flags: bool) -> void:
+	var player_ref: WeakRef = _rocket_owner_flags.get("player") as WeakRef
+	var player: Player = player_ref.get_ref() as Player if player_ref != null else null
+	var sync_ref: WeakRef = _rocket_owner_flags.get("sync") as WeakRef
+	var sync: MultiplayerSynchronizer = sync_ref.get_ref() as MultiplayerSynchronizer if sync_ref != null else null
+	if restore_flags:
+		if is_instance_valid(player):
+			player.set_physics_process(bool(_rocket_owner_flags["physics"]))
+			player.set_process_input(bool(_rocket_owner_flags["input"]))
+			player.set_process_unhandled_input(bool(_rocket_owner_flags["unhandled"]))
+		var animator_ref: WeakRef = _rocket_owner_flags.get("animator") as WeakRef
+		var animator: Node = animator_ref.get_ref() as Node if animator_ref != null else null
+		if is_instance_valid(animator):
+			animator.set_process(bool(_rocket_owner_flags["animator_process"]))
+		if is_instance_valid(sync) and sync.is_inside_tree() and sync.is_multiplayer_authority():
+			var grants: Dictionary = _rocket_owner_flags.get("grants",{})
+			for peer_id: int in grants: sync.set_visibility_for(peer_id,bool(grants[peer_id]))
+			sync.public_visibility = bool(_rocket_owner_flags["public"])
+			sync.remove_visibility_filter(_rocket_owner_can_publish)
+			sync.update_visibility()
+	_rocket_owner_flags.clear()
+
+
+func _reset_rocket_transition(restore_flags: bool, discard_payload: bool) -> void:
+	_stop_observing_rocket_payload()
+	_release_rocket_owner(restore_flags)
+	if discard_payload: _rocket_payload.clear()
+	_rocket_phase = "IDLE"
+	_rocket_token = 0
+	_rocket_roster.clear()
+	_rocket_acked.clear()
+	_rocket_owner_prepared = false
+	_rocket_cleanup_started = false
+	_rocket_prepare_started_msec = 0
+
+
+func _abandon_rocket_transition() -> void:
+	if multiplayer.is_server() and _rocket_phase == "PREPARING":
+		cancel_rocket_transition(_rocket_token)
+	_reset_rocket_transition(true, true)
+
+
+func _cleanup_rocket_generation() -> bool:
+	if not multiplayer.is_server():
+		return false
+	var scene: Node = get_tree().current_scene
+	if scene == null:
+		return true
+	var spawned: Array[Node] = []
+	_collect_rocket_spawned(scene, spawned)
+	# Quiesce host publication in this generation, including authored stateful nodes.
+	# Those authored nodes remain in place; only the explicit spawn list is removed.
+	_quiesce_rocket_host_syncs(scene)
+	for node: Node in spawned:
+		var parent: Node = node.get_parent()
+		if parent != null:
+			parent.remove_child(node) # Spawner still alive: enqueue reliable despawn now.
+			node.queue_free()
+	return true
+
+
+func _collect_rocket_spawned(root: Node, result: Array[Node]) -> void:
+	if root is PlayersRoot or root is SpotSpawner or root is PickupsRoot or root is EnemySpawner:
+		for child: Node in root.get_children():
+			if not child.has_meta(ROCKET_SPAWN_META):
+				continue
+			var marker: WeakRef = child.get_meta(ROCKET_SPAWN_META) as WeakRef
+			var spawner: MultiplayerSpawner = marker.get_ref() as MultiplayerSpawner if marker != null else null
+			if is_instance_valid(spawner) and spawner.is_inside_tree() and spawner.get_parent() == root and spawner.is_multiplayer_authority() and spawner.get_node_or_null(spawner.spawn_path) == root:
+				result.append(child)
+	for child: Node in root.get_children():
+		_collect_rocket_spawned(child, result)
+
+
+func _quiesce_rocket_host_syncs(root: Node) -> void:
+	if root is MultiplayerSynchronizer:
+		var sync: MultiplayerSynchronizer = root as MultiplayerSynchronizer
+		if sync.is_multiplayer_authority():
+			sync.add_visibility_filter(_rocket_owner_can_publish)
+			sync.public_visibility = false
+			sync.update_visibility()
+	for child: Node in root.get_children():
+		_quiesce_rocket_host_syncs(child)
+
+
 # --- RPCs (host -> todos) -------------------------------------------------------
 
 @rpc("authority", "call_local", "reliable")
@@ -296,6 +694,7 @@ func _rpc_enter_map(map_id: String, night: bool = false) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _rpc_return_to_lobby(summary: Dictionary) -> void:
+	_reset_rocket_transition(true, true)
 	_current_map = null
 	_night = false
 	_last_summary = summary.duplicate(true)
@@ -329,6 +728,8 @@ func _rpc_report_scene_ready(map_id: String) -> void:
 # --- Eventos ----------------------------------------------------------------------
 
 func _on_peer_connected(peer_id: int) -> void:
+	if multiplayer.is_server() and _rocket_phase == "PREPARING":
+		cancel_rocket_transition(_rocket_token)
 	# O GameState já envia o snapshot completo; aqui enviamos a cena atual.
 	if multiplayer.is_server() and peer_id != HOST_PEER_ID:
 		var args: Array = get_sync_scene_args()
@@ -336,10 +737,13 @@ func _on_peer_connected(peer_id: int) -> void:
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	if multiplayer.is_server() and _rocket_phase == "PREPARING":
+		cancel_rocket_transition(_rocket_token)
 	_ready_peers.erase(peer_id)
 
 
 func _on_server_disconnected() -> void:
+	_reset_rocket_transition(true, true)
 	_current_map = null
 	_night = false
 	_pending_summary = {}
@@ -351,6 +755,7 @@ func _on_server_disconnected() -> void:
 ## O próprio peer saiu por disconnect_game(): volta ao lobby sem host_lost nem resumo.
 ## Aqui o peer já é offline (is_server() dá true sempre): só o was_host do sinal vale.
 func _on_session_left(was_host: bool) -> void:
+	_reset_rocket_transition(true, true)
 	if was_host and _current_map != null:
 		# Guarda dinheiro e museu ganhos até aqui, sem avançar o dia.
 		var save: SaveManager = SaveManager.instance
@@ -434,6 +839,9 @@ func _compare_map_order(a: MapData, b: MapData) -> bool:
 
 
 func _find_map(map_id: String) -> MapData:
+	# Narrative travel resolves its destination without offering it at the base.
+	if map_id == "lua":
+		return load("res://items/maps/lua.tres") as MapData
 	if map_id.is_empty():
 		return null
 	for map_data: MapData in get_available_maps():
@@ -450,6 +858,7 @@ func _is_online() -> bool:
 ## de uma expedição; dentro da expedição não salva (regra de sempre). Em coop sai da sessão pela
 ## rotina do "Sair da sessão" (disconnect_game). Depois limpa a expedição e abre a tela inicial.
 func return_to_title() -> void:
+	_abandon_rocket_transition()
 	var save: SaveManager = SaveManager.instance
 	var state: GameState = GameState.instance
 	if _current_map == null and save != null and state != null and state.is_authority() and save.is_progress_applied():
