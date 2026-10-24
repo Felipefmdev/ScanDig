@@ -376,6 +376,7 @@ func _enter_tree() -> void:
 	var owner_id: int = peer_id_from_name(name)
 	if owner_id > 0:
 		set_multiplayer_authority(owner_id)
+	_configure_replication_gates()
 	var local: bool = is_multiplayer_authority()
 	# Antes de os filhos entrarem: um jogador remoto nunca rouba a câmara nem mostra HUD.
 	var cam: Camera3D = get_node_or_null(^"Head/Camera3D") as Camera3D
@@ -426,8 +427,7 @@ func _notification(what: int) -> void:
 
 func _ready() -> void:
 	add_to_group(ALL_GROUP)
-	if net_sync != null:
-		net_sync.add_visibility_filter(_sync_visible_to)
+
 	if not is_local():
 		_setup_remote()
 		return
@@ -490,12 +490,45 @@ func _setup_remote() -> void:
 ##   cliente recebe "Node not found" a meio do carregamento;
 ## - num cliente (dono do seu jogador): para o host e para quem já tem um jogador na
 ##   cena (o host só cria o jogador de um peer depois de ele estar pronto).
+func _configure_replication_gates() -> void:
+	# Parent enters before its children: configure both filters before sync start.
+	# Recursive owner assignment must not transfer the spawn gate to the guest.
+	var gate: MultiplayerSynchronizer = get_node_or_null(^"HostSpawnSync") as MultiplayerSynchronizer
+	if gate != null:
+		gate.set_multiplayer_authority(1, false)
+		gate.public_visibility = true
+		gate.add_visibility_filter(_spawn_visible_to)
+	var owner_sync: MultiplayerSynchronizer = get_node_or_null(^"NetSync") as MultiplayerSynchronizer
+	if owner_sync != null:
+		owner_sync.public_visibility = true
+		owner_sync.add_visibility_filter(_sync_visible_to)
+
+
+func _spawn_visible_to(peer_id: int) -> bool:
+	if not multiplayer.is_server():
+		return false
+	var sm: SessionManager = SessionManager.instance
+	if sm == null or not sm.is_in_expedition():
+		return true
+	return sm.is_peer_scene_ready(peer_id)
+
+
+func refresh_replication_visibility() -> void:
+	if not is_inside_tree():
+		return
+	var gate: MultiplayerSynchronizer = get_node_or_null(^"HostSpawnSync") as MultiplayerSynchronizer
+	if gate != null and gate.is_inside_tree() and gate.is_multiplayer_authority():
+		gate.update_visibility()
+	var owner_sync: MultiplayerSynchronizer = get_node_or_null(^"NetSync") as MultiplayerSynchronizer
+	if owner_sync != null and owner_sync.is_inside_tree() and owner_sync.is_multiplayer_authority():
+		owner_sync.update_visibility()
+
+
 func _sync_visible_to(peer_id: int) -> bool:
 	if multiplayer.is_server():
-		var sm: SessionManager = SessionManager.instance
-		if sm == null or not sm.is_in_expedition():
-			return true
-		return sm.is_peer_scene_ready(peer_id)
+		# Both host-owned syncs of Player 1 must deny unready peers (spawn OR).
+		return _spawn_visible_to(peer_id)
+	# Existing owner path retained. Recipient receipt readiness is separate (#173 B).
 	return peer_id == 1 or (get_parent() != null and get_parent().has_node(str(peer_id)))
 
 

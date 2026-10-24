@@ -94,7 +94,7 @@ func _refresh_visibility() -> void:
 	for child: Node in get_children():
 		var player: Player = child as Player
 		if player != null and player.is_node_ready():
-			player.net_sync.update_visibility()
+			player.refresh_replication_visibility()
 
 
 func _player_count() -> int:
