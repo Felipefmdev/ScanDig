@@ -51,6 +51,7 @@ const KIND_SCENES: Dictionary = {
 	&"floater": "res://gameplay/enemies/floater/floater.tscn",
 	&"the_sleeper": "res://gameplay/enemies/boss/the_sleeper.tscn",
 	&"the_echo": "res://gameplay/enemies/boss/the_echo.tscn",
+	&"lunar_warden": "res://gameplay/enemies/boss/lunar_warden.tscn",
 }
 
 ## Inimigo base do mapa (níveis de ameaça e ambiente) e o "resistente" a partir do nível 2.
@@ -337,6 +338,8 @@ func spawn_from_data(data: Variant) -> Node3D:
 	var enemy: Node3D = null
 	if _net_spawner != null and _net_spawner.is_inside_tree():
 		enemy = _net_spawner.spawn(d) as Node3D
+		if enemy != null:
+			enemy.set_meta(&"_rocket_spawn_spawner", weakref(_net_spawner))
 	else:
 		enemy = _create_from_data(d) as Node3D
 		if enemy != null:

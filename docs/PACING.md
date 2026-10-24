@@ -12,13 +12,19 @@ com testes reais e atualizem a tabela.
 | 3. Ruínas | 90–110 min | Guardião de pedra, Morcegos | Guardião Ancestral | R$ 8.000 + chefe do Campo |
 | 4. Geleira Eterna | 90–110 min | A definir (Dev A) | Mamute Congelado (`frozen_mammoth`) | R$ 70.000 + detector Nv.5 + chefe das Ruínas (`ancient_guardian`) |
 | 5. Cratera | 90–120 min | Criaturas "estranhas" | O Que Dorme Lá Em Baixo | R$ 190.000 + detector Nv.6 + chefe da Geleira (`frozen_mammoth`) |
-| 6. Ilha do Tesouro (final) | 30–45 min (**alvo**) | Caranguejo, Ermitão, Cobra | Colosso do Tesouro (`gold_colossus`, o final, #115) | Os 8 fragmentos do mapa (#103) |
+| 6. Lua (destino final, #120) | — (sem medição econômica; campanha contínua pendente) | — | Guardião do Sinal (`lunar_warden`, o final, #120) | Embarque no foguete da Cratera (missão Dra. Vega) |
+| [HISTÓRICO] 6. Ilha do Tesouro (legado) | 30–45 min (**alvo histórico**) | Caranguejo, Ermitão, Cobra | Colosso do Tesouro (`gold_colossus`, final legado #115) | Os 8 fragmentos do mapa (#103) [design histórico substituído pela Lua #120] |
 | Museu 100% | +30–60 min | — | — | Opcional (completistas), depois do final |
 
-Ordem (#49, #103): Praia → Campo → Ruínas → **Geleira** → Cratera → **Ilha do Tesouro**. Soma:
-6 h 50 min a 8 h 40 min nos 5 sítios; **7 h 20 min a 9 h 25 min com a Ilha** (o jogo acaba no
-Colosso do Tesouro). O museu 100 % é opcional e fica fora da conta. **Provisório** até a medição
+Ordem (#49, #120): Praia → Campo → Ruínas → **Geleira** → Cratera → **Lua (destino final)**. Soma:
+6 h 50 min a 8 h 40 min nos 5 sítios terrestres; o jogo culmina no confronto contra o Guardião do Sinal
+na Lua (#120), acessada via foguete da Cratera (sem medição econômica; tempo de campanha contínua
+pendente de validação dedicada). O museu 100 % é opcional e fica fora da conta. **Provisório** até a medição
 pelo bot (#46) e por humanos.
+
+[HISTÓRICO]: Ordem anterior (#103) previa a Ilha do Tesouro (7 h 20 min a 9 h 25 min com a Ilha,
+desbloqueada por 8 fragmentos de mapa, finalizando no Colosso do Tesouro #115); marco arquivado como
+design histórico substituído pelo final lunar (#120).
 
 Regra geral: **cada mapa novo paga ~3x mais por item**, mas os upgrades e o mapa seguinte
 custam ~4x mais. Assim o tempo por mapa cresce devagar e o jogador sente-se mais rico.
@@ -290,14 +296,20 @@ desbloqueio do seguinte) a dividir pela renda medida.
 | Ruínas | det 3, moch 3, pá 1 | 1.336 | 2,3 | ~573 | 7,5 | 75.000 | ~56 min | 90–110 min |
 | Geleira | det 4, moch 4, pá 2 | 2.849 | 2,8 | ~1.124 | 7 | 236.000 | ~83 min | 90–110 min |
 | Cratera | det 5, moch 5, pá 2, pin 1 | 2.552 | 1,4 | ~1.986 | 14 | 190.000 | ~74 min | 90–120 min |
-| Ilha do Tesouro | det 4, pá 3, moch 2 | 4.191 | 2,8 (apanhados: 5,2) | ~1.655 | 4 em 10 min | — (não há o que comprar a seguir) | **sem medição** | 30–45 min (alvo) |
+| Lua (#120) | — | — | — | — | — | — (sem medição econômica) | pendente | campanha contínua pendente |
+| [HISTÓRICO] Ilha do Tesouro (#115) | det 4, pá 3, moch 2 | 4.191 | 2,8 (apanhados: 5,2) | ~1.655 | 4 em 10 min | — (não há o que comprar a seguir) | **sem medição** | 30–45 min (alvo histórico) |
 
-**Ilha do Tesouro (#115, 2026-10-17):** `tools/bot/pacing_ilha_tesouro.json` em headless, **sem**
+**[HISTÓRICO] Ilha do Tesouro (#115, 2026-10-17):** `tools/bot/pacing_ilha_tesouro.json` em headless, **sem**
 `--fixed-fps` (10 min reais = 601 s): R$ 42.014 ganhos, 52 itens apanhados (inclui os tesouros à
 vista do `TreasureHoard`), 28 vendidos por R$ 46.352, 39 spots, 4 mortes, ameaça máx. 3,
 0 SCRIPT ERROR. O roteiro não tem meta (corre até o timeout) e o chefe final não entra nele,
-por isso o tempo da Ilha continua **alvo** (30–45 min: chegar, apanhar o tesouro à vista, vencer o
-Colosso), não medição.
+por isso o tempo da Ilha continuava **alvo** (30–45 min: chegar, apanhar o tesouro à vista, vencer o
+Colosso), não medição. Registro histórico de simulação mantido exclusivamente como referência de design legado (#115/#121).
+
+**Lua (#120):** Destino final da campanha contínua após a Cratera via foguete da Dra. Vega.
+Sem medição econômica por bot e sem ciclo de vendas de itens/minuto medidos; duração da campanha contínua
+pendente de validação dedicada. Os dados econômicos e tempos da Ilha do Tesouro são estritamente
+históricos e não se transferem para a Lua.
 
 **Total de bot após #64: ~5 h 10 min** de escavação (~310 min), mais ~2–4 min por chefe e missões,
 perfazendo o alvo de 7–9 horas para um jogador humano. A distribuição dos tempos está agora perfeitamente

@@ -15,7 +15,7 @@ extends CanvasLayer
 signal open_changed(open: bool)
 
 const TITLE_TEXT: String = "Jogo concluído"
-const SUBTITLE_TEXT: String = "O Que Dorme foi vencido no altar da Cratera.\nLeve o Ídolo de Ouro, o tesouro principal, ao Museu.\nAinda há peças, segredos e bichos por achar."
+const SUBTITLE_TEXT: String = "O Guardião do Sinal foi vencido na Lua.\nA expedição chegou ao destino do sinal.\nAinda há peças, segredos e bichos por achar."
 ## Linhas "Campanha" (#141): chave -> rótulo. Chaves de Achievements.STAT_KEYS vêm do
 ## GameState.stats; "play_time" é o tempo do save (só o host sabe) e "achievements" a contagem.
 const CAMPAIGN_ROWS: Array[Array] = [

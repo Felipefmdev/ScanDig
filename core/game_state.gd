@@ -62,6 +62,7 @@ const QUESTS: Dictionary = {
 	"ines_camara": {"name": "A câmara selada", "reward": 25000},
 	"bjorn_expedicao": {"name": "A expedição perdida", "reward": 41000},
 	"vega_sinal": {"name": "Sinal no fundo", "reward": 40000},
+	"vega_foguete": {"name": "Rumo à Lua", "reward": 0},
 }
 ## Relíquias escondidas e easter eggs (#45): só ficam registrados no save.
 const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", "praia_reliquia_mare",
@@ -80,15 +81,15 @@ const CREATURES: Dictionary = {
 	"ice_wolf": "Lobo do Gelo", "penguin": "Pinguim-ladrão", "walrus": "Morsa",
 	"crawler": "Rastejante", "floater": "Flutuante",
 }
-## Final do jogo: provisoriamente O Que Dorme, no altar da Cratera (#121 removeu a Ilha do
-## Tesouro). Passa a ser o chefe lunar quando o final na Lua entrar (#120).
-const FINAL_BOSS_ID: String = "the_sleeper"
+## Final do jogo: Guardião lunar (#120). O Que Dorme permanece como
+## pré-requisito da viagem na Cratera, sem encerrar a campanha.
+const FINAL_BOSS_ID: String = "lunar_warden"
 ## Chefes escondidos/de missão: entram em defeated_bosses sem desbloquear nada.
 ## Praia: octopus. Campo: crow_king (missão da Lurdes) e scarecrow (escondido).
 ## Mapas 3-5: idol_mummy, cave_yeti, ancient_walrus, the_sleeper, the_echo (#75).
 const EXTRA_BOSSES: Array[String] = [
 	"octopus", "crow_king", "scarecrow",
-	"idol_mummy", "cave_yeti", "ancient_walrus", "the_sleeper", "the_echo",
+	"idol_mummy", "cave_yeti", "ancient_walrus", "the_sleeper", "the_echo", "lunar_warden",
 ]
 
 const UPGRADES: Dictionary = {
@@ -257,6 +258,9 @@ func get_tool_data(item_id: String) -> ToolData:
 
 
 func is_map_unlocked(map_id: String) -> bool:
+	# Narrative destination: a forged/legacy unlocked-map entry is insufficient.
+	if map_id == "lua":
+		return is_quest_completed("vega_foguete")
 	var map_data: MapData = _load_map(map_id)
 	if map_data == null:
 		return false
@@ -281,6 +285,8 @@ func is_game_completed() -> bool:
 
 ## "" se pode desbloquear agora; senão o motivo, no idioma atual, pronto para a UI.
 func get_map_unlock_block_reason(map_id: String) -> String:
+	if map_id == "lua":
+		return I18n.t("Embarque no foguete da Cratera.")
 	var map_data: MapData = _load_map(map_id)
 	if map_data == null:
 		return I18n.t("Mapa desconhecido.")

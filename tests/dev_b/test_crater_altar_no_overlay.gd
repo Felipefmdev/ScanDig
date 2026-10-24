@@ -2,7 +2,7 @@ extends GutTest
 
 ## #115: o CraterAltar não tem mais overlay de vitória/créditos próprio nem reporta/salva a
 ## derrota do the_sleeper (o próprio chefe reporta). Vitória e créditos: VictoryScreen, no
-## gold_colossus.
+## Guardião lunar (#120).
 
 
 func before_each() -> void:
@@ -41,7 +41,8 @@ func test_defeated_sleeper_shows_nothing() -> void:
 	await wait_frames(3)
 	assert_eq(_canvas_layers(altar), 0, "nenhum CanvasLayer no altar com o the_sleeper vencido")
 	assert_null(get_tree().root.find_child("VictoryCreditsOverlay", true, false))
-	assert_true(gs.is_game_completed())
+	assert_true(gs.is_boss_defeated("the_sleeper"), "Sleeper progress remains saved")
+	assert_false(gs.is_game_completed(), "Sleeper is a prerequisite, not the final boss")
 
 
 func test_boss_spawned_has_no_overlay_hooks() -> void:

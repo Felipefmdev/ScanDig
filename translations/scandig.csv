@@ -377,13 +377,13 @@ Slot %d,Slot %d,Slot %d
 Apagar,Apagar,Delete
 Confirmar,Confirmar,Confirm
 Jogo concluído,Jogo concluído,Game complete
-"O Que Dorme foi vencido no altar da Cratera.
-Leve o Ídolo de Ouro, o tesouro principal, ao Museu.
-Ainda há peças, segredos e bichos por achar.","O Que Dorme foi vencido no altar da Cratera.
-Leve o Ídolo de Ouro, o tesouro principal, ao Museu.
-Ainda há peças, segredos e bichos por achar.","The Sleeper has been defeated at the Crater altar.
-Take the Golden Idol, the main treasure, to the Museum.
-There are still pieces, secrets and critters to find."
+"O Guardião do Sinal foi vencido na Lua.
+A expedição chegou ao destino do sinal.
+Ainda há peças, segredos e bichos por achar.","O Guardião do Sinal foi vencido na Lua.
+A expedição chegou ao destino do sinal.
+Ainda há peças, segredos e bichos por achar.","The Signal Warden was defeated on the Moon.
+The expedition reached the source of the signal.
+There are still artifacts, secrets and creatures to discover."
 — CRÉDITOS —,— CRÉDITOS —,— CREDITS —
 "Maestro / Lead_Gameplay (Antigravity #2) — Coordenação e Arquitetura Geral
 Broca (Dev_Player) — Controle em 1ª Pessoa, Ferramentas, Terrenos e Segredos
@@ -1133,3 +1133,16 @@ Arquivos: %d,Arquivos: %d,Files: %d
 Bom achado! Guarde com cuidado.,Bom achado! Guarde com cuidado.,Nice find! Keep it safe.
 Traga o Ídolo de Jade na mochila para despertar o pedestal.,Traga o Ídolo de Jade na mochila para despertar o pedestal.,Bring the Jade Idol in your backpack to awaken the pedestal.
 Ajude Inês a abrir a câmara selada antes de despertar o pedestal.,Ajude Inês a abrir a câmara selada antes de despertar o pedestal.,Help Inês open the sealed chamber before awakening the pedestal.
+Lua,Lua,Moon
+Rumo à Lua,Rumo à Lua,To the Moon
+Embarque no foguete da Cratera.,Embarque no foguete da Cratera.,Board the rocket in the Crater.
+[E] Limpar base com a pá,[E] Limpar base com a pá,[E] Clear base with the shovel
+[E] Fixar conexão,[E] Fixar conexão,[E] Secure connection
+[E] Alinhar receptor,[E] Alinhar receptor,[E] Align receiver
+[E] Embarcar para a Lua,[E] Embarcar para a Lua,[E] Board for the Moon
+[E] Conclua a missão da Vega,[E] Conclua a missão da Vega,[E] Complete Vega's mission
+[E] Vença o Dorminhoco,[E] Vença o Dorminhoco,[E] Defeat the Sleeper
+[E] Repare os três pontos do foguete,[E] Repare os três pontos do foguete,[E] Repair all three rocket points
+Não foi possível salvar. Tente embarcar novamente.,Não foi possível salvar. Tente embarcar novamente.,Could not save. Try boarding again.
+Guardião do Sinal,Guardião do Sinal,Signal Warden
+GUARDIÃO DO SINAL,GUARDIÃO DO SINAL,SIGNAL WARDEN

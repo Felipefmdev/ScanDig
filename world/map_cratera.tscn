@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://4q15piwkl53i"]
+[gd_scene load_steps=43 format=3 uid="uid://4q15piwkl53i"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -18,8 +18,10 @@
 [ext_resource type="PackedScene" uid="uid://5t8vhesors51" path="res://assets/models/kenney_pirate/barrel.glb" id="k_barrel"]
 [ext_resource type="PackedScene" uid="uid://3q1pqo6818cx" path="res://assets/models/kenney_pirate/chest.glb" id="k_chest"]
 [ext_resource type="PackedScene" uid="uid://tpyunr7h3idb" path="res://assets/models/kenney_pirate/crate.glb" id="k_crate"]
+[ext_resource type="Script" path="res://gameplay/environment/crater_rocket.gd" id="lunar_rocket"]
 [ext_resource type="Script" path="res://gameplay/digging/pickups_root.gd" id="p_pickups_root"]
 [ext_resource type="PackedScene" path="res://gameplay/quests/cratera/cratera_secrets.tscn" id="q_cratera_secrets"]
+[ext_resource type="Script" path="res://gameplay/quests/cratera/crater_rocket_station.gd" id="rocket_station"]
 [ext_resource type="Resource" uid="uid://dl0lf0jvb2ceo" path="res://items/tools/armadilha_rede.tres" id="t_armadilha_rede"]
 [ext_resource type="Resource" uid="uid://8yhj4ld0mre0" path="res://items/tools/arpao_corda.tres" id="t_arpao_corda"]
 [ext_resource type="Resource" uid="uid://xr5tl3035x0y" path="res://items/tools/dinamite.tres" id="t_dinamite"]
@@ -292,3 +294,10 @@ script = ExtResource("c_crater_altar")
 script = ExtResource("deco_scatter")
 theme = "cratera"
 seed_value = 505
+
+[node name="CraterRocket" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 0, 21)
+script = ExtResource("lunar_rocket")
+
+[node name="RocketStation" type="Node3D" parent="."]
+script = ExtResource("rocket_station")

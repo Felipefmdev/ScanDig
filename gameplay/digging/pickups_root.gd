@@ -61,7 +61,10 @@ func take(pickup: ItemPickup) -> CarriedItem:
 
 func _spawn_item(dict: Dictionary, pos: Vector3, impulse: Vector3) -> ItemPickup:
 	_counter += 1
-	return _spawner.spawn({"n": _counter, "carried": dict, "pos": to_local(pos), "impulse": impulse}) as ItemPickup
+	var pickup: ItemPickup = _spawner.spawn({"n": _counter, "carried": dict, "pos": to_local(pos), "impulse": impulse}) as ItemPickup
+	if pickup != null:
+		pickup.set_meta(&"_rocket_spawn_spawner", weakref(_spawner))
+	return pickup
 
 
 ## spawn_function: corre no host e em cada cliente com os mesmos dados.
