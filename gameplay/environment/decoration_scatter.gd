@@ -145,6 +145,9 @@ func _border_row(half: Vector2, rng: RandomNumberGenerator, builders: Array[Call
 			elif theme == "campo":
 				# #157: pedras largas e baixas deixam ver o prado e os bosques externos.
 				b = b.scaled(Vector3(1.25, minf(0.65, 1.6 / b.y.length()), 1.2))
+			# #186: low, broad edge markers instead of near-field spikes.
+			if theme != "campo":
+				b = b.scaled(Vector3(1.0, minf(1.0, 2.0 / b.y.length()), 1.0))
 			var k: int = rng.randi() % 2
 			_add("border_%d" % k, builders[k], Transform3D(b, Vector3(p.x, y - 0.3, p.z)))
 			n += 1

@@ -258,6 +258,9 @@ static func reset_focus() -> void:
 static func _update_focus(tree: SceneTree) -> void:
 	var best: Interactable = null
 	var player: Node3D = tree.get_first_node_in_group(&"player") as Node3D if tree != null else null
+	if player != null and player.has_method("is_settings_open") and bool(player.call("is_settings_open")):
+		reset_focus()
+		return
 	var cam: Camera3D = null
 	if player != null and "camera" in player and player.get("camera") is Camera3D:
 		cam = player.get("camera") as Camera3D

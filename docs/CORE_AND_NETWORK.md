@@ -44,9 +44,9 @@ Só o host (peer 1) altera o estado. Qualquer peer chama `request_*`; `_send_to_
 | `request_report_discovery(item_id, final_value)` | `_host_report_discovery` |
 | `request_sell_item(item_id, final_value)` | `_host_sell_item` |
 | `request_donate_item(item_id)` | `_host_donate_item` |
-| `request_buy_upgrade(upgrade_id)` | `_host_buy_upgrade` → `purchase_result` só para quem comprou |
-| `request_purchase_item(item_id)` | `_host_purchase_item` → `item_purchase_result` só para quem comprou |
-| `request_unlock_map(map_id)` | `_host_unlock_map` → `map_unlock_result` só para quem pediu |
+| `request_world_upgrade(upgrade_id, counter_path, request_id)` | Validação da banca real; `world_upgrade_result` correlacionado só ao comprador |
+| `request_world_item(item_id, offer_path, request_id)` | Validação da oferta real; `world_item_result` e entrega owner-local pelo broker |
+| `request_unlock_map(map_id)` | Compatibilidade: recusa sem cobrar; abertura somente pela passagem física (#186) |
 | `request_report_boss_defeated(boss_id)` | `_host_report_boss_defeated` (**só do host**, ver abaixo) |
 | `request_complete_quest(quest_id)` | `_host_complete_quest` (**só do host**) → `quest_completed` em todos |
 | `request_report_secret(secret_id)` | `_host_report_secret` (**só do host**) → `secret_found` em todos |
@@ -107,7 +107,7 @@ Tabela aprovada na #25; travas da Geleira na #49 (valores provisórios até a me
 Trava de mapa:
 - `get_next_upgrade_required_map(upgrade_id)` → id do mapa exigido para o **próximo** nível; `""` sem trava, no máximo ou upgrade desconhecido.
 - `get_upgrade_block_reason(upgrade_id)` → `""` se dá para comprar agora; senão o motivo, na ordem: `"Upgrade desconhecido."` → `"<nome> já está no nível máximo."` → `"Desbloqueie <nome do mapa> primeiro."` (quando `not is_map_unlocked(required)`) → `"Saldo insuficiente para <nome> (Custo: R$ <custo>)."`.
-- `_host_buy_upgrade` usa `get_upgrade_block_reason`: com motivo, falha com essa mensagem em `purchase_result`, sem mexer em saldo, nível nem snapshot.
+- `request_world_upgrade` valida a banca, ator vivo/pronto, alcance e LOS antes de `get_upgrade_block_reason`. O ledger por peer e ID devolve o mesmo resultado no retry, sem novo débito. O endpoint antigo `request_buy_upgrade` sempre recusa; a aba da loja da Base fica oculta.
 - A trava vale só para comprar: um nível já comprado antes dela continua valendo. Snapshot e save não mudaram de formato; `apply_snapshot` limita o nível ao `max_level`.
 - `_ready` confere a tabela (`costs`, `required_maps` e `max_level` do mesmo tamanho; mapas exigidos existem em `MAPS_DIR`) com `push_error`.
 
@@ -119,8 +119,8 @@ Consultas de equipamento (só leitura, qualquer peer; clientes leem o valor do s
 - `get_tool_data(item_id)` → `ToolData` de `TOOLS_DIR/<id>.tres` (`res://items/tools`), ou `null` se o id for inválido (vazio, com `/`, `\` ou `..`), não existir ou não bater com `ToolData.id`.
 - `get_max_item_value(item_data)` → teto anti-trapaça de venda/doação: `ceil(base_value × BuriedSpot.RARE_VALUE_MULTIPLIER × BuriedSpot.PERFECT_BONUS_MULTIPLIER)` (ex.: base 250 → 938).
 
-### Ferramentas da Praia (`request_purchase_item`)
-A banca da Praia (`ShopOffer`) deve comprar só por esta API, nunca debitando `team_money` no cliente. `request_purchase_item(String(tool_data.id))` → o host valida id, `price > 0` e saldo, debita e envia o snapshot. Só o comprador recebe `item_purchase_result(item_id, success, message)`; com `success == true` o gameplay dele cria o `CarriedItem` (`CarriedItem.create_from_tool_data`). O core não sabe de mochila: o espaço deve ser checado antes do pedido. Ferramentas compradas não entram no snapshot nem no save.
+### Ferramentas nas bancas (`request_world_item`)
+As bancas dos cinco mapas terrestres usam `ShopOffer.try_buy` → `request_world_item(item_id, offer_path, request_id)`. O host exige oferta e ToolData canônicas, ator vivo/pronto no mapa, alcance de 2,5 m, LOS e saldo; publica o snapshot antes do resultado correlacionado. O ledger por peer/ID impede novo débito em replay. O broker owner-local cria e insere um CarriedItem uma vez, aguardando espaço e ator válido mesmo se a oferta desaparecer. `try_buy` só confirma sucesso após `world_item_delivered`, devolve `carried = null` e conserva o ID após timeout. Os pedidos antigos `request_purchase_item` são recusados. A fila é memória de sessão, sem promessa de inventário durável em disco.
 
 Mensagens: `"Comprado: <nome>"`, `"Saldo insuficiente para <nome> (R$ <preço>)."`, `"Produto indisponível."`.
 
@@ -137,28 +137,28 @@ Ordem e chefes do `docs/GAME_DESIGN.md` §3 (#45): cada mapa pede o chefe princi
 | `geleira` | Geleira Eterna | 20.000 | Nv.5 | `ancient_guardian` (Guardião Ancestral) | `frozen_mammoth` |
 | `cratera` | Cratera | 55.000 | Nv.6 | `frozen_mammoth` (Mamute Congelado) | (chefe final) |
 
-O `item_pool` da Geleira é preenchido na #49 (Dev_UI_Economy); a cena `world/map_geleira.tscn` ainda não existe (Dev A, #45): a Geleira aparece na lista, travada pelo chefe, e depois de paga mostra "Em breve.". Na #49 a Geleira passa a vender o detector nível 5 (equipado Nv.6, que a Cratera exige) e a mochila nível 5 (8 espaços); valores provisórios até a medição por bot (#46).
+A tabela acima registra custos e requisitos históricos do modelo anterior à #186; não é uma tabela de bloqueios ativos. As cenas dos cinco mapas terrestres existem, incluindo `world/map_geleira.tscn`. A Geleira vende as melhorias permitidas pelos recibos de progressão; o detector não é requisito para entrar na Cratera. Os valores atuais de equipamentos vêm de `GameState.UPGRADES` e de `docs/PACING.md`.
 
 Troféus de chefe ficam no catálogo, fora de qualquer `item_pool`: `coroa_caranguejo_rei` (Caranguejo-Rei) e `garra_toupeira` (Toupeira Gigante, R$ 900).
 
-Desbloquear é uma compra única, só depois de vencer o chefe exigido. Um mapa desbloqueado só é jogável se `res://world/map_<id>.tscn` existir (senão a UI mostra "Em breve").
+A passagem salva uma abertura permanente depois de validar a credencial derivada do chefe (#186), sem compra monetária. Um mapa desbloqueado só é jogável se `res://world/map_<id>.tscn` existir (senão a UI mostra "Em breve").
 
 `GameState`:
-- `unlocked_maps: Array[String]` (só mapas pagos) e `defeated_bosses: Array[String]`.
-- `is_map_unlocked(map_id)` → `unlock_cost <= 0` ou está em `unlocked_maps`.
+- `unlocked_maps: Array[String]` contém recibos de rotas abertas, incluindo compras legítimas de saves antigos; `defeated_bosses: Array[String]` fornece as credenciais recuperáveis.
+- `is_map_unlocked(map_id)` concede Praia desde o início, terrestres canônicos pelo recibo e Lua pela missão `vega_foguete`; custo zero não concede acesso.
 - `is_boss_defeated(boss_id)`.
-- `get_map_unlock_block_reason(map_id)` → `""` se pode desbloquear agora; senão o motivo pronto para a UI.
-- `request_unlock_map(map_id)` → o host revalida com `get_map_unlock_block_reason`, debita `unlock_cost`, adiciona a `unlocked_maps` e sincroniza. Resposta em `map_unlock_result` só para quem pediu.
+- `get_map_unlock_block_reason(map_id)` orienta a derrotar o chefe e usar a chave na passagem; Lua orienta a embarcar no foguete. Não autoriza compra por menu.
+- #186: `request_unlock_map` recusa sem débito. `BossPassage` valida a credencial derivada do chefe e o endpoint físico; o primeiro E salva o recibo em `unlocked_maps` e só publica após save OK (reverte em falha). O segundo E solicita viagem, com equipe viva/pronta em R5 e sem ameaça R8. Ida e volta usam o mesmo recibo. `unlock_cost` e detector mínimo são metadados históricos; saves com rotas compradas mantêm o acesso.
 - `request_report_boss_defeated(boss_id)` → o host aceita só os `boss_id` de `MAP_UNLOCK_BOSSES` e `EXTRA_BOSSES`, só da própria simulação (nunca de um cliente), sem duplicar e sem dar dinheiro. O gameplay liga o `boss_defeated` de cada chefe a isso.
 - `map_id` vazio, com `/`, `\` ou `..`, inválido como nome de arquivo ou com `MapData.id` diferente é tratado como mapa desconhecido.
 
-Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado."`, `"Vença o chefe <chefe> (<mapa anterior em MAP_ORDER>) para liberar."`, `"Saldo insuficiente para desbloquear <nome> (R$ <custo>)."`, sucesso `"<nome> desbloqueado!"`.
+O motivo da rota fechada indica o chefe pendente ou a passagem onde usar a chave. O resultado de abertura depende do save; uma recusa não cobra saldo nem anuncia persistência.
 
 `SessionManager`:
 - `get_available_maps()` ordenado por `MAP_ORDER`.
-- `can_start_map(map_id)` exige `MapData`, mapa desbloqueado, cena e nível do detector.
-- `get_map_status(map_id)` → Dictionary com as chaves sempre presentes: `map_id`, `display_name`, `unlocked`, `has_scene`, `playable` (== `can_start_map`), `unlock_cost`, `required_boss_id`, `required_boss_name` (`""` sem chefe), `boss_defeated` (true sem chefe), `can_unlock` (`get_map_unlock_block_reason == ""`), `reason`.
-- Ordem do `reason`: `"Mapa desconhecido."` → se bloqueado, `get_map_unlock_block_reason` ou `"Desbloqueie por R$ <custo>."` → `"Em breve."` sem cena → `"Requer detector nível <n>."` → `""` (jogável). Id desconhecido devolve todas as chaves vazias/false/0.
+- `can_start_map(map_id)` exige MapData, recibo de abertura e cena; o detector não bloqueia entrada terrestre. Praia é inicial e Lua mantém a missão do foguete.
+- `get_map_status(map_id)` → Dictionary com as chaves sempre presentes: `map_id`, `display_name`, `unlocked`, `has_scene`, `playable` (== `can_start_map`), `unlock_cost` (sempre 0 nesta resposta de UI), `required_boss_id`, `required_boss_name` (`""` sem chefe), `boss_defeated` (true sem chefe), `can_unlock` (sempre false no menu consultivo), `reason`.
+- O `reason` informa mapa desconhecido, credencial/passagem pendente ou cena ausente. Detector e saldo não bloqueiam entrada terrestre. ID desconhecido devolve todas as chaves vazias/false/0.
 
 ### Vender vs. doar (DiscoveryBridge)
 `BuriedSpot` → `ItemPickup` → mochila (`CarriedItem`) → `SellPoint.deliver()` → `DiscoveryBridge.report_item_found(item, final_value)` → `GameState.request_report_discovery`. O host decide:
@@ -166,7 +166,7 @@ Mensagens (texto exato): `"Mapa desconhecido."`, `"<nome> já está desbloqueado
 - **Item repetido:** vendido por `final_value` (limitado a `get_max_item_value()` = `base_value × RARE_VALUE_MULTIPLIER × PERFECT_BONUS_MULTIPLIER`, arredondado para cima).
 
 ### Ciclo do `SessionManager`
-1. Host: `request_start_expedition(map_id)` (exige `can_start_map`: mapa desbloqueado, nível do detector e cena `res://world/map_<id>.tscn`).
+1. Host: `request_start_expedition(map_id)` (exige `can_start_map`: mapa desbloqueado e cena `res://world/map_<id>.tscn`).
 2. RPC `_rpc_enter_map` → todos trocam de cena (`scene_changing`, `expedition_started`). Quem entra no meio recebe `_rpc_sync_scene`.
 3. Durante a expedição o host junta `item_sold`/`item_donated` no resumo.
 4. Host: `request_end_expedition()` → `advance_day()` → `SaveManager.save_game()` → `expedition_ending(map_id)` (só no host) → `_rpc_return_to_lobby(summary)` → `scene_changing(lobby)` e `expedition_ended(summary)` em todos.
@@ -332,7 +332,7 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
 }
 ```
 
-Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo e agora libera a Geleira (antes liberava a Cratera). Saves v1–v4 (#139) carregam com `play_time_s` 0, `last_map` "" (o card mostra "—") e `last_played` = `saved_at`; valor de tipo errado nesses três volta ao padrão sem invalidar o save. Saves v1–v5 (#141) carregam com `stats` {} e `achievements` []; `stats` passa pelo `GameState.sanitize_stats` (só chave texto com número, mínimo 0; as chaves válidas estão em `Achievements.STAT_KEYS`), e as conquistas que o save já cumpre entram sem toast no carregamento. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save_<n>.json`.
+Só o host grava e carrega. Saves v1 (`equipped_detector_level`) são convertidos ao carregar. Saves v2 antigos sem `backpack` carregam com nível 0. Saves v1/v2 sem `unlocked_maps`/`defeated_bosses` carregam com as duas listas vazias. Saves v1–v3 sem `completed_quests`/`found_secrets` carregam com as duas listas vazias. Um `ancient_guardian` em `defeated_bosses` de um save v3 continua valendo como credencial para abrir a passagem da Geleira. A derrota não abre a rota automaticamente: é preciso usar a passagem, salvo quando o save já contém um recibo legítimo em `unlocked_maps`, que é preservado. Saves v1–v4 (#139) carregam com `play_time_s` 0, `last_map` "" (o card mostra "—") e `last_played` = `saved_at`; valor de tipo errado nesses três volta ao padrão sem invalidar o save. Saves v1–v5 (#141) carregam com `stats` {} e `achievements` []; `stats` passa pelo `GameState.sanitize_stats` (só chave texto com número, mínimo 0; as chaves válidas estão em `Achievements.STAT_KEYS`), e as conquistas que o save já cumpre entram sem toast no carregamento. No Windows: `%APPDATA%\Godot\app_userdata\ScanDig\scandig_save_<n>.json`.
 
 **Tempo de jogo e miniatura (#139).** `SaveManager.play_time_s` soma no `_process` só com o progresso aplicado, no host/offline, fora da tela inicial e sem a árvore pausada (pausa do solo); em expedição guarda `last_map`. Ao gravar com render, a tela vira `scandig_save_<n>.png` (`THUMBNAIL_SIZE` 256x144, corte 16:9, `make_thumbnail`); no headless, testes, bots e na tela inicial não há captura (`_capture_viewport_image` devolve null, os testes a sobrescrevem). `delete_slot` apaga o .png; `start_new_game` apaga o antigo.
 

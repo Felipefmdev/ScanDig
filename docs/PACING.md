@@ -1,4 +1,6 @@
 # ScanDig — Ritmo e Progressão (alvo: 7 a 9 horas)
+> **Modelo atual (#186):** passagens terrestres abrem por credencial do chefe, sem taxa de entrada ou detector mínimo. Recibos antigos são preservados sem reembolso. Melhorias são compradas nas cinco bancas do mundo; preços e níveis não foram rebalanceados. As tabelas abaixo que incluem taxas de desbloqueio registram a economia anterior e não medem a duração da campanha com passagens. Não há novo benchmark humano ou de bot que justifique transferir automaticamente esses tempos ao fluxo atual.
+
 
 Documento partilhado entre Dev A e Dev B. Os números são o **alvo de design**; afinem
 com testes reais e atualizem a tabela.

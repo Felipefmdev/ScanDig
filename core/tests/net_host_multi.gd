@@ -65,6 +65,10 @@ func _run() -> void:
 	print("HOST ready=", sm.get_ready_peers(), " ok=", ready_ok, " id_a=", id_a, " id_b=", id_b, " signals=", scene_ready_pairs)
 	_check(both_ready and ready_ok, "ready esperado %s" % str(expected_ready))
 
+	var counter: Node = current_scene.get_node("Banca/Upgrades")
+	var both_in_range: bool = await _wait_until(func() -> bool:
+		return bool(counter.call("host_can_purchase", id_a)) and bool(counter.call("host_can_purchase", id_b)), 10.0)
+	_check(both_in_range, "dois clientes reais prontos, próximos e com LOS na banca")
 	# Largada: saldo exato para UM pinpointer + 7. Os dois clientes compram ao ver isso.
 	var cost: int = gs.get_next_upgrade_cost("pinpointer")
 	_check(cost > 0, "custo do pinpointer=%d" % cost)

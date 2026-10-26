@@ -53,7 +53,7 @@ func _run() -> void:
 	gs.map_unlock_result.connect(_on_map_unlock_result)
 	gs.progression_changed.connect(_on_progression_changed)
 	var campo_data: MapData = _map("campo")
-	# Saldo um real abaixo do Campo: primeiro trava o chefe, depois o saldo.
+	# Saldo historico abaixo do preco antigo: abertura por chave nao pode cobrar.
 	var short_money: int = campo_data.unlock_cost - 1
 	gs.load_snapshot({"team_money": short_money, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 
@@ -74,10 +74,10 @@ func _run() -> void:
 
 	# #45: Geleira entre Ruínas e Cratera; cada mapa pede o chefe do anterior.
 	var geleira: Dictionary = sm.get_map_status("geleira")
-	_check(not geleira["unlocked"] and not geleira["playable"] and geleira["unlock_cost"] == _map("geleira").unlock_cost, "status geleira bloqueada: %s" % str(geleira))
+	_check(not geleira["unlocked"] and not geleira["playable"] and geleira["unlock_cost"] == 0 and _map("geleira").unlock_cost > 0, "status geleira bloqueada: %s" % str(geleira))
 	_check(geleira["required_boss_id"] == "ancient_guardian" and geleira["reason"] == "Vença o chefe Guardião Ancestral (Ruínas) para liberar.", "geleira exige Guardião Ancestral: %s" % str(geleira["reason"]))
 	var cratera: Dictionary = sm.get_map_status("cratera")
-	_check(cratera["required_boss_id"] == "frozen_mammoth" and cratera["required_boss_name"] == "Mamute Congelado" and cratera["unlock_cost"] == _map("cratera").unlock_cost, "cratera exige Mamute Congelado: %s" % str(cratera))
+	_check(cratera["required_boss_id"] == "frozen_mammoth" and cratera["required_boss_name"] == "Mamute Congelado" and cratera["unlock_cost"] == 0 and _map("cratera").unlock_cost > 0, "cratera exige Mamute Congelado: %s" % str(cratera))
 
 	var unknown: Dictionary = sm.get_map_status("xyz")
 	var has_all_keys: bool = true
@@ -100,32 +100,29 @@ func _run() -> void:
 	await _report_boss(gs, "king_crab")
 	_check(gs.defeated_bosses.size() == 1, "king_crab não duplica: %s" % str(gs.defeated_bosses))
 
-	result = await _unlock(gs, "campo")
-	_check(result.get("success", true) == false and result.get("message", "") == "Saldo insuficiente para desbloquear %s (%s)." % [campo_data.display_name, MoneyFormat.money(campo_data.unlock_cost)], "desbloqueio sem saldo falha: %s" % str(result.get("message", "")))
-
+	# Mesmo chefe + saldo suficiente nao autorizam o endpoint legado.
 	gs.load_snapshot({"team_money": campo_data.unlock_cost + 500})
+	var money_before: int = gs.team_money
 	result = await _unlock(gs, "campo")
-	_check(result.get("success", false) == true and result.get("message", "") == "Campo Antigo desbloqueado!", "desbloqueio campo ok: %s" % str(result.get("message", "")))
-	_check(gs.team_money == 500, "dinheiro 500: %d" % gs.team_money)
-	_check(gs.is_map_unlocked("campo"), "campo desbloqueado")
-
-	# O Campo pede o detector do campo.tres (#46: Nv.2, upgrade nível 1).
+	_check(not bool(result.get("success", true)) and not gs.is_map_unlocked("campo"), "legado nao compra nem abre apos chefe")
+	_check(gs.team_money == money_before, "legado negado nao cobra")
+	gs.load_snapshot({"team_money": short_money})
+	_check(gs.open_boss_passage("campo") == OK, "abertura host-local salva recibo sem exigir saldo antigo")
+	_check(gs.team_money == short_money, "abertura nao cobra nem reembolsa")
+	_check(gs.is_map_unlocked("campo"), "campo aberto por recibo")
 	campo = sm.get_map_status("campo")
-	_check(campo_data.required_detector_level > 1, "campo exige detector acima do inicial: %d" % campo_data.required_detector_level)
-	_check(campo["unlocked"] and not campo["playable"] and campo["reason"] == "Requer detector nível %d." % campo_data.required_detector_level, "status campo pede o detector: %s" % str(campo["reason"]))
-	_check(not sm.can_start_map("campo"), "can_start_map campo false com detector Nv.1")
-	gs.load_snapshot({"upgrade_levels": {"detector": campo_data.required_detector_level - 1}})
-	campo = sm.get_map_status("campo")
-	_check(campo["unlocked"] and campo["playable"] and campo["reason"] == "", "status campo jogável: %s" % str(campo["reason"]))
-	_check(sm.can_start_map("campo"), "can_start_map campo true com o detector exigido")
-
+	_check(campo_data.unlock_cost > 0 and campo_data.required_detector_level > 1, "MapData historico preservado")
+	_check(campo["unlocked"] and campo["playable"] and campo["reason"] == "", "recibo permite Campo com detector inicial")
+	_check(campo["unlock_cost"] == 0 and not campo["can_unlock"], "menu consulta sem preco nem autorizacao de abertura")
+	_check(gs.equipped_detector_level == 1 and sm.can_start_map("campo"), "detector Nv.1 nao bloqueia Campo")
+	_check(gs.open_boss_passage("campo") == OK, "abertura repetida idempotente")
+	_check(gs.team_money == short_money, "repeticao nao cobra")
 	result = await _unlock(gs, "campo")
-	_check(result.get("success", true) == false and result.get("message", "") == "Campo Antigo já está desbloqueado.", "desbloqueio repetido falha: %s" % str(result.get("message", "")))
-	_check(gs.team_money == 500, "dinheiro continua 500: %d" % gs.team_money)
-
+	_check(not bool(result.get("success", true)), "legado repetido continua negado")
 	result = await _unlock(gs, "../catalog/alianca_ouro")
-	_check(result.get("success", true) == false, "desbloqueio malicioso falha: %s" % str(result.get("message", "")))
-	_check(gs.team_money == 500, "dinheiro continua 500 após malicioso: %d" % gs.team_money)
+	_check(not bool(result.get("success", true)), "desbloqueio malicioso negado")
+	_check(gs.open_boss_passage("../catalog/alianca_ouro") != OK, "abertura host-local maliciosa negada")
+	_check(gs.team_money == short_money, "nenhuma via maliciosa altera dinheiro")
 
 	SaveManager.instance.save_game()
 	var saved: Dictionary = SaveManager.instance.load_from_file()
@@ -133,27 +130,17 @@ func _run() -> void:
 	_check(saved.get("unlocked_maps", []) == ["campo"], "save unlocked_maps: %s" % str(saved.get("unlocked_maps")))
 	_check(saved.get("defeated_bosses", []) == ["king_crab"], "save defeated_bosses: %s" % str(saved.get("defeated_bosses")))
 
-	# Ruínas têm cena (#42): desbloqueada, mas pede o detector do ruinas.tres.
-	var ruinas_data: MapData = _map("ruinas")
-	await _report_boss(gs, "giant_mole")
-	gs.load_snapshot({"team_money": ruinas_data.unlock_cost})
-	result = await _unlock(gs, "ruinas")
-	_check(result.get("success", false) == true and result.get("message", "") == "Ruínas desbloqueado!", "desbloqueio ruinas ok: %s" % str(result.get("message", "")))
-	var ruinas: Dictionary = sm.get_map_status("ruinas")
-	_check(ruinas["unlocked"] and ruinas["has_scene"] and not ruinas["playable"], "status ruinas desbloqueada e com cena: %s" % str(ruinas))
-	_check(ruinas["reason"] == "Requer detector nível %d." % ruinas_data.required_detector_level, "status ruinas pede o detector: %s" % str(ruinas["reason"]))
-	_check(not sm.can_start_map("ruinas"), "can_start_map ruinas false sem o detector")
-
-	# #49: Geleira paga com o detector exigido; com world/map_geleira.tscn (#45) fica jogável.
-	var geleira_data: MapData = _map("geleira")
-	await _report_boss(gs, "ancient_guardian")
-	gs.load_snapshot({"team_money": geleira_data.unlock_cost, "upgrade_levels": {"detector": geleira_data.required_detector_level - 1}})
-	result = await _unlock(gs, "geleira")
-	_check(result.get("success", false) == true and result.get("message", "") == "Geleira Eterna desbloqueado!", "desbloqueio geleira ok: %s" % str(result.get("message", "")))
-	geleira = sm.get_map_status("geleira")
-	_check(geleira["unlocked"] and geleira["has_scene"] and geleira["playable"], "status geleira desbloqueada e jogável: %s" % str(geleira))
-	_check(geleira["reason"] == "", "status geleira sem motivo: %s" % str(geleira["reason"]))
-	_check(sm.can_start_map("geleira"), "can_start_map geleira true com o detector exigido")
+	# Chefes fornecem credenciais; cada abertura salva recibo sem preco/detector gate.
+	for route_id: String in ["ruinas", "geleira"]:
+		var route: Dictionary = GameState.MAP_UNLOCK_BOSSES[route_id]
+		await _report_boss(gs, str(route["boss_id"]))
+		_check(not gs.is_map_unlocked(route_id), "derrota nao abre automaticamente: " + route_id)
+		_check(gs.open_boss_passage(route_id) == OK, "abertura com save OK: " + route_id)
+		var route_status: Dictionary = sm.get_map_status(route_id)
+		_check(route_status["unlocked"] and route_status["has_scene"] and route_status["playable"], "rota com cena jogavel: " + route_id)
+		_check(route_status["reason"] == "" and sm.can_start_map(route_id), "sem gate de equipamento: " + route_id)
+		_check(_map(route_id).unlock_cost > 0 and _map(route_id).required_detector_level > 1, "dados historicos preservados: " + route_id)
+		_check(gs.team_money == short_money, "rota nao cobra: " + route_id)
 
 	gs.reset_state()
 	gs.load_snapshot({"team_money": 300, "current_day": 4, "discovered_items": [], "upgrade_levels": {"detector": 1}})

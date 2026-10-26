@@ -143,7 +143,7 @@ func test_crater_terrain_and_ground_snap() -> void:
 	assert_lt(center_h, 0.1, "Centro da cratera é uma depressão")
 
 	var rim_h: float = CraterTerrain.height_at(42.0, 0.0)
-	assert_gt(rim_h, 5.0, "Bordas perimétricas da cratera são elevadas")
+	assert_between(rim_h, 0.5, 1.2, "#186: margem baixa preserva horizonte aberto")
 
 	# Cores
 	var col: Color = CraterTerrain.color_at(0.0, 0.0, 0.0)

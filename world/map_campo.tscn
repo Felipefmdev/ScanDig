@@ -1,4 +1,4 @@
-[gd_scene load_steps=57 format=3 uid="uid://djlnpnnc3081a"]
+[gd_scene load_steps=60 format=3 uid="uid://djlnpnnc3081a"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -40,6 +40,10 @@
 [ext_resource type="Resource" uid="uid://c54p0jdtphl1p" path="res://items/tools/kit_medico.tres" id="t_kit_medico"]
 [ext_resource type="Resource" uid="uid://bl2ekyeefkw8e" path="res://items/tools/repelente.tres" id="t_repelente"]
 [ext_resource type="Environment" uid="uid://4chyvbdu60mc" path="res://world/environment_campo.tres" id="w_env_campo"]
+
+[ext_resource type="PackedScene" path="res://gameplay/environment/boss_passage.tscn" id="186_passage"]
+[ext_resource type="PackedScene" path="res://gameplay/environment/upgrade_counter.tscn" id="186_counter"]
+[ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="186_ground"]
 
 [sub_resource type="CylinderShape3D" id="Shape_trunk"]
 height = 3.0
@@ -1636,3 +1640,33 @@ seed_value = 202
 [node name="NightLandmarks" type="Node3D" parent="."]
 script = ExtResource("night_landmarks")
 theme = "campo"
+
+[node name="WorldRoutes" type="Node3D" parent="."]
+script = ExtResource("186_ground")
+sink = 0.0
+terrain = 1
+height_offsets = {"Arrival_campo": 0.15, "Arrival_ruinas": 0.15}
+
+[node name="Passage_campo" parent="WorldRoutes" instance=ExtResource("186_passage")]
+position = Vector3(-8.000000, 0, 27.000000)
+rotation_degrees = Vector3(0, 163.495638, 0)
+route_id = "campo"
+source_map = "campo"
+
+[node name="Arrival_campo" type="Marker3D" parent="WorldRoutes"]
+position = Vector3(-6.863647, 0, 23.164808)
+rotation_degrees = Vector3(0, 343.495638, 0)
+
+[node name="Passage_ruinas" parent="WorldRoutes" instance=ExtResource("186_passage")]
+position = Vector3(27.000000, 0, 8.000000)
+rotation_degrees = Vector3(0, -106.504362, 0)
+route_id = "ruinas"
+source_map = "campo"
+
+[node name="Arrival_ruinas" type="Marker3D" parent="WorldRoutes"]
+position = Vector3(23.164808, 0, 6.863647)
+rotation_degrees = Vector3(0, 73.495638, 0)
+
+[node name="Upgrades" parent="Banca" instance=ExtResource("186_counter")]
+position = Vector3(0, 0, 1.8)
+map_id = "campo"

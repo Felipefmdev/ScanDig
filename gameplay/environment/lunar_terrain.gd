@@ -58,12 +58,12 @@ static func _outer_relief(x: float, z: float) -> float:
 	if guard <= 0.0:
 		return 0.0
 	var distance: float = Vector2(x+6.0,z-4.0).length()
-	var relief: float = 4.6+0.025*maxf(0.0,distance-35.0)
-	relief += 0.65*(1.0+sin(x*0.067+z*0.031))
+	var relief: float = 0.35+0.0025*maxf(0.0,distance-35.0)
+	relief += 0.15*(1.0+sin(x*0.067+z*0.031))
 	for ridge: Vector4 in OUTER_RIDGES:
 		var dx: float = (x-ridge.x)/ridge.z
 		var dz: float = (z-ridge.y)/(ridge.z*0.72)
-		relief += ridge.w*exp(-(dx*dx+dz*dz)*1.6)
+		relief += ridge.w*0.2*exp(-(dx*dx+dz*dz)*1.6)
 	return guard*relief
 
 static func height_at(x: float, z: float) -> float:

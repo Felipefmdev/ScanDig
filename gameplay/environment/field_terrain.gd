@@ -3,8 +3,8 @@ class_name FieldTerrain
 extends StaticBody3D
 
 ## Chão do Campo Antigo: malha low-poly facetada (normais e cor por face), prado ondulado
-## com um caminho de terra batida, uma lavoura antiga em sulcos e colinas que sobem para
-## lá das paredes (fecham o horizonte). A colisão é a mesma malha (layer 1), para o
+## com um caminho de terra batida, uma lavoura antiga em sulcos e prado baixo para
+## lá das bordas, mantendo o horizonte aberto. A colisão é a mesma malha (layer 1), para o
 ## raycast do SpotSpawner e dos jogadores. `height_at()` é estático: a relva (GrassField)
 ## e o GroundSnap usam-no com `terrain = Campo`.
 
@@ -102,10 +102,10 @@ static func height_at(x: float, z: float) -> float:
 		var dist: float = Vector2(x - f.x, z - f.y).length()
 		var k: float = smoothstep(f.z, f.z * 0.6, dist)  # 1 no centro, 0 fora
 		h = lerpf(h, 0.0, k)
-	# colinas para lá das paredes: o vale fecha-se à volta do jogador
+	# #186: ondulação externa baixa; não formar uma coroa em volta do jogador.
 	var edge: float = maxf(absf(x), absf(z))
 	var rise: float = smoothstep(PLAY_HALF - 1.0, SIZE.y, edge)
-	h += rise * rise * (5.5 + _get_broad().get_noise_2d(x * 2.0, z * 2.0) * 3.0)
+	h += rise * rise * (0.7 + _get_broad().get_noise_2d(x * 2.0, z * 2.0) * 0.5)
 	return h
 
 

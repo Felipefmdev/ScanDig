@@ -62,6 +62,12 @@ title_screen.tscn ──(Solo/Coop: select_slot + continue/new)──▶ lobby_b
 - A viagem Cratera → Lua permanece na mesma expedição, sem avançar o dia nem abrir resumo intermediário. Lua fica fora da seleção da Base. `CraterRocketStation` valida reparos, atores, segurança e save antes do embarque; `CoreSession` coordena prepare/ACK/commit com token e roster fixos. Ready da cena continua separado dos ACKs e governa spawn/visibilidade (#173).
 - O payload owner-local é capturado uma vez e atualizado por sinais do ator antigo até sua saída; o novo Player o consome uma vez. Dano, cura, revive e downed não são anulados pela cópia inicial. Cancel antes do cleanup devolve flags e permite retry explícito. O cache não é save durável, não transporta pickups físicos abandonados e não oferece rollback geral após commit.
 
+### Passagens e bancas (#186)
+
+As quatro ligações terrestres têm endpoints `BossPassage`, com recibo fixo por rota nos dois sentidos. Primeiro E converte a credencial derivada do chefe em abertura salva; segundo E viaja com a equipe reunida. A viagem reaproveita prepare/ACK/payload, mantém o dia e restaura o dono pelo spawn normal. Falha pós-commit tem recuperação própria para a Base e conserva o payload pendente em memória; não promete rollback de processo encerrado.
+
+Cada um dos cinco mapas terrestres tem `UpgradeCounter` e painel `WorldUpgradeShop` com quatro tipos de melhoria. Ferramentas mantêm as ofertas locais. O host valida contexto físico e correlaciona compras por peer/ID; o broker de itens entrega uma vez no inventário owner-local e espera espaço. Retry após timeout conserva a intenção. A loja da Base fica oculta e os endpoints antigos de compra/desbloqueio recusam pedidos. Lua continua exclusivamente pelo foguete, sem banca.
+
 ## 3. Estado e snapshot (o host decide)
 
 - Todo pedido de mudança passa por `GameState.request_*` (vender, doar, comprar, desbloquear, missão, segredo…). No host roda direto; no cliente vira RPC `any_peer` para o host, que valida.

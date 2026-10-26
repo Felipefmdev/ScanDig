@@ -25,7 +25,6 @@ func test_build_animated_face_creates_parts() -> void:
 
 func test_quest_npc_life_animation() -> void:
 	var npc: QuestNpc = QUEST_NPC.new()
-	add_child_autofree(npc)
 	var model: Node3D = Node3D.new()
 	model.name = "Model"
 	npc.add_child(model)
@@ -35,7 +34,7 @@ func test_quest_npc_life_animation() -> void:
 	var mouth: Node3D = head.find_child("NpcMouth", true, false) as Node3D
 	var pupils: Node3D = head.find_child("NpcPupils", true, false) as Node3D
 	
-	npc._ready()
+	add_child_autofree(npc)
 	assert_not_null(npc._head_node)
 	assert_not_null(npc._mouth_node)
 	assert_not_null(npc._pupils_node)
@@ -65,12 +64,11 @@ func test_quest_npc_reacts_to_player_holding_quest_item() -> void:
 	npc.quest_id = "praia_farol_1892"
 	npc.holding_item_id = "lente_fresnel_1892"
 	npc.line_holding = "A lente do farol! Traz cá!"
-	add_child_autofree(npc)
 	var model: Node3D = Node3D.new()
 	model.name = "Model"
 	npc.add_child(model)
 	NPC_BODY.build_animated_face(model, Vector3(0, 1.3, 0), 0.15, Color.BLACK, 1)
-	npc._ready()
+	add_child_autofree(npc)
 	npc.global_position = Vector3.ZERO
 
 	var player := DummyPlayerWithItem.new()

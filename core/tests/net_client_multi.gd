@@ -52,7 +52,7 @@ func _run() -> void:
 	var gs: GameState = GameState.instance
 	var sm: SessionManager = SessionManager.instance
 	sm.expedition_ended.connect(func(s: Dictionary) -> void: summary = s)
-	gs.purchase_result.connect(func(upgrade_id: String, success: bool, message: String) -> void:
+	gs.world_upgrade_result.connect(func(_request_id: int, upgrade_id: String, success: bool, message: String) -> void:
 		if upgrade_id == "pinpointer" and _buy_result.is_empty():
 			_buy_result = {"success": success, "message": message})
 	gs.state_synced.connect(func() -> void: _on_state_synced(gs))
@@ -66,6 +66,18 @@ func _run() -> void:
 	print(_prefix, " scene_after_join=", _scene_name(), " in_exp=", sm.is_in_expedition())
 	_check(in_map, "não entrou na Praia em 10 s")
 
+	# Posicionamento de protocolo: jogador real junto à banca real, sem bypass de LOS.
+	var owner_ready: bool = await _wait_until(func() -> bool:
+		var candidate: Player = HostSync.player_of(self, root.get_multiplayer().get_unique_id()) as Player
+		return candidate != null and candidate.is_node_ready(), 10.0)
+	_check(owner_ready, "owner real pronto para a compra contextual")
+	if not owner_ready:
+		await _finish()
+		return
+	var actor: Player = HostSync.player_of(self, root.get_multiplayer().get_unique_id()) as Player
+	var counter: Node3D = current_scene.get_node("Banca/Upgrades") as Node3D
+	actor.set_physics_process(false)
+	actor.global_position = counter.global_position + counter.global_basis.z * 1.3
 	# Largada: _on_state_synced compra no mesmo frame em que o snapshot custo + 7 chega.
 	var go: bool = await _wait_until(func() -> bool: return _bought, 15.0)
 	_check(go, "sinal de largada não chegou em 15 s (money=%d)" % gs.team_money)
@@ -85,7 +97,7 @@ func _on_state_synced(gs: GameState) -> void:
 	var level: int = gs.get_upgrade_level("pinpointer")
 	if not _bought and level == 0 and gs.team_money == gs.get_next_upgrade_cost("pinpointer") + 7:
 		_bought = true
-		gs.request_buy_upgrade("pinpointer")
+		gs.request_world_upgrade("pinpointer", current_scene.get_node("Banca/Upgrades").get_path(), 1)
 	if level == 1 and gs.team_money == 7:
 		_saw_converged = true
 func _run_a(gs: GameState, _sm: SessionManager) -> void:

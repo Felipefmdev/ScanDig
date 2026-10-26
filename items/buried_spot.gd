@@ -48,6 +48,14 @@ func _exit_tree() -> void:
 	_untrack_all_diggers()
 
 
+func _enter_tree() -> void:
+	# Parent enters first. Installing this in _ready lets NetSync publish its
+	# initial cache path before the peer has loaded the map/SpotNetSpawner.
+	var sync: MultiplayerSynchronizer = get_node_or_null(^"NetSync") as MultiplayerSynchronizer
+	if sync != null:
+		NetVisibility.watch(sync)
+
+
 func _ready() -> void:
 	add_to_group("buried_spots")
 	if not rare_decided:
@@ -55,9 +63,6 @@ func _ready() -> void:
 	_create_visuals()
 	_create_particles()
 	_update_mound()
-	var sync: MultiplayerSynchronizer = get_node_or_null(^"NetSync") as MultiplayerSynchronizer
-	if sync != null:
-		NetVisibility.watch(sync)
 
 
 func _create_visuals() -> void:

@@ -88,7 +88,9 @@ func test_external_ground_continues_beyond_play_bounds() -> void:
 	var source: Script = _source()
 	if source == null: return
 	for direction: Vector2 in [Vector2.LEFT,Vector2.RIGHT,Vector2.UP,Vector2.DOWN]:
-		assert_gt(_height(source,direction*70),_height(source,direction*30)+4.0,"External relief closes horizon without a mesh seam at bounds")
+		var outer: float = _height(source,direction*70)
+		assert_true(is_finite(outer), "Exterior remains real finite terrain beyond Bounds")
+		assert_between(outer,-1.0,4.0,"#186 exterior stays low instead of closing the horizon")
 
 func test_full_authored_flat_disks_and_irregular_horizon() -> void:
 	var source: Script = _source()
@@ -105,7 +107,7 @@ func test_full_authored_flat_disks_and_irregular_horizon() -> void:
 			var h: float = _height(source,Vector2(x,z))
 			highest = maxf(highest,h)
 			lowest = minf(lowest,h)
-	assert_gt(highest-lowest,3.0,"Horizonte precisa variar em altura, sem paredão uniforme")
+	assert_between(highest-lowest,.5,3.0,"#186 low irregular horizon retains relief without tall ridges")
 
 func test_ground_material_does_not_draw_outlines_between_ground_faces() -> void:
 	var source: Script = _source()

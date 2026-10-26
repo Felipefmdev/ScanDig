@@ -47,6 +47,10 @@ func _transforms(state: SceneState) -> Dictionary:
 			# Também se grava como position/rotation/scale (ex.: SunLight escrito à mão).
 			var pos: Vector3 = props.get(&"position", Vector3.ZERO)
 			var rot: Vector3 = props.get(&"rotation", Vector3.ZERO)
+			# PackedScene.pack serializa em radianos a rotação escrita em graus na cena.
+			if not props.has(&"rotation") and props.get(&"rotation_degrees") is Vector3:
+				var degrees: Vector3 = props[&"rotation_degrees"]
+				rot = Vector3(deg_to_rad(degrees.x), deg_to_rad(degrees.y), deg_to_rad(degrees.z))
 			var scl: Vector3 = props.get(&"scale", Vector3.ONE)
 			out[str(state.get_node_path(i))] = Transform3D(Basis.from_euler(rot).scaled(scl), pos)
 	return out
@@ -163,3 +167,28 @@ func test_rebuild_keeps_children_saved_in_the_scene() -> void:
 		kept.owner = root
 		gen.call(&"rebuild")
 		assert_true(is_instance_valid(kept) and kept.get_parent() == gen, "%s: rebuild não apaga filhos com owner" % script_path.get_file())
+
+func test_route_basis_and_xz_changes_remain_detected() -> void:
+	var packed: PackedScene = load("res://world/map_praia.tscn") as PackedScene
+	var original: SceneState = packed.get_state()
+	var scene: Node = packed.instantiate()
+	var marker: Node3D = scene.get_node("WorldRoutes/Arrival_campo") as Node3D
+	var authored: Transform3D = marker.transform
+	for mutation: String in ["x", "z", "basis"]:
+		marker.transform = authored
+		match mutation:
+			"x": marker.position.x += 0.1
+			"z": marker.position.z += 0.1
+			"basis": marker.rotate_y(0.2)
+		var repacked: PackedScene = PackedScene.new()
+		assert_eq(repacked.pack(scene), OK)
+		var changed: Array[String] = _changed(original, repacked.get_state())
+		assert_eq(changed.size(), 1, mutation + " real continua detectada")
+		if changed.size() == 1:
+			assert_true(changed[0].begins_with("./WorldRoutes/Arrival_campo "))
+	marker.transform = authored
+	marker.position.y += 0.2
+	var repacked_y: PackedScene = PackedScene.new()
+	assert_eq(repacked_y.pack(scene), OK)
+	assert_eq(_changed(original, repacked_y.get_state()).size(), 0, "Exceção de Y só para filho direto de GroundSnap")
+	scene.free()

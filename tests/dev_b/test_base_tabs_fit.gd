@@ -71,7 +71,13 @@ func test_museum_star_keeps_short_title() -> void:
 
 func test_lb_rb_still_switch_tabs() -> void:
 	var tabs: TabContainer = ui.tab_container
-	tabs.current_tab = 0
+	var visible_tabs: Array[int] = []
+	for index: int in tabs.get_tab_count():
+		if not tabs.is_tab_hidden(index) and not tabs.is_tab_disabled(index):
+			visible_tabs.append(index)
+	assert_gt(visible_tabs.size(), 1)
+	assert_true(tabs.is_tab_hidden(0), "a loja pertence à banca, não à navegação da base")
+	tabs.current_tab = visible_tabs[0]
 	var rb: InputEventJoypadButton = InputEventJoypadButton.new()
 	rb.button_index = JOY_BUTTON_RIGHT_SHOULDER
 	rb.pressed = true
@@ -79,9 +85,13 @@ func test_lb_rb_still_switch_tabs() -> void:
 	lb.button_index = JOY_BUTTON_LEFT_SHOULDER
 	lb.pressed = true
 	ui._unhandled_input(rb)
-	assert_eq(tabs.current_tab, 1, "RB: próxima aba")
+	assert_eq(tabs.current_tab, visible_tabs[1], "RB: próxima aba visível")
 	ui._unhandled_input(lb)
 	ui._unhandled_input(lb)
-	assert_eq(tabs.current_tab, tabs.get_tab_count() - 1, "LB volta e dá a volta para o Mapa")
+	assert_eq(tabs.current_tab, visible_tabs.back(), "LB volta e dá a volta entre abas visíveis")
+	for index: int in visible_tabs.size():
+		ui._unhandled_input(rb)
+		assert_false(tabs.is_tab_hidden(tabs.current_tab), "o ciclo nunca seleciona a loja oculta")
+	assert_eq(tabs.current_tab, visible_tabs.back(), "uma volta inteira conserva a aba")
 	await wait_frames(2)
 	_assert_tabs_fit("depois do LB")

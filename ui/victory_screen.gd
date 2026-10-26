@@ -119,6 +119,8 @@ func open() -> void:
 	# Em coop o menu de pausa pode estar aberto quando o chefe cai: fecha antes (devolve o mouse).
 	if PauseMenu.instance != null and PauseMenu.is_open():
 		PauseMenu.instance.close()
+	# The previous modal returns mouse/focus before this screen captures ownership.
+	get_tree().call_group(&"world_upgrade_shops", &"close")
 	refresh()
 	show_summary()
 	_open = true

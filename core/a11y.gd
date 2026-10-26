@@ -380,7 +380,14 @@ func _on_weather_changed(kind: String, phase: String) -> void:
 func _on_node_added(node: Node) -> void:
 	# A vibração da entrada do chefe (#148) também sai daqui, com ou sem legendas.
 	if node is EnemyBase:
-		_check_enemy.call_deferred(node)
+		_check_enemy_ref.call_deferred(weakref(node))
+
+
+## O inimigo pode sair entre node_added e o flush; resolve antes da conversão tipada.
+func _check_enemy_ref(reference: WeakRef) -> void:
+	var node: Node = reference.get_ref() as Node
+	if is_instance_valid(node):
+		_check_enemy(node)
 
 
 ## Depois do _ready (o chefe entra no grupo "bosses" lá).

@@ -1,5 +1,5 @@
 ## Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://core/tests/map_pools_test.gd
-## Pools de itens dos mapas (#26): itens válidos no catálogo, médias alvo e detector mínimo.
+## Pools de itens dos mapas (#26): catalogo, medias alvo e dados historicos de equipamento.
 extends SceneTree
 
 const MAP_IDS: Array[String] = ["praia", "campo", "ruinas", "geleira", "cratera"]
@@ -81,8 +81,8 @@ func _run() -> void:
 	for map_id: String in MAP_IDS:
 		_check_pool(map_id)
 
-	# Regras de progressão (#64: os valores ficam no economy_anchor_test). Ao longo de MAP_ORDER:
-	# média do pool, preço de desbloqueio e detector exigido nunca diminuem; média sobe sempre.
+	# Balanceamento historico (#64): valores MapData preservados, sem autorizar compra/acesso.
+	# Media do pool sobe; preco antigo e nivel de eficiencia seguem monotonicidade.
 	var previous: MapData = null
 	for map_id: String in SessionManager.MAP_ORDER:
 		var map_data: MapData = _load_map(map_id)
@@ -92,7 +92,7 @@ func _run() -> void:
 			_check(_pool_average(previous) < _pool_average(map_data), "média %s < %s: %.1f < %.1f" % [previous.id, map_id, _pool_average(previous), _pool_average(map_data)])
 			_check(previous.unlock_cost <= map_data.unlock_cost, "desbloqueio %s <= %s: %d <= %d" % [previous.id, map_id, previous.unlock_cost, map_data.unlock_cost])
 			_check(previous.required_detector_level <= map_data.required_detector_level, "detector %s <= %s: %d <= %d" % [previous.id, map_id, previous.required_detector_level, map_data.required_detector_level])
-			_check(map_data.unlock_cost > 0, "%s tem preço de desbloqueio: %d" % [map_id, map_data.unlock_cost])
+			_check(map_data.unlock_cost > 0, "%s conserva preco historico positivo: %d" % [map_id, map_data.unlock_cost])
 		previous = map_data
 	var geleira: MapData = _load_map("geleira")
 	_check(geleira != null and geleira.id == "geleira" and geleira.display_name == "Geleira Eterna", "geleira carregada")
@@ -115,9 +115,7 @@ func _run() -> void:
 	_check(gs.get_total_catalog_items() == catalog_files, "catálogo: GameState %d, arquivos %d" % [gs.get_total_catalog_items(), catalog_files])
 	_check(catalog_files >= 44, "catálogo com pelo menos 44 itens: %d" % catalog_files)
 
-	# Ordem dos motivos em get_map_status: bloqueado → "Em breve." (sem cena) → detector.
-	# Radar Nv.3 com Ruínas e Geleira desbloqueadas. As duas têm cena (#42/#45), então o motivo é
-	# o detector exigido pelo .tres de cada uma.
+	# Recibos permanentes removem gate de detector, sem alterar os niveis no MapData.
 	gs.load_snapshot({"team_money": 0, "current_day": 1, "discovered_items": [], "upgrade_levels": {"detector": 2}, "unlocked_maps": ["campo", "ruinas", "geleira"], "defeated_bosses": ["king_crab", "giant_mole", "ancient_guardian"]})
 	await _wait(3)
 	_check(gs.equipped_detector_level == 3, "radar Nv.3: %d" % gs.equipped_detector_level)
@@ -126,8 +124,8 @@ func _run() -> void:
 		var map_status: Dictionary = sm.get_map_status(map_id)
 		_check(map_data.required_detector_level > 3, "%s exige mais que o radar Nv.3: %d" % [map_id, map_data.required_detector_level])
 		_check(map_status["unlocked"] and map_status["has_scene"], "%s desbloqueada e com cena: %s" % [map_id, str(map_status)])
-		_check(map_status["reason"] == "Requer detector nível %d." % map_data.required_detector_level, "%s pede o detector do .tres: %s" % [map_id, str(map_status["reason"])])
-		_check(not sm.can_start_map(map_id), "can_start_map %s false com radar Nv.3" % map_id)
+		_check(map_status["reason"] == "" and map_status["playable"], "%s sem gate de detector: %s" % [map_id, str(map_status)])
+		_check(sm.can_start_map(map_id), "can_start_map %s true com recibo e radar Nv.3" % map_id)
 
 	# Todos os mapas reais já têm cena: o "Em breve." usa um mapa falso, gravado só durante o teste.
 	await _check_coming_soon(gs, sm)
@@ -146,8 +144,14 @@ func _remove_fake_map() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(FAKE_MAP_PATH))
 
 
-## Mapa sem cena (world/map_teste_em_breve.tscn não existe), pago e com detector Nv.9:
-## bloqueado → motivo do desbloqueio; desbloqueado → "Em breve." antes do detector.
+## Adapter de consulta estritamente sintetico para manter a cobertura de cena ausente.
+## O GameState real continua rejeitando recibo de ID fora da allowlist de rotas.
+class MissingSceneState extends GameState:
+	func is_map_unlocked(map_id: String) -> bool:
+		return true if map_id == "teste_em_breve" else super.is_map_unlocked(map_id)
+
+
+## Nao altera qualquer cena real; o recurso falso e removido ao terminar.
 func _check_coming_soon(gs: GameState, sm: SessionManager) -> void:
 	_remove_fake_map()
 	var fake: MapData = MapData.new()
@@ -160,12 +164,19 @@ func _check_coming_soon(gs: GameState, sm: SessionManager) -> void:
 	gs.load_snapshot({"team_money": 0, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(2)
 	var locked: Dictionary = sm.get_map_status(FAKE_MAP_ID)
-	_check(not locked["unlocked"] and locked["reason"] == "Saldo insuficiente para desbloquear Mapa de Teste (%s)." % MoneyFormat.money(100), "falso bloqueado: motivo do desbloqueio: %s" % str(locked["reason"]))
+	_check(not locked["unlocked"] and not locked["has_scene"] and not locked["playable"], "ID sintetico bloqueado e sem cena")
 	gs.load_snapshot({"unlocked_maps": [FAKE_MAP_ID]})
-	await _wait(2)
+	_check(not gs.is_map_unlocked(FAKE_MAP_ID), "recibo forjado fora das rotas nao abre mapa real")
+	# Isola apenas a premissa unlocked da consulta; can_start_map/get_map_status
+	# reais ainda devem verificar ausencia de cena, sem gate de detector.
+	var query_state: MissingSceneState = MissingSceneState.new()
+	GameState.instance = query_state
 	var soon: Dictionary = sm.get_map_status(FAKE_MAP_ID)
-	_check(soon["unlocked"] and not soon["has_scene"] and not soon["playable"], "falso desbloqueado e sem cena: %s" % str(soon))
-	_check(soon["reason"] == "Em breve.", "falso: 'Em breve.' antes do detector Nv.9: %s" % str(soon["reason"]))
-	_check(not sm.can_start_map(FAKE_MAP_ID), "can_start_map falso false")
+	var playable: bool = sm.can_start_map(FAKE_MAP_ID)
+	GameState.instance = gs
+	query_state.free()
+	_check(soon["unlocked"] and not soon["has_scene"] and not soon["playable"], "consulta sintetica desbloqueada e sem cena")
+	_check(soon["reason"] == "Em breve.", "cena ausente mantem motivo Em breve")
+	_check(not playable, "can_start_map sem cena permanece false")
 	_remove_fake_map()
 	_check(not FileAccess.file_exists(FAKE_MAP_PATH), "mapa falso apagado")

@@ -92,7 +92,7 @@ func _run() -> void:
 	gs.request_complete_quest("ze_anzol")
 	_check(gs.team_money == paid, "missão do save não paga de novo: %d" % gs.team_money)
 
-	# Save v3: sem as listas novas; ancient_guardian agora libera a Geleira (saldo = preço do .tres).
+	# Save v3: conserva recibos comprados e chefe como credencial; carregar nao abre rota nova.
 	var geleira_cost: int = (load("res://items/maps/geleira.tres") as MapData).unlock_cost
 	_check(save.save_to_file({"version": 3, "team_money": geleira_cost, "current_day": 9, "discovered_items": [],
 		"upgrade_levels": {"detector": 4}, "unlocked_maps": ["campo", "ruinas"],
@@ -101,7 +101,12 @@ func _run() -> void:
 	_check(gs.completed_quests.is_empty() and gs.found_secrets.is_empty(), "save v3 carrega listas vazias: %s / %s" % [str(gs.completed_quests), str(gs.found_secrets)])
 	_check(gs.team_money == geleira_cost and gs.current_day == 9, "save v3 mantém dinheiro e dia")
 	_check(gs.is_boss_defeated("ancient_guardian"), "save v3 mantém ancient_guardian")
-	_check(gs.get_map_unlock_block_reason("geleira") == "", "ancient_guardian libera a Geleira: %s" % gs.get_map_unlock_block_reason("geleira"))
+	_check(gs.is_map_unlocked("campo") and gs.is_map_unlocked("ruinas"), "recibos antigos preservados")
+	_check(not gs.is_map_unlocked("geleira"), "chefe migrado nao abre Geleira ao carregar")
+	_check(not gs.get_map_unlock_block_reason("geleira").is_empty(), "ainda requer uso na passagem")
+	_check(gs.open_boss_passage("geleira") == OK, "credencial migrada permite abertura host-local com save OK")
+	_check(gs.is_map_unlocked("geleira") and gs.team_money == geleira_cost, "uso abre sem debito nem recompensa")
+	_check(gs.current_day == 9, "abertura nao avanca dia")
 	_check(gs.get_map_unlock_block_reason("cratera") == "Vença o chefe Mamute Congelado (Geleira Eterna) para liberar.", "cratera pede o Mamute: %s" % gs.get_map_unlock_block_reason("cratera"))
 
 	gs.reset_state()
