@@ -49,6 +49,7 @@ var credits_label: Label = null
 var _open: bool = false
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _game_state: GameState = null
+var _fit_center: FitCenterContainer = null
 
 
 static func is_open() -> bool:
@@ -125,6 +126,8 @@ func open() -> void:
 	show_summary()
 	_open = true
 	root_control.visible = true
+	if SessionUI.instance != null:
+		SessionUI.instance._place_toast()
 	UiFocus.link_chain([continue_button, credits_button])
 	var before: Control = get_viewport().gui_get_focus_owner()
 	if before != null and not root_control.is_ancestor_of(before):
@@ -143,9 +146,11 @@ func close() -> void:
 		return
 	_open = false
 	root_control.visible = false
+	_fit_center.offset_top = 0.0
 	Input.mouse_mode = _previous_mouse_mode
 	if SessionUI.instance != null and SessionUI.instance.expedition_bar != null:
 		SessionUI.instance.call(&"_refresh_expedition_bar")
+		SessionUI.instance._place_toast()
 	# O foco volta aonde estava (#135); sem ele (vitória na expedição e volta ao lobby), à Base.
 	var before: Control = _focus_before
 	_focus_before = null
@@ -154,6 +159,13 @@ func close() -> void:
 	elif is_inside_tree():
 		get_tree().call_group(UiFocus.HOME_GROUP, &"focus_home")
 	open_changed.emit(false)
+
+
+## Faixa medida do aviso, mantida também nos créditos e após sua expiração.
+## Encolhe só este cartão; não altera o layout compartilhado de outros modais.
+func reserve_notice_space(height: float) -> void:
+	if _fit_center != null:
+		_fit_center.offset_top = height
 
 
 func show_credits() -> void:
@@ -208,6 +220,7 @@ static func campaign_value_text(gs: GameState, key: String) -> String:
 func _build() -> void:
 	# Encolhe para caber em telas baixas com ui_scale 1.3 (#146).
 	var center: FitCenterContainer = FitCenterContainer.new()
+	_fit_center = center
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root_control.add_child(center)
 
