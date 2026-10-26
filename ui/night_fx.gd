@@ -271,8 +271,11 @@ func _update_chip(player: Player) -> void:
 
 
 func _free_lights() -> void:
-	for node: Node in [lantern_light, detector_glow, night_chip]:
-		if node != null and is_instance_valid(node):
+	# O Player pode ter levado esses filhos ao ser removido. Validar a referência
+	# antes da conversão para Node evita converter uma instância já liberada.
+	for reference: Variant in [lantern_light, detector_glow, night_chip]:
+		if is_instance_valid(reference):
+			var node: Node = reference as Node
 			if node.get_parent() != null:
 				node.get_parent().remove_child(node)
 			node.queue_free()

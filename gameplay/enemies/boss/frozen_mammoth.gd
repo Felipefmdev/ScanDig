@@ -355,8 +355,8 @@ func _spawn_rolling_snowball(spawn_pos: Vector3, dir: Vector3) -> void:
 	mi.mesh = ToonKit.commit(st)
 	mi.material_override = _mat
 	mi.top_level = true
-	mi.global_position = spawn_pos
 	add_child(mi)
+	mi.global_position = spawn_pos
 
 	_snowballs.append(mi)
 	_snowball_dirs.append(dir)
