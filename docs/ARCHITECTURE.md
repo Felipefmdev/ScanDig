@@ -93,7 +93,7 @@ Cada um dos cinco mapas terrestres tem `UpgradeCounter` e painel `WorldUpgradeSh
   | v5 (#139) | `play_time_s`, `last_map`, `last_played`, miniatura |
   | v6 (#141) | `stats`, `achievements` |
 
-  Campos sem número de versão próprio (`seen_creatures`, `intact_items`, `rare_items`, `map_fragments`) também começam vazios. `game_completed` é sempre recalculado pelos chefes vencidos.
+  Campos sem número de versão próprio (`seen_creatures`, `intact_items`, `rare_items`) também começam vazios. `game_completed` é sempre recalculado pelos chefes vencidos.
 - Save mais novo que o jogo: não aplica e bloqueia a gravação. Save corrompido: vai para `.corrupt-<unix>.json` e começa jogo novo. Regras e testes em `CORE_AND_NETWORK.md` §3 e `tests/dev_b/test_save_robustness.gd`.
 - **Ao mudar o formato:** suba `SAVE_VERSION`, acrescente o caso em `_upgrade_save_data`, um teste que carrega o save da versão anterior e atualize a tabela acima.
 
