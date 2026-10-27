@@ -95,15 +95,16 @@ efetivos (acima do mínimo de 16 px).
 **Correção aplicada:** capturas completas geradas e inspecionadas a `1280×720`, `1920×1080`
 e `2560×1080` via `ui/tests/theme_snapshots.gd` em `.bot_runs/theme/`.
 
-### F6 — Hierarquia dentro do HUD não está medida (P2)
+### F6 — Hierarquia dentro do HUD não está medida (P2) — **corrigido**
 
 `hud.tscn` tem 4 chips (`MoneyChip`, `DetectorChip`, `MuseumChip`, e o grupo
 `toast_avoid`) mas não há teste de prioridade visual entre eles. Em ecrãs pequenos, todos
 competem.
 
-**Correção:** definir um primário (dinheiro ou detetor, conforme o mapa) e reduzir os
-outros a ícone + número; medir com o teste dos 5 s.
-**Aceite:** em 5 s, o jogador diz o saldo e o estado do detetor sem procurar.
+**Correção aplicada:** `UiChip` ganhou `@export var primary: bool = true` com `_apply_hierarchy()`.
+O chip primário (`MoneyChip`) mantém `PAPER_LIGHT` (0,94), borda 2 px, sombra 2 px, fonte 18 px
+e ícone 22×22; os chips secundários (`DetectorChip` e `MuseumChip` em `ui/hud.tscn`) usam `PAPER` (0,88),
+borda 1 px, sem sombra, margens compactas (6/8/2/2), fonte 15 px e ícone 18×18, validado em `ui/tests/theme_test.gd`.
 
 ## 4. Forças a preservar
 
@@ -129,7 +130,7 @@ outros a ícone + número; medir com o teste dos 5 s.
 | P1 | Borda de foco com contraste ≥ 3:1 | `build_theme.gd:139` | feito (#180) |
 | P1 | Escala tipográfica 18/21/26 | `build_theme.gd:12,213` | feito (#180) |
 | P2 | Toast com contorno e texto claro | `build_theme.gd:245` | feito (#180) |
-| P2 | Chip primário do HUD | `hud.tscn`, `hud.gd` | M |
+| P2 | Chip primário do HUD | `hud.tscn`, `ui_chip.gd` | feito (#196) |
 | P2 | Capturas 720p/1080p/ultrawide | `ui/tests/theme_snapshots.gd` | feito (#180) |
 | P3 | Requisitos de desbloqueio legíveis | `base_station_ui.gd` | feito (#180) |
 

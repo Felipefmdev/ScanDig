@@ -62,11 +62,26 @@ func _same_color(c: Control, item: String, type: String) -> bool:
 
 
 func _check_scenes(base: BaseStationUI, menu: MultiplayerMenu, hud: Node, ui: SessionUI) -> void:
-	# HUD do lobby (#119): Dinheiro / Detector / Museu em UiChip (papel claro, texto de tinta).
+	# HUD do lobby (#119, #180 F6): MoneyChip primário (papel claro, borda 2, sombra 2, fonte 18, ícone 22);
+	# DetectorChip e MuseumChip secundários (papel bege, borda 1, sem sombra, fonte 15, ícone 18).
 	var money_chip: UiChip = hud.get_node("%MoneyChip") as UiChip
+	var detector_chip: UiChip = hud.get_node("%DetectorChip") as UiChip
+	var museum_chip: UiChip = hud.get_node("%MuseumChip") as UiChip
 	_check(money_chip != null and money_chip.icon_rect.texture != null, "HUD: chip do dinheiro com ícone")
 	_check(money_chip != null and money_chip.label.get_theme_color("font_color").is_equal_approx(UiPalette.INK), "HUD: texto do chip em INK")
 	_check(money_chip != null and (money_chip.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.is_equal_approx(UiChip.make_style().bg_color), "HUD: fundo de papel do chip")
+	_check(money_chip != null and money_chip.primary
+		and money_chip.label.get_theme_font_size("font_size") == 18
+		and money_chip.icon_rect.custom_minimum_size == Vector2(22, 22),
+		"HUD: MoneyChip primário (fonte 18, ícone 22x22)")
+	for sec_chip: UiChip in [detector_chip, museum_chip]:
+		var sec_style: StyleBoxFlat = sec_chip.get_theme_stylebox("panel") as StyleBoxFlat if sec_chip != null else null
+		_check(sec_chip != null and not sec_chip.primary
+			and sec_style != null and sec_style.border_width_top == 1 and sec_style.shadow_size == 0
+			and sec_style.bg_color.is_equal_approx(Color(UiPalette.PAPER, 0.88))
+			and sec_chip.label.get_theme_font_size("font_size") == 15
+			and sec_chip.icon_rect.custom_minimum_size == Vector2(18, 18),
+			"HUD: %s secundário (borda 1, sem sombra, fonte 15, ícone 18x18)" % (String(sec_chip.name) if sec_chip != null else "chip"))
 
 	var menu_panel: PanelContainer = menu.get_node("PanelContainer") as PanelContainer
 	_check(_same_box(menu_panel, "panel", "WornPanel"), "menu: painel WornPanel do theme")

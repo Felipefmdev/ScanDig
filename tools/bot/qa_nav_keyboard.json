@@ -133,7 +133,8 @@
 					"campo",
 					"ruinas",
 					"geleira",
-					"cratera"
+					"cratera",
+					"lua"
 				],
 				"defeated_bosses": [
 					"king_crab",
@@ -170,7 +171,7 @@
 		},
 		{
 			"t": 0,
-			"ui_tab": "Mapa do Tesouro"
+			"ui_tab": "Diário"
 		},
 		{
 			"sleep": 0.3
@@ -246,26 +247,6 @@
 		{
 			"t": 0,
 			"nav_audit": "base_diario",
-			"root": "BaseStationUI",
-			"devices": [
-				"keyboard"
-			],
-			"allow_leave": true
-		},
-		{
-			"sleep": 0.3
-		},
-		{
-			"t": 0,
-			"ui_nav": "tab_next",
-			"device": "keyboard"
-		},
-		{
-			"sleep": 0.4
-		},
-		{
-			"t": 0,
-			"nav_audit": "base_mapa",
 			"root": "BaseStationUI",
 			"devices": [
 				"keyboard"

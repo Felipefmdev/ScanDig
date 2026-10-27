@@ -11,7 +11,7 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LOBBY = "res://world/lobby_base.tscn"
-ALL_MAPS = ["praia", "campo", "ruinas", "geleira", "cratera", "ilha_tesouro"]
+ALL_MAPS = ["praia", "campo", "ruinas", "geleira", "cratera", "lua"]
 # Espelha core/night_mode.gd (NIGHT_BY_MAP) e core/weather_manager.gd (WEATHER_BY_MAP).
 MAPS = {
 	"praia": {"night": True, "weather": True, "bounds": [-23, -23, 23, 23]},
@@ -19,18 +19,14 @@ MAPS = {
 	"ruinas": {"night": True, "weather": False, "bounds": [-25, -25, 25, 25]},
 	"geleira": {"night": True, "weather": True, "bounds": [-25, -25, 25, 25]},
 	"cratera": {"night": True, "weather": True, "bounds": [-25, -25, 25, 25]},
-	"ilha_tesouro": {"night": False, "weather": False, "bounds": [-18, -18, 18, 18]},
+	"lua": {"night": False, "weather": False, "bounds": [-20, -20, 20, 20]},
 }
 STATE = {
 	"unlocked_maps": ALL_MAPS,
 	"defeated_bosses": ["king_crab", "giant_mole", "ancient_guardian", "frozen_mammoth"],
 	"upgrade_levels": {"detector": 5, "backpack": 2, "shovel": 2},
 	"team_money": 5000,
-	"map_fragments": ["praia_frag_1", "campo_frag_1"],
 }
-# A Ilha só abre com o Mapa do Tesouro completo (GameState.has_all_map_fragments).
-ALL_FRAGMENTS = ["praia_frag_1", "campo_frag_1", "ruinas_frag_1", "ruinas_frag_2",
-	"geleira_frag_1", "geleira_frag_2", "cratera_frag_1", "cratera_frag_2"]
 # ~20 s andando: 10 x (explorar 8 m, no maximo 2 s) com um dump de FPS a cada volta.
 WALK_ROUNDS = 10
 
@@ -70,8 +66,7 @@ def trip(map_id, cfg, label, night, weather):
 
 def map_script(map_id):
 	cfg = MAPS[map_id]
-	state = dict(STATE, map_fragments=ALL_FRAGMENTS) if map_id == "ilha_tesouro" else STATE
-	steps = [{"t": 0.3, "set_state": state}, {"t": 2.0, "dump": "00_lobby_antes"}]
+	steps = [{"t": 0.3, "set_state": STATE}, {"t": 2.0, "dump": "00_lobby_antes"}]
 	steps += trip(map_id, cfg, "10_dia", False, cfg["weather"])
 	if cfg["night"]:
 		steps += trip(map_id, cfg, "20_noite", True, False)
@@ -93,7 +88,7 @@ def map_script(map_id):
 
 def base_script():
 	steps = [{"t": 0.3, "set_state": STATE}, {"t": 2.0, "dump": "00_lobby"}, {"t": 0, "screenshot": "00_lobby"}]
-	for i, tab in enumerate(["Loja de Equipamentos", "Museu de Achados", "Expedições", "Diário", "Mapa do Tesouro"]):
+	for i, tab in enumerate(["Loja de Equipamentos", "Museu de Achados", "Expedições", "Diário"]):
 		steps += [{"t": 0, "ui_tab": tab}, {"sleep": 0.6}, {"t": 0, "screenshot": "%02d_aba" % (i + 1)}]
 	steps += [
 		{"t": 0, "ui_tab": "Museu de Achados"},
@@ -249,8 +244,8 @@ def nav_script(device):
 		{"t": 0.3, "set_state": STATE}, {"sleep": 1.0}, {"t": 0, "screenshot": "10_lobby"}]
 	steps += nav("menu_coop", "MultiplayerMenu", d, allow_leave=True)
 	# A aba inicial depende do save; da última, tab_next dá a volta para a Loja (e foca a página).
-	steps += [{"t": 0, "ui_tab": "Mapa do Tesouro"}, {"sleep": 0.3}]
-	for i, name in enumerate(["loja", "museu", "expedicoes", "diario", "mapa"]):
+	steps += [{"t": 0, "ui_tab": "Diário"}, {"sleep": 0.3}]
+	for i, name in enumerate(["loja", "museu", "expedicoes", "diario"]):
 		steps += [tab, {"sleep": 0.4}]
 		steps += nav("base_" + name, "BaseStationUI", d, allow_leave=True)
 	steps += [{"t": 0, "ui_tab": "Museu de Achados"}, {"sleep": 0.4}, {"t": 0, "ui_press": "ViewMuseumButton"}, {"sleep": 2.5}]

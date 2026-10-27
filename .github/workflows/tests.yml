@@ -29,7 +29,7 @@ jobs:
 
       - name: Parse-check every scene by loading it
         run: |
-          for scene in world/map_praia.tscn world/test_sandbox.tscn; do
+          for scene in world/title_screen.tscn world/lobby_base.tscn world/map_praia.tscn world/map_campo.tscn world/map_ruinas.tscn world/map_geleira.tscn world/map_cratera.tscn world/map_lua.tscn world/test_sandbox.tscn; do
             ./godot --headless --path . --quit-after 60 "res://$scene" 2>&1 | tee run.log
             if grep -q "SCRIPT ERROR" run.log; then echo "Script error in $scene"; exit 1; fi
           done

@@ -67,7 +67,7 @@ Só no host: `advance_day()`, `reset_state()`, `load_snapshot(data)`.
 ### Sinais do `GameState`
 `money_changed(new_amount)`, `collection_updated(total_found, max_items)`, `item_sold(item_name, value)`, `item_donated(item_name, reward)`, `upgrades_changed(upgrade_levels)`, `purchase_result(upgrade_id, success, message)`, `item_purchase_result(item_id, success, message)`, `progression_changed(unlocked_maps, defeated_bosses)`, `map_unlock_result(map_id, success, message)`, `quest_completed(quest_id, reward)`, `secret_found(secret_id)`, `creature_discovered(kind)`, `game_completed_changed(completed)`, `game_victory()`, `state_synced()`.
 
-**Estado x evento (#81/#120).** O chefe final atual é `GameState.FINAL_BOSS_ID = lunar_warden`, o Guardião do Sinal da Lua. O host registra sua primeira derrota, aplica/transmite o snapshot e depois emite `game_victory` aos peers presentes. `game_completed_changed` é estado e pode vir de save, snapshot e reentrada; `game_victory` é evento ao vivo e não é reproduzido para quem entra depois. VictoryScreen abre pelo evento; reset, troca de cena ou fechar a tela seguem os mecanismos existentes.
+**Estado x evento (#81/#120).** O chefe final atual é `GameState.FINAL_BOSS_ID = lunar_warden` (Guardião Lunar na Lua, #120). O host registra sua primeira derrota, aplica/transmite o snapshot e depois emite `game_victory` aos peers presentes. `game_completed_changed` é estado e pode vir de save, snapshot e reentrada; `game_victory` é evento ao vivo e não é reproduzido para quem entra depois. VictoryScreen abre pelo evento; reset, troca de cena ou fechar a tela seguem os mecanismos existentes.
 
 **Concluído = derrotou lunar_warden.** O valor é derivado de `defeated_bosses` em snapshots, leitura de save e resumos; o bool gravado não substitui essa derivação. Chefes antigos continuam registrados sem equivaler ao final lunar. Essa troca de critério não introduz novo campo nem aumenta por si só SAVE_VERSION=6. O save final é solicitado após a vitória quando há progresso aplicado; a exibição da tela não atesta sucesso de disco.
 
@@ -324,7 +324,7 @@ NORAY_OID_LENGTH=6 NORAY_OID_CHARSET=23456789ABCDEFGHJKLMNPQRSTUVWXYZ node bin/n
   "upgrade_levels": { "detector": 0, "pinpointer": 0, "shovel": 0, "backpack": 0 },
   "unlocked_maps": ["campo"], "defeated_bosses": ["king_crab"],
   "completed_quests": ["ze_anzol"], "found_secrets": ["praia_polvo"],
-  "seen_creatures": [], "intact_items": ["moeda_antiga"], "rare_items": [], "map_fragments": [], "built_shortcuts": [],
+  "seen_creatures": [], "intact_items": ["moeda_antiga"], "rare_items": [], "built_shortcuts": [],
   "game_completed": false,
   "stats": { "expeditions": 3, "night_expeditions": 0, "flawless_expeditions": 1, "items_found": 12, "items_sold": 9,
              "items_donated": 1, "money_earned": 640, "creatures_defeated": 2, "digs": 40, "dig_depth_cm": 1850 },

@@ -1,0 +1,266 @@
+{
+	"scene": "res://world/lobby_base.tscn",
+	"steps": [
+		{
+			"t": 0.3,
+			"set_state": {
+				"unlocked_maps": [
+					"praia",
+					"campo",
+					"ruinas",
+					"geleira",
+					"cratera",
+					"lua"
+				],
+				"defeated_bosses": [
+					"king_crab",
+					"giant_mole",
+					"ancient_guardian",
+					"frozen_mammoth"
+				],
+				"upgrade_levels": {
+					"detector": 5,
+					"backpack": 2,
+					"shovel": 2
+				},
+				"team_money": 5000
+			}
+		},
+		{
+			"t": 2.0,
+			"dump": "00_lobby_antes"
+		},
+		{
+			"t": 0,
+			"start_expedition": "lua",
+			"timeout": 60
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"screenshot": "10_dia_inicio"
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_inicio"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w00"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w01"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w02"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w03"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w04"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w05"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w06"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w07"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w08"
+		},
+		{
+			"t": 0,
+			"explore": 8,
+			"bounds": [
+				-20,
+				-20,
+				20,
+				20
+			],
+			"timeout": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_w09"
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_fim_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "10_dia_lobby_depois"
+		},
+		{
+			"t": 0,
+			"start_expedition": "lua",
+			"timeout": 60
+		},
+		{
+			"sleep": 5.0
+		},
+		{
+			"t": 0,
+			"dump": "30_repete_fim_cena"
+		},
+		{
+			"t": 0,
+			"call": "CoreSessionUI",
+			"method": "request_return_to_base"
+		},
+		{
+			"wait_until": "in_expedition==0",
+			"timeout": 40
+		},
+		{
+			"sleep": 3.0
+		},
+		{
+			"t": 0,
+			"ui_press": "SummaryCloseButton"
+		},
+		{
+			"sleep": 2.0
+		},
+		{
+			"t": 0,
+			"dump": "30_repete_lobby_depois"
+		},
+		{
+			"t": 0,
+			"quit": true
+		}
+	]
+}
