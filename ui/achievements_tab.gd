@@ -143,7 +143,7 @@ func _build_row(id: String) -> Button:
 	var desc: Label = Label.new()
 	desc.name = "Desc"
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override(&"font_size", 13)
+	desc.add_theme_font_size_override(&"font_size", 15)
 	desc.add_theme_color_override(&"font_color", UiPalette.INK)
 	texts.add_child(desc)
 	var right: VBoxContainer = VBoxContainer.new()
@@ -154,7 +154,7 @@ func _build_row(id: String) -> Button:
 	var progress: Label = Label.new()
 	progress.name = "Progress"
 	progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	progress.add_theme_font_size_override(&"font_size", 13)
+	progress.add_theme_font_size_override(&"font_size", 15)
 	right.add_child(progress)
 	var bar: ProgressBar = ProgressBar.new()
 	bar.name = "Bar"

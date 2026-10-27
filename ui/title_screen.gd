@@ -645,7 +645,7 @@ func _slot_card(n: int) -> Button:
 	lines.add_theme_constant_override("separation", 2)
 	var title: Label = _card_label(20, UiPalette.INK)
 	var summary: Label = _card_label(16, UiPalette.INK)
-	var meta: Label = _card_label(14, UiPalette.WOOD)
+	var meta: Label = _card_label(15, UiPalette.WOOD)
 	for label: Label in [title, summary, meta]:
 		lines.add_child(label)
 	row.add_child(lines)

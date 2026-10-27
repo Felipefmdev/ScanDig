@@ -216,6 +216,9 @@ static func audit(root: Control, device: String, allow_leave: bool = false) -> D
 			await inject(viewport, action, device)
 			var to: Control = viewport.gui_get_focus_owner()
 			_restore(from, state)
+			# Tab/page restoration schedules layout and focus links for the next frame.
+			# Drain it before testing another edge from the restored control.
+			await tree.process_frame
 			var trap: String = ""
 			if to == null:
 				trap = "foco perdido"

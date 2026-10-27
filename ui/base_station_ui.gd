@@ -135,7 +135,8 @@ func _ready() -> void:
 		tab_container.resized.connect(_sync_hidden_tab_widths)
 		tab_container.tab_changed.connect(func(_tab: int) -> void:
 			_sync_hidden_tab_widths()
-			_queue_fit_height())
+			_queue_fit_height()
+			_sync_focus.call_deferred())
 		_sync_hidden_tab_widths.call_deferred()
 		_focus_initial.call_deferred()
 		get_viewport().size_changed.connect(_queue_fit_height)
@@ -183,7 +184,7 @@ func _apply_tab_titles() -> void:
 func _focus_initial() -> void:
 	if SessionManager.launch_mode == SessionManager.LAUNCH_COOP or not is_visible_in_tree() or UiFocus.modal_open():
 		return
-	UiFocus.focus_tab_page(tab_container)
+	UiFocus.focus_tab_page(tab_container, [tab_container.get_tab_bar()])
 
 
 ## Teclado/comando (#135): botões desativados (Comprar sem saldo, Partir bloqueado...) saem da
@@ -194,13 +195,17 @@ func _sync_focus() -> void:
 		buttons.append(_get_shop_button(upgrade_id))
 	UiFocus.skip_disabled(buttons)
 	if tab_container != null and tab_container.is_visible_in_tree():
-		UiFocus.link_chain(UiFocus.focusables(tab_container.get_current_tab_control()))
+		var bar: TabBar = tab_container.get_tab_bar()
+		bar.focus_mode = Control.FOCUS_ALL
+		var chain: Array = UiFocus.focusables(tab_container.get_current_tab_control())
+		chain.append(bar)
+		UiFocus.link_chain(chain)
 
 
 ## Uma camada por cima fechou sem foco para devolver (resumo do dia, #135): foco na aba atual.
 func focus_home() -> void:
 	if tab_container != null and is_visible_in_tree() and not PauseMenu.is_open() and not VictoryScreen.is_open():
-		UiFocus.focus_tab_page(tab_container)
+		UiFocus.focus_tab_page(tab_container, [tab_container.get_tab_bar()])
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -208,7 +213,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var step: int = UiFocus.tab_step(event)
 	if step != 0:
-		UiFocus.step_tab(tab_container, step)
+		UiFocus.step_tab(tab_container, step, [tab_container.get_tab_bar()])
 		get_viewport().set_input_as_handled()
 
 
@@ -1254,22 +1259,6 @@ func _refresh_journal_display() -> void:
 			bosses_header_label.text = tr("Guardiões e Chefes de Sítio (%d/%d):") % [defeated_count, BOSS_ORDER.size()]
 
 
-## Linha mais larga que o card (ex.: "Ilha do Tesouro • Guardião" na grade de 3 colunas): a fonte
-## desce até 10 antes de cair nas reticências (#146).
-func _shrink_slot_label(lbl: Label, base_size: int) -> void:
-	var font: Font = lbl.get_theme_font(&"font")
-	var font_size: int = base_size
-	while font_size > 10:
-		var widest: float = 0.0
-		for line: String in lbl.text.split("
-"):
-			widest = maxf(widest, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
-		if widest <= lbl.size.x:
-			break
-		font_size -= 1
-	lbl.add_theme_font_size_override(&"font_size", font_size)
-
-
 func _build_journal_slot(id: String, title_text: String, sub_text: String, discovered: bool, accent: Color, is_boss: bool) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.name = ("BossSlot_" if is_boss else "JournalSlot_") + id
@@ -1299,11 +1288,10 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 	var lbl := Label.new()
 	lbl.name = "SlotLabel"
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_font_size_override("font_size", 15)
 	lbl.text = "%s\n%s" % [title_text, sub_text]
-	lbl.clip_text = true
-	lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	lbl.resized.connect(_shrink_slot_label.bind(lbl, 13))
+	# A grade rola na vertical: texto longo ganha linhas, sem reduzir a legibilidade.
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not discovered:
 		lbl.modulate = Color(0.68, 0.64, 0.58, 0.92)
 	row.add_child(lbl)

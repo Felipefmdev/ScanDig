@@ -51,6 +51,8 @@ func test_default_pad_bindings_in_input_map() -> void:
 	assert_true(_has_button("slot_next", JOY_BUTTON_Y) and _has_button("slot_next", JOY_BUTTON_DPAD_RIGHT), "Y e → avançam o espaço")
 	assert_true(_has_button("pause", JOY_BUTTON_START), "Start pausa")
 	assert_true(_has_button("sprint", JOY_BUTTON_LEFT_STICK), "L3 corre")
+	assert_true(_has_button("inspect", JOY_BUTTON_RIGHT_STICK), "R3 abre a inspeção sem depender do teclado")
+	assert_eq(SettingsManager.instance.find_conflict("inspect", {"type": "joy_button", "code": JOY_BUTTON_RIGHT_STICK}), "", "R3 não disputa outra ação padrão")
 	var fwd: Array[InputEvent] = _pad_events("move_forward")
 	assert_eq(fwd.size(), 1)
 	var motion: InputEventJoypadMotion = fwd[0] as InputEventJoypadMotion
@@ -111,6 +113,21 @@ func test_old_settings_file_keeps_keyboard_and_gets_pad_defaults() -> void:
 	assert_eq(sm.get_binding("jump"), {"type": "key", "code": KEY_K}, "troca antiga do teclado vale")
 	assert_eq(sm.get_pad_binding("jump"), {"type": "joy_button", "code": JOY_BUTTON_A}, "comando com os padrões")
 	assert_true(_has_button("jump", JOY_BUTTON_A))
+	assert_true(_has_button("inspect", JOY_BUTTON_RIGHT_STICK), "configuração antiga recebe o padrão de inspeção")
+
+
+func test_old_custom_right_stick_binding_keeps_priority() -> void:
+	var sm: SettingsManager = SettingsManager.instance
+	var old: ConfigFile = ConfigFile.new()
+	var right_stick: Dictionary = {"type": "joy_button", "code": JOY_BUTTON_RIGHT_STICK}
+	old.set_value(SettingsManager.CONTROLS_PAD, "jump", right_stick)
+	assert_eq(old.save(SETTINGS_PATH), OK)
+	sm.load_settings()
+	sm.apply_all()
+	assert_eq(sm.get_pad_binding("jump"), right_stick, "preferência antiga é preservada")
+	assert_true(_has_button("jump", JOY_BUTTON_RIGHT_STICK))
+	assert_true(sm.get_pad_binding("inspect").is_empty(), "novo padrão não disputa R3 já personalizado")
+	assert_true(_pad_events("inspect").is_empty(), "R3 não dispara duas ações")
 
 
 func test_sanitize_pad_section_and_look_sensitivity() -> void:

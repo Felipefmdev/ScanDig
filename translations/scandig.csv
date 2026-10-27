@@ -1177,3 +1177,5 @@ PASSAGEM,PASSAGEM,PASSAGE
 Chave disponível: %s. Use na passagem para %s.,Chave disponível: %s. Use na passagem para %s.,Key available: %s. Use it at the passage to %s.
 Aproxime-se da banca para comprar.,Aproxime-se da banca para comprar.,Move closer to the stall to buy.
 Compre ferramentas na banca dentro do mapa.,Compre ferramentas na banca dentro do mapa.,Buy tools at the stall inside the map.
+Online (código),Online (código),Online (code)
+Rede local (IP),Rede local (IP),Local network (IP)
