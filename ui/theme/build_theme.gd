@@ -211,7 +211,10 @@ func _labels() -> void:
 	_theme.set_stylebox("normal", "Label", _empty())
 
 	_variation("TitleLabel", "Label")
-	_theme.set_font_size("font_size", "TitleLabel", 21)
+	_theme.set_font_size("font_size", "TitleLabel", 26)
+
+	_variation("SubtitleLabel", "Label")
+	_theme.set_font_size("font_size", "SubtitleLabel", 21)
 
 	_variation("HintLabel", "Label")
 	_theme.set_font_size("font_size", "HintLabel", 15)
@@ -241,7 +244,9 @@ func _labels() -> void:
 
 	_variation("ToastLabel", "Label")
 	_theme.set_font_size("font_size", "ToastLabel", 20)
-	_theme.set_color("font_color", "ToastLabel", P.PAPER)
+	_theme.set_color("font_color", "ToastLabel", P.PAPER_LIGHT)
+	_theme.set_color("font_outline_color", "ToastLabel", P.INK)
+	_theme.set_constant("outline_size", "ToastLabel", 2)
 
 	_theme.set_color("font_color", "TooltipLabel", P.INK)
 	_theme.set_color("font_shadow_color", "TooltipLabel", Color(0, 0, 0, 0))
@@ -508,6 +513,7 @@ func _fonts() -> void:
 	_theme.default_font = _hand_font("PatrickHand-Regular.ttf", BODY_EMBOLDEN)
 	var strong: FontVariation = _hand_font("PatrickHand-Regular.ttf", TITLE_EMBOLDEN)
 	_theme.set_font("font", "TitleLabel", strong)
+	_theme.set_font("font", "SubtitleLabel", strong)
 	_theme.set_font("title_font", "Window", strong)
 	# Código da sala: no Patrick Hand o "M" parece "H" (os dois estão no alfabeto do código);
 	# Kalam Bold separa bem os caracteres do alfabeto (sem 0/O/1/I).

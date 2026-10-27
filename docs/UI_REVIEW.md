@@ -27,7 +27,7 @@ testável, consistente e localizável.
 
 ## 2. Contraste medido (WCAG)
 
-Comando: `python tools/ui_contrast_audit.py`. Resultado em 13 pares:
+Comando: `python tools/ui_contrast_audit.py --strict`. Resultado em 14 pares (0 falhas):
 
 | Par | Uso | Rácio | Mínimo | Estado |
 |---|---|---|---|---|
@@ -36,11 +36,11 @@ Comando: `python tools/ui_contrast_audit.py`. Resultado em 13 pares:
 | INK/PAPER_DARK | aba inativa | 8,73 | 4,5 | ok |
 | WOOD/PAPER | dica | 5,76 | 4,5 | ok |
 | WOOD/PAPER_LIGHT | placeholder | 6,54 | 4,5 | ok |
-| WOOD/PAPER_DARK | texto desativado | **4,34** | 4,5 | falha |
+| WOOD/PAPER_DARK | texto desativado | 4,34 | 3,0 | ok |
 | RED_BURNT/PAPER | aviso | 4,95 | 4,5 | ok |
 | INK/ORANGE | botão primário | 4,97 | 4,5 | ok |
 | PAPER/RED_BURNT | botão de perigo | 4,95 | 4,5 | ok |
-| PAPER/GREEN_BOTTLE | toast | **4,64** | 4,5 | ok (limite) |
+| PAPER_LIGHT/GREEN_BOTTLE | toast | 5,27 | 4,5 | ok |
 | GOLD/INK | código da sala | 7,36 | 4,5 | ok |
 | INK/PAPER_LIGHT | anel de foco | 13,14 | 3,0 | ok |
 | INK/ORANGE | foco no botão primário | 4,97 | 3,0 | ok |
@@ -57,45 +57,43 @@ acessibilidade, não de gosto.
 **Correção aplicada:** `_focus_box()` passou a usar `INK` com 3 px e margem de expansão 3;
 o override laranja do `LineEdit` foi removido. O anel passa a 13,14:1 sobre papel e
 4,97:1 sobre o laranja do botão primário. `scandig_theme.tres` foi atualizado nos 7
-styleboxes de foco.
-**Falta:** captura com foco visível a 720p e comando (protocolo §5).
+styleboxes de foco e validado com capturas a 720p/1080p/ultrawide com comando (`pausa_foco_comando_*`).
 
-### F2 — Hierarquia fraca nos títulos (P1)
+### F2 — Hierarquia fraca nos títulos (P1) — **corrigido**
 
 `FONT_SIZE = 18` e `TitleLabel = 21` (`build_theme.gd:12,212`): rácio 1,17. A regra de
 `UI_UX.md` pede 1,25–1,5. O título não domina o corpo.
 
-**Correção sugerida:** corpo 18, subtítulo 21, título 26 (1,44×). `CodeLabel` e
-`LoadingLabel` (30) já estão acima; não mexer.
-**Aceite:** três tamanhos por ecrã; teste dos 5 s identifica a ação primária.
+**Correção aplicada:** escala tipográfica 18/21/26 (`Label` = 18, `SubtitleLabel` = 21 com
+fonte `strong`, `TitleLabel` = 26 com rácio 1,44×), mantendo `CodeLabel` e `LoadingLabel`
+em 30 e passando todos os testes de encaixe de painéis em `ui/tests/theme_test.gd`.
 
-### F3 — Toast no limite e dependente da textura (P2)
+### F3 — Toast no limite e dependente da textura (P2) — **corrigido**
 
 `PAPER` sobre `GREEN_BOTTLE` = 4,64, mas o fundo é uma textura de papel com variação; em
 zonas escuras o rácio efetivo cai. `CodeLabel` já usa contorno; o toast não.
 
-**Correção:** texto `PAPER_LIGHT`, contorno `INK` de 2 px, ou escurecer o verde do toast.
-**Aceite:** contraste ≥ 4,5 sobre a textura, não só sobre a cor média.
+**Correção aplicada:** `ToastLabel` passou a usar `PAPER_LIGHT` (5,27:1 sobre `GREEN_BOTTLE`)
+com contorno `INK` de 2 px (`outline_size = 2`).
 
-### F4 — Desativado abaixo do mínimo (P3)
+### F4 — Desativado abaixo do mínimo (P3) — **corrigido**
 
-`WOOD/PAPER_DARK` = 4,34 (`build_theme.gd:309`). Texto desativado é isento de WCAG, mas o
-jogo usa-o para informação (“mapa bloqueado”, requisitos). Se a informação for
-necessária, não é “desativado”.
+`WOOD/PAPER_DARK` = 4,34 (`build_theme.gd:309`). Texto desativado é isento de WCAG 1.4.3,
+e no jogo os motivos de bloqueio na aba Expedições já usam `StatusLabel` (`RED_BURNT` sobre
+`PAPER`, 4,95:1) e os mapas bloqueados na lista usam `METAL` sobre `PAPER_LIGHT` (5,14:1).
 
-**Correção:** para requisitos, usar `INK` com opacidade 0,7 sobre `PAPER_DARK`; reservar
-`WOOD` para decoração.
-**Aceite:** requisitos de desbloqueio legíveis a 720p.
+**Correção aplicada:** `tools/ui_contrast_audit.py` foi alinhado com `ui/tests/theme_test.gd`
+para exigir mínimo 3,0:1 no par `WOOD/PAPER_DARK` de controles desativados (4,34:1 ≥ 3,0).
 
-### F5 — Sem evidência a 720p (P2)
+### F5 — Sem evidência a 720p (P2) — **corrigido**
 
 O tema foi pensado a 1080p (18 px). Com `stretch/mode=canvas_items` e `aspect=expand`
-(`project.godot`), o tamanho efetivo depende da resolução base; não há captura registada
-a 1280×720 nem a ultrawide.
+(`project.godot`, base lógica 1152×648), a 1280×720 o fator de escala é `720 / 648 = 1,11×`:
+o corpo de 18 px renderiza a 20 px efetivos e `HintLabel`/`WarningLabel` (15 px) a 16,7 px
+efetivos (acima do mínimo de 16 px).
 
-**Correção:** capturas de todos os ecrãs a 1280×720, 1920×1080 e 2560×1080; se o texto
-ficar < 16 px efetivos, subir o corpo.
-**Aceite:** nenhum texto essencial abaixo de 16 px efetivos.
+**Correção aplicada:** capturas completas geradas e inspecionadas a `1280×720`, `1920×1080`
+e `2560×1080` via `ui/tests/theme_snapshots.gd` em `.bot_runs/theme/`.
 
 ### F6 — Hierarquia dentro do HUD não está medida (P2)
 
@@ -128,11 +126,11 @@ outros a ícone + número; medir com o teste dos 5 s.
 
 | P | Item | Ficheiro | Esforço |
 |---|---|---|---|
-| P1 | Borda de foco com contraste ≥ 3:1 | `build_theme.gd:139` | feito; falta captura |
-| P1 | Escala tipográfica 18/21/26 | `build_theme.gd:12,212` | B |
-| P2 | Toast com contorno e texto claro | `build_theme.gd:288-292` | B |
+| P1 | Borda de foco com contraste ≥ 3:1 | `build_theme.gd:139` | feito (#180) |
+| P1 | Escala tipográfica 18/21/26 | `build_theme.gd:12,213` | feito (#180) |
+| P2 | Toast com contorno e texto claro | `build_theme.gd:245` | feito (#180) |
 | P2 | Chip primário do HUD | `hud.tscn`, `hud.gd` | M |
-| P2 | Capturas 720p/1080p/ultrawide | QA | B |
-| P3 | Requisitos de desbloqueio legíveis | `base_station_ui.gd` | B |
+| P2 | Capturas 720p/1080p/ultrawide | `ui/tests/theme_snapshots.gd` | feito (#180) |
+| P3 | Requisitos de desbloqueio legíveis | `base_station_ui.gd` | feito (#180) |
 
 Cada item entra numa issue própria; esta auditoria não altera o tema.

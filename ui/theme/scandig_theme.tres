@@ -83,7 +83,7 @@ border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.168627, 0.129412, 0.094118, 1)
+border_color = Color(0.168627, 0.129412, 0.0941176, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -218,7 +218,7 @@ border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.168627, 0.129412, 0.094118, 1)
+border_color = Color(0.168627, 0.129412, 0.0941176, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -501,11 +501,15 @@ border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.168627, 0.129412, 0.094118, 1)
+border_color = Color(0.168627, 0.129412, 0.0941176, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
 anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_29"]
@@ -568,7 +572,7 @@ border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.168627, 0.129412, 0.094118, 1)
+border_color = Color(0.168627, 0.129412, 0.0941176, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -753,7 +757,7 @@ border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.168627, 0.129412, 0.094118, 1)
+border_color = Color(0.168627, 0.129412, 0.0941176, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -872,6 +876,17 @@ corner_radius_bottom_left = 3
 corner_detail = 2
 anti_aliasing = false
 
+[sub_resource type="SystemFont" id="SystemFont_3"]
+font_names = PackedStringArray("Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans Symbols", "DejaVu Sans")
+
+[sub_resource type="SystemFont" id="SystemFont_4"]
+font_names = PackedStringArray("Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji")
+
+[sub_resource type="FontVariation" id="FontVariation_2"]
+fallbacks = Array[Font]([SubResource("SystemFont_3"), SubResource("SystemFont_4")])
+base_font = ExtResource("2_kyeus")
+variation_embolden = 0.8
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_49"]
 content_margin_left = 10.0
 content_margin_top = 4.0
@@ -894,7 +909,7 @@ border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.168627, 0.129412, 0.094118, 1)
+border_color = Color(0.168627, 0.129412, 0.0941176, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -991,7 +1006,7 @@ border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.168627, 0.129412, 0.094118, 1)
+border_color = Color(0.168627, 0.129412, 0.0941176, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -1068,17 +1083,6 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 2
 anti_aliasing = false
-
-[sub_resource type="SystemFont" id="SystemFont_3"]
-font_names = PackedStringArray("Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans Symbols", "DejaVu Sans")
-
-[sub_resource type="SystemFont" id="SystemFont_4"]
-font_names = PackedStringArray("Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji")
-
-[sub_resource type="FontVariation" id="FontVariation_2"]
-fallbacks = Array[Font]([SubResource("SystemFont_3"), SubResource("SystemFont_4")])
-base_font = ExtResource("2_kyeus")
-variation_embolden = 0.8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_61"]
 content_margin_left = 12.0
@@ -1398,6 +1402,9 @@ ProgressBar/styles/background = SubResource("StyleBoxFlat_47")
 ProgressBar/styles/fill = SubResource("StyleBoxFlat_48")
 StatusLabel/base_type = &"Label"
 StatusLabel/colors/font_color = Color(0.619608, 0.231373, 0.168627, 1)
+SubtitleLabel/base_type = &"Label"
+SubtitleLabel/font_sizes/font_size = 21
+SubtitleLabel/fonts/font = SubResource("FontVariation_2")
 TabBar/colors/font_disabled_color = Color(0.431373, 0.290196, 0.176471, 1)
 TabBar/colors/font_hovered_color = Color(0.168627, 0.129412, 0.0941176, 1)
 TabBar/colors/font_outline_color = Color(0.168627, 0.129412, 0.0941176, 1)
@@ -1424,10 +1431,12 @@ TabContainer/styles/tabbar_background = SubResource("StyleBoxEmpty_5")
 ThreatBar/base_type = &"ProgressBar"
 ThreatBar/styles/fill = SubResource("StyleBoxFlat_60")
 TitleLabel/base_type = &"Label"
-TitleLabel/font_sizes/font_size = 21
+TitleLabel/font_sizes/font_size = 26
 TitleLabel/fonts/font = SubResource("FontVariation_2")
 ToastLabel/base_type = &"Label"
-ToastLabel/colors/font_color = Color(0.909804, 0.862745, 0.752941, 1)
+ToastLabel/colors/font_color = Color(0.952941, 0.917647, 0.827451, 1)
+ToastLabel/colors/font_outline_color = Color(0.168627, 0.129412, 0.0941176, 1)
+ToastLabel/constants/outline_size = 2
 ToastLabel/font_sizes/font_size = 20
 ToastPanel/base_type = &"PanelContainer"
 ToastPanel/styles/panel = SubResource("StyleBoxFlat_61")

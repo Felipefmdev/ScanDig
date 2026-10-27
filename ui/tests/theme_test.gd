@@ -151,6 +151,14 @@ func _check_fonts() -> void:
 	if main != null:
 		_check(_missing_glyphs(main) == "", "glifos da UI na fonte principal ou no fallback (faltando: '%s')" % _missing_glyphs(main))
 	_check(_missing_glyphs(code) == "", "glifos na fonte do código ou no fallback (faltando: '%s')" % _missing_glyphs(code))
+	_check(_theme.default_font_size == 18 and _theme.get_font_size("font_size", "SubtitleLabel") == 21 and _theme.get_font_size("font_size", "TitleLabel") == 26,
+		"escala tipográfica 18/21/26 (corpo/SubtitleLabel/TitleLabel)")
+	_check(_theme.get_type_variation_base("SubtitleLabel") == &"Label" and _theme.get_font("font", "SubtitleLabel") == _theme.get_font("font", "TitleLabel"),
+		"SubtitleLabel herda de Label com fonte strong")
+	_check(_theme.get_color("font_color", "ToastLabel").is_equal_approx(UiPalette.PAPER_LIGHT)
+		and _theme.get_color("font_outline_color", "ToastLabel").is_equal_approx(UiPalette.INK)
+		and _theme.get_constant("outline_size", "ToastLabel") == 2,
+		"ToastLabel em PAPER_LIGHT com contorno INK de 2 px")
 
 
 func _check_progress_bars() -> void:
@@ -207,7 +215,7 @@ func _check_contrast() -> void:
 		[UiPalette.WOOD, UiPalette.PAPER_LIGHT, "placeholder do LineEdit"],
 		[UiPalette.METAL, UiPalette.PAPER_LIGHT, "mapa bloqueado na lista"],
 		[UiPalette.GOLD, UiPalette.INK, "CodeLabel"],
-		[UiPalette.PAPER, UiPalette.GREEN_BOTTLE, "aviso (ToastPanel)"],
+		[UiPalette.PAPER_LIGHT, UiPalette.GREEN_BOTTLE, "aviso (ToastPanel)"],
 		[UiPalette.PAPER, UiPalette.WOOD_DARK, "carregamento / título da janela"],
 	]
 	for pair: Array in pairs:
