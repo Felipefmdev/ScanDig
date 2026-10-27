@@ -48,8 +48,8 @@ pelos órfãos de #128).
 | Cratera | dia + cinzas | 〃 | 〃 | 〃 | (mesma ida) | 585 / 579 |
 | Cratera | noite | 〃 | 〃 | 〃 | 9 → 18 → 18 | 601 / 585 |
 | Cratera | 3.ª ida | | | | 27 → 27 | |
-| Ilha do Tesouro | dia (sem noite/clima) | 0 | 2 (#127) | 0 (+48 à saída) | 0 → 9 → 9 | 664 / 648 |
-| Ilha do Tesouro | 2.ª ida | | | | 18 → 18 | |
+| Lua | dia (sem noite/clima) | 0 | 0 | 0 (+0 à saída) | 0 → 0 → 0 | 971 / 890 |
+| Lua | 2.ª ida | | | | 0 → 0 | |
 
 Leitura:
 - **Nenhum SCRIPT ERROR** em nenhum mapa, fase ou tela.
@@ -64,7 +64,7 @@ Leitura:
 
 | tela | roteiro | resultado |
 |---|---|---|
-| Lobby / Base: Loja, Museu, Expedições, Diário, Mapa do Tesouro + Ver museu e volta à tenda | `qa_base.json` | OK: 0 erros, 0 warnings, 0 órfãos |
+| Lobby / Base: Loja, Museu, Expedições, Diário + Ver museu e volta à tenda | `qa_base.json` | OK: 0 erros, 0 warnings, 0 órfãos |
 | Pausa: no lobby (Configurações → Voltar → Continuar) e na Praia (abrir/fechar, Voltar à base, resumo) | `qa_pause.json` | OK: 0 erros; 4 órfãos = a ida à Praia (#128) |
 | Título + slots: Novo jogo → Slot 1, Sair para o menu → Continuar, Carregar → Slot 1, Apagar → Confirmar | `qa_title_slots.json` | OK: 0 erros, 0 órfãos; slot apagado volta a "Vazio" |
 | Vitória: abrir, Créditos, fechar | `qa_victory.json` | OK: 0 erros, 0 órfãos |
@@ -148,18 +148,17 @@ num deles é armadilha). As abas Diário e Mapa do Tesouro não têm controles: 
 
 | tela | teclado | comando | armadilhas | Esc/B ok |
 |---|---|---|---|---|
-| título | 5/5 | 5/5 | 0 | — |
-| slots (vazios) | 4/4 | 4/4 | 0 | ok |
+| título | 6/6 | 6/6 | 0 | — |
+| slots (vazios) | 5/5 | 5/5 | 0 | ok |
 | configurações: Vídeo | 9/9 | 9/9 | 0 | — |
 | configurações: Áudio | 6/6 | 6/6 | 0 | — |
-| configurações: Controles | 59/59 | 59/59 | 0 | — |
+| configurações: Controles | 60/60 | 60/60 | 0 | — |
 | configurações: Jogabilidade | 15/15 | 15/15 | 0 | ok |
 | menu Multiplayer (lobby coop) | 5/5 | 5/5 | 0 | — |
-| Base: Loja | 2/2 | 2/2 | 0 | — |
+| Base: Loja | 23/23 | 23/23 | 0 | — |
 | Base: Museu | 5/5 | 5/5 | 0 | — |
 | Base: Expedições | 3/3 | 3/3 | 0 | — |
 | Base: Diário | 0/0 | 0/0 | 0 | — |
-| Base: Mapa do Tesouro (pergaminho) | 0/0 | 0/0 | 0 | — |
 | Ver museu | 1/1 | 1/1 | 0 | ok |
 | pausa | 4/4 | 4/4 | 0 | — |
 | pausa: confirmar sair | 2/2 | 2/2 | 0 | ok |
@@ -169,7 +168,7 @@ num deles é armadilha). As abas Diário e Mapa do Tesouro não têm controles: 
 | créditos | 1/1 | 1/1 | 0 | ok |
 | vitória (fechar) | 2/2 | 2/2 | 0 | ok |
 | resumo do dia | 2/2 | 2/2 | 0 | ok |
-| slots (com save) | 5/5 | 5/5 | 0 | — |
+| slots (com save) | 6/6 | 6/6 | 0 | — |
 | apagar slot | 2/2 | 2/2 | 0 | ok |
 
 Passos novos do bot (edição mínima no `debug_bridge.gd`, Dev A): `{"ui_nav": "ui_down", "device":

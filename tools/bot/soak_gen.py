@@ -1,7 +1,7 @@
 """Gera o roteiro de resistência (R5, #142) em tools/bot/soak_20.json.
 
 Uso: python tools/bot/soak_gen.py [idas]   (padrão 22)
-Cada ida sai da Base para um mapa desbloqueado (a Ilha fica de fora), alternando dia/noite e
+Cada ida sai da Base para um mapa desbloqueado (a Lua fica de fora), alternando dia/noite e
 clima forçado; cava, apanha, vende no SellPoint e volta. Um dump no fim da cena e outro na Base
 depois de cada ida: os dumps trazem orphans/nodes e "perf" (memória, objetos, recursos, FPS
 méd/mín da ida, tempo de carga). tools/bot/soak_report.py transforma tudo em tabela + SVG.
@@ -25,7 +25,6 @@ STATE = {
 	"defeated_bosses": ["king_crab", "giant_mole", "ancient_guardian", "frozen_mammoth"],
 	"upgrade_levels": {"detector": 5, "backpack": 2, "shovel": 2},
 	"team_money": 5000,
-	"map_fragments": ["praia_frag_1", "campo_frag_1"],
 }
 RADIUS = 13
 DIG_SECONDS = 30

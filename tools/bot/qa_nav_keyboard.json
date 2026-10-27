@@ -120,7 +120,7 @@
 		},
 		{
 			"t": 0,
-			"ui_press": "Slot 1"
+			"ui_press": "Slot1"
 		},
 		{
 			"sleep": 3.0

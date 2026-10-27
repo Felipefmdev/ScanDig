@@ -22,7 +22,7 @@ NOISE = [
 	"screenshot",
 	"[DebugBridge]",
 ]
-MAP_ORDER = ["praia", "campo", "ruinas", "geleira", "cratera", "ilha_tesouro"]
+MAP_ORDER = ["praia", "campo", "ruinas", "geleira", "cratera", "lua"]
 PHASES = [("10_dia", "dia"), ("10_dia_clima", "dia + clima"), ("20_noite", "noite")]
 
 
@@ -101,7 +101,7 @@ NAV_NAMES = {
 	"config_audio": "configurações: Áudio", "config_controles": "configurações: Controles",
 	"config_jogabilidade": "configurações: Jogabilidade", "menu_coop": "menu Multiplayer (lobby coop)",
 	"base_loja": "Base: Loja", "base_museu": "Base: Museu", "base_expedicoes": "Base: Expedições",
-	"base_diario": "Base: Diário", "base_mapa": "Base: Mapa do Tesouro (pergaminho)", "ver_museu": "Ver museu",
+	"base_diario": "Base: Diário", "ver_museu": "Ver museu",
 	"pausa": "pausa", "pausa_sair": "pausa: confirmar sair", "pausa_config": "pausa: configurações",
 	"pausa_fecha": "pausa (fechar)", "vitoria": "vitória", "creditos": "créditos", "vitoria_fecha": "vitória (fechar)",
 	"resumo": "resumo do dia", "slots_save": "slots (com save)", "apagar": "apagar slot",

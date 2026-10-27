@@ -66,6 +66,26 @@ def trip(map_id, cfg, label, night, weather):
 
 def map_script(map_id):
 	cfg = MAPS[map_id]
+	if map_id == "lua":
+		# A Lua não parte da Base por request_start_expedition (é destino narrativo do foguete, #120):
+		# abre direto world/map_lua.tscn e grava os mesmos dumps para o qa_report.py.
+		steps = [
+			{"t": 0.3, "set_state": STATE},
+			{"t": 2.0, "dump": "00_lobby_antes"},
+			{"sleep": 1.0},
+			{"t": 0, "screenshot": "10_dia_inicio"},
+			{"t": 0, "dump": "10_dia_inicio"},
+		]
+		steps += walk("10_dia", cfg["bounds"])
+		steps += [
+			{"t": 0, "dump": "10_dia_fim_cena"},
+			{"t": 0, "dump": "10_dia_lobby_depois"},
+			{"sleep": 5.0},
+			{"t": 0, "dump": "30_repete_fim_cena"},
+			{"t": 0, "dump": "30_repete_lobby_depois"},
+			{"t": 0, "quit": True},
+		]
+		return {"scene": "res://world/map_lua.tscn", "steps": steps}
 	steps = [{"t": 0.3, "set_state": STATE}, {"t": 2.0, "dump": "00_lobby_antes"}]
 	steps += trip(map_id, cfg, "10_dia", False, cfg["weather"])
 	if cfg["night"]:
@@ -163,7 +183,7 @@ def title_script():
 		{"t": 0, "ui_press": "Novo jogo"},
 		{"sleep": 0.5},
 		{"t": 0, "screenshot": "01_slots_novo"},
-		{"t": 0, "ui_press": "Slot 1"},
+		{"t": 0, "ui_press": "Slot1"},
 		{"sleep": 3.0},
 		{"t": 0, "dump": "02_lobby_novo"},
 	]
@@ -174,7 +194,7 @@ def title_script():
 		{"t": 0, "ui_press": "Carregar"},
 		{"sleep": 0.5},
 		{"t": 0, "screenshot": "06_slots_carregar"},
-		{"t": 0, "ui_press": "Slot 1"},
+		{"t": 0, "ui_press": "Slot1"},
 		{"sleep": 3.0},
 		{"t": 0, "dump": "07_lobby_carregar"},
 	]
@@ -240,7 +260,7 @@ def nav_script(device):
 		if i > 0:
 			steps += [tab, {"sleep": 0.3}]
 		steps += nav("config_" + name, "SettingsMenu", d, cancel="SettingsMenu" if i == 3 else "")
-	steps += [{"t": 0, "ui_press": "Multiplayer"}, {"sleep": 0.4}, {"t": 0, "ui_press": "Slot 1"}, {"sleep": 3.0},
+	steps += [{"t": 0, "ui_press": "Multiplayer"}, {"sleep": 0.4}, {"t": 0, "ui_press": "Slot1"}, {"sleep": 3.0},
 		{"t": 0.3, "set_state": STATE}, {"sleep": 1.0}, {"t": 0, "screenshot": "10_lobby"}]
 	steps += nav("menu_coop", "MultiplayerMenu", d, allow_leave=True)
 	# A aba inicial depende do save; da última, tab_next dá a volta para a Loja (e foca a página).

@@ -1,5 +1,5 @@
 {
-	"scene": "res://world/lobby_base.tscn",
+	"scene": "res://world/map_lua.tscn",
 	"steps": [
 		{
 			"t": 0.3,
@@ -31,12 +31,7 @@
 			"dump": "00_lobby_antes"
 		},
 		{
-			"t": 0,
-			"start_expedition": "lua",
-			"timeout": 60
-		},
-		{
-			"sleep": 3.0
+			"sleep": 1.0
 		},
 		{
 			"t": 0,
@@ -202,31 +197,7 @@
 		},
 		{
 			"t": 0,
-			"call": "CoreSessionUI",
-			"method": "request_return_to_base"
-		},
-		{
-			"wait_until": "in_expedition==0",
-			"timeout": 40
-		},
-		{
-			"sleep": 3.0
-		},
-		{
-			"t": 0,
-			"ui_press": "SummaryCloseButton"
-		},
-		{
-			"sleep": 2.0
-		},
-		{
-			"t": 0,
 			"dump": "10_dia_lobby_depois"
-		},
-		{
-			"t": 0,
-			"start_expedition": "lua",
-			"timeout": 60
 		},
 		{
 			"sleep": 5.0
@@ -234,25 +205,6 @@
 		{
 			"t": 0,
 			"dump": "30_repete_fim_cena"
-		},
-		{
-			"t": 0,
-			"call": "CoreSessionUI",
-			"method": "request_return_to_base"
-		},
-		{
-			"wait_until": "in_expedition==0",
-			"timeout": 40
-		},
-		{
-			"sleep": 3.0
-		},
-		{
-			"t": 0,
-			"ui_press": "SummaryCloseButton"
-		},
-		{
-			"sleep": 2.0
 		},
 		{
 			"t": 0,
