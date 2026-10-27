@@ -525,6 +525,7 @@ const DEFAULT_PAD_BINDINGS: Dictionary = {
 	"careful_dig": {"type": "joy_axis", "code": JOY_AXIS_TRIGGER_LEFT, "sign": 1},
 	"attack": {"type": "joy_button", "code": JOY_BUTTON_RIGHT_SHOULDER},
 	"drop": {"type": "joy_button", "code": JOY_BUTTON_B},
+	"inspect": {"type": "joy_button", "code": JOY_BUTTON_RIGHT_STICK},
 	"marker": {"type": "joy_button", "code": JOY_BUTTON_DPAD_UP},
 	"slot_prev": {"type": "joy_button", "code": JOY_BUTTON_LEFT_SHOULDER},
 	"slot_next": {"type": "joy_button", "code": JOY_BUTTON_Y},
@@ -626,7 +627,14 @@ func get_pad_binding(action: String) -> Dictionary:
 		return {}
 	if _valid_pad_binding(saved.get(action)):
 		return _normalized_pad_binding(saved[action])
-	return (DEFAULT_PAD_BINDINGS.get(action, {}) as Dictionary).duplicate()
+	var fallback: Dictionary = (DEFAULT_PAD_BINDINGS.get(action, {}) as Dictionary).duplicate()
+	# Inspeção ganhou R3 na #180. Um perfil antigo pode já usar esse botão:
+	# preservar a escolha explícita em vez de fazer R3 disparar duas ações.
+	if action == "inspect":
+		for other: String in CONTROL_ACTIONS:
+			if other != action and _valid_pad_binding(saved.get(other)) and _normalized_pad_binding(saved[other]) == fallback:
+				return {}
+	return fallback
 
 
 ## Outra ação que já usa este binding na MESMA coluna (teclado/mouse ou comando), ou "".

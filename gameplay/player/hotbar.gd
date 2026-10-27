@@ -31,8 +31,8 @@ const COLOR_RARE: Color = Color(0.85, 0.55, 1.0)
 const COLOR_TOOL: Color = Color(0.32, 0.8, 1.0)
 const SELECTED_SCALE: float = 1.08
 const MARK_SIDE: float = 16.0
-const NAME_BASE_FONT_SIZE: int = 13
-const NAME_MIN_FONT_SIZE: int = 9
+const NAME_BASE_FONT_SIZE: int = 15
+const NAME_MIN_FONT_SIZE: int = 15
 
 var inventory: Inventory = null
 var _slot_panels: Array[PanelContainer] = []
@@ -179,7 +179,7 @@ func _make_slot_panel() -> PanelContainer:
 	var name_label: Label = _make_label("Name", NAME_BASE_FONT_SIZE, Color.WHITE)
 	name_label.resized.connect(_shrink_name_label.bind(name_label))
 	box.add_child(name_label)
-	box.add_child(_make_label("Value", 12, UiPalette.GREEN_BOTTLE.lightened(0.4)))
+	box.add_child(_make_label("Value", 15, UiPalette.GREEN_BOTTLE.lightened(0.4)))
 	for l: Node in [box.get_node("Name"), box.get_node("Value")]:
 		(l as Label).visible = not _is_compact()
 
@@ -188,7 +188,7 @@ func _make_slot_panel() -> PanelContainer:
 	overlay.name = "Overlay"
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(overlay)
-	var key: Label = _make_label("Key", 11, Color(1, 1, 1, 0.6))
+	var key: Label = _make_label("Key", 15, Color(1, 1, 1, 0.6))
 	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	key.custom_minimum_size = Vector2.ZERO
 	# Sem largura própria: com o clip do _make_label o número sumia (#146).
@@ -268,7 +268,7 @@ func _fill_slot(i: int) -> void:
 	_shrink_name_label(name_label)
 
 
-## Linha do nome mais larga que o slot: reduz a fonte antes de cair nas reticências (#147).
+## Nome longo pode truncar no slot estreito, preservando o piso legível a 720p (#180).
 func _shrink_name_label(lbl: Label) -> void:
 	if lbl == null or not is_instance_valid(lbl):
 		return

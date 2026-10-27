@@ -432,6 +432,8 @@ func _ready() -> void:
 		_setup_remote()
 		return
 	add_to_group(LOCAL_GROUP)
+	if InputDevice.instance != null and not InputDevice.instance.device_changed.is_connected(_on_input_device_changed):
+		InputDevice.instance.device_changed.connect(_on_input_device_changed)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_ensure_default_input_mappings()
 	_update_session_hud()
@@ -2223,6 +2225,8 @@ var _hint_text: String = ""
 
 
 func _on_input_device_changed(_using_gamepad: bool) -> void:
+	if is_inspecting:
+		refresh_inspect_card()
 	if _hint_text.is_empty() or message_stack == null:
 		return
 	var updated: String = HINTS.fill(_hint_template)
@@ -2448,7 +2452,7 @@ func _setup_settings() -> void:
 func _on_core_settings_changed(section: String, values: Dictionary) -> void:
 	if section == SettingsManager.GAMEPLAY:
 		apply_settings(values)
-	elif section == SettingsManager.CONTROLS:
+	elif section == SettingsManager.CONTROLS or section == SettingsManager.CONTROLS_PAD:
 		refresh_inspect_card()
 
 
@@ -2591,14 +2595,8 @@ func toggle_inspect() -> void:
 
 
 func get_action_key_label(action: String) -> String:
-	if SettingsManager.instance != null:
-		var b: Dictionary = SettingsManager.instance.get_binding(action)
-		if not b.is_empty():
-			return SettingsManager.binding_label(b)
-	var fallback: Dictionary = SettingsManager.DEFAULT_BINDINGS.get(action, {})
-	if not fallback.is_empty():
-		return SettingsManager.binding_label(fallback)
-	return action.to_upper()
+	var label: String = InputDevice.action_label(action)
+	return label if not label.is_empty() else action.to_upper()
 
 
 func refresh_inspect_card() -> void:

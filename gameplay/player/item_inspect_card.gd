@@ -43,7 +43,7 @@ func _init() -> void:
 	header_label.name = "HeaderLabel"
 	header_label.text = "🔍 FICHA DE CAMPO — SCANDIG"
 	header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header_label.add_theme_font_size_override("font_size", 12)
+	header_label.add_theme_font_size_override("font_size", 15)
 	header_label.add_theme_color_override("font_color", UiPalette.WOOD)
 	box.add_child(header_label)
 
@@ -59,7 +59,7 @@ func _init() -> void:
 	subtitle_label = Label.new()
 	subtitle_label.name = "SubtitleLabel"
 	subtitle_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	subtitle_label.add_theme_font_size_override("font_size", 13)
+	subtitle_label.add_theme_font_size_override("font_size", 15)
 	subtitle_label.add_theme_color_override("font_color", UiPalette.WOOD)
 	box.add_child(subtitle_label)
 
@@ -72,7 +72,7 @@ func _init() -> void:
 	description_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description_label.custom_minimum_size = Vector2(310, 0)
-	description_label.add_theme_font_size_override("font_size", 14)
+	description_label.add_theme_font_size_override("font_size", 15)
 	description_label.add_theme_color_override("font_color", UiPalette.INK)
 	box.add_child(description_label)
 
@@ -81,7 +81,7 @@ func _init() -> void:
 	stats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	stats_label.custom_minimum_size = Vector2(310, 0)
-	stats_label.add_theme_font_size_override("font_size", 14)
+	stats_label.add_theme_font_size_override("font_size", 15)
 	stats_label.add_theme_color_override("font_color", UiPalette.GREEN_BOTTLE)
 	box.add_child(stats_label)
 
@@ -93,7 +93,7 @@ func _init() -> void:
 	controls_title_label.name = "ControlsTitleLabel"
 	controls_title_label.text = "Controlos:"
 	controls_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	controls_title_label.add_theme_font_size_override("font_size", 12)
+	controls_title_label.add_theme_font_size_override("font_size", 15)
 	controls_title_label.add_theme_color_override("font_color", UiPalette.WOOD)
 	box.add_child(controls_title_label)
 
@@ -102,7 +102,7 @@ func _init() -> void:
 	controls_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	controls_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	controls_label.custom_minimum_size = Vector2(310, 0)
-	controls_label.add_theme_font_size_override("font_size", 13)
+	controls_label.add_theme_font_size_override("font_size", 15)
 	controls_label.add_theme_color_override("font_color", UiPalette.INK)
 	box.add_child(controls_label)
 
