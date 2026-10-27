@@ -1,0 +1,12 @@
+{
+  "name": "ScanDig Bridge",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Plugin de desenvolvimento local: a ponte usa apenas 127.0.0.1:8765. O wildcard e exigido pelo manifesto enquanto nao ha dominio publico; sera estreitado antes de publicar."
+  }
+}
