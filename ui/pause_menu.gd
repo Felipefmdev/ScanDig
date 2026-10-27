@@ -136,6 +136,8 @@ func open() -> bool:
 		return true
 	if not can_open():
 		return false
+	# Contextual shops relinquish focus/mouse before the pause menu records them.
+	get_tree().call_group(&"world_upgrade_shops", &"close")
 	_open = true
 	_refresh_buttons()
 	settings_menu.visible = false

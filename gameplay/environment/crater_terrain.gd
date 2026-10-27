@@ -129,10 +129,10 @@ static func height_at(x: float, z: float) -> float:
 		var dist: float = Vector2(x - f.x, z - f.y).length()
 		h = lerpf(h, 0.0, smoothstep(f.z, f.z * 0.45, dist))
 
-	# Crista perimétrica towering da cratera (borda de impacto intransponível)
+	# #186: broken low impact banks rather than a continuous high rim.
 	var edge: float = maxf(absf(x), absf(z))
 	var rise: float = smoothstep(PLAY_HALF - 1.0, PLAY_HALF + 10.0, edge)
-	h += rise * rise * (8.0 + _get_broad().get_noise_2d(x * 1.6, z * 1.6) * 3.5)
+	h += rise * rise * (1.0 + _get_broad().get_noise_2d(x * 1.6, z * 1.6) * 0.5)
 	return h
 
 

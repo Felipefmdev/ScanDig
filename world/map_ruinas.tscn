@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://cf54jvjy1668h"]
+[gd_scene load_steps=44 format=3 uid="uid://cf54jvjy1668h"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -30,6 +30,10 @@
 [ext_resource type="Resource" uid="uid://soda27bugbxa" path="res://items/tools/lanterna_magnesio.tres" id="t_lanterna_magnesio"]
 [ext_resource type="Resource" uid="uid://bl2ekyeefkw8e" path="res://items/tools/repelente.tres" id="t_repelente"]
 [ext_resource type="Environment" uid="uid://drs6p2j2o86og" path="res://world/environment_ruinas.tres" id="w_env_ruinas"]
+
+[ext_resource type="PackedScene" path="res://gameplay/environment/boss_passage.tscn" id="186_passage"]
+[ext_resource type="PackedScene" path="res://gameplay/environment/upgrade_counter.tscn" id="186_counter"]
+[ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="186_ground"]
 
 [sub_resource type="BoxShape3D" id="Shape_wall_x"]
 size = Vector3(1, 6, 62)
@@ -289,3 +293,33 @@ seed_value = 303
 [node name="NightLandmarks" type="Node3D" parent="."]
 script = ExtResource("night_landmarks")
 theme = "ruinas"
+
+[node name="WorldRoutes" type="Node3D" parent="."]
+script = ExtResource("186_ground")
+sink = 0.0
+terrain = 2
+height_offsets = {"Arrival_ruinas": 0.15, "Arrival_geleira": 0.15}
+
+[node name="Passage_ruinas" parent="WorldRoutes" instance=ExtResource("186_passage")]
+position = Vector3(-27.000000, 0, 8.000000)
+rotation_degrees = Vector3(0, 106.504362, 0)
+route_id = "ruinas"
+source_map = "ruinas"
+
+[node name="Arrival_ruinas" type="Marker3D" parent="WorldRoutes"]
+position = Vector3(-23.164808, 0, 6.863647)
+rotation_degrees = Vector3(0, 286.504362, 0)
+
+[node name="Passage_geleira" parent="WorldRoutes" instance=ExtResource("186_passage")]
+position = Vector3(8.000000, 0, 27.000000)
+rotation_degrees = Vector3(0, -163.495638, 0)
+route_id = "geleira"
+source_map = "ruinas"
+
+[node name="Arrival_geleira" type="Marker3D" parent="WorldRoutes"]
+position = Vector3(6.863647, 0, 23.164808)
+rotation_degrees = Vector3(0, 16.504362, 0)
+
+[node name="Upgrades" parent="Banca" instance=ExtResource("186_counter")]
+position = Vector3(-1.8, 0, 0)
+map_id = "ruinas"

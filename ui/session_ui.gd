@@ -237,6 +237,7 @@ func _connect_session() -> void:
 		_connect_if_has(GameState.instance, &"secret_found", _on_secret_found)
 		_connect_if_has(GameState.instance, &"creature_discovered", _on_creature_discovered)
 		_connect_if_has(GameState.instance, &"achievement_unlocked", _on_achievement_unlocked)
+		_connect_if_has(GameState.instance, &"boss_key_available", _on_boss_key_available)
 	if NetworkManager.instance != null:
 		_connect_if_has(NetworkManager.instance, &"session_left", _on_session_left)
 	if SaveManager.instance != null:
@@ -249,6 +250,7 @@ func _connect_session() -> void:
 	_connect_if_has(_session, &"expedition_started", _on_expedition_started)
 	_connect_if_has(_session, &"expedition_ended", _on_expedition_ended)
 	_connect_if_has(_session, &"host_lost", _on_host_lost)
+	_connect_if_has(_session, &"passage_travel_failed", _on_passage_travel_failed)
 	_refresh_expedition_bar()
 
 
@@ -370,6 +372,22 @@ func _on_scene_changing(target_scene: String) -> void:
 
 func _on_expedition_started(_map_id: String) -> void:
 	_refresh_expedition_bar()
+
+
+func _on_passage_travel_failed(message: String) -> void:
+	_loading_token += 1
+	loading_screen.hide()
+	_refresh_expedition_bar()
+	show_save_toast(tr(message))
+
+
+func _on_boss_key_available(route_id: String) -> void:
+	var route: Dictionary = GameState.MAP_UNLOCK_BOSSES.get(route_id, {})
+	if route.is_empty(): return
+	var item: ItemData = load("res://items/catalog/%s.tres" % str(route["item_id"])) as ItemData
+	var map_data: MapData = load("res://items/maps/%s.tres" % route_id) as MapData
+	if item != null and map_data != null:
+		_enqueue_toast(tr("Chave disponível: %s. Use na passagem para %s.") % [tr(item.display_name), tr(map_data.display_name)])
 
 
 func _on_expedition_ended(summary: Dictionary) -> void:

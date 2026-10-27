@@ -1146,3 +1146,34 @@ Embarque no foguete da Cratera.,Embarque no foguete da Cratera.,Board the rocket
 Não foi possível salvar. Tente embarcar novamente.,Não foi possível salvar. Tente embarcar novamente.,Could not save. Try boarding again.
 Guardião do Sinal,Guardião do Sinal,Signal Warden
 GUARDIÃO DO SINAL,GUARDIÃO DO SINAL,SIGNAL WARDEN
+Use a chave do chefe na passagem para %s.,Use a chave do chefe na passagem para %s.,Use the boss key at the passage to %s.
+Compre melhorias na banca dentro do mapa.,Compre melhorias na banca dentro do mapa.,Purchase upgrades at the stall inside the map.
+Pedido de compra inválido.,Pedido de compra inválido.,Invalid purchase request.
+Pedido de compra expirado.,Pedido de compra expirado.,Purchase request expired.
+Aproxime-se da banca para comprar melhorias.,Aproxime-se da banca para comprar melhorias.,Approach the stall to purchase upgrades.
+Passagem indisponível,Passagem indisponível,Passage unavailable
+Abra esta passagem pelo outro lado,Abra esta passagem pelo outro lado,Open this passage from the other side
+[E] Usar %s para abrir a passagem,[E] Usar %s para abrir a passagem,[E] Use %s to open the passage
+[E] Viajar para %s,[E] Viajar para %s,[E] Travel to %s
+Requer %s,Requer %s,Requires %s
+Passagem aberta para a equipe.,Passagem aberta para a equipe.,Passage opened for the team.
+Não foi possível salvar a passagem. Tente novamente.,Não foi possível salvar a passagem. Tente novamente.,Could not save the passage. Try again.
+Não foi possível abrir esta passagem.,Não foi possível abrir esta passagem.,Could not open this passage.
+Passagem indisponível. Tente novamente.,Passagem indisponível. Tente novamente.,Passage unavailable. Try again.
+[E] Melhorias,[E] Melhorias,[E] Upgrades
+Loja indisponível. Tente novamente.,Loja indisponível. Tente novamente.,Shop unavailable. Try again.
+Melhorias,Melhorias,Upgrades
+MELHORIAS [E],MELHORIAS [E],UPGRADES [E]
+Saldo da equipe: %s,Saldo da equipe: %s,Team balance: %s
+%s  •  %d pontos,%s  •  %d pontos,%s  •  %d spots
+Preparando viagem...,Preparando viagem...,Preparing travel...
+Reúna a equipe aqui,Reúna a equipe aqui,Gather your team here
+"Reúna a equipe a até 5 m, sem ameaças a até 8 m, e tente novamente.","Reúna a equipe a até 5 m, sem ameaças a até 8 m, e tente novamente.","Gather everyone within 5 m, with no threats within 8 m, and try again."
+O destino não terminou de carregar. Tente novamente pela base.,O destino não terminou de carregar. Tente novamente pela base.,The destination did not finish loading. Try again from the base.
+Não foi possível carregar o destino. Retorne pela base e tente novamente.,Não foi possível carregar o destino. Retorne pela base e tente novamente.,Could not load the destination. Return through the base and try again.
+Um participante não conseguiu carregar o destino. Tente novamente pela base.,Um participante não conseguiu carregar o destino. Tente novamente pela base.,A player could not load the destination. Try again from the base.
+O ponto de chegada não está disponível. Tente novamente pela base.,O ponto de chegada não está disponível. Tente novamente pela base.,The arrival point is unavailable. Try again from the base.
+PASSAGEM,PASSAGEM,PASSAGE
+Chave disponível: %s. Use na passagem para %s.,Chave disponível: %s. Use na passagem para %s.,Key available: %s. Use it at the passage to %s.
+Aproxime-se da banca para comprar.,Aproxime-se da banca para comprar.,Move closer to the stall to buy.
+Compre ferramentas na banca dentro do mapa.,Compre ferramentas na banca dentro do mapa.,Buy tools at the stall inside the map.

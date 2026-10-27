@@ -11,6 +11,11 @@ signal item_sold(item_name: String, value: int)
 signal item_donated(item_name: String, reward: int)
 signal upgrades_changed(upgrade_levels: Dictionary)
 signal purchase_result(upgrade_id: String, success: bool, message: String)
+signal world_upgrade_result(request_id: int, upgrade_id: String, success: bool, message: String)
+signal world_item_result(request_id: int, item_id: String, success: bool, message: String)
+signal world_item_delivered(request_id: int, item_id: String)
+## Live defeat only; loading history never replays a key reward notification.
+signal boss_key_available(route_id: String)
 signal state_synced()
 ## Só o peer que comprou recebe. item_id = ToolData.id.
 signal item_purchase_result(item_id: String, success: bool, message: String)
@@ -43,12 +48,13 @@ const BASE_BACKPACK_CAPACITY: int = 3
 const TOOLS_DIR: String = "res://items/tools"
 ## Definições de mapa (MapData); arquivo <id>.tres, id == nome do arquivo.
 const MAPS_DIR: String = "res://items/maps"
-## Chefe que precisa ser vencido antes de pagar o desbloqueio de cada mapa.
+## Ligação terrestre: chave derivada da derrota; recibo é o ID do mapa nesta tabela.
+## Os dois endpoints usam o mesmo recibo. Lua tem autorização própria do foguete.
 const MAP_UNLOCK_BOSSES: Dictionary = {
-	"campo": {"boss_id": "king_crab", "boss_name": "Caranguejo-Rei"},
-	"ruinas": {"boss_id": "giant_mole", "boss_name": "Toupeira Gigante"},
-	"geleira": {"boss_id": "ancient_guardian", "boss_name": "Guardião Ancestral"},
-	"cratera": {"boss_id": "frozen_mammoth", "boss_name": "Mamute Congelado"},
+	"campo": {"source_map": "praia", "boss_id": "king_crab", "boss_name": "Caranguejo-Rei", "item_id": "coroa_caranguejo_rei"},
+	"ruinas": {"source_map": "campo", "boss_id": "giant_mole", "boss_name": "Toupeira Gigante", "item_id": "garra_toupeira"},
+	"geleira": {"source_map": "ruinas", "boss_id": "ancient_guardian", "boss_name": "Guardião Ancestral", "item_id": "nucleo_guardiao"},
+	"cratera": {"source_map": "geleira", "boss_id": "frozen_mammoth", "boss_name": "Mamute Congelado", "item_id": "dente_mamute"},
 }
 
 ## Definição da loja: custo de cada nível, mapa que precisa estar desbloqueado para
@@ -114,8 +120,21 @@ static var instance: GameState = null
 
 ## upgrade_id -> nível comprado (0 = não comprado).
 var upgrade_levels: Dictionary = {}
-## Mapas pagos; mapas com unlock_cost <= 0 (a Praia) não precisam estar aqui.
+## Recibos permanentes das passagens; compras legítimas de saves antigos são preservadas.
 var unlocked_maps: Array[String] = []
+var _opening_boss_passage: bool = false
+## Session-local receipts: replays never charge again, even after a cached reply expires.
+var _world_upgrade_results: Dictionary = {}
+var _world_upgrade_high_water: Dictionary = {}
+var _world_upgrade_busy: bool = false
+var _world_item_results: Dictionary = {}
+var _world_item_high_water: Dictionary = {}
+var _world_item_busy: bool = false
+## Owner-local delivery escrow survives scene/offer teardown, not disconnect/reset.
+var _world_item_requested: Dictionary = {}
+var _world_item_deliveries: Dictionary = {}
+var _world_item_queue: Array[int] = []
+const WORLD_UPGRADE_REPLY_LIMIT: int = 64
 var defeated_bosses: Array[String] = []
 var completed_quests: Array[String] = []
 var found_secrets: Array[String] = []
@@ -153,6 +172,7 @@ func _ready() -> void:
 	_validate_upgrades()
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer.peer_disconnected.connect(_on_upgrade_peer_left)
 
 
 # --- Consulta (seguro em qualquer peer) ---------------------------------------
@@ -264,7 +284,7 @@ func is_map_unlocked(map_id: String) -> bool:
 	var map_data: MapData = _load_map(map_id)
 	if map_data == null:
 		return false
-	return map_data.unlock_cost <= 0 or unlocked_maps.has(map_id)
+	return map_id == "praia" or (MAP_UNLOCK_BOSSES.has(map_id) and unlocked_maps.has(map_id))
 
 
 func is_boss_defeated(boss_id: String) -> bool:
@@ -296,9 +316,36 @@ func get_map_unlock_block_reason(map_id: String) -> String:
 		var boss: Dictionary = MAP_UNLOCK_BOSSES[map_id]
 		if not is_boss_defeated(str(boss["boss_id"])):
 			return _boss_block_reason(map_id, str(boss["boss_name"]))
-	if team_money < map_data.unlock_cost:
-		return I18n.t("Saldo insuficiente para desbloquear %s (%s).") % [I18n.t(map_data.display_name), MoneyFormat.money(map_data.unlock_cost)]
-	return ""
+	return I18n.t("Use a chave do chefe na passagem para %s.") % I18n.t(map_data.display_name)
+
+
+## Host-local, não RPC. O Interactable valida ator, origem, alcance e LOS antes de chamar.
+## Derrota fornece a chave, mas só esta operação de uso cria e salva o recibo.
+func open_boss_passage(route_id: String) -> Error:
+	if not is_authority() or multiplayer.get_remote_sender_id() != 0:
+		return ERR_UNAUTHORIZED
+	if not MAP_UNLOCK_BOSSES.has(route_id):
+		return ERR_INVALID_PARAMETER
+	if _opening_boss_passage:
+		return ERR_BUSY
+	if unlocked_maps.has(route_id):
+		return OK
+	var route: Dictionary = MAP_UNLOCK_BOSSES[route_id]
+	if not is_boss_defeated(str(route["boss_id"])):
+		return ERR_UNAUTHORIZED
+	var save: SaveManager = SaveManager.instance
+	if save == null or not save.is_progress_applied():
+		return ERR_UNAVAILABLE
+	_opening_boss_passage = true
+	unlocked_maps.append(route_id)
+	var error: Error = save.save_game(self)
+	if error != OK:
+		# Não substituir o snapshot inteiro: a chave e os outros progressos sobrevivem.
+		unlocked_maps.erase(route_id)
+	else:
+		_broadcast_snapshot()
+	_opening_boss_passage = false
+	return error
 
 
 ## "Vença o chefe <chefe> (<mapa anterior>) para liberar.": o chefe fica no mapa anterior de
@@ -339,7 +386,41 @@ func request_buy_upgrade(upgrade_id: String) -> void:
 	_send_to_host(&"_host_buy_upgrade", [upgrade_id])
 
 
-## Desbloqueio pago de mapa. A resposta chega por map_unlock_result.
+func request_world_upgrade(upgrade_id: String, counter_path: NodePath, request_id: int) -> void:
+	_send_to_host(&"_host_world_upgrade", [upgrade_id, counter_path, request_id])
+
+
+func request_world_item(item_id: String, offer_path: NodePath, request_id: int) -> void:
+	if request_id > 0 and not _world_item_requested.has(request_id):
+		_world_item_requested[request_id] = item_id
+	_send_to_host(&"_host_world_item", [item_id, offer_path, request_id])
+
+
+func is_world_item_delivered(request_id: int) -> bool:
+	return bool((_world_item_deliveries.get(request_id, {}) as Dictionary).get("delivered", false))
+
+
+func _process(_delta: float) -> void:
+	if _world_item_queue.is_empty(): return
+	var actor: Player = HostSync.player_of(get_tree(), multiplayer.get_unique_id()) as Player
+	var scene: Node = get_tree().current_scene
+	if actor == null or not actor.is_node_ready() or actor.is_queued_for_deletion() or not actor.is_local() or not actor.is_alive() or actor.is_downed:
+		return
+	if scene == null or not scene.is_ancestor_of(actor) or actor.inventory == null:
+		return
+	for request_id: int in _world_item_queue.duplicate():
+		var delivery: Dictionary = _world_item_deliveries[request_id]
+		if bool(delivery["delivered"]) or actor.inventory.is_full(): continue
+		# Mark before Inventory signals can reenter a result handler.
+		delivery["delivered"] = true
+		if not actor.inventory.add_item(delivery["carried"] as CarriedItem):
+			delivery["delivered"] = false
+			continue
+		_world_item_queue.erase(request_id)
+		world_item_delivered.emit(request_id, str(delivery["item_id"]))
+
+
+## Compatibilidade de clientes antigos: este pedido não abre rotas nem cobra dinheiro.
 func request_unlock_map(map_id: String) -> void:
 	_send_to_host(&"_host_unlock_map", [map_id])
 
@@ -430,18 +511,156 @@ func _host_buy_upgrade(upgrade_id: String) -> void:
 		sender = multiplayer.get_unique_id()
 
 	var success: bool = false
-	var message: String = get_upgrade_block_reason(upgrade_id)
-	if message.is_empty():
-		team_money -= get_next_upgrade_cost(upgrade_id)
-		upgrade_levels[upgrade_id] = get_upgrade_level(upgrade_id) + 1
-		success = true
-		message = I18n.t("Compra realizada: %s (nível %d)!") % [I18n.t(UPGRADES[upgrade_id]["name"]), get_upgrade_level(upgrade_id)]
-		_broadcast_snapshot()
+	var message: String = I18n.t("Compre melhorias na banca dentro do mapa.")
 
 	if sender == multiplayer.get_unique_id():
 		purchase_result.emit(upgrade_id, success, message)
 	else:
 		_receive_purchase_result.rpc_id(sender, upgrade_id, success, message)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_world_upgrade(upgrade_id: String, counter_path: NodePath, request_id: int) -> void:
+	if not is_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender == 0:
+		sender = multiplayer.get_unique_id()
+	# Counter host validation runs outside the guest RPC context.
+	_execute_world_upgrade.call_deferred(sender, upgrade_id, counter_path, request_id)
+
+
+func _execute_world_upgrade(sender: int, upgrade_id: String, counter_path: NodePath, request_id: int) -> void:
+	if not is_authority() or multiplayer.get_remote_sender_id() != 0 or sender <= 0:
+		return
+	var results: Dictionary = _world_upgrade_results.get(sender, {})
+	var old: Dictionary = results.get(request_id, {})
+	if not old.is_empty():
+		var same: bool = str(old["upgrade_id"]) == upgrade_id and str(old["counter"]) == str(counter_path)
+		_reply_world_upgrade(sender, request_id, upgrade_id, same and bool(old["success"]), str(old["message"]) if same else I18n.t("Pedido de compra inválido."))
+		return
+	if request_id <= 0 or request_id <= int(_world_upgrade_high_water.get(sender, 0)):
+		_reply_world_upgrade(sender, request_id, upgrade_id, false, I18n.t("Pedido de compra expirado."))
+		return
+	if _world_upgrade_busy:
+		_reply_world_upgrade(sender, request_id, upgrade_id, false, I18n.t("Compra em curso..."))
+		return
+	_world_upgrade_busy = true
+	var success: bool = false
+	var message: String = I18n.t("Aproxime-se da banca para comprar melhorias.")
+	var counter: Node = get_node_or_null(counter_path) if not counter_path.is_empty() else null
+	var script: Script = counter.get_script() as Script if is_instance_valid(counter) else null
+	var scene: Node = get_tree().current_scene
+	var valid: bool = counter is Node3D and script != null and script.resource_path == "res://gameplay/environment/upgrade_counter.gd" \
+		and scene != null and scene.is_ancestor_of(counter) and counter.is_in_group(&"upgrade_counters") \
+		and counter.has_method("host_can_purchase") and bool(counter.call("host_can_purchase", sender))
+	if valid:
+		message = get_upgrade_block_reason(upgrade_id)
+		if message.is_empty():
+			team_money -= get_next_upgrade_cost(upgrade_id)
+			upgrade_levels[upgrade_id] = get_upgrade_level(upgrade_id) + 1
+			success = true
+			message = I18n.t("Compra realizada: %s (nível %d)!") % [I18n.t(UPGRADES[upgrade_id]["name"]), get_upgrade_level(upgrade_id)]
+	# Store before emitting any snapshot/result signals: reentrant listeners see a receipt.
+	results[request_id] = {"upgrade_id": upgrade_id, "counter": str(counter_path), "success": success, "message": message}
+	_world_upgrade_high_water[sender] = request_id
+	while results.size() > WORLD_UPGRADE_REPLY_LIMIT:
+		results.erase(results.keys()[0])
+	_world_upgrade_results[sender] = results
+	if success:
+		_broadcast_snapshot()
+	_reply_world_upgrade(sender, request_id, upgrade_id, success, message)
+	_world_upgrade_busy = false
+
+
+func _reply_world_upgrade(sender: int, request_id: int, upgrade_id: String, success: bool, message: String) -> void:
+	if sender == multiplayer.get_unique_id():
+		_receive_world_upgrade_result(request_id, upgrade_id, success, message)
+	elif _is_online() and multiplayer.get_peers().has(sender):
+		_receive_world_upgrade_result.rpc_id(sender, request_id, upgrade_id, success, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_world_upgrade_result(request_id: int, upgrade_id: String, success: bool, message: String) -> void:
+	world_upgrade_result.emit(request_id, upgrade_id, success, message)
+
+
+func _on_upgrade_peer_left(peer_id: int) -> void:
+	_world_upgrade_results.erase(peer_id)
+	_world_upgrade_high_water.erase(peer_id)
+	_world_item_results.erase(peer_id)
+	_world_item_high_water.erase(peer_id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _host_world_item(item_id: String, offer_path: NodePath, request_id: int) -> void:
+	if not is_authority(): return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender == 0: sender = multiplayer.get_unique_id()
+	_execute_world_item.call_deferred(sender, item_id, offer_path, request_id)
+
+
+func _execute_world_item(sender: int, item_id: String, offer_path: NodePath, request_id: int) -> void:
+	if not is_authority() or multiplayer.get_remote_sender_id() != 0 or sender <= 0: return
+	var results: Dictionary = _world_item_results.get(sender, {})
+	var old: Dictionary = results.get(request_id, {})
+	if not old.is_empty():
+		var same: bool = str(old["item_id"]) == item_id and str(old["offer"]) == str(offer_path)
+		_reply_world_item(sender, request_id, item_id, same and bool(old["success"]), str(old["message"]) if same else I18n.t("Pedido de compra inválido."))
+		return
+	if request_id <= 0 or request_id <= int(_world_item_high_water.get(sender, 0)):
+		_reply_world_item(sender, request_id, item_id, false, I18n.t("Pedido de compra expirado."))
+		return
+	if _world_item_busy:
+		_reply_world_item(sender, request_id, item_id, false, I18n.t("Compra em curso..."))
+		return
+	_world_item_busy = true
+	var success: bool = false
+	var message: String = I18n.t("Aproxime-se da banca para comprar.")
+	var offer: ShopOffer = get_node_or_null(offer_path) as ShopOffer if not offer_path.is_empty() else null
+	var script: Script = offer.get_script() as Script if is_instance_valid(offer) else null
+	var tool: ToolData = get_tool_data(item_id)
+	var scene: Node = get_tree().current_scene
+	var valid: bool = offer != null and script != null and script.resource_path == "res://items/shop_offer.gd" \
+		and scene != null and scene.is_ancestor_of(offer) and offer.is_in_group(ShopOffer.GROUP) \
+		and tool != null and tool == offer.tool_data and offer.host_can_purchase(sender)
+	if valid:
+		if tool.price <= 0:
+			message = I18n.t("Produto indisponível.")
+		elif team_money < tool.price:
+			message = I18n.t("Saldo insuficiente para %s (%s).") % [I18n.t(tool.display_name), MoneyFormat.money(tool.price)]
+		else:
+			team_money -= tool.price
+			success = true
+			message = I18n.t("Comprado: %s") % I18n.t(tool.display_name)
+	results[request_id] = {"item_id":item_id, "offer":str(offer_path), "success":success, "message":message}
+	_world_item_high_water[sender] = request_id
+	while results.size() > WORLD_UPGRADE_REPLY_LIMIT:
+		results.erase(results.keys()[0])
+	_world_item_results[sender] = results
+	if success: _broadcast_snapshot()
+	_reply_world_item(sender, request_id, item_id, success, message)
+	_world_item_busy = false
+
+
+func _reply_world_item(sender: int, request_id: int, item_id: String, success: bool, message: String) -> void:
+	if sender == multiplayer.get_unique_id():
+		_receive_world_item_result(request_id, item_id, success, message)
+	elif _is_online() and multiplayer.get_peers().has(sender):
+		_receive_world_item_result.rpc_id(sender, request_id, item_id, success, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_world_item_result(request_id: int, item_id: String, success: bool, message: String) -> void:
+	if success and not _world_item_deliveries.has(request_id):
+		var tool: ToolData = get_tool_data(item_id)
+		if str(_world_item_requested.get(request_id, "")) != item_id or tool == null:
+			success = false
+			message = I18n.t("Pedido de compra inválido.")
+		else:
+			_world_item_deliveries[request_id] = {"item_id": item_id, "carried": CarriedItem.create_from_tool_data(tool), "delivered": false}
+			_world_item_queue.append(request_id)
+	world_item_result.emit(request_id, item_id, success, message)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -453,17 +672,7 @@ func _host_purchase_item(item_id: String) -> void:
 		sender = multiplayer.get_unique_id()
 
 	var success: bool = false
-	var message: String = ""
-	var tool: ToolData = get_tool_data(item_id)
-	if tool == null or tool.price <= 0:
-		message = I18n.t("Produto indisponível.")
-	elif team_money < tool.price:
-		message = I18n.t("Saldo insuficiente para %s (%s).") % [I18n.t(tool.display_name), MoneyFormat.money(tool.price)]
-	else:
-		team_money -= tool.price
-		success = true
-		message = I18n.t("Comprado: %s") % I18n.t(tool.display_name)
-		_broadcast_snapshot()
+	var message: String = I18n.t("Compre ferramentas na banca dentro do mapa.")
 
 	if sender == multiplayer.get_unique_id():
 		item_purchase_result.emit(item_id, success, message)
@@ -481,13 +690,6 @@ func _host_unlock_map(map_id: String) -> void:
 
 	var success: bool = false
 	var message: String = get_map_unlock_block_reason(map_id)
-	if message.is_empty():
-		var map_data: MapData = _load_map(map_id)
-		team_money -= map_data.unlock_cost
-		unlocked_maps.append(map_id)
-		success = true
-		message = I18n.t("%s desbloqueado!") % I18n.t(map_data.display_name)
-		_broadcast_snapshot()
 
 	if sender == multiplayer.get_unique_id():
 		map_unlock_result.emit(map_id, success, message)
@@ -510,6 +712,11 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 		apply_snapshot(data)
 		if _is_online():
 			_receive_snapshot.rpc(data)
+		for route_id: String in MAP_UNLOCK_BOSSES:
+			if str(MAP_UNLOCK_BOSSES[route_id]["boss_id"]) == boss_id:
+				_receive_boss_key_available(route_id)
+				if _is_online():
+					_receive_boss_key_available.rpc(route_id)
 		if boss_id == FINAL_BOSS_ID:
 			# Depois do snapshot: RPCs reliable do mesmo nó chegam em ordem (contagens já novas).
 			_receive_game_victory()
@@ -517,6 +724,12 @@ func _host_report_boss_defeated(boss_id: String) -> void:
 				_receive_game_victory.rpc()
 		if boss_id == FINAL_BOSS_ID and SaveManager.instance != null and SaveManager.instance.is_progress_applied():
 			SaveManager.instance.save_game()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_boss_key_available(route_id: String) -> void:
+	if MAP_UNLOCK_BOSSES.has(route_id):
+		boss_key_available.emit(route_id)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -886,6 +1099,15 @@ func advance_day() -> void:
 
 
 func reset_state() -> void:
+	_world_item_requested.clear()
+	_world_item_deliveries.clear()
+	_world_item_queue.clear()
+	_world_item_results.clear()
+	_world_item_high_water.clear()
+	_world_item_busy = false
+	_world_upgrade_results.clear()
+	_world_upgrade_high_water.clear()
+	_world_upgrade_busy = false
 	if not is_authority():
 		return
 	team_money = 100

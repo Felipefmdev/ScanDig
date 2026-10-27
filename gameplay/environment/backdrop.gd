@@ -18,12 +18,12 @@ const SEA_EXTENT: float = 600.0
 
 ## [base, topo, escala de altura min, max, largura min, max]
 const PALETTE: Dictionary = {
-	"praia": [Color(0.42, 0.56, 0.36), Color(0.62, 0.66, 0.5), 10.0, 22.0, 18.0, 30.0],
-	"campo": [Color(0.32, 0.52, 0.24), Color(0.5, 0.66, 0.32), 9.0, 20.0, 20.0, 34.0],
-	"ruinas": [Color(0.7, 0.5, 0.32), Color(0.84, 0.66, 0.44), 12.0, 24.0, 16.0, 28.0],
-	"geleira": [Color(0.42, 0.5, 0.6), Color(0.95, 0.97, 1.0), 26.0, 48.0, 16.0, 26.0],
+	"praia": [Color(0.42, 0.56, 0.36), Color(0.62, 0.66, 0.5), 2.5, 6.0, 18.0, 30.0],
+	"campo": [Color(0.32, 0.52, 0.24), Color(0.5, 0.66, 0.32), 2.5, 5.5, 22.0, 34.0],
+	"ruinas": [Color(0.7, 0.5, 0.32), Color(0.84, 0.66, 0.44), 3.0, 7.0, 16.0, 28.0],
+	"geleira": [Color(0.42, 0.5, 0.6), Color(0.95, 0.97, 1.0), 3.0, 8.0, 16.0, 26.0],
 	"ilha": [Color(0.32, 0.52, 0.3), Color(0.5, 0.62, 0.4), 5.0, 12.0, 10.0, 18.0],
-	"cratera": [Color(0.16, 0.12, 0.18), Color(0.3, 0.22, 0.34), 22.0, 40.0, 22.0, 34.0],
+	"cratera": [Color(0.16, 0.12, 0.18), Color(0.3, 0.22, 0.34), 3.0, 7.0, 22.0, 34.0],
 }
 
 @export_enum("praia", "campo", "ruinas", "geleira", "cratera", "ilha") var theme: String = "campo":
@@ -76,6 +76,13 @@ func build() -> int:
 			continue
 		# Ilha: mar aberto a toda a volta, só uns ilhéus raros e longe no horizonte.
 		if theme == "ilha" and i % 4 != 0:
+			continue
+		# #186: retain spaced groups and open skyline sectors in each biome.
+		if theme == "praia" and not [6, 7, 8, 10, 11, 12, 14, 15].has(i):
+			continue
+		if theme in ["ruinas", "geleira", "cratera"] and not [0, 1, 6, 7, 12, 13, 18, 19].has(i):
+			continue
+		if theme == "campo" and not [1, 2, 8, 9, 15, 16].has(i):
 			continue
 		var r: float = rng.randf_range(MIN_RADIUS + 15.0, MAX_RADIUS - 15.0)
 		var center: Vector3 = dir * r

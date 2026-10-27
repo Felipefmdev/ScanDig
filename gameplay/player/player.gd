@@ -2454,7 +2454,13 @@ func _on_core_settings_changed(section: String, values: Dictionary) -> void:
 
 ## Menu de pausa aberto: sem olhar, mover, atacar nem cavar (em coop o jogo segue).
 func is_settings_open() -> bool:
-	return PauseMenu.is_open() or VictoryScreen.is_open()
+	if PauseMenu.is_open() or VictoryScreen.is_open():
+		return true
+	if is_inside_tree():
+		for shop: Node in get_tree().get_nodes_in_group(&"world_upgrade_shops"):
+			if shop.has_method("is_open_for") and bool(shop.call("is_open_for", self)):
+				return true
+	return false
 
 
 func toggle_settings(open: bool) -> void:
@@ -4557,12 +4563,12 @@ func _spawn_magnetic_wave(origin: Vector3, forward: Vector3) -> void:
 	mat.albedo_color = Color(0.35, 0.95, 1.0, 0.8)
 	ring.material_override = mat
 
+	parent.add_child(ring)
 	ring.global_position = origin
 	var up_target: Vector3 = forward.normalized()
 	if not up_target.is_zero_approx():
 		ring.quaternion = Quaternion(Vector3.UP, up_target)
 
-	parent.add_child(ring)
 	var t: Tween = ring.create_tween()
 	t.tween_property(ring, "scale", Vector3(12.0, 1.0, 12.0), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	t.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.35)

@@ -58,18 +58,15 @@ func test_can_start_only_when_unlocked() -> void:
 	assert_ne(status["reason"], "Em breve.")
 
 
-## Com o detector mínimo do campo.tres (Nv.1 hoje, Nv.2 depois da #26) dá para entrar;
-## abaixo dele, não.
-func test_requires_minimum_detector() -> void:
+## #186: detector changes exploration efficiency, never substitutes a route receipt.
+func test_detector_level_does_not_block_or_unlock_a_permanent_route() -> void:
 	var sm: SessionManager = SessionManager.instance
-	var required_upgrade: int = CAMPO.required_detector_level - 1
-	_set_progress(["campo"], ["king_crab"], required_upgrade)
-	assert_true(sm.can_start_map("campo"), "detector Nv.%d chega" % CAMPO.required_detector_level)
-	if required_upgrade > 0:
-		_set_progress(["campo"], ["king_crab"], required_upgrade - 1)
-		assert_false(sm.can_start_map("campo"), "detector abaixo do mínimo")
-	_set_progress(["campo"], ["king_crab"], 1)
-	assert_true(sm.can_start_map("campo"), "detector Nv.2 (300) chega sempre")
+	_set_progress(["campo"], ["king_crab"], 0)
+	assert_true(sm.can_start_map("campo"), "baseline detector can revisit the opened route")
+	_set_progress(["campo"], [], 6)
+	assert_true(sm.can_start_map("campo"), "legacy receipt remains valid without boss")
+	_set_progress([], ["king_crab"], 6)
+	assert_false(sm.can_start_map("campo"), "even the best detector cannot bypass first passage use")
 
 
 func test_economy_above_praia() -> void:
@@ -90,4 +87,4 @@ func test_field_terrain_flat_zones() -> void:
 	assert_almost_eq(FieldTerrain.height_at(0.0, 0.0), 0.0, 0.001, "spawn plano")
 	assert_almost_eq(FieldTerrain.height_at(3.5, 3.5), 0.0, 0.001, "base plana")
 	assert_almost_eq(FieldTerrain.height_at(-18.0, -18.0), 0.0, 0.001, "circulo de pedras plano")
-	assert_gt(FieldTerrain.height_at(44.0, 0.0), 2.0, "colinas para la das paredes")
+	assert_between(FieldTerrain.height_at(44.0, 0.0), 0.1, 2.0, "#186: low exterior relief instead of an enclosing ridge")

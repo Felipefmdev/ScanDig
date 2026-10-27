@@ -123,10 +123,10 @@ static func height_at(x: float, z: float) -> float:
 		var dist: float = Vector2(x - f.x, z - f.y).length()
 		h = lerpf(h, 0.0, smoothstep(f.z, f.z * 0.5, dist))
 
-	# Paredões de gelo towering / encostas das margens
+	# #186: low snow banks; retain the playable floor and the independent Bounds.
 	var edge: float = maxf(absf(x), absf(z))
 	var rise: float = smoothstep(PLAY_HALF - 1.0, SIZE.y, edge)
-	h += rise * rise * (7.5 + _get_broad().get_noise_2d(x * 1.8, z * 1.8) * 3.5)
+	h += rise * rise * (1.0 + _get_broad().get_noise_2d(x * 1.8, z * 1.8) * 0.5)
 	return h
 
 

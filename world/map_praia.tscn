@@ -1,4 +1,4 @@
-[gd_scene load_steps=77 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=80 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -51,6 +51,10 @@
 [ext_resource type="PackedScene" path="res://gameplay/quests/praia/praia_secrets.tscn" id="q_praia_secrets"]
 [ext_resource type="Environment" uid="uid://d17jqai7gcjjd" path="res://world/environment_praia.tres" id="w_env_praia"]
 [ext_resource type="Shader" path="res://world/shaders/beach_water.gdshader" id="w_water_shader"]
+
+[ext_resource type="PackedScene" path="res://gameplay/environment/boss_passage.tscn" id="186_passage"]
+[ext_resource type="PackedScene" path="res://gameplay/environment/upgrade_counter.tscn" id="186_counter"]
+[ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="186_ground"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(1.502, 0.949, 1.514)
@@ -981,3 +985,23 @@ script = ExtResource("env_dressing")
 [node name="NightLandmarks" type="Node3D" parent="."]
 script = ExtResource("night_landmarks")
 theme = "praia"
+
+[node name="WorldRoutes" type="Node3D" parent="."]
+script = ExtResource("186_ground")
+sink = 0.0
+terrain = 0
+height_offsets = {"Arrival_campo": 0.15}
+
+[node name="Passage_campo" parent="WorldRoutes" instance=ExtResource("186_passage")]
+position = Vector3(-8.000000, 0, 27.000000)
+rotation_degrees = Vector3(0, 163.495638, 0)
+route_id = "campo"
+source_map = "praia"
+
+[node name="Arrival_campo" type="Marker3D" parent="WorldRoutes"]
+position = Vector3(-6.863647, 0, 23.164808)
+rotation_degrees = Vector3(0, 343.495638, 0)
+
+[node name="Upgrades" parent="Banca" instance=ExtResource("186_counter")]
+position = Vector3(0, 0, 1.8)
+map_id = "praia"

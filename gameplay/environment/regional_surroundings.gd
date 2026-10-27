@@ -10,9 +10,9 @@ const TERRAINS: Dictionary = {
 }
 const RADII: Array[float] = [46.0, 49.0, 52.0, 54.0, 58.0, 61.0, 65.0, 70.0, 75.0]
 const PROFILES: Dictionary = {
-	"ruinas": [0.0, 1.5, 5.0, 5.0, 5.5, 8.0, 6.0, 3.0, 0.0],
-	"geleira": [0.0, 3.0, 9.0, 13.0, 6.0, 16.0, 11.0, 5.0, 0.0],
-	"cratera": [0.0, 2.0, 5.0, 5.2, 9.0, 9.2, 6.0, 3.0, 0.0],
+	"ruinas": [0.0, 0.4, 1.2, 1.0, 1.5, 2.0, 1.4, 0.6, 0.0],
+	"geleira": [0.0, 0.6, 1.4, 2.0, 0.9, 2.2, 1.6, 0.7, 0.0],
+	"cratera": [0.0, 0.4, 1.0, 0.8, 1.8, 2.0, 1.2, 0.5, 0.0],
 }
 const COLORS: Dictionary = {
 	"ruinas": [Color("#78644b"), Color("#b29369"), Color("#c3a87b")],
@@ -74,7 +74,7 @@ static func _ridge(theme: String, ring: int, sample: int) -> Vector3:
 	var variation: float = 0.75 + 0.21 * sin(angle * 5.0 + float(SEED) * 0.013) + 0.12 * cos(angle * 11.0)
 	var ridge_height: float = float(PROFILES[theme][ring]) * variation
 	if theme == "geleira" and ring >= 2 and ring <= 7:
-		ridge_height = maxf(0.0, ridge_height * (1.0 + noise * 0.35) + noise * 2.4)
+		ridge_height = maxf(0.0, ridge_height * (1.0 + noise * 0.35) + noise * 0.4)
 	return Vector3(p.x, base + ridge_height, p.y)
 
 

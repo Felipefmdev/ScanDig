@@ -3,12 +3,12 @@ extends Node3D
 
 ## Um produto exposto na banca da base. O jogador olha para ele e carrega E (ver Player).
 ## O dinheiro vem do GameState (Dev B): a compra é validada e debitada no host
-## (request_purchase_item / item_purchase_result), por isso funciona offline e em coop.
+## (request_world_item / world_item_result), por isso funciona offline e em coop.
 
 signal purchased(tool_data: ToolData)
 
 const GROUP: StringName = &"shop_offers"
-## Tempo máximo à espera de item_purchase_result (igual à aba Loja).
+## Tempo máximo à espera da autorização e entrega na mochila.
 const PURCHASE_TIMEOUT: float = 5.0
 ## Rótulo 3D (#122): fonte grande com pixel pequeno (nítido de perto e legível a uns metros) e,
 ## entre vizinhos da mesma banca, alturas alternadas para os rótulos não se cruzarem
@@ -24,7 +24,35 @@ const LABEL_WIDTH_M: float = 1.4
 @export var tool_data: ToolData = null
 
 var _label: Label3D = null
+static var _request_sequence: int = 0
 var _pending: bool = false
+## Um timeout conserva a identidade da compra para repetir sem novo débito.
+var _intent_request: int = 0
+
+
+func host_can_purchase(peer_id: int) -> bool:
+	if not is_inside_tree() or is_queued_for_deletion() or not multiplayer.is_server() or not is_multiplayer_authority() or multiplayer.get_remote_sender_id() != 0:
+		return false
+	var scene: Node = get_tree().current_scene
+	var session: SessionManager = SessionManager.instance
+	if scene == null or not scene.is_ancestor_of(self) or session == null or not session.is_peer_scene_ready(peer_id):
+		return false
+	if session.get_current_map() == null or not SessionManager.MAP_ORDER.has(session.get_current_map().id) or str(session.get_rocket_transition()["phase"]) != "IDLE":
+		return false
+	var actor: Player = HostSync.player_of(get_tree(), peer_id) as Player
+	if actor == null or not actor.is_node_ready() or actor.is_queued_for_deletion() or not scene.is_ancestor_of(actor) or actor.multiplayer != multiplayer:
+		return false
+	if String(actor.name) != str(peer_id) or actor.get_multiplayer_authority() != peer_id or not actor.is_alive() or actor.is_downed:
+		return false
+	if actor.global_position.distance_to(global_position) > 2.5 or not is_instance_valid(actor.head):
+		return false
+	var excluded: Array[RID] = [actor.get_rid()]
+	for child: Node in actor.find_children("*", "CollisionObject3D", true, false):
+		excluded.append((child as CollisionObject3D).get_rid())
+	for child: Node in find_children("*", "CollisionObject3D", true, false):
+		excluded.append((child as CollisionObject3D).get_rid())
+	var ray: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(actor.head.global_position, global_position + Vector3.UP * .15, 1, excluded)
+	return get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
 
 
 func _ready() -> void:
@@ -97,15 +125,15 @@ func get_prompt() -> String:
 	return tr("[E] Comprar %s (%s)") % [tr(tool_data.display_name), MoneyFormat.money(tool_data.price)]
 
 
-## Tenta comprar pelo host (GameState.request_purchase_item). É uma corrotina: use
+## Tenta comprar pelo host (GameState.request_world_item). É uma corrotina: use
 ## `await offer.try_buy(inventory)`. Devolve {"ok": bool, "message": String, "carried": CarriedItem}.
-## A mochila é verificada ANTES do pedido (o core não sabe de mochilas); o débito é só no host.
+## O broker do core entrega uma vez; repetir após timeout conserva o pedido pago.
 func try_buy(inventory: Inventory) -> Dictionary:
 	var result: Dictionary = {"ok": false, "message": "", "carried": null}
 	if tool_data == null:
 		result["message"] = "Produto indisponível."
 		return result
-	if inventory != null and inventory.is_full():
+	if _intent_request == 0 and inventory != null and inventory.is_full():
 		result["message"] = "Mochila cheia! Liberte um slot antes de comprar."
 		return result
 	var state: GameState = GameState.instance
@@ -119,35 +147,40 @@ func try_buy(inventory: Inventory) -> Dictionary:
 	_pending = true
 	var item_id: String = String(tool_data.id)
 	var reply: Dictionary = {}
-	var on_result: Callable = func(id: String, success: bool, message: String) -> void:
-		if id == item_id and reply.is_empty():
+	if _intent_request == 0:
+		_request_sequence += 1
+		_intent_request = _request_sequence
+	var request_id: int = _intent_request
+	var on_result: Callable = func(received_id: int, id: String, success: bool, message: String) -> void:
+		if received_id == request_id and id == item_id and reply.is_empty():
 			reply["success"] = success
 			reply["message"] = message
 	# Liga antes do pedido: no host/offline a resposta é emitida dentro da própria chamada.
-	state.item_purchase_result.connect(on_result)
-	state.request_purchase_item(item_id)
+	state.world_item_result.connect(on_result)
+	state.request_world_item(item_id, get_path(), request_id)
 	var deadline: int = Time.get_ticks_msec() + int(PURCHASE_TIMEOUT * 1000.0)
-	while reply.is_empty() and Time.get_ticks_msec() < deadline and is_inside_tree():
+	while (reply.is_empty() or (bool(reply.get("success", false)) and not state.is_world_item_delivered(request_id))) and Time.get_ticks_msec() < deadline and is_inside_tree():
 		var tree: SceneTree = get_tree()
 		if tree == null:
 			break
 		await tree.process_frame
 		if not is_inside_tree():
 			break
-	if is_instance_valid(state) and state.item_purchase_result.is_connected(on_result):
-		state.item_purchase_result.disconnect(on_result)
+	if is_instance_valid(state) and state.world_item_result.is_connected(on_result):
+		state.world_item_result.disconnect(on_result)
 	_pending = false
 	if not is_inside_tree():
 		result["message"] = "Cancelado."
 		return result
 
-	if reply.is_empty():
+	if reply.is_empty() or (bool(reply.get("success", false)) and not state.is_world_item_delivered(request_id)):
 		result["message"] = "Sem resposta do anfitrião. Tente de novo."
 		return result
+	_intent_request = 0
 	result["message"] = reply["message"]
 	if not reply["success"]:
 		return result
 	result["ok"] = true
-	result["carried"] = CarriedItem.create_from_tool_data(tool_data)
+	# O broker entrega na mochila; o Player não deve adicionar outro item.
 	purchased.emit(tool_data)
 	return result

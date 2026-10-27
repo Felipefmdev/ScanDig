@@ -3,6 +3,8 @@
 ## confere as regras (trava antes do saldo, custo cobrado, máximo), não os preços.
 ## A tabela atual fica fixada só no economy_anchor_test.
 extends SceneTree
+const WORLD_SHOP: Script = preload("res://core/tests/world_shop_fixture.gd")
+var _shop: Variant = null
 
 var _fails: int = 0
 var _last_result: Dictionary = {}
@@ -22,11 +24,8 @@ func _initialize() -> void:
 func _on_purchase_result(upgrade_id: String, success: bool, message: String) -> void:
 	_last_result = {"upgrade_id": upgrade_id, "success": success, "message": message}
 
-func _buy(gs: GameState, upgrade_id: String) -> Dictionary:
-	_last_result = {}
-	gs.request_buy_upgrade(upgrade_id)
-	await _wait(3)
-	return _last_result
+func _buy(_gs: GameState, upgrade_id: String) -> Dictionary:
+	return await _shop.buy_upgrade(upgrade_id)
 
 func _map_name(map_id: String) -> String:
 	var map_data: MapData = load("res://items/maps/%s.tres" % map_id) as MapData
@@ -75,11 +74,20 @@ func _walk_upgrade(gs: GameState, upgrade_id: String) -> void:
 		_check(gs.equipped_detector_level == 1 + max_level, "detector equipado = 1 + nível máximo: %d" % gs.equipped_detector_level)
 
 func _run() -> void:
-	change_scene_to_file("res://world/lobby_base.tscn")
-	await _wait(10)
+	_shop = WORLD_SHOP.new()
+	if not _shop.setup(self,"upgrade_lock"):
+		_check(false,"physical fixture: "+str(_shop.errors))
+		_shop.cleanup()
+		quit(_fails)
+		return
 	var gs: GameState = GameState.instance
 	_check(gs != null, "GameState presente")
 	gs.purchase_result.connect(_on_purchase_result)
+	gs.load_snapshot({"team_money":10000,"upgrade_levels":{}})
+	_last_result = {}
+	gs.request_buy_upgrade("detector")
+	await _wait(3)
+	_check(_last_result.get("success",true) == false and gs.team_money == 10000 and gs.get_upgrade_level("detector") == 0,"legacy upgrade endpoint denied despite sufficient balance")
 
 	# Tabela coerente: um custo e um mapa por nível, mapas existentes e custos positivos.
 	for upgrade_id: String in GameState.UPGRADES.keys():
@@ -95,7 +103,7 @@ func _run() -> void:
 	for upgrade_id: String in GameState.UPGRADES.keys():
 		await _walk_upgrade(gs, upgrade_id)
 
-	# #49: o detector que cada mapa exige se compra ANTES de entrar nele (trava num mapa anterior).
+	# Historical equipment-tier ordering stays coherent; detector is no longer an entry toll.
 	var detector_maps: Array = GameState.UPGRADES["detector"]["required_maps"]
 	for map_id: String in SessionManager.MAP_ORDER:
 		var map_data: MapData = load("res://items/maps/%s.tres" % map_id) as MapData
@@ -126,7 +134,11 @@ func _run() -> void:
 
 	_check(gs.get_upgrade_block_reason("xyz") == "Upgrade desconhecido.", "upgrade desconhecido")
 	_check(gs.get_next_upgrade_required_map("xyz") == "", "required_map de upgrade desconhecido vazio")
+	var money_unknown: int = gs.team_money
+	var unknown: Dictionary = await _buy(gs,"xyz")
+	_check(not bool(unknown.get("success",true)) and unknown.get("message","") == "Upgrade desconhecido." and gs.team_money == money_unknown,"unknown upgrade rejected at real counter without charge")
 
-	gs.reset_state()
+	_check(_shop.errors.is_empty(),"bounded correlated physical replies: "+str(_shop.errors))
+	_shop.cleanup()
 	print("RESULT fails=%d" % _fails)
 	quit(_fails)

@@ -51,6 +51,9 @@ func test_points_sit_on_the_ground() -> void:
 		if kind == "BuriedSpot":
 			ground = _collision_height(scene, p, ground)
 		var gap: float = p.y - ground
+		# Marcadores de chegada declaram folga acima do terreno para o spawn.
+		if n is Marker3D and n.get_parent() is GroundSnap:
+			gap -= float((n.get_parent() as GroundSnap).height_offsets.get(String(n.name), 0.0))
 		if kind == "ShopOffer":
 			gap -= OFFER_HEIGHT
 		if RAISED.has(String(n.name)):

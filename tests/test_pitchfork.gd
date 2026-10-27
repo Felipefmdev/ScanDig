@@ -175,22 +175,24 @@ func test_map_campo_banca_and_offers() -> void:
 
 
 func test_buy_forcado_from_banca() -> void:
+	# O teste de compra usa o ator e a banca reais, sem duplicar o Player do setup de combate.
+	world.free()
+	world = null
+	player = null
+	var shop: Variant = preload("res://core/tests/world_shop_fixture.gd").new()
+	var setup_ok: bool = shop.setup(get_tree(), "pitchfork")
+	assert_true(setup_ok, str(shop.errors))
+	if not setup_ok:
+		shop.cleanup()
+		return
 	var state: GameState = GameState.instance
-	var saved_money: int = state.team_money
 	state.team_money = 1000
-	
-	var offer: ShopOffer = ShopOffer.new()
-	offer.tool_data = FORCADO_DATA
-	add_child_autofree(offer)
-	
-	var inv: Inventory = Inventory.new()
-	add_child_autofree(inv)
-	
-	var result: Dictionary = await offer.try_buy(inv)
+	shop.offer.tool_data = FORCADO_DATA
+	assert_true(shop.offer.host_can_purchase(1))
+	var result: Dictionary = await shop.offer.try_buy(shop.actor.inventory)
 	assert_true(result["ok"], result["message"])
 	assert_eq(state.team_money, 400, "debitou R$ 600")
-	var carried: CarriedItem = result["carried"]
-	assert_not_null(carried)
-	assert_eq(carried.tool_id, &"forcado")
-	
-	state.team_money = saved_money
+	assert_null(result["carried"], "O broker já inseriu o item uma única vez")
+	assert_eq(shop.product_count("forcado"), 1)
+	assert_true(shop.errors.is_empty(), str(shop.errors))
+	shop.cleanup()

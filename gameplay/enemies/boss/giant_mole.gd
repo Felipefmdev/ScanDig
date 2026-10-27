@@ -39,6 +39,7 @@ enum State {
 
 const BOSS_ID: StringName = &"giant_mole"
 const BOSS_NAME: String = "TOUPEIRA GIGANTE"
+const TROPHY_ITEM_ID: String = "garra_toupeira"
 const GROUP_BOSSES: StringName = &"bosses"
 const WEAK_POINT_MULTIPLIER: float = 2.0
 const NET_STUN_CAP: float = 1.5
@@ -494,6 +495,8 @@ func _process_dying(_delta: float) -> void:
 	body_root.position.y = -0.5 * t
 	if _state_time >= 1.8 and _state_time - _delta < 1.8:
 		hud.visible = false
+		if has_simulation_authority():
+			QuestRewards.drop_item(get_tree(), TROPHY_ITEM_ID, global_position + Vector3.UP * 2.0)
 		boss_defeated.emit(BOSS_ID)
 	if _state_time >= 3.0:
 		spawn_particles(global_position + Vector3.UP * 0.8, FUR, 40, 4.0)

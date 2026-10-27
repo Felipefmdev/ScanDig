@@ -162,7 +162,7 @@ static func height_at(x: float, z: float) -> float:
 		h = lerpf(h, 0.0, smoothstep(f.z, f.z * 0.6, dist))
 	var edge: float = maxf(absf(x), absf(z))
 	var rise: float = smoothstep(PLAY_HALF - 1.0, SIZE.y, edge)
-	h += rise * rise * (6.0 + _get_broad().get_noise_2d(x * 2.0, z * 2.0) * 3.0)
+	h += rise * rise * (0.8 + _get_broad().get_noise_2d(x * 2.0, z * 2.0) * 0.45)
 	return h
 
 

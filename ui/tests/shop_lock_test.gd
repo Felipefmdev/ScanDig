@@ -67,9 +67,12 @@ func _run() -> void:
 	_check(backpack.tooltip_text == "Desbloqueie %s primeiro." % _lock_name("backpack", 2), "tooltip mochila: %s" % backpack.tooltip_text)
 	_check(not shovel.disabled and shovel.text == "Comprar\n" + _cost("shovel", 0), "pá liberada: %s" % _row(ui, "shovel"))
 
-	# 2. Compra o nível 3: o 4 trava nas Ruínas.
+	# 2. A aba antiga não compra; snapshot do nível 3 exibe a trava das Ruínas.
 	detector.pressed.emit()
 	await _wait(5)
+	_check(gs.get_upgrade_level("detector") == 2 and gs.team_money == 100000, "Loja oculta não autoriza compra remota")
+	gs.load_snapshot(_snapshot(100000, [], {"detector": 3, "backpack": 2}))
+	await _wait(3)
 	_check(gs.get_upgrade_level("detector") == 3, "detector nível 3: %d" % gs.get_upgrade_level("detector"))
 	_check(_row(ui, "detector").contains("🔒 Requer " + _lock_name("detector", 3)) and _row(ui, "detector").contains(_cost("detector", 3)), "detector travado em Ruínas: %s" % _row(ui, "detector"))
 	_check(detector.disabled, "detector desabilitado nas Ruínas")

@@ -12,6 +12,7 @@ signal host_lost()
 signal peer_scene_ready(peer_id: int, map_id: String)
 ## Preparation was cancelled; the same station can offer boarding again.
 signal rocket_travel_cancelled(token: int)
+signal passage_travel_failed(message: String)
 ## Só no host: a expedição vai terminar AGORA. Emitido dentro de request_end_expedition(),
 ## depois de advance_day() + save_game() e ANTES de avisar os peers (_rpc_return_to_lobby).
 ## Quem escuta pode remover nós replicados de forma síncrona (remove_child + queue_free)
@@ -73,6 +74,13 @@ var _rocket_owner_flags: Dictionary = {}
 var _rocket_payload_owner: WeakRef = null
 var _rocket_payload_token: int = 0
 var _rocket_payload_connections: Array[Dictionary] = []
+## Empty for the lunar rocket; terrestrial passages supply their canonical route.
+var _passage_context: Dictionary = {}
+## Scene readiness outlives the owner's one-shot payload restoration.
+const PASSAGE_LOAD_TIMEOUT_MSEC: int = 30000
+var _passage_loading: Dictionary = {}
+var _passage_recovering: bool = false
+var _passage_arrival: Dictionary = {}
 
 
 func _enter_tree() -> void:
@@ -103,6 +111,8 @@ func _ready() -> void:
 
 ## A Godot 4.3 não avisa quando change_scene_to_file termina: compara a cena atual com a pedida.
 func _process(_delta: float) -> void:
+	if multiplayer.is_server() and not _passage_loading.is_empty() and Time.get_ticks_msec() - int(_passage_loading["started"]) >= PASSAGE_LOAD_TIMEOUT_MSEC:
+		fail_passage_transition(int(_passage_loading["token"]), "O destino não terminou de carregar. Tente novamente pela base.")
 	if multiplayer.is_server() and _rocket_phase == "PREPARING" and Time.get_ticks_msec() - _rocket_prepare_started_msec >= ROCKET_PREPARE_TIMEOUT_MSEC:
 		cancel_rocket_transition(_rocket_token)
 	if _pending_scene_path.is_empty() or _awaiting_scene_frame:
@@ -157,7 +167,8 @@ func can_start_map(map_id: String) -> bool:
 		return false
 	if not state.is_map_unlocked(map_id) or not ResourceLoader.exists(MAP_SCENE_FORMAT % map_id):
 		return false
-	return map_data.required_detector_level <= state.equipped_detector_level
+	# Equipamento melhora a exploração; não é pedágio para rotas permanentes.
+	return true
 
 
 ## Tudo o que a UI precisa para uma linha da lista de mapas (chaves sempre presentes).
@@ -191,21 +202,20 @@ func get_map_status(map_id: String) -> Dictionary:
 	if map_id == "lua":
 		reason = block_reason
 	elif not unlocked:
-		reason = block_reason if not block_reason.is_empty() else I18n.t("Desbloqueie por %s.") % MoneyFormat.money(map_data.unlock_cost)
+		reason = block_reason
 	elif not has_scene:
 		reason = "Em breve."
-	elif not playable:
-		reason = I18n.t("Requer detector nível %d.") % map_data.required_detector_level
 
 	status["display_name"] = map_data.display_name
 	status["unlocked"] = unlocked
 	status["has_scene"] = has_scene
 	status["playable"] = playable
-	status["unlock_cost"] = map_data.unlock_cost
+	status["unlock_cost"] = 0
 	status["required_boss_id"] = boss_id
 	status["required_boss_name"] = str(boss.get("boss_name", ""))
 	status["boss_defeated"] = boss_id.is_empty() or state.is_boss_defeated(boss_id)
-	status["can_unlock"] = block_reason.is_empty()
+	# O menu só consulta progresso: nenhuma entrada pode abrir uma rota daqui.
+	status["can_unlock"] = false
 	status["reason"] = reason
 	return status
 
@@ -399,7 +409,8 @@ func restore_rocket_payload(player: Player) -> bool:
 	player.health_changed.emit(player.health,player.max_health)
 	player._refresh_hunger_hud()
 	player._update_session_hud()
-	if _rocket_phase == "COMMITTING":
+	if _rocket_phase == "COMMITTING" or _passage_recovering:
+		_passage_recovering = false
 		_reset_rocket_transition(false, false)
 	return true
 
@@ -429,6 +440,82 @@ func request_rocket_travel() -> bool:
 	return true
 
 
+## Host-local only. A real scene endpoint supplies the route, never a client destination.
+func request_passage_travel(endpoint: Node3D, requesting_peer: int) -> bool:
+	if not _passage_loading.is_empty() or _passage_recovering or not _rocket_payload.is_empty():
+		return false
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != 0 or _ending or _current_map == null or _rocket_phase != "IDLE":
+		return false
+	if not is_instance_valid(endpoint) or not endpoint.is_inside_tree():
+		return false
+	var script: Script = endpoint.get_script() as Script
+	if script == null or script.resource_path != "res://gameplay/environment/boss_passage.gd":
+		return false
+	if not endpoint.has_method("validate_request") or int(endpoint.call("validate_request", requesting_peer)) != OK:
+		return false
+	var route_id: String = str(endpoint.get("route_id"))
+	var source_map: String = str(endpoint.get("source_map"))
+	var route: Dictionary = GameState.MAP_UNLOCK_BOSSES.get(route_id, {})
+	var state: GameState = GameState.instance
+	if route.is_empty() or state == null or not state.unlocked_maps.has(route_id) or source_map != _current_map.id:
+		return false
+	var origin: String = str(route["source_map"])
+	if source_map != origin and source_map != route_id:
+		return false
+	var destination: String = route_id if source_map == origin else origin
+	if _find_map(destination) == null or not ResourceLoader.exists(MAP_SCENE_FORMAT % destination):
+		return false
+	var roster: Array[int] = _rocket_connected_roster()
+	for peer_id: int in roster:
+		if not is_peer_scene_ready(peer_id):
+			return false
+		var actor: Player = HostSync.player_of(get_tree(), peer_id) as Player
+		if actor == null or not actor.is_inside_tree() or actor.is_queued_for_deletion() or not actor.is_alive() or actor.is_downed:
+			return false
+		if String(actor.name) != str(peer_id) or actor.get_multiplayer_authority() != peer_id or actor.multiplayer != multiplayer:
+			return false
+		if Vector2(actor.global_position.x - endpoint.global_position.x, actor.global_position.z - endpoint.global_position.z).length() > 5.0:
+			return false
+	for node: Node in get_tree().get_nodes_in_group(EnemyBase.GROUP):
+		var enemy: EnemyBase = node as EnemyBase
+		if enemy != null and enemy.is_inside_tree() and enemy.is_alive() and enemy.multiplayer == multiplayer:
+			if Vector2(enemy.global_position.x - endpoint.global_position.x, enemy.global_position.z - endpoint.global_position.z).length() <= 8.0:
+				return false
+	var save: SaveManager = SaveManager.instance
+	if save == null or not save.is_progress_applied() or save.save_game(state) != OK:
+		return false
+	_rocket_sequence += 1
+	_rocket_token = _rocket_sequence
+	_rocket_roster = roster
+	_rocket_acked.clear()
+	_passage_context = {"route": route_id, "source": source_map, "destination": destination}
+	_rocket_phase = "PREPARING"
+	_rocket_prepare_started_msec = Time.get_ticks_msec()
+	_call_all(&"_rpc_prepare_passage", [_rocket_token, roster.duplicate(), route_id, source_map])
+	return true
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_prepare_passage(token: int, roster: Array, route_id: String, source_map: String) -> void:
+	var route: Dictionary = GameState.MAP_UNLOCK_BOSSES.get(route_id, {})
+	if route.is_empty() or _current_map == null or _current_map.id != source_map:
+		return
+	var origin: String = str(route["source_map"])
+	if source_map != origin and source_map != route_id:
+		return
+	if _rocket_phase == "IDLE":
+		if multiplayer.is_server() or token <= _rocket_sequence:
+			return
+	elif _rocket_phase != "PREPARING" or token != _rocket_token:
+		return
+	var destination: String = route_id if source_map == origin else origin
+	var context: Dictionary = {"route": route_id, "source": source_map, "destination": destination}
+	if not _passage_context.is_empty() and _passage_context != context:
+		return
+	_passage_context = context
+	_rpc_prepare_rocket(token, roster)
+
+
 @rpc("authority", "call_local", "reliable", 0)
 func _rpc_rocket_travel() -> void:
 	# Compatibility entry cannot bypass preparation or recapture inventory.
@@ -437,7 +524,57 @@ func _rpc_rocket_travel() -> void:
 
 
 func get_rocket_transition() -> Dictionary:
-	return {"phase":_rocket_phase,"token":_rocket_token,"roster":_rocket_roster.duplicate(),"acked":_rocket_acked.duplicate()}
+	return {"phase":_rocket_phase,"token":_rocket_token,"roster":_rocket_roster.duplicate(),"acked":_rocket_acked.duplicate(),"destination":str(_passage_context.get("destination", "lua"))}
+
+
+func get_passage_loading() -> Dictionary:
+	return {"active": not _passage_loading.is_empty(), "token": int(_passage_loading.get("token", 0)), "roster": (_passage_loading.get("roster", []) as Array).duplicate(), "waiting_peers": (_passage_loading.get("waiting_peers", []) as Array).duplicate()}
+
+
+func get_passage_arrival() -> Dictionary:
+	return _passage_arrival.duplicate()
+
+
+## Host-local recovery, never an arbitrary client destination or rollback.
+func fail_passage_transition(token: int, message: String) -> bool:
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != 0 or _passage_loading.is_empty() or token != int(_passage_loading["token"]):
+		return false
+	_call_all(&"_rpc_recover_passage", [token, message])
+	return true
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_recover_passage(token: int, message: String) -> void:
+	if _passage_loading.is_empty() or token != int(_passage_loading["token"]):
+		return
+	_refresh_rocket_payload()
+	_release_rocket_owner(false)
+	# Retain the token and observer until the old actor exits, then consume once
+	# in the next real Player._ready. No day advance or economic rollback.
+	_passage_recovering = not _rocket_payload.is_empty()
+	_passage_arrival.clear()
+	_rocket_phase = "IDLE"
+	_current_map = null
+	_night = false
+	var waiting: Array = _passage_loading.get("waiting_peers", []).duplicate()
+	_passage_loading.clear()
+	_change_scene(LOBBY_SCENE)
+	passage_travel_failed.emit(message)
+	if multiplayer.is_server():
+		for peer_id: int in waiting:
+			_sync_peer_scene(peer_id)
+
+
+func _finish_passage_loading_if_ready() -> void:
+	if _passage_loading.is_empty() or _current_map == null or _current_map.id != str(_passage_loading["destination"]):
+		return
+	for peer_id: int in _passage_loading["roster"]:
+		if not _ready_peers.has(peer_id):
+			return
+	var waiting: Array = _passage_loading["waiting_peers"].duplicate()
+	_passage_loading.clear()
+	for peer_id: int in waiting:
+		_sync_peer_scene(peer_id)
 
 
 func _rocket_connected_roster() -> Array[int]:
@@ -459,7 +596,7 @@ func _rocket_local_player() -> Player:
 
 @rpc("authority", "call_local", "reliable", 0)
 func _rpc_prepare_rocket(token: int, roster: Array) -> void:
-	if token <= 0 or _current_map == null or _current_map.id != "cratera":
+	if token <= 0 or _current_map == null or _current_map.id != str(_passage_context.get("source", "cratera")):
 		return
 	var participants: Array[int] = []
 	for value: Variant in roster:
@@ -534,15 +671,25 @@ func _rpc_commit_rocket(token: int) -> void:
 			return
 	elif _rocket_phase != "PREPARING":
 		return
-	var destination: MapData = _find_map("lua")
+	var destination_id: String = str(_passage_context.get("destination", "lua"))
+	var destination: MapData = _find_map(destination_id)
 	if destination == null:
 		return
 	_rocket_phase = "COMMITTING"
+	if not _passage_context.is_empty():
+		_passage_loading = {"token": token, "roster": _rocket_roster.duplicate(), "waiting_peers": [], "destination": destination_id, "started": Time.get_ticks_msec()}
+		_passage_arrival = {"route": str(_passage_context["route"]), "destination": destination_id}
 	# Old owner remains frozen until removal. The new Player restores the cache once.
 	_release_rocket_owner(false)
 	_current_map = destination
-	_night = false
-	_change_scene(MAP_SCENE_FORMAT % "lua")
+	_night = _night and NightMode.is_available(destination_id) if not _passage_context.is_empty() else false
+	if not _passage_context.is_empty() and multiplayer.is_server() and not _pending_summary.is_empty():
+		var visited: Array = _pending_summary.get("visited_maps", [_passage_context["source"]])
+		visited.append(destination_id)
+		_pending_summary["visited_maps"] = visited
+		_pending_summary["map_id"] = destination_id
+		_pending_summary["map_name"] = destination.display_name
+	_change_scene(MAP_SCENE_FORMAT % destination_id)
 
 
 func cancel_rocket_transition(token: int) -> bool:
@@ -627,9 +774,13 @@ func _reset_rocket_transition(restore_flags: bool, discard_payload: bool) -> voi
 	_rocket_owner_prepared = false
 	_rocket_cleanup_started = false
 	_rocket_prepare_started_msec = 0
+	_passage_context.clear()
 
 
 func _abandon_rocket_transition() -> void:
+	_passage_arrival.clear()
+	_passage_loading.clear()
+	_passage_recovering = false
 	if multiplayer.is_server() and _rocket_phase == "PREPARING":
 		cancel_rocket_transition(_rocket_token)
 	_reset_rocket_transition(true, true)
@@ -687,6 +838,7 @@ func _rpc_enter_map(map_id: String, night: bool = false) -> void:
 		push_error("SessionManager: mapa '%s' não encontrado neste peer." % map_id)
 		return
 	_current_map = map_data
+	_passage_arrival.clear()
 	_night = night and NightMode.is_available(map_id)
 	_change_scene(MAP_SCENE_FORMAT % map_id)
 	expedition_started.emit(map_id)
@@ -694,6 +846,9 @@ func _rpc_enter_map(map_id: String, night: bool = false) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _rpc_return_to_lobby(summary: Dictionary) -> void:
+	_passage_arrival.clear()
+	_passage_loading.clear()
+	_passage_recovering = false
 	_reset_rocket_transition(true, true)
 	_current_map = null
 	_night = false
@@ -704,13 +859,18 @@ func _rpc_return_to_lobby(summary: Dictionary) -> void:
 
 ## Sincroniza a cena de um peer que entrou no meio (map_id vazio = lobby).
 @rpc("authority", "call_remote", "reliable")
-func _rpc_sync_scene(map_id: String, night: bool = false) -> void:
+func _rpc_sync_scene(map_id: String, night: bool = false, arrival: Dictionary = {}) -> void:
 	if map_id.is_empty():
 		_current_map = null
 		_night = false
 		_change_scene(LOBBY_SCENE)
 	else:
 		_rpc_enter_map(map_id, night)
+		# Applied before the deferred scene load and the normal PlayerSpawner.
+		var route_id: String = str(arrival.get("route", ""))
+		var route: Dictionary = GameState.MAP_UNLOCK_BOSSES.get(route_id, {})
+		if not route.is_empty() and map_id in [route_id, str(route["source_map"])] and str(arrival.get("destination", "")) == map_id:
+			_passage_arrival = {"route": route_id, "destination": map_id}
 
 
 ## Cliente -> host: o mapa atual terminou de carregar neste peer.
@@ -728,21 +888,37 @@ func _rpc_report_scene_ready(map_id: String) -> void:
 # --- Eventos ----------------------------------------------------------------------
 
 func _on_peer_connected(peer_id: int) -> void:
+	if multiplayer.is_server() and not _passage_loading.is_empty():
+		var waiting: Array = _passage_loading["waiting_peers"]
+		if peer_id != HOST_PEER_ID and not waiting.has(peer_id):
+			waiting.append(peer_id)
+		return
 	if multiplayer.is_server() and _rocket_phase == "PREPARING":
 		cancel_rocket_transition(_rocket_token)
 	# O GameState já envia o snapshot completo; aqui enviamos a cena atual.
 	if multiplayer.is_server() and peer_id != HOST_PEER_ID:
-		var args: Array = get_sync_scene_args()
-		_rpc_sync_scene.rpc_id(peer_id, args[0], args[1])
+		_sync_peer_scene(peer_id)
+
+
+func _sync_peer_scene(peer_id: int) -> void:
+	var args: Array = get_sync_scene_args()
+	_rpc_sync_scene.rpc_id(peer_id, args[0], args[1], get_passage_arrival())
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	if multiplayer.is_server() and _rocket_phase == "PREPARING":
 		cancel_rocket_transition(_rocket_token)
 	_ready_peers.erase(peer_id)
+	if multiplayer.is_server() and not _passage_loading.is_empty():
+		(_passage_loading["roster"] as Array).erase(peer_id)
+		(_passage_loading["waiting_peers"] as Array).erase(peer_id)
+		_finish_passage_loading_if_ready()
 
 
 func _on_server_disconnected() -> void:
+	_passage_arrival.clear()
+	_passage_loading.clear()
+	_passage_recovering = false
 	_reset_rocket_transition(true, true)
 	_current_map = null
 	_night = false
@@ -755,6 +931,9 @@ func _on_server_disconnected() -> void:
 ## O próprio peer saiu por disconnect_game(): volta ao lobby sem host_lost nem resumo.
 ## Aqui o peer já é offline (is_server() dá true sempre): só o was_host do sinal vale.
 func _on_session_left(was_host: bool) -> void:
+	_passage_arrival.clear()
+	_passage_loading.clear()
+	_passage_recovering = false
 	_reset_rocket_transition(true, true)
 	if was_host and _current_map != null:
 		# Guarda dinheiro e museu ganhos até aqui, sem avançar o dia.
@@ -806,7 +985,39 @@ func _change_scene(scene_path: String) -> void:
 	if current != null and current.scene_file_path == scene_path:
 		return
 	scene_changing.emit(scene_path)
-	tree.call_deferred(&"change_scene_to_file", scene_path)
+	_apply_scene_change.call_deferred(scene_path)
+
+
+func _perform_scene_change(scene_path: String) -> Error:
+	return get_tree().change_scene_to_file(scene_path)
+
+
+func _apply_scene_change(scene_path: String) -> void:
+	# A newer request supersedes this deferred operation.
+	if _pending_scene_path != scene_path:
+		return
+	var error: Error = _perform_scene_change(scene_path)
+	if error == OK:
+		return
+	_pending_scene_path = ""
+	var message: String = "Não foi possível carregar o destino. Retorne pela base e tente novamente."
+	if not _passage_loading.is_empty():
+		var token: int = int(_passage_loading["token"])
+		if multiplayer.is_server():
+			fail_passage_transition(token, message)
+		elif _is_online():
+			_rpc_report_passage_failure.rpc_id(HOST_PEER_ID, token)
+	else:
+		passage_travel_failed.emit(message)
+
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func _rpc_report_passage_failure(token: int) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if not multiplayer.is_server() or sender <= 0 or _passage_loading.is_empty():
+		return
+	if (_passage_loading["roster"] as Array).has(sender):
+		fail_passage_transition.call_deferred(token, "Um participante não conseguiu carregar o destino. Tente novamente pela base.")
 
 
 func _on_scene_loaded(scene_path: String) -> void:
@@ -822,10 +1033,14 @@ func _on_scene_loaded(scene_path: String) -> void:
 
 
 func _mark_ready(peer_id: int, map_id: String) -> void:
+	if _current_map == null or _current_map.id != map_id:
+		return
 	if _ready_peers.has(peer_id):
 		return
 	_ready_peers.append(peer_id)
 	peer_scene_ready.emit(peer_id, map_id)
+	if multiplayer.is_server():
+		_finish_passage_loading_if_ready()
 
 
 func _compare_map_order(a: MapData, b: MapData) -> bool:

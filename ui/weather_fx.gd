@@ -134,9 +134,7 @@ func finish(instant: bool = false) -> void:
 		particles = null
 		set_process(false)
 		# Deixa as últimas gotas caírem e some.
-		get_tree().create_timer(old.lifetime + 0.2, true, false, true).timeout.connect(func() -> void:
-			if is_instance_valid(old):
-				old.queue_free())
+		get_tree().create_timer(old.lifetime + 0.2, true, false, true).timeout.connect(WeatherFx._retire_particles.bind(weakref(old)))
 	if _env_copy == null:
 		_kind = ""
 		return
@@ -145,6 +143,13 @@ func finish(instant: bool = false) -> void:
 		restore_environment()
 		return
 	_fade_env_to(0.0)
+
+
+## O timer não mantém um nó potencialmente liberado nem depende da instância de FX.
+static func _retire_particles(reference: WeakRef) -> void:
+	var old: Node = reference.get_ref() as Node
+	if is_instance_valid(old):
+		old.queue_free()
 
 
 ## Sem tween (testes e capturas): névoa/cor já no ponto `amount`.

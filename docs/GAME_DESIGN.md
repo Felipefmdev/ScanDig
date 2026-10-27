@@ -6,6 +6,8 @@ Tudo o que está aqui é o alvo: afinem com o bot e com testes humanos e atualiz
 
 ## 1. Regras gerais
 
+- **Progressão e comércio (#186):** primeiro E na passagem usa a credencial derivada do chefe e salva a abertura permanente; segundo E viaja com a equipe reunida (R5, sem ameaça R8), no mesmo dia. O troféu comercial continua independente. Todas as cinco bancas terrestres vendem os quatro tipos de melhoria e suas ferramentas locais; a loja da Base fica oculta. Não há taxa monetária nem detector mínimo para travessia terrestre. Rotas compradas em saves antigos permanecem abertas, sem reembolso.
+
 - **Premissa: a Expedição e a Origem do Sinal (#120).** A jornada avança através de 5 sítios de escavação
   terrestres (Praia, Campo, Ruínas, Geleira, Cratera). Ao desvendar os mistérios da Cratera, a equipa
   repara o foguete de pesquisa para alcançar a **Lua** (`world/map_lua.tscn`), o 6.º mapa e o final da campanha.
@@ -48,10 +50,10 @@ Referências: `caranguejo.jpg`, `pa.jpg`, `kit_medico.jpg`, `repelente.jpg`, `es
 | # | Mapa | Tempo | Inimigos | Chefe principal | Chefe escondido | Arma exclusiva | Desbloqueio |
 | :- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | Praia | 60–70 min | Caranguejo, Ermitão, Gaivota | Caranguejo-Rei (investidas, enxame) | Polvo do Naufrágio | **Estilingue** (+ Armadilha de Rede) | Início |
-| 2 | Campo Antigo | 80–90 min | Cobra, Toupeira, Corvo | Toupeira Gigante (túneis, irrompe) | Espantalho Desperto | **Forcado** (corpo a corpo de alcance, empurra) | R$ 800 + Caranguejo-Rei |
-| 3 | Ruínas | 90–100 min | Guardião de pedra, Morcego | Guardião Ancestral (pontos fracos que acendem, placas) | Múmia do Ídolo | **Lanterna de Magnésio** (flash em cone que atordoa; morcegos fogem) | R$ 8.000 + Toupeira Gigante |
-| 4 | **Geleira Eterna** (novo) | 90–100 min | Lobo do gelo, Pinguim-ladrão, Morsa | Mamute Congelado (gelo que racha, avalanche) | Yeti da Gruta | **Arpão de Corda** (puxa inimigos e itens) | R$ 70.000 + Guardião Ancestral |
-| 5 | Cratera | 100–120 min | Criaturas estranhas (rastejantes, flutuantes) | O Que Dorme Lá Em Baixo (fases no fundo da cratera) | O Eco | **Pulso Magnético** (empurra criaturas, puxa metal) | R$ 190.000 + Mamute Congelado |
+| 2 | Campo Antigo | 80–90 min | Cobra, Toupeira, Corvo | Toupeira Gigante (túneis, irrompe) | Espantalho Desperto | **Forcado** (corpo a corpo de alcance, empurra) | Credencial do Caranguejo-Rei + passagem Praia↔Campo |
+| 3 | Ruínas | 90–100 min | Guardião de pedra, Morcego | Guardião Ancestral (pontos fracos que acendem, placas) | Múmia do Ídolo | **Lanterna de Magnésio** (flash em cone que atordoa; morcegos fogem) | Credencial da Toupeira Gigante + passagem Campo↔Ruínas |
+| 4 | **Geleira Eterna** (novo) | 90–100 min | Lobo do gelo, Pinguim-ladrão, Morsa | Mamute Congelado (gelo que racha, avalanche) | Yeti da Gruta | **Arpão de Corda** (puxa inimigos e itens) | Credencial do Guardião Ancestral + passagem Ruínas↔Geleira |
+| 5 | Cratera | 100–120 min | Criaturas estranhas (rastejantes, flutuantes) | O Que Dorme Lá Em Baixo (fases no fundo da cratera) | O Eco | **Pulso Magnético** (empurra criaturas, puxa metal) | Credencial do Mamute Congelado + passagem Geleira↔Cratera |
 | 6 | **Lua** (final, #120) | — (duração não medida) | — | **Guardião do Sinal** (`lunar_warden`; telegraph em faixa, núcleo exposto) | — | — (sem banca) | Foguete da Cratera (missão `vega_foguete` após `the_sleeper` e `vega_sinal`) |
 
 O alvo global de 7–9 h permanece uma intenção de design; a duração do final lunar e da campanha completa ainda não foi medida. Os tempos do antigo final na Ilha não se transferem para a Lua.

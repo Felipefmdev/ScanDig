@@ -1,0 +1,76 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://gameplay/environment/boss_passage.gd" id="1_jnpu3"]
+
+[sub_resource type="BoxShape3D" id="Barrier"]
+size = Vector3(3.6, 1.2, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="Wood"]
+albedo_color = Color(0.34, 0.24, 0.14, 1)
+
+[sub_resource type="BoxMesh" id="Post"]
+material = SubResource("Wood")
+size = Vector3(0.2, 2.2, 0.2)
+
+[sub_resource type="BoxMesh" id="Rail"]
+material = SubResource("Wood")
+size = Vector3(3.4, 0.13, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="SignMaterial"]
+albedo_color = Color(0.18, 0.25, 0.18, 1)
+
+[sub_resource type="BoxMesh" id="Sign"]
+material = SubResource("SignMaterial")
+size = Vector3(1.5, 0.52, 0.12)
+
+[node name="BossPassage" type="Node3D" groups=["boss_passages"]]
+script = ExtResource("1_jnpu3")
+route_id = ""
+source_map = ""
+prompt = "[E] Interagir"
+interact_range = 2.5
+focus_offset = Vector3(0, 0.8, 0)
+start_active = true
+once = false
+hide_when_inactive = false
+
+[node name="Gate" type="StaticBody3D" parent="." groups=["spot_blockers"]]
+
+[node name="Collision" type="CollisionShape3D" parent="Gate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("Barrier")
+
+[node name="LeftPost" type="MeshInstance3D" parent="Gate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.7, 0.7, 0)
+mesh = SubResource("Post")
+
+[node name="RightPost" type="MeshInstance3D" parent="Gate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.7, 0.7, 0)
+mesh = SubResource("Post")
+
+[node name="LowRail" type="MeshInstance3D" parent="Gate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("Rail")
+
+[node name="HighRail" type="MeshInstance3D" parent="Gate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+mesh = SubResource("Rail")
+
+[node name="Sign" type="MeshInstance3D" parent="Gate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 1.55, 0.11)
+mesh = SubResource("Sign")
+
+[node name="Destination" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 1.55, 0.2)
+modulate = Color(0.95, 0.9, 0.7, 1)
+text = "PASSAGEM"
+font_size = 36
+outline_size = 6
+
+[node name="Approach" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0)
+pixel_size = 0.006
+billboard = 1
+text = "Reúna a equipe aqui"
+font_size = 36
+outline_size = 8

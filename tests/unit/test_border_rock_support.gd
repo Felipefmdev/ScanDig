@@ -70,3 +70,21 @@ func test_campo_border_rocks_leave_the_landscape_visible() -> void:
 			# O modelo termina em y=0.75; limitar a silhueta acima do apoio.
 			maximum_height = maxf(maximum_height, pose.basis.y.length() * 0.75)
 	assert_lt(maximum_height, 1.5, "Borda rural baixa deixa ver bosques e lavoura externa")
+
+
+func test_other_terrestrial_border_rocks_do_not_form_tall_spikes() -> void:
+	for theme_name: String in ["praia", "ruinas", "geleira", "cratera"]:
+		var scatter: Node3D = BorderScatter.new()
+		scatter.set("theme", theme_name)
+		autofree(scatter)
+		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		rng.seed = 186
+		scatter.call("_border", Vector2(29.0, 29.0), rng)
+		var maximum_height: float = 0.0
+		var count: int = 0
+		for entry: Dictionary in (scatter.get("_kinds") as Dictionary).values():
+			for pose: Transform3D in entry["xforms"]:
+				maximum_height = maxf(maximum_height, pose.basis.y.length() * .75)
+				count += 1
+		assert_gt(count, 100, "near edge remains marked in " + theme_name)
+		assert_lte(maximum_height, 1.6, theme_name + " low edge rocks leave upper view open")

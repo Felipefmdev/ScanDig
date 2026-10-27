@@ -149,7 +149,7 @@ func test_glacier_terrain_and_ground_snap() -> void:
 	assert_lt(lake_h, -0.4, "Bacia do lago é afundada")
 
 	var wall_h: float = GlacierTerrain.height_at(44.0, 0.0)
-	assert_gt(wall_h, 4.0, "Paredões perimétricos são elevados")
+	assert_between(wall_h, 0.5, 1.2, "#186: margem baixa preserva horizonte aberto")
 
 	# Cores
 	var col: Color = GlacierTerrain.color_at(0.0, 0.0, 0.0)

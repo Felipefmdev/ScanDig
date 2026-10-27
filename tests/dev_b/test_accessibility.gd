@@ -165,7 +165,7 @@ func test_reduced_flashes_on_explosion_and_damage() -> void:
 
 	var enemy: EnemyBase = EnemyBase.new()
 	add_child_autofree(enemy)
-	var shader: ShaderMaterial = ShaderMaterial.new()
+	var shader: ShaderMaterial = LowPolyMesh.make_material()
 	var std: StandardMaterial3D = StandardMaterial3D.new()
 	std.albedo_color = Color.WHITE
 	enemy._register_flash_material(shader)

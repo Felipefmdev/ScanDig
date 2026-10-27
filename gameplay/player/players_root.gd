@@ -49,6 +49,18 @@ func spawn_player(peer_id: int) -> Player:
 	if existing != null:
 		return existing as Player
 	var data: Dictionary = {"peer_id": peer_id, "pos": _spawn_offset(_player_count())}
+	var session: SessionManager = SessionManager.instance
+	var arrival: Dictionary = session.get_passage_arrival() if session != null else {}
+	if not arrival.is_empty() and session.get_current_map() != null and str(arrival.get("destination", "")) == session.get_current_map().id:
+		var scene: Node = get_tree().current_scene
+		var marker: Marker3D = scene.get_node_or_null("WorldRoutes/Arrival_" + str(arrival.get("route", ""))) as Marker3D if scene != null else null
+		if marker == null:
+			var loading: Dictionary = session.get_passage_loading()
+			if bool(loading.get("active", false)):
+				session.fail_passage_transition.call_deferred(int(loading["token"]), "O ponto de chegada não está disponível. Tente novamente pela base.")
+			return null
+		data["pos"] = to_local(marker.global_transform * _spawn_offset(_player_count()))
+		data["yaw"] = marker.global_rotation.y - global_rotation.y
 	if _spawner != null:
 		var spawned: Player = _spawner.spawn(data) as Player
 		if spawned != null:
@@ -66,6 +78,7 @@ func _create_player(data: Variant) -> Node:
 	var player: Player = PLAYER_SCENE.instantiate() as Player
 	player.name = str(int(d.get("peer_id", 1)))
 	player.position = d.get("pos", Vector3.ZERO)
+	player.rotation.y = float(d.get("yaw", 0.0))
 	return player
 
 

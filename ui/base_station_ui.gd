@@ -1,7 +1,7 @@
 class_name BaseStationUI
 extends Control
 
-## Painel da Base/Tenda contendo Loja de Equipamentos, Museu de Achados e Expedições.
+## Painel da Base/Tenda: Museu e revisitas. Comércio acontece nas bancas dos mapas.
 
 @onready var tab_container: TabContainer = _resolve_node("TabContainer", "PanelContainer/MarginContainer/VBoxContainer/TabContainer") as TabContainer
 
@@ -124,6 +124,7 @@ func _ready() -> void:
 	_session = get_node_or_null(SESSION_PATH)
 	_build_achievements_tab()
 	_wrap_pages_in_scroll()
+	_hide_hub_shop()
 	_apply_tab_titles()
 	# Borda de foco só navegando por teclado/comando; com o mouse, nada aceso (#122).
 	UiFocus.follow_pointer(get_node_or_null(^"PanelContainer") as Control)
@@ -139,6 +140,18 @@ func _ready() -> void:
 		_focus_initial.call_deferred()
 		get_viewport().size_changed.connect(_queue_fit_height)
 		_queue_fit_height()
+
+
+## Retain the old page as an inaccessible compatibility view while its presentation
+## helpers migrate to the world shop. Neither keyboard nor controller may select it.
+func _hide_hub_shop() -> void:
+	if tab_container == null:
+		return
+	for index: int in tab_container.get_tab_count():
+		if String(tab_container.get_tab_control(index).name) == "Loja de Equipamentos":
+			tab_container.set_tab_hidden(index, true)
+			if tab_container.current_tab == index:
+				tab_container.current_tab = mini(index + 1, tab_container.get_tab_count() - 1)
 
 
 ## Idioma trocado (#131): os textos fixos (abas, botões da cena) se traduzem sozinhos; as linhas
@@ -353,14 +366,14 @@ func _map_name(map: MapData) -> String:
 
 
 func _format_map_details(map: MapData) -> String:
-	return tr("%s  •  Detector nível %d  •  %d pontos") % [_map_name(map), map.required_detector_level, map.spot_count]
+	return tr("%s  •  %d pontos") % [_map_name(map), map.spot_count]
 
 
 func _format_map_row(map: MapData, status: Dictionary) -> String:
 	if bool(status.get("playable", false)):
 		return "✔ " + _format_map_details(map)
 	if not bool(status.get("unlocked", false)):
-		var row: String = "🔒 %s  •  %s" % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
+		var row: String = "🔒 %s" % _map_name(map)
 		var boss_name: String = str(status.get("required_boss_name", ""))
 		if not boss_name.is_empty():
 			row += tr("  •  Chefe: %s") % tr(boss_name)
@@ -440,21 +453,14 @@ func _get_map_status_reason(map: MapData) -> String:
 
 
 func _can_request_unlock() -> bool:
-	return _game_state != null and _game_state.has_method(&"request_unlock_map")
+	return false # First opening belongs to the physical passage, never this menu.
 
 
 func _refresh_unlock_button() -> void:
 	if unlock_map_btn == null:
 		return
-	var map: MapData = _get_selected_map()
-	var status: Dictionary = _get_map_status(map)
-	if status.is_empty() or bool(status.get("unlocked", true)) or not _can_request_unlock():
-		unlock_map_btn.visible = false
-		return
-	unlock_map_btn.visible = true
-	unlock_map_btn.text = tr("Desbloquear %s (%s)") % [_map_name(map), UiFormat.money(int(status.get("unlock_cost", 0)))]
-	unlock_map_btn.disabled = _pending_unlock or not bool(status.get("can_unlock", false))
-	unlock_map_btn.tooltip_text = UiFormat.fix_money_spaces(tr(str(status.get("reason", "")))) if unlock_map_btn.disabled else ""
+	unlock_map_btn.visible = false
+	unlock_map_btn.disabled = true
 	_sync_focus()
 
 

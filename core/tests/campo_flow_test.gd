@@ -5,7 +5,6 @@ extends SceneTree
 const CAMPO_SCENE: String = "res://world/map_campo.tscn"
 
 var _fails: int = 0
-var _unlock_result: Dictionary = {}
 var _ready_signals: Array[Dictionary] = []
 
 func _check(cond: bool, msg: String) -> void:
@@ -29,9 +28,6 @@ func _wait_until(cond: Callable, timeout_s: float) -> bool:
 func _initialize() -> void:
 	_run.call_deferred()
 
-func _on_map_unlock_result(map_id: String, success: bool, message: String) -> void:
-	_unlock_result = {"map_id": map_id, "success": success, "message": message}
-
 func _on_peer_scene_ready(peer_id: int, map_id: String) -> void:
 	_ready_signals.append({"peer_id": peer_id, "map_id": map_id})
 
@@ -47,21 +43,22 @@ func _run() -> void:
 		print("RESULT fails=%d" % _fails)
 		quit(_fails)
 		return
-	gs.map_unlock_result.connect(_on_map_unlock_result)
 	sm.peer_scene_ready.connect(_on_peer_scene_ready)
-	# Preço e detector vêm do campo.tres (#64): sobram 500 depois do desbloqueio.
+	# Conserva dados historicos; nova abertura nao exige dinheiro ou upgrade.
 	var campo_data: MapData = load("res://items/maps/campo.tres") as MapData
-	gs.load_snapshot({"team_money": campo_data.unlock_cost + 500, "current_day": 1, "discovered_items": [], "upgrade_levels": {"detector": campo_data.required_detector_level - 1}, "unlocked_maps": [], "defeated_bosses": []})
+	gs.load_snapshot({"team_money": campo_data.unlock_cost + 500, "current_day": 1, "discovered_items": [], "upgrade_levels": {}, "unlocked_maps": [], "defeated_bosses": []})
 	await _wait(3)
 
 	gs.request_report_boss_defeated("king_crab")
 	await _wait(3)
 	_check(gs.is_boss_defeated("king_crab"), "king_crab vencido")
-	gs.request_unlock_map("campo")
-	var unlocked: bool = await _wait_until(func() -> bool: return not _unlock_result.is_empty(), 5.0)
-	_check(unlocked and _unlock_result.get("map_id", "") == "campo" and _unlock_result.get("success", false) == true, "desbloqueio campo ok: %s" % str(_unlock_result))
-	_check(gs.team_money == 500, "dinheiro 500: %d" % gs.team_money)
-	_check(sm.can_start_map("campo"), "can_start_map campo")
+	var money_before: int = gs.team_money
+	_check(not gs.is_map_unlocked("campo"), "derrota so fornece credencial")
+	_check(gs.open_boss_passage("campo") == OK, "uso host-local da credencial salva recibo")
+	_check(gs.is_map_unlocked("campo"), "Campo aberto")
+	_check(gs.team_money == money_before, "abertura nao cobra preco historico")
+	_check(campo_data.unlock_cost > 0 and campo_data.required_detector_level > 1, "MapData historico nao foi zerado")
+	_check(gs.equipped_detector_level == 1 and sm.can_start_map("campo"), "recibo libera Campo com detector inicial")
 
 	var day0: int = gs.current_day
 	sm.request_start_expedition("campo")
