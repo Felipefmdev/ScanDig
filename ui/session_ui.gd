@@ -499,6 +499,14 @@ func _place_toast() -> void:
 	toast_panel.offset_right = home.end.x
 	toast_panel.offset_top = home.position.y
 	toast_panel.offset_bottom = home.end.y
+	# A conquista chega antes de game_victory. Ao abrir, a vitória reposiciona
+	# esse mesmo aviso, sem tocar na fila, token ou prazo de expiração.
+	if VictoryScreen.is_open():
+		var height: float = maxf(home.size.y, toast_panel.get_combined_minimum_size().y)
+		toast_panel.offset_top = TOAST_BASE_TOP
+		toast_panel.offset_bottom = TOAST_BASE_TOP + height
+		VictoryScreen.instance.reserve_notice_space(TOAST_BASE_TOP + height + SAVE_TOAST_GAP)
+		return
 	if bool(_session_call(&"is_in_expedition", false)):
 		return
 	var view: Rect2 = toast_panel.get_viewport_rect()
