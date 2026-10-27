@@ -101,6 +101,7 @@ func _spawn_spot() -> void:
 	}) as BuriedSpot
 	if spot == null:
 		return
+	spot.set_meta(&"_rocket_spawn_spawner", weakref(_net_spawner))
 	spot.item_revealed.connect(_on_spot_revealed.bind(spot))
 	_active_spots.append(spot)
 	spot_spawned.emit(spot)

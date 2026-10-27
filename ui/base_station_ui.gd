@@ -1170,7 +1170,7 @@ const CREATURE_FIELD_META: Dictionary = {
 const BOSS_ORDER: Array[String] = [
 	"king_crab", "giant_mole", "ancient_guardian", "frozen_mammoth",
 	"octopus", "crow_king", "scarecrow", "idol_mummy",
-	"cave_yeti", "ancient_walrus", "the_sleeper", "the_echo",
+	"cave_yeti", "ancient_walrus", "the_sleeper", "the_echo", "lunar_warden",
 ]
 
 const BOSS_FIELD_META: Dictionary = {
@@ -1186,6 +1186,7 @@ const BOSS_FIELD_META: Dictionary = {
 	"ancient_walrus": {"name": "Morsa Anciã", "region": "Geleira", "color": Color(0.58, 0.44, 0.36)},
 	"the_sleeper": {"name": "O Adormecido", "region": "Cratera", "color": Color(0.88, 0.32, 0.52)},
 	"the_echo": {"name": "O Eco", "region": "Cratera", "color": Color(0.38, 0.90, 0.78)},
+	"lunar_warden": {"name": "Guardião do Sinal", "region": "Lua", "color": Color(0.60, 0.23, 0.91)},
 }
 
 var _journal_slot_labels: Dictionary = {}

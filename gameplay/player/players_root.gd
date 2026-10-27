@@ -50,7 +50,10 @@ func spawn_player(peer_id: int) -> Player:
 		return existing as Player
 	var data: Dictionary = {"peer_id": peer_id, "pos": _spawn_offset(_player_count())}
 	if _spawner != null:
-		return _spawner.spawn(data) as Player
+		var spawned: Player = _spawner.spawn(data) as Player
+		if spawned != null:
+			spawned.set_meta(&"_rocket_spawn_spawner", weakref(_spawner))
+		return spawned
 	# Sem spawner (testes): cria só localmente.
 	var player: Player = _create_player(data)
 	add_child(player)
@@ -94,7 +97,7 @@ func _refresh_visibility() -> void:
 	for child: Node in get_children():
 		var player: Player = child as Player
 		if player != null and player.is_node_ready():
-			player.net_sync.update_visibility()
+			player.refresh_replication_visibility()
 
 
 func _player_count() -> int:

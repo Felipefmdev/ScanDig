@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://gameplay/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://gameplay/detector/metal_detector.tscn" id="2_detector"]
@@ -31,6 +31,8 @@ properties/4/replication_mode = 2
 properties/5/path = NodePath(".:is_downed")
 properties/5/spawn = true
 properties/5/replication_mode = 2
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_host_spawn"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.4
@@ -239,6 +241,10 @@ vertical_alignment = 1
 [node name="Avatar" type="Node3D" parent="."]
 visible = false
 script = ExtResource("9_avatar")
+
+[node name="HostSpawnSync" type="MultiplayerSynchronizer" parent="."]
+root_path = NodePath("..")
+replication_config = SubResource("SceneReplicationConfig_host_spawn")
 
 [node name="NetSync" type="MultiplayerSynchronizer" parent="."]
 root_path = NodePath("..")

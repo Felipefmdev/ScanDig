@@ -376,6 +376,7 @@ func _enter_tree() -> void:
 	var owner_id: int = peer_id_from_name(name)
 	if owner_id > 0:
 		set_multiplayer_authority(owner_id)
+	_configure_replication_gates()
 	var local: bool = is_multiplayer_authority()
 	# Antes de os filhos entrarem: um jogador remoto nunca rouba a câmara nem mostra HUD.
 	var cam: Camera3D = get_node_or_null(^"Head/Camera3D") as Camera3D
@@ -426,8 +427,7 @@ func _notification(what: int) -> void:
 
 func _ready() -> void:
 	add_to_group(ALL_GROUP)
-	if net_sync != null:
-		net_sync.add_visibility_filter(_sync_visible_to)
+
 	if not is_local():
 		_setup_remote()
 		return
@@ -474,6 +474,8 @@ func _ready() -> void:
 	if GameState.instance != null:
 		GameState.instance.money_changed.connect(_on_team_money_changed)
 		GameState.instance.upgrades_changed.connect(_on_upgrades_changed)
+	if SessionManager.instance != null:
+		SessionManager.instance.restore_rocket_payload(self)
 
 
 ## Jogador de outro peer: só corpo + nome; posição/rotação chegam pelo NetSync.
@@ -490,12 +492,45 @@ func _setup_remote() -> void:
 ##   cliente recebe "Node not found" a meio do carregamento;
 ## - num cliente (dono do seu jogador): para o host e para quem já tem um jogador na
 ##   cena (o host só cria o jogador de um peer depois de ele estar pronto).
+func _configure_replication_gates() -> void:
+	# Parent enters before its children: configure both filters before sync start.
+	# Recursive owner assignment must not transfer the spawn gate to the guest.
+	var gate: MultiplayerSynchronizer = get_node_or_null(^"HostSpawnSync") as MultiplayerSynchronizer
+	if gate != null:
+		gate.set_multiplayer_authority(1, false)
+		gate.public_visibility = true
+		gate.add_visibility_filter(_spawn_visible_to)
+	var owner_sync: MultiplayerSynchronizer = get_node_or_null(^"NetSync") as MultiplayerSynchronizer
+	if owner_sync != null:
+		owner_sync.public_visibility = true
+		owner_sync.add_visibility_filter(_sync_visible_to)
+
+
+func _spawn_visible_to(peer_id: int) -> bool:
+	if not multiplayer.is_server():
+		return false
+	var sm: SessionManager = SessionManager.instance
+	if sm == null or not sm.is_in_expedition():
+		return true
+	return sm.is_peer_scene_ready(peer_id)
+
+
+func refresh_replication_visibility() -> void:
+	if not is_inside_tree():
+		return
+	var gate: MultiplayerSynchronizer = get_node_or_null(^"HostSpawnSync") as MultiplayerSynchronizer
+	if gate != null and gate.is_inside_tree() and gate.is_multiplayer_authority():
+		gate.update_visibility()
+	var owner_sync: MultiplayerSynchronizer = get_node_or_null(^"NetSync") as MultiplayerSynchronizer
+	if owner_sync != null and owner_sync.is_inside_tree() and owner_sync.is_multiplayer_authority():
+		owner_sync.update_visibility()
+
+
 func _sync_visible_to(peer_id: int) -> bool:
 	if multiplayer.is_server():
-		var sm: SessionManager = SessionManager.instance
-		if sm == null or not sm.is_in_expedition():
-			return true
-		return sm.is_peer_scene_ready(peer_id)
+		# Both host-owned syncs of Player 1 must deny unready peers (spawn OR).
+		return _spawn_visible_to(peer_id)
+	# Existing owner path retained. Recipient receipt readiness is separate (#173 B).
 	return peer_id == 1 or (get_parent() != null and get_parent().has_node(str(peer_id)))
 
 
@@ -1127,6 +1162,10 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 	var final_val: int = res.get("final_value", 0)
 	var is_rare_variant: bool = res.get("is_rare_variant", false)
 	var is_perfect: bool = res.get("is_perfect", false)
+	# Revealing an itemless activation point is not a collectible discovery.
+	if revealed and item == null:
+		_clear_dig_progress_messages()
+		return
 	if item != null and bool(res.get("revealed_now", false)):
 		Rumble.on_dig_found(is_rare_variant)  # vibração do comando (#148)
 
@@ -1152,32 +1191,45 @@ func _show_dig_feedback(res: Dictionary, is_careful: bool) -> void:
 		var msg: String = tr("💥 CRACK! Você bateu com a pá no objeto!\nIntegridade caiu para %d%% (Camada %d/%d)") % [
 			int(integrity * 100.0), layer_num, max_layers
 		]
-		_show_temporary_message(msg, UiPalette.RED_BURNT.lightened(0.2), 2.2)
+		_show_temporary_message(msg, UiPalette.RED_BURNT.lightened(0.2), 2.2, &"dig_progress")
 	else:
 		var tool_name: String = tr("Escavação Cuidadosa") if is_careful else tr("Pá Rápida")
 		var layer_num: int = max_layers - dirt_left
 		var msg: String = tr("⛏️ [%s] Escavando terra... (Camada %d/%d)") % [
 			tool_name, layer_num, max_layers
 		]
-		_show_temporary_message(msg, Color(0.85, 0.95, 0.85), 1.6)
+		_show_temporary_message(msg, Color(0.85, 0.95, 0.85), 1.6, &"dig_progress")
 
 
-func _show_temporary_message(text: String, color: Color = Color.WHITE, duration: float = 2.0) -> void:
+## Only excavation progress is retired; quest, tutorial and boss notices survive.
+func _clear_dig_progress_messages() -> void:
+	if message_stack == null:
+		return
+	for child: Node in message_stack.get_children():
+		if child is Label and child.get_meta(&"feedback_kind", &"") == &"dig_progress":
+			child.queue_free()
+
+
+func _show_temporary_message(text: String, color: Color = Color.WHITE, duration: float = 2.0, feedback_kind: StringName = &"") -> void:
 	# "[E]"/"[Q]" viram a tecla configurada ou o botão do comando (#102).
-	_push_message(InputDevice.fill_key_prompts(text), color, duration, MESSAGE_FONT_SIZE, 8)
+	_push_message(InputDevice.fill_key_prompts(text), color, duration, MESSAGE_FONT_SIZE, 8, feedback_kind)
 
 
 ## Mete uma mensagem na pilha do HUD. A mesma mensagem repetida só renova o tempo (ex.: cavar
 ## várias vezes fora de um sinal); com mais de MAX_MESSAGES sai a mais antiga.
-func _push_message(text: String, color: Color, duration: float, font_size: int, outline: int) -> void:
+func _push_message(text: String, color: Color, duration: float, font_size: int, outline: int, feedback_kind: StringName = &"") -> void:
 	if message_stack == null:
 		return
 	for child: Node in message_stack.get_children():
 		var existing: Label = child as Label
 		if existing != null and not existing.is_queued_for_deletion() and existing.text == text:
+			if not feedback_kind.is_empty():
+				existing.set_meta(&"feedback_kind", feedback_kind)
 			_fade_message(existing, duration)
 			return
 	var label: Label = Label.new()
+	if not feedback_kind.is_empty():
+		label.set_meta(&"feedback_kind", feedback_kind)
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
