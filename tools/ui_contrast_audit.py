@@ -37,7 +37,8 @@ PAIRS = (
     ("PAPER", "RED_BURNT", "texto do botão de perigo", 4.5),
     ("PAPER", "GREEN_BOTTLE", "texto do toast", 4.5),
     ("GOLD", "INK", "código da sala (CodeLabel)", 4.5),
-    ("ORANGE", "PAPER_LIGHT", "borda de foco", 3.0),
+    ("INK", "PAPER_LIGHT", "anel de foco", 3.0),
+    ("INK", "ORANGE", "anel de foco no botão primário", 3.0),
     ("METAL", "PAPER_DARK", "borda desativada", 3.0),
 )
 

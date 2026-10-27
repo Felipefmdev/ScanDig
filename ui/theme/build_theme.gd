@@ -139,10 +139,12 @@ func _empty() -> StyleBoxEmpty:
 func _focus_box() -> StyleBoxFlat:
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.draw_center = false
-	sb.border_color = P.WOOD
-	sb.set_border_width_all(2)
+	# INK garante >=3:1 tanto no papel como sobre o laranja do botão primário; o laranja
+	# sozinho falhava (2,65:1) e não se distinguia do preenchimento.
+	sb.border_color = P.INK
+	sb.set_border_width_all(3)
 	sb.set_corner_radius_all(3)
-	sb.set_expand_margin_all(2)
+	sb.set_expand_margin_all(3)
 	sb.anti_aliasing = false
 	return sb
 
@@ -330,8 +332,6 @@ func _inputs() -> void:
 	var normal: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 2, 6, 4)
 	var read_only: StyleBoxFlat = _flat(P.PAPER_DARK, 2, 2, 6, 4)
 	var focus: StyleBoxFlat = _focus_box()
-	focus.border_color = P.ORANGE
-	focus.set_expand_margin_all(0)
 	_theme.set_stylebox("normal", "LineEdit", normal)
 	_theme.set_stylebox("read_only", "LineEdit", read_only)
 	_theme.set_stylebox("focus", "LineEdit", focus)
