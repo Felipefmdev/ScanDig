@@ -16,6 +16,7 @@ pequeno pode ser descarregado para `docs/learning/_refs/` (ignorado pelo Git) co
 | Kenney Pirate/Nature | `assets/models/` | props do dia a dia | material toon por override |
 | Godot MCP (koltyakov) | sessão local | inspeção/aplicação/capturas | lease de engine exclusivo |
 | GUT | `addons/gut` | testes | headless |
+| [Figma](https://www.figma.com/) | conta do Felipe | maquetar ecrãs, componentes e tokens antes do tema | browser/app; ver `docs/ui/FIGMA.md` |
 
 Abre a oficina e o jogo por `./tools/map_production.ps1 -Tool Workshop|Game`.
 
@@ -26,7 +27,7 @@ Abre a oficina e o jogo por `./tools/map_production.ps1 -Tool Workshop|Game`.
 | [Cyclops Level Builder](https://github.com/blackears/cyclopsLevelBuilder) | MIT | blockout dentro do editor, com medidas e colisão | addon na **oficina**, nunca no jogo |
 | [TrenchBroom](https://trenchbroom.github.io/) + [tbloader](https://github.com/codecat/godot-tbloader) | GPL / MIT | arquitetura brush (Ruínas, interiores) | só se o kit modular não chegar |
 | [PureRef](https://www.pureref.com/) | donativo | prancha de referências por mapa | instalar no sistema |
-| [Figma](https://www.figma.com/) / [Penpot](https://penpot.app/) | free / MPL | maquetar ecrãs antes do tema | browser |
+| [Penpot](https://penpot.app/) | MPL | alternativa ao Figma, se faltar licença | browser |
 | [Krita](https://krita.org/) / [Aseprite](https://www.aseprite.org/) | GPL / pago | 9-slice, ícones, texturas | sistema |
 | [Fontsource](https://fontsource.org/) / [Google Fonts](https://fonts.google.com/) | OFL | fontes com acentos | já usas Kalam/Patrick Hand |
 

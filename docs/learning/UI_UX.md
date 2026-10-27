@@ -124,7 +124,18 @@ Todo o controlo interativo tem seis estados:
 
 Se um ecrã responde a duas perguntas ao mesmo tempo, separa-o em dois estados.
 
-## 11. Checklist de UI
+## 11. Figma
+
+O Figma é o sítio para **maquetar**; o `Theme` é o sítio para **implementar**. Fluxo,
+molduras e handoff em [`docs/ui/FIGMA.md`](../ui/FIGMA.md); tokens prontos em
+[`docs/ui/tokens.json`](../ui/tokens.json).
+
+- Frame base **1152×648** (1×), testes a 1280×720 e 1920×1080.
+- Componentes com variantes de estado; nada de cópias soltas.
+- Cores e texto só por tokens; o JSON não substitui `ui_palette.gd`, acompanha-o.
+- Uma alteração de token entra no mesmo commit do tema.
+
+## 12. Checklist de UI
 
 - [ ] Uma ação primária visível em 5 s.
 - [ ] Três tamanhos de texto, no máximo.
