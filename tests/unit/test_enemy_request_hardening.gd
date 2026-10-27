@@ -35,8 +35,8 @@ func _spawn_player(peer_id: int = 1, tool_id: StringName = &"", pos: Vector3 = V
 	var p: TestPlayerNode = TestPlayerNode.new()
 	p.authority_id = peer_id
 	p.held_tool_id = tool_id
-	p.global_position = pos
 	arena.add_child(p)
+	p.global_position = pos
 	return p
 
 
@@ -48,6 +48,13 @@ func _spawn_enemy(pos: Vector3 = Vector3.ZERO) -> Snake:
 	s.health = 100.0
 	s.global_position = pos
 	return s
+
+
+func test_spawn_player_uses_world_position_under_translated_parent() -> void:
+	arena.position = Vector3(17, 3, -11)
+	var expected: Vector3 = Vector3(22, 5, -4)
+	var player: TestPlayerNode = _spawn_player(1, &"pa", expected)
+	assert_eq(player.global_position, expected, "fixture deve posicionar depois de entrar na árvore")
 
 
 # ---------------------------------------------------------------------------

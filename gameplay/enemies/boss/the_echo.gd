@@ -276,8 +276,8 @@ func _spawn_sonic_ring(center: Vector3) -> void:
 	mi.mesh = ToonKit.commit(st)
 	mi.material_override = _glow_mat
 	mi.top_level = true
-	mi.global_position = center
 	add_child(mi)
+	mi.global_position = center
 
 	_sonic_rings.append(mi)
 	_ring_scales.append(1.0)
