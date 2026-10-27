@@ -3,7 +3,8 @@
 #   tools/run_headless_tests.sh [caminho-do-godot]
 # Roda cada *_test.gd (SceneTree que imprime "RESULT fails=N") e os pares de rede pela porta
 # local (net_host + net_client etc.). Falha se algum teste não imprimir "RESULT fails=0", se
-# aparecer "RESULT fails=N" com N > 0, "SCRIPT ERROR" ou "Parse Error".
+# aparecer "RESULT fails=N" com N > 0, "SCRIPT ERROR" ou "Parse Error", ou se o processo
+# terminar com exit não zero (incluindo timeout). Hosts legados usam sua mensagem final.
 # Fora daqui: ui/tests/theme_snapshots.gd (captura com janela) e o par net_room_* (precisa do
 # noray: use tools/test_online.sh). Os testes gravam o save: o do jogador é copiado e restaurado.
 set -uo pipefail
@@ -27,31 +28,47 @@ restore_save() {
 }
 trap restore_save EXIT
 
-# $1 = nome, $2 = log, $3 = padrão que precisa aparecer (vazio: nenhum)
+# $1 = nome, $2 = log, $3 = conclusão obrigatória, $4 = exit do processo/timeout/wait.
 check_log() {
-	local name="$1" log="$2" need="$3"
-	if grep -qE "SCRIPT ERROR|Parse Error" "$log" || grep -qE "RESULT fails=[1-9]" "$log" \
-		|| { [ -n "$need" ] && ! grep -qE "$need" "$log"; }; then
-		FAILED+=("$name")
-		echo "FALHOU $name"
-		grep -E "SCRIPT ERROR|Parse Error|^FAIL|FAIL |RESULT" "$log" | head -20 | sed 's/^/    /'
+	local name="$1" log="$2" need="$3" status="$4" reason=""
+	if [ "$status" -ne 0 ]; then
+		reason="exit não zero; "
+		if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then reason+="timeout ou SIGKILL; "; fi
+	fi
+	if [ -z "$need" ]; then reason+="conclusão obrigatória não configurada; "; fi
+	if [ ! -f "$log" ] || [ ! -s "$log" ]; then
+		reason+="log ausente ou vazio; "
 	else
-		echo "ok     $name"
+		if grep -qE 'SCRIPT ERROR|Parse Error|RESULT fails=0*[1-9][0-9]*' "$log"; then
+			reason+="erro no log; "
+		fi
+		if [ -n "$need" ] && ! grep -qE -- "$need" "$log"; then reason+="conclusão não encontrada; "; fi
+	fi
+	if [ -n "$reason" ]; then
+		FAILED+=("$name")
+		echo "FALHOU $name (exit=$status, log=$log)"
+		echo "    $reason"
+		if [ -f "$log" ]; then
+			sed -n '1,20{s/^/    /;p;}' "$log"
+			grep -E "SCRIPT ERROR|Parse Error|^FAIL|FAIL |RESULT" "$log" | sed -n '1,20{s/^/    /;p;}' || true
+		fi
+	else
+		echo "ok     $name (exit=$status)"
 	fi
 }
 
 run_single() {
-	local script="$1" name log
+	local script="$1" name log status=0
 	name="$(basename "$script" .gd)"
 	log="$LOG_DIR/$name.log"
-	timeout 180 "$GODOT" --headless --path . --script "res://$script" > "$log" 2>&1
-	check_log "$name" "$log" "RESULT fails=0"
+	timeout 180 "$GODOT" --headless --path . --script "res://$script" > "$log" 2>&1 || status=$?
+	check_log "$name" "$log" '(^|[[:space:]])RESULT fails=0[[:space:]]*$' "$status"
 }
 
-# $1 = host, $2 = padrão do cliente; depois os clientes como "script[:papel]"
+# $1 = host, $2 = conclusão do host, $3 = conclusão do cliente; depois "script[:papel]".
 run_pair() {
-	local host="$1" need="$2" hname hlog pid entry script role cname clog
-	shift 2
+	local host="$1" hneed="$2" need="$3" hname hlog pid entry script role cname clog status
+	shift 3
 	hname="$(basename "$host" .gd)"
 	hlog="$LOG_DIR/$hname.log"
 	timeout 120 "$GODOT" --headless --path . --script "res://$host" > "$hlog" 2>&1 &
@@ -76,11 +93,13 @@ run_pair() {
 	done
 	local i
 	for i in "${!cpids[@]}"; do
-		wait "${cpids[$i]}"
-		check_log "${cnames[$i]}" "${clogs[$i]}" "$need"
+		status=0
+		wait "${cpids[$i]}" || status=$?
+		check_log "${cnames[$i]}" "${clogs[$i]}" "$need" "$status"
 	done
-	wait "$pid"
-	check_log "$hname" "$hlog" ""
+	status=0
+	wait "$pid" || status=$?
+	check_log "$hname" "$hlog" "$hneed" "$status"
 }
 
 echo "== testes avulsos"
@@ -89,11 +108,13 @@ for script in core/tests/*_test.gd ui/tests/*_test.gd; do
 done
 
 echo "== pares de rede"
-run_pair core/tests/net_host.gd "RESULT fails=0" core/tests/net_client.gd
-run_pair core/tests/net_host_drop.gd "host_lost=true" core/tests/net_client_drop.gd
-run_pair core/tests/net_host_multi.gd "RESULT fails=0" core/tests/net_client_multi.gd:A core/tests/net_client_multi.gd:B
-run_pair core/tests/net_names_host.gd "RESULT fails=0" core/tests/net_names_client.gd:A core/tests/net_names_client.gd:B
-run_pair core/tests/net_save_host.gd "RESULT fails=0" core/tests/net_save_client.gd
+RESULT_OK='(^|[[:space:]])RESULT fails=0[[:space:]]*$'
+# Esses dois hosts antigos não imprimem RESULT; exigir sua saída final existente.
+run_pair core/tests/net_host.gd '^HOST day=[0-9]+ money=[0-9]+[[:space:]]*$' "$RESULT_OK" core/tests/net_client.gd
+run_pair core/tests/net_host_drop.gd '^HOST players=2[[:space:]]*$' '^CLIENT host_lost=true scene=LobbyBase in_exp=false[[:space:]]*$' core/tests/net_client_drop.gd
+run_pair core/tests/net_host_multi.gd "$RESULT_OK" "$RESULT_OK" core/tests/net_client_multi.gd:A core/tests/net_client_multi.gd:B
+run_pair core/tests/net_names_host.gd "$RESULT_OK" "$RESULT_OK" core/tests/net_names_client.gd:A core/tests/net_names_client.gd:B
+run_pair core/tests/net_save_host.gd "$RESULT_OK" "$RESULT_OK" core/tests/net_save_client.gd
 
 echo "logs em $LOG_DIR"
 if [ "${#FAILED[@]}" -gt 0 ]; then
