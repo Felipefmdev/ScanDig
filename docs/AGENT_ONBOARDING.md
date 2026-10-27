@@ -13,13 +13,14 @@ Lê isto ao entrares no projeto. Primeiro ganhas contexto e só depois montas a 
 
 1. `CONTEXT.md`: regras de arquitetura (Godot 4.3, GDScript tipado), divisão Dev A / Dev B e o que cada equipa pode editar.
    - Visão geral do código (autoloads, fluxo da expedição, save, testes): [`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
-2. `docs/GAME_DESIGN.md`: a visão do jogo (mapas, armas por mapa, missões, segredos, estilo de arte).
-3. `docs/CORE_AND_NETWORK.md`: autoridade do host, RPCs, snapshot e save.
-4. `docs/PACING.md` e `docs/TOOLS.md`: economia e ferramentas.
-5. O kanban (GitHub Project #1). Usa `gh issue list --state open` e `gh issue view N`.
+2. **Antes de tocar em `world/` ou `ui/`:** [`docs/learning/AGENT_CONTEXT.md`](learning/AGENT_CONTEXT.md) (1 página, obrigatório) e, para números, [`docs/MAP_METRICS.md`](MAP_METRICS.md). O resto do pacote está em [`docs/learning/`](learning/README.md).
+3. `docs/GAME_DESIGN.md`: a visão do jogo (mapas, armas por mapa, missões, segredos, estilo de arte).
+4. `docs/CORE_AND_NETWORK.md`: autoridade do host, RPCs, snapshot e save.
+5. `docs/PACING.md` e `docs/TOOLS.md`: economia e ferramentas.
+6. O kanban (GitHub Project #1). Usa `gh issue list --state open` e `gh issue view N`.
    - Issues marcadas **NÃO INICIAR** esperam ordem do Felipe.
    - Só pegues no que te for atribuído.
-6. `git log --oneline -20`: o que mudou por último.
+7. `git log --oneline -20`: o que mudou por último.
 
 ### Regras da casa
 

@@ -12,5 +12,8 @@
 # Saida do DebugBridge (tools/run_bot.sh)
 .bot_runs/
 
+# Copias de estudo offline (tools/fetch_study_refs.py)
+docs/learning/_refs/
+
 # Commit do build, gerado no CI (tools/write_build_info.sh, #138)
 /build_info.json
