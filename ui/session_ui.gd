@@ -122,6 +122,10 @@ func _ready() -> void:
 	toast_panel.visible = false
 	_toast_home = Rect2(toast_panel.offset_left, toast_panel.offset_top,
 		toast_panel.offset_right - toast_panel.offset_left, toast_panel.offset_bottom - toast_panel.offset_top)
+	# A quebra de linha é medida pelo Container após trocar texto/largura.
+	toast_panel.minimum_size_changed.connect(func() -> void:
+		if toast_panel.visible:
+			_place_toast(), CONNECT_DEFERRED)
 	get_viewport().size_changed.connect(func() -> void:
 		if toast_panel.visible:
 			_place_toast())
@@ -495,21 +499,21 @@ func _show_next_toast() -> void:
 ## entre o que está à esquerda (chips) e à direita (menu Multiplayer), e estreita se faltar espaço.
 func _place_toast() -> void:
 	var home: Rect2 = _toast_home
-	toast_panel.offset_left = home.position.x
-	toast_panel.offset_right = home.end.x
+	var view: Rect2 = toast_panel.get_viewport_rect()
+	var safe_width: float = minf(home.size.x, view.size.x * 0.9)
+	toast_panel.offset_left = -safe_width * 0.5
+	toast_panel.offset_right = safe_width * 0.5
 	toast_panel.offset_top = home.position.y
 	toast_panel.offset_bottom = home.end.y
 	# A conquista chega antes de game_victory. Ao abrir, a vitória reposiciona
 	# esse mesmo aviso, sem tocar na fila, token ou prazo de expiração.
 	if VictoryScreen.is_open():
-		var height: float = maxf(home.size.y, toast_panel.get_combined_minimum_size().y)
 		toast_panel.offset_top = TOAST_BASE_TOP
-		toast_panel.offset_bottom = TOAST_BASE_TOP + height
-		VictoryScreen.instance.reserve_notice_space(TOAST_BASE_TOP + height + SAVE_TOAST_GAP)
+		_fit_toast_height()
 		return
 	if bool(_session_call(&"is_in_expedition", false)):
+		_fit_toast_height()
 		return
-	var view: Rect2 = toast_panel.get_viewport_rect()
 	var strip_bottom: float = TOAST_BASE_TOP + maxf(home.size.y, toast_panel.get_combined_minimum_size().y)
 	var free_left: float = 0.0
 	var free_right: float = view.size.x
@@ -520,12 +524,25 @@ func _place_toast() -> void:
 			free_left = maxf(free_left, rect.end.x + SAVE_TOAST_GAP)
 		else:
 			free_right = minf(free_right, rect.position.x - SAVE_TOAST_GAP)
-	var width: float = minf(home.size.x, free_right - free_left)
+	var width: float = minf(safe_width, free_right - free_left)
 	var center: float = (free_left + free_right) * 0.5 - view.size.x * 0.5
 	toast_panel.offset_left = center - width * 0.5
 	toast_panel.offset_right = center + width * 0.5
 	toast_panel.offset_top = TOAST_BASE_TOP
-	toast_panel.offset_bottom = TOAST_BASE_TOP + home.size.y
+	_fit_toast_height()
+
+
+## Altura do texto completo; nenhum reposicionamento reinicia a fila ou o timer.
+func _fit_toast_height() -> void:
+	var height: float = maxf(_toast_home.size.y, toast_panel.get_combined_minimum_size().y)
+	toast_panel.offset_bottom = toast_panel.offset_top + height
+	if save_toast_panel != null and save_toast_panel.visible:
+		var save_rect: Rect2 = save_toast_rect()
+		if toast_panel.get_global_rect().intersects(save_rect):
+			toast_panel.offset_top = save_rect.end.y + SAVE_TOAST_GAP
+			toast_panel.offset_bottom = toast_panel.offset_top + height
+	if VictoryScreen.is_open():
+		VictoryScreen.instance.reserve_notice_space(toast_panel.offset_bottom + SAVE_TOAST_GAP)
 
 
 func _toast_avoid_rects() -> Array[Rect2]:
@@ -561,6 +578,10 @@ func _build_save_toast() -> void:
 	save_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	save_toast_panel.add_child(save_toast_label)
 	add_child(save_toast_panel)
+	for changed: Signal in [save_toast_panel.resized, save_toast_panel.visibility_changed]:
+		changed.connect(func() -> void:
+			if toast_panel.visible:
+				_place_toast(), CONNECT_DEFERRED)
 
 
 func _on_save_failed(reason: SaveManager.FailReason, _error_message: String) -> void:
