@@ -68,10 +68,9 @@ theme_type_variation = &"ToastPanel"
 [node name="ToastLabel" type="Label" parent="ToastPanel"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Aviso"
 horizontal_alignment = 1
 vertical_alignment = 1
-text_overrun_behavior = 3
+autowrap_mode = 3
 theme_type_variation = &"ToastLabel"
 
 [node name="LoadingScreen" type="ColorRect" parent="."]
