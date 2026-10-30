@@ -80,3 +80,12 @@ Control
 # do assets/audio/CREDITS.md lido pelo AudioCredits.
 CC0 1.0
 gravação:
+raiz MapPraia explícita inválida
+raiz não está pronta
+lista deve conter três placas, um prompt e quatro ofertas
+Label3D ausente ou inválida: %s
+ShopOffer ausente ou inválida: %s
+oferta sem Label3D filha direta única: %s
+alvo não está pronto ou deixou a raiz
+Label3D repetida na lista
+conjunto de oito alvos ou fontes incompleto
