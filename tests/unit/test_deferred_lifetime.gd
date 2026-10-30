@@ -129,8 +129,9 @@ func test_real_player_pulse_places_wave_at_world_origin_under_translated_parent(
 	assert_almost_eq(ring.global_position.z, expected_origin.z, EPS, "wave world Z independent of parent translation")
 	rings.clear()
 	ring = null
-	# Production wave lifetime is .35s. Real timer, no custom_step/time mutation.
-	await get_tree().create_timer(0.65, true, false, true).timeout
+	# The .35s production tween uses game time, which can lag wall time on slow frames.
+	# Observe it with the same clock; no custom_step or time-scale mutation.
+	await get_tree().create_timer(0.65, true, false, false).timeout
 	await get_tree().process_frame
 	assert_null(ring_ref.get_ref(), "production tween removes its wave")
 	assert_true(is_instance_valid(player), "attack cleanup preserves actor")

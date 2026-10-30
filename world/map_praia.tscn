@@ -1,4 +1,4 @@
-[gd_scene load_steps=80 format=3 uid="uid://b78rqvgonlc6u"]
+[gd_scene load_steps=81 format=3 uid="uid://b78rqvgonlc6u"]
 
 [ext_resource type="Script" path="res://gameplay/player/players_root.gd" id="1_players"]
 [ext_resource type="Script" path="res://gameplay/disturbance/disturbance_meter.gd" id="2_disturbance"]
@@ -55,6 +55,7 @@
 [ext_resource type="PackedScene" path="res://gameplay/environment/boss_passage.tscn" id="186_passage"]
 [ext_resource type="PackedScene" path="res://gameplay/environment/upgrade_counter.tscn" id="186_counter"]
 [ext_resource type="Script" path="res://gameplay/environment/ground_snap.gd" id="186_ground"]
+[ext_resource type="Script" path="res://ui/world_shop_typography.gd" id="208_typography"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(1.502, 0.949, 1.514)
@@ -1005,3 +1006,10 @@ rotation_degrees = Vector3(0, 343.495638, 0)
 [node name="Upgrades" parent="Banca" instance=ExtResource("186_counter")]
 position = Vector3(0, 0, 1.8)
 map_id = "praia"
+
+[node name="ShopTypography" type="Node" parent="."]
+script = ExtResource("208_typography")
+map_root = NodePath("..")
+title_labels = Array[NodePath]([NodePath("BaseEntrega/Label"), NodePath("Banca/Label"), NodePath("Banca/Upgrades/Label")])
+body_labels = Array[NodePath]([NodePath("Banca/Upgrades/Prompt")])
+offers = Array[NodePath]([NodePath("Banca/Offer1"), NodePath("Banca/Offer2"), NodePath("Banca/Offer3"), NodePath("Banca/Offer4")])
