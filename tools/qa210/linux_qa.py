@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 TREE = "cbfe567ca115c0b536814f5e4a57d771d9e80f71"
+OBSERVATION_TREE = 'a500e509407eef37bda6e1cb713a741224d54d8e'
 COMMIT = "748e90cee8cd69e68a78b4006e9f512cd18f22d8"
 TARGET = "res://tests/unit/test_world_upgrade_shop.gd"
 VERSION = "Godot Engine v4.3.stable.official.77dcf97d8"
@@ -200,7 +201,7 @@ def capture_sources(root, entries, run, stage_name):
             row["missing_or_symlink"] = True
         rows.append(row)
     output = run / ("sources-after-" + stage_name + ".json")
-    save(output, {"input_tree": TREE, "files": rows})
+    save(output, {"input_tree": TREE, "execution_tree": OBSERVATION_TREE, "files": rows})
     for name in GENERATED:
         path = root / name
         if path.is_file() and not path.is_symlink():
@@ -278,6 +279,36 @@ def save(path, value):
         stream.write("\n")
 
 
+def callback_observations(stdout):
+    stdout = re.sub(r"\x1b\[[0-9;]*m", "", stdout)
+    expected = {
+        "test_dead_actor_cannot_open_and_death_while_open_closes",
+        "test_range_loss_closes_and_out_of_range_open_is_rejected",
+        "test_counter_free_closes_without_retaining_invalid_reference",
+        "test_current_scene_change_closes_even_if_old_counter_still_exists",
+    }
+    rows = [json.loads(line.removeprefix("QA210_OBSERVATION "))
+            for line in stdout.splitlines() if line.startswith("QA210_OBSERVATION ")]
+    if len(rows) != 4 or {row.get("test") for row in rows} != expected:
+        raise RuntimeError("Missing/duplicate callback observations")
+    for row in rows:
+        if row.get("schema") != "qa210-callback-v1":
+            raise RuntimeError("Unexpected callback schema")
+        before, after = row["before"], row["after"]
+        delta = after["shop_idle_count"] - before["shop_idle_count"]
+        if delta < 0 or after["physics_frame"] < before["physics_frame"]:
+            raise RuntimeError("Invalid callback counters")
+        row["shop_idle_delta"] = delta
+        row["global_process_delta"] = after["process_frame"] - before["process_frame"]
+        row["physics_delta"] = after["physics_frame"] - before["physics_frame"]
+        row["close_delta"] = after["shop_close_count"] - before["shop_close_count"]
+        row["open_delta"] = after["shop_open_count"] - before["shop_open_count"]
+        # Observação, nunca substitui classificação das asserções GUT.
+        row["observation"] = ("no_shop_idle_callback_in_wait_window" if delta == 0
+                              else "shop_idle_callback_observed_in_wait_window")
+    return rows
+
+
 def stage(name, command, limit, env, run, manifest, snapshot, entries):
     result = {"name": name, "argv": command, "timeout_seconds": limit,
               "started_at_unix": time.time(), "native_exit_code": None,
@@ -344,6 +375,8 @@ def stage(name, command, limit, env, run, manifest, snapshot, entries):
             result["required_cache_at_exit"] = cache_inventory(snapshot)
         if name == "gut":
             result["gut_result"] = classify_gut(stdout, stderr, result["native_exit_code"])
+            result["callback_observations"] = callback_observations(stdout)
+            save(run / "callback-observations.json", result["callback_observations"])
             reported = re.search(r"using\s+\[([^\]]+)\]\s+for temporary output\.", stdout)
             profile = Path(env["XDG_DATA_HOME"]).resolve()
             result["profile_isolation_verified"] = bool(reported and
@@ -388,7 +421,10 @@ def main():
             parser.error("Engine nao e ELF Linux")
     sources = json.loads(source_path.read_text(encoding="utf-8"))
     entries = sources["files"]
-    if sources["tree"] != TREE or sources["commit"] != COMMIT or tree_id(entries) != TREE:
+    if (sources["tree"] != OBSERVATION_TREE or sources.get("input_tree") != TREE
+            or sources.get("execution_is_ci_identical") is not False
+            or sources.get("original_manifest_sha256") != "3A3C84E628CC3CDB8F5E087623897381E19122E443A6FE4305143730DBB70866"
+            or sources["commit"] != COMMIT or tree_id(entries) != OBSERVATION_TREE):
         parser.error("Arvore CI invalida")
     errors = verify_snapshot(snapshot, entries)
     if errors:

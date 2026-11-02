@@ -12,6 +12,7 @@ import zipfile
 from pathlib import Path
 
 import linux_qa as qa
+import observe_snapshot
 
 URL = "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip"
 ELF = "Godot_v4.3-stable_linux.x86_64"
@@ -121,15 +122,20 @@ def main():
         if report["inventory_before"]:
             raise RuntimeError("Unexpected Godot before preparation")
         snapshot = prepare_sources(source_git, work, evidence)
+        original_source_path = evidence / "sources-manifest.json"
+        source_path = observe_snapshot.apply_observation(snapshot, evidence, original_source_path)
+        report["source_provenance"] = {"input_tree": qa.TREE, "execution_tree": qa.OBSERVATION_TREE,
+                                       "execution_is_ci_identical": False,
+                                       "original_manifest_sha256": qa.digest(original_source_path)}
         binary = download_engine(work, report)
         supervisor = Path(__file__).with_name("linux_qa.py")
-        report["qa_artifacts"] = [{"path": p.name, "sha256": qa.digest(p)} for p in (Path(__file__), supervisor, Path(__file__).with_name("post_import_hook.gd"))]
-        report["sources_manifest_sha256"] = qa.digest(evidence / "sources-manifest.json")
+        report["qa_artifacts"] = [{"path": p.name, "sha256": qa.digest(p)} for p in (Path(__file__), supervisor, Path(__file__).with_name("post_import_hook.gd"), Path(__file__).with_name("observe_snapshot.py"))]
+        report["sources_manifest_sha256"] = qa.digest(source_path)
         report["phase"] = "supervisor"
         qa.save(evidence / "preparation.json", report)
         command = [sys.executable, "-B", str(supervisor), "--execute", "--snapshot", str(snapshot),
                    "--pre-run-hook", str(Path(__file__).with_name("post_import_hook.gd")),
-                   "--sources-manifest", str(evidence / "sources-manifest.json"),
+                   "--sources-manifest", str(source_path),
                    "--sources-manifest-sha256", report["sources_manifest_sha256"],
                    "--workflow-root", str(workflow), "--engine", str(binary),
                    "--engine-sha256", report["godot_binary_sha256"], "--supervisor-sha256", qa.digest(supervisor),
