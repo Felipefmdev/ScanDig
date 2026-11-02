@@ -1,0 +1,55 @@
+name: QA210 shop probe
+
+on:
+  push:
+    branches: [qa/210-shop-probe-20261102]
+    paths:
+      - .github/workflows/qa210-shop-probe.yml
+      - tools/qa210/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa210-shop-probe-once
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Initialize evidence
+        run: mkdir -p "$RUNNER_TEMP/qa210-evidence"
+      - name: Checkout QA workflow only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: qa-workflow
+          persist-credentials: false
+      - name: Checkout exact CI source revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 748e90cee8cd69e68a78b4006e9f512cd18f22d8
+          path: ci-source-git
+          persist-credentials: false
+      - name: Prepare and run one bounded probe
+        run: |
+          python3 -B "$GITHUB_WORKSPACE/qa-workflow/tools/qa210/actions_probe.py" \
+            --source-git "$GITHUB_WORKSPACE/ci-source-git" \
+            --workflow-root "$GITHUB_WORKSPACE/qa-workflow" \
+            --evidence "$RUNNER_TEMP/qa210-evidence" \
+            --work "$RUNNER_TEMP/qa210-work" \
+            > "$RUNNER_TEMP/qa210-evidence/setup.stdout.log" \
+            2> "$RUNNER_TEMP/qa210-evidence/setup.stderr.log"
+      - name: Upload QA evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qa210-shop-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qa210-evidence
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
