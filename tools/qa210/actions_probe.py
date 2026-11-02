@@ -123,11 +123,12 @@ def main():
         snapshot = prepare_sources(source_git, work, evidence)
         binary = download_engine(work, report)
         supervisor = Path(__file__).with_name("linux_qa.py")
-        report["qa_artifacts"] = [{"path": p.name, "sha256": qa.digest(p)} for p in (Path(__file__), supervisor)]
+        report["qa_artifacts"] = [{"path": p.name, "sha256": qa.digest(p)} for p in (Path(__file__), supervisor, Path(__file__).with_name("post_import_hook.gd"))]
         report["sources_manifest_sha256"] = qa.digest(evidence / "sources-manifest.json")
         report["phase"] = "supervisor"
         qa.save(evidence / "preparation.json", report)
         command = [sys.executable, "-B", str(supervisor), "--execute", "--snapshot", str(snapshot),
+                   "--pre-run-hook", str(Path(__file__).with_name("post_import_hook.gd")),
                    "--sources-manifest", str(evidence / "sources-manifest.json"),
                    "--sources-manifest-sha256", report["sources_manifest_sha256"],
                    "--workflow-root", str(workflow), "--engine", str(binary),
