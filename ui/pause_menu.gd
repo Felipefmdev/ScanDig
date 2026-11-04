@@ -232,6 +232,13 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 	continue_button = _button("Continuar", &"PrimaryButton")
+	var continue_focus: StyleBoxFlat = root_control.theme.get_stylebox(&"focus", &"PrimaryButton").duplicate() as StyleBoxFlat
+	continue_focus.draw_center = false
+	continue_focus.border_color = UiPalette.PAPER_LIGHT
+	for side: Side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		continue_focus.set_border_width(side, 1)
+		continue_focus.set_expand_margin(side, 0.0)
+	continue_button.add_theme_stylebox_override(&"focus", continue_focus)
 	settings_button = _button("Configurações")
 	return_button = _button("Voltar à base")
 	leave_button = _button("Sair da sessão", &"DangerButton")
