@@ -136,7 +136,8 @@ func _ready() -> void:
 		tab_container.tab_changed.connect(func(_tab: int) -> void:
 			_sync_hidden_tab_widths()
 			_queue_fit_height()
-			_sync_focus.call_deferred())
+			_sync_focus.call_deferred()
+			_reveal_museum_header.call_deferred())
 		_sync_hidden_tab_widths.call_deferred()
 		_focus_initial.call_deferred()
 		get_viewport().size_changed.connect(_queue_fit_height)
@@ -185,12 +186,15 @@ func _focus_initial() -> void:
 	if SessionManager.launch_mode == SessionManager.LAUNCH_COOP or not is_visible_in_tree() or UiFocus.modal_open():
 		return
 	UiFocus.focus_tab_page(tab_container, [tab_container.get_tab_bar()])
+	_reveal_museum_header.call_deferred()
 
 
 ## Teclado/comando (#135): botões desativados (Comprar sem saldo, Partir bloqueado...) saem da
 ## navegação e a corrente da aba atual é refeita, para o que voltou a ficar ativo entrar de novo.
 func _sync_focus() -> void:
-	var buttons: Array = [unlock_map_btn, depart_btn, night_check, sell_item_btn, register_item_btn]
+	var buttons: Array = [unlock_map_btn, depart_btn, night_check]
+	if museum_dev_enabled(OS.is_debug_build(), OS.get_cmdline_user_args()):
+		buttons.append_array([sell_item_btn, register_item_btn])
 	for upgrade_id: String in SHOP_BUTTONS:
 		buttons.append(_get_shop_button(upgrade_id))
 	UiFocus.skip_disabled(buttons)
@@ -206,6 +210,18 @@ func _sync_focus() -> void:
 func focus_home() -> void:
 	if tab_container != null and is_visible_in_tree() and not PauseMenu.is_open() and not VictoryScreen.is_open():
 		UiFocus.focus_tab_page(tab_container, [tab_container.get_tab_bar()])
+		_reveal_museum_header.call_deferred()
+
+
+## Reveal both progress and action at the Museum entry/home boundary, after layout/focus.
+func _reveal_museum_header() -> void:
+	if not is_instance_valid(view_museum_btn) or not view_museum_btn.is_visible_in_tree() or UiFocus.modal_open():
+		return
+	var page: ScrollContainer = tab_container.get_current_tab_control() as ScrollContainer
+	if page == null or not page.is_ancestor_of(view_museum_btn):
+		return
+	view_museum_btn.grab_focus()
+	page.scroll_vertical = 0
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -899,11 +915,56 @@ func _get_map_display_name(map_id: String) -> String:
 
 func _setup_museum_controls() -> void:
 	_fill_item_select_box()
+	var dev_ui: bool = museum_dev_enabled(OS.is_debug_build(), OS.get_cmdline_user_args())
+	for id: String in ["SimLabel", "SimSeparator", "ItemSelectBox", "SellItemButton", "RegisterItemButton"]:
+		var control: Control = find_child(id, true, false) as Control
+		if control != null:
+			control.visible = dev_ui
+			if control is BaseButton:
+				control.focus_mode = Control.FOCUS_ALL if dev_ui else Control.FOCUS_NONE
+	if item_select_box != null:
+		(item_select_box.get_parent() as Control).visible = dev_ui
 	if sell_item_btn != null:
 		sell_item_btn.pressed.connect(_on_sell_test_pressed)
 	if register_item_btn != null:
 		register_item_btn.pressed.connect(_on_register_test_pressed)
 	_build_view_museum_button()
+	if museum_item_list != null:
+		museum_item_list.resized.connect(_sync_museum_catalog_width)
+		museum_item_list.item_selected.connect(_queue_museum_selection_visible)
+		_sync_museum_catalog_width.call_deferred()
+
+
+static func museum_dev_enabled(debug_build: bool, args: PackedStringArray) -> bool:
+	return debug_build and args.has("--dev-ui")
+
+
+func _sync_museum_catalog_width() -> void:
+	var padding: float = museum_item_list.get_theme_stylebox(&"panel").get_minimum_size().x + museum_item_list.get_theme_constant(&"h_separation")
+	museum_item_list.fixed_column_width = maxi(1, floori(museum_item_list.size.x - padding))
+
+
+func _queue_museum_selection_visible(index: int) -> void:
+	_ensure_museum_selection_visible.call_deferred(index)
+
+
+## ItemList auto_height has no internal scroll; expose its selected row in the page.
+func _ensure_museum_selection_visible(index: int) -> void:
+	if index < 0 or index >= museum_item_list.item_count or not museum_item_list.is_visible_in_tree():
+		return
+	var ancestor: Node = museum_item_list.get_parent()
+	while ancestor != null and not ancestor is ScrollContainer:
+		ancestor = ancestor.get_parent()
+	var scroll: ScrollContainer = ancestor as ScrollContainer
+	if scroll == null:
+		return
+	var row: Rect2 = museum_item_list.get_item_rect(index)
+	row.position += museum_item_list.global_position
+	var viewport: Rect2 = scroll.get_global_rect()
+	if row.end.y > viewport.end.y:
+		scroll.scroll_vertical += ceili(row.end.y - viewport.end.y + 4.0)
+	elif row.position.y < viewport.position.y:
+		scroll.scroll_vertical -= ceili(viewport.position.y - row.position.y + 4.0)
 
 
 ## Itens do catálogo na caixa de teste do Museu (nome no idioma atual; a seleção fica).
@@ -919,12 +980,23 @@ func _fill_item_select_box() -> void:
 		item_select_box.select(selected)
 
 
-## "Catálogo..." e o botão "Ver museu" na mesma linha (a aba não fica mais alta).
+## Progresso separado do catalogo; a pagina externa e a unica rolagem vertical.
 func _build_view_museum_button() -> void:
 	if museum_item_list == null:
 		return
 	var page: Control = museum_item_list.get_parent() as Control
 	var info: Label = page.get_node_or_null(^"MuseumInfoLabel") as Label
+	if secrets_label != null:
+		var progress: PanelContainer = PanelContainer.new()
+		progress.name = "MuseumProgress"
+		progress.theme_type_variation = &"WornPanel"
+		var panel_style: StyleBox = get_theme_stylebox(&"panel", &"WornPanel").duplicate() as StyleBox
+		for side: Side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+			panel_style.set_content_margin(side, 8.0)
+		progress.add_theme_stylebox_override(&"panel", panel_style)
+		page.add_child(progress)
+		page.move_child(progress, 0)
+		secrets_label.reparent(progress, false)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "MuseumInfoRow"
 	page.add_child(row)
@@ -935,6 +1007,15 @@ func _build_view_museum_button() -> void:
 		info.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	view_museum_btn = Button.new()
 	view_museum_btn.name = "ViewMuseumButton"
+	view_museum_btn.theme_type_variation = &"PrimaryButton"
+	view_museum_btn.custom_minimum_size.y = 44.0
+	var focus: StyleBoxFlat = get_theme_stylebox(&"focus", &"PrimaryButton").duplicate() as StyleBoxFlat
+	focus.draw_center = false
+	focus.border_color = UiPalette.PAPER_LIGHT
+	for side: Side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		focus.set_border_width(side, 1)
+		focus.set_expand_margin(side, 0.0)
+	view_museum_btn.add_theme_stylebox_override(&"focus", focus)
 	view_museum_btn.text = "Ver museu"
 	view_museum_btn.tooltip_text = "Ver a vitrine do Museu ao lado da tenda"
 	view_museum_btn.icon = UiIcons.get_icon("museum", 48)
