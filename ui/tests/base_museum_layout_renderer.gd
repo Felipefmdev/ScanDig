@@ -1,4 +1,7 @@
 extends SceneTree
+## Renderer real obrigatorio antes do merge; headless nao constitui aceite.
+## Godot --path . --windowed --resolution 1280x720 --script res://ui/tests/base_museum_layout_renderer.gd
+## Gate: exit0, sem SCRIPT/Parse Error ou FAIL; CHECKS count=36 e RESULT fails=0.
 ## #215: catalogo legivel, uma rolagem, progresso separado e dev opt-in.
 const BASE_SCENE: PackedScene = preload("res://ui/base_station_ui.tscn")
 const DEV_NAMES: Array[String] = ["SimLabel", "SimSeparator", "ItemSelectBox", "SellItemButton", "RegisterItemButton"]
@@ -104,5 +107,6 @@ func _run() -> void:
 	await _key(KEY_ESCAPE)
 	_check(not view.is_open() and ui.is_visible_in_tree() and ui.view_museum_btn.has_focus(), "Esc retorna da vitrine com foco em Ver museu")
 	_check(ui.map_list != null and ui.depart_btn != null and tabs.get_tab_count() >= 3 and state.team_money == money_before, "demais abas e saldo preservados")
-	print("RESULT checks=%d fails=%d" % [_checks, _fails])
+	print("CHECKS count=%d" % _checks)
+	print("RESULT fails=%d" % _fails)
 	quit(0 if _fails == 0 else 1)
