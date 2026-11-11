@@ -1,4 +1,7 @@
 extends SceneTree
+## Renderer real obrigatorio antes do merge; headless nao constitui aceite.
+## Godot --path . --windowed --resolution 2560x1440 --script res://ui/tests/shop_maps_praia_fonts_renderer.gd
+## Gate: exit0, sem SCRIPT/Parse Error ou FAIL; CHECKS count=63 e RESULT fails=0.
 ## #216: fontes da Praia por papel nas cinco lojas, com Prompt real e dinamico.
 const DRIVER: Script = preload("res://ui/shop_distance_legibility.gd")
 const HELPER: Script = preload("res://ui/world_shop_typography.gd")
@@ -219,5 +222,6 @@ func _run() -> void:
 	(previous["map"] as Node).free()
 	driver.free()
 	current_scene = null
-	print("RESULT checks=%d fails=%d" % [_checks, _fails])
+	print("CHECKS count=%d" % _checks)
+	print("RESULT fails=%d" % _fails)
 	quit(0 if _fails == 0 else 1)

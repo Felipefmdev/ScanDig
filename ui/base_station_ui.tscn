@@ -123,35 +123,47 @@ text = "Segredos: 0/0"
 
 [node name="MuseumItemList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
 size_flags_vertical = 3
+auto_height = true
+icon_mode = 0
+fixed_column_width = 480
+max_text_lines = 3
 
 [node name="SimSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+visible = false
 layout_mode = 2
 
 [node name="SimLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+visible = false
 layout_mode = 2
 text = "Simulação de Achado em Campo (Testes Dev B):"
 theme_type_variation = &"HintLabel"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ItemSelectBox" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
+focus_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 fit_to_longest_item = false
 
 [node name="SellItemButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
+focus_mode = 0
 layout_mode = 2
 text = "Vender Item"
 
 [node name="RegisterItemButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
+focus_mode = 0
 layout_mode = 2
 text = "Doar ao Museu"
 

@@ -193,7 +193,7 @@ func _private_font(font: Font, cache: Dictionary, raster: bool) -> Font:
 
 
 func _signature(label: Label3D, dynamic_text: bool = false) -> String:
-	return "%s|%d|%s|%d" % ["<dynamic>" if dynamic_text else label.text, label.font_size, label.width, label.autowrap_mode]
+	return "%s|%d|%s|%d" % [String(&"<dynamic>") if dynamic_text else label.text, label.font_size, label.width, label.autowrap_mode]
 
 
 func _bound_valid() -> bool:
@@ -378,7 +378,7 @@ func get_individual_snapshot() -> Dictionary:
 	var pose: Dictionary = {}
 	if is_instance_valid(_camera):
 		pose = {"position": _v3(_camera.global_position), "rotation": _v3(_camera.global_rotation), "basis": _transform_snapshot(_camera.global_transform)["basis"], "fov": _camera.fov, "window_size": [_camera.get_window().size.x, _camera.get_window().size.y], "viewport_size": [_camera.get_viewport().get_visible_rect().size.x, _camera.get_viewport().get_visible_rect().size.y]}
-	return {"bound": is_instance_valid(_map), "bound_to_current_scene": is_instance_valid(_map) and _map == get_tree().current_scene, "map_path": _map.scene_file_path if is_instance_valid(_map) else "", "offer_count": _offer_count, "praia_helper": _praia_helper, "title_min_height": _title_min_height, "labels": labels, "pose": pose, "target_visible": _target_visible, "weight": _weight, "distance_m": _distance_m, "enter_m": ENTER_METERS, "exit_m": EXIT_METERS, "fade_seconds": FADE_SECONDS, "shaping_pending": _title_wait > 0, "limited_reason": _limited_reason, "bounds_method": "cached glyph AABB plus conservative outline; QA images decide reading"}
+	return {"bound": is_instance_valid(_map), "bound_to_current_scene": is_instance_valid(_map) and _map == get_tree().current_scene, "map_path": _map.scene_file_path if is_instance_valid(_map) else "", "offer_count": _offer_count, "praia_helper": _praia_helper, "title_min_height": _title_min_height, "labels": labels, "pose": pose, "target_visible": _target_visible, "weight": _weight, "distance_m": _distance_m, "enter_m": ENTER_METERS, "exit_m": EXIT_METERS, "fade_seconds": FADE_SECONDS, "shaping_pending": _title_wait > 0, "limited_reason": _limited_reason, "bounds_method": String(&"cached glyph AABB plus conservative outline; QA images decide reading")}
 
 
 func get_proximity_snapshot() -> Dictionary:
