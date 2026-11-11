@@ -87,7 +87,24 @@ func test_shop_height_by_content_and_focus_only_with_keyboard() -> void:
 	assert_almost_eq(scroll.custom_minimum_size.y, content_h, 1.0, "altura da Loja = conteúdo")
 	ui.tab_container.current_tab = 1
 	await wait_frames(4)
-	assert_almost_eq(scroll.custom_minimum_size.y, ui.get_page(1).get_combined_minimum_size().y, 1.0, "outra aba: altura dela")
+	var museum_scroll: ScrollContainer = ui.tab_container.get_tab_control(1) as ScrollContainer
+	var museum_page: Control = ui.get_page(1)
+	var museum_content_h: float = museum_page.get_combined_minimum_size().y
+	var panel: Control = ui.get_node(^"PanelContainer") as Control
+	var viewport_rect: Rect2 = ui.get_viewport().get_visible_rect()
+	assert_gt(museum_scroll.size.y, 0.0, "Museu: area de leitura tem altura positiva")
+	assert_lte(museum_scroll.custom_minimum_size.y, museum_content_h + 1.0, "Museu: altura nao excede o conteudo")
+	assert_true(viewport_rect.encloses(panel.get_global_rect()), "Museu: painel permanece dentro do viewport")
+	assert_lte(panel.get_global_rect().end.y, viewport_rect.end.y - BaseStationUI.BOTTOM_MARGIN + 1.0, "Museu: painel respeita margem inferior")
+	assert_gt(museum_content_h, museum_scroll.size.y, "Museu: catalogo longo excede a area de leitura")
+	var scrollbar: VScrollBar = museum_scroll.get_v_scroll_bar()
+	assert_true(scrollbar.visible and scrollbar.max_value > scrollbar.page, "Museu: overflow disponibiliza rolagem vertical")
+	var page_top_before: float = museum_page.global_position.y
+	museum_scroll.scroll_vertical = ceili(scrollbar.max_value)
+	await wait_frames(2)
+	assert_gt(museum_scroll.scroll_vertical, 0, "Museu: rolagem avanca no conteudo longo")
+	assert_lt(museum_page.global_position.y, page_top_before, "Museu: rolagem desloca efetivamente o conteudo")
+	assert_lte(museum_page.get_global_rect().end.y, museum_scroll.get_global_rect().end.y + 1.0, "Museu: fim do conteudo pode ser revelado")
 	var btn: Button = ui.buy_detector_btn
 	assert_eq(btn.get_theme_stylebox(&"focus").get_class(), "StyleBoxEmpty", "mouse: sem borda de foco")
 	InputDevice.instance.set_using_pointer(false)
