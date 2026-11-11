@@ -37,6 +37,7 @@ CoreAmbience="*res://core/ambience_manager.gd"
 CoreA11y="*res://core/a11y.gd"
 CoreCaptionsUI="*res://ui/captions_hud.gd"
 DebugBridge="*res://gameplay/debug/debug_bridge.gd"
+CoreShopDistanceLegibility="*res://ui/shop_distance_legibility.gd"
 
 [display]
 
