@@ -115,6 +115,7 @@ run_pair core/tests/net_host_drop.gd '^HOST players=2[[:space:]]*$' '^CLIENT hos
 run_pair core/tests/net_host_multi.gd "$RESULT_OK" "$RESULT_OK" core/tests/net_client_multi.gd:A core/tests/net_client_multi.gd:B
 run_pair core/tests/net_names_host.gd "$RESULT_OK" "$RESULT_OK" core/tests/net_names_client.gd:A core/tests/net_names_client.gd:B
 run_pair core/tests/net_save_host.gd "$RESULT_OK" "$RESULT_OK" core/tests/net_save_client.gd
+run_pair core/tests/net_notebook_host.gd "$RESULT_OK" "$RESULT_OK" core/tests/net_notebook_client.gd
 
 echo "logs em $LOG_DIR"
 if [ "${#FAILED[@]}" -gt 0 ]; then

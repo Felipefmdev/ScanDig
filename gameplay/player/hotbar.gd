@@ -2,17 +2,17 @@ class_name Hotbar
 extends HBoxContainer
 
 ## Hotbar da mochila no HUD do jogador. Constrói um quadrado por slot do Inventory
-## (acompanha melhorias de capacidade) e destaca o slot selecionado (borda dourada e leve
-## escala). Cada slot mostra o ícone 3D do item (ItemIcons, #119); até o ícone ficar pronto, e
+## (acompanha melhorias de capacidade) e destaca o slot selecionado com borda dourada,
+## sem brilho ou zoom. Cada slot mostra o ícone 3D do item (ItemIcons, #119); até o ícone ficar pronto, e
 ## sempre no headless, fica o quadrado na cor do item. No canto, a marca do tipo (ferramenta ou
 ## achado de museu). Slot vazio mantém o fundo escuro habitual e a moldura, sem quadrado nem traço.
 
-const SLOT_SIZE: Vector2 = Vector2(92, 92)
+const SLOT_SIZE: Vector2 = Vector2(48, 48)
 ## Com muitos slots (mochila até 8) encolhem até aqui para caber entre a vida e a mão.
 const MIN_SLOT_SIZE: float = 28.0
 ## Abaixo disto o slot fica compacto: só ícone, número e marca (sem nome e valor).
 const COMPACT_SLOT_SIZE: float = 48.0
-const SEPARATION: int = 8
+const SEPARATION: int = 4
 const COMPACT_SEPARATION: int = 4
 ## Largura reservada à esquerda do ecrã (painel de vida: 24 + 280 px + margem).
 const SIDE_RESERVED: float = 320.0
@@ -29,7 +29,7 @@ const COLOR_BORDER: Color = UiPalette.INK
 const COLOR_SELECTED: Color = UiPalette.GOLD
 const COLOR_RARE: Color = Color(0.85, 0.55, 1.0)
 const COLOR_TOOL: Color = Color(0.32, 0.8, 1.0)
-const SELECTED_SCALE: float = 1.08
+const SELECTED_SCALE: float = 1.0
 const MARK_SIDE: float = 16.0
 const NAME_BASE_FONT_SIZE: int = 15
 const NAME_MIN_FONT_SIZE: int = 15
@@ -37,6 +37,7 @@ const NAME_MIN_FONT_SIZE: int = 15
 var inventory: Inventory = null
 var _slot_panels: Array[PanelContainer] = []
 var _slot_size: Vector2 = SLOT_SIZE
+var _last_band: Vector2 = Vector2.ZERO
 
 
 func bind(inv: Inventory) -> void:
@@ -45,11 +46,31 @@ func bind(inv: Inventory) -> void:
 		get_viewport().size_changed.connect(_on_viewport_resized)
 	inventory.inventory_changed.connect(_rebuild)
 	inventory.selected_slot_changed.connect(_on_selected_slot_changed)
+	if SettingsManager.instance != null and not SettingsManager.instance.settings_changed.is_connected(_on_settings_changed):
+		SettingsManager.instance.settings_changed.connect(_on_settings_changed)
 	if ItemIcons.can_render() and is_inside_tree():
 		var icons: ItemIcons = ItemIcons.renderer(get_tree())
 		if not icons.icon_ready.is_connected(_on_icon_ready):
 			icons.icon_ready.connect(_on_icon_ready)
 	_rebuild()
+
+
+func _on_settings_changed(section: String, _values: Dictionary) -> void:
+	if section == SettingsManager.GAMEPLAY:
+		_on_viewport_resized()
+
+
+func _process(_delta: float) -> void:
+	# Os vitais atualizam a largura depois da escala de texto. Acompanha o layout
+	# final sem refazer painéis enquanto a faixa e o tamanho permanecerem iguais.
+	if inventory != null and (_band() != _last_band or get_slot_size(inventory.capacity) != _slot_size):
+		_on_viewport_resized()
+
+
+func _text_scale() -> float:
+	if SettingsManager.instance == null:
+		return 1.0
+	return clampf(float(SettingsManager.instance.get_value(SettingsManager.GAMEPLAY, "hud_text_scale")), 0.8, 1.5)
 
 
 func _on_icon_ready(_key: String) -> void:
@@ -100,11 +121,24 @@ func _band() -> Vector2:
 	var view: Vector2 = get_viewport_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
 	var aspect: float = view.x / maxf(view.y, 1.0)
 	var right: float = minf(view.x * (0.5 + 0.5 * HAND_SCREEN_X / aspect) - HAND_GAP, view.x - EXPEDITION_RESERVED)
-	return Vector2(SIDE_RESERVED, maxf(right, SIDE_RESERVED + MIN_SLOT_SIZE))
+	if is_inside_tree() and SessionUI.instance != null:
+		var expedition: Control = SessionUI.instance.expedition_bar
+		if is_instance_valid(expedition) and expedition.is_visible_in_tree():
+			# As duas UIs são CanvasLayers distintas: converte pelo viewport para
+			# respeitar o espaço da hotbar mesmo com transforms de canvas diferentes.
+			var viewport_rect: Rect2 = expedition.get_global_transform_with_canvas() * Rect2(Vector2.ZERO, expedition.size)
+			var canvas_rect: Rect2 = get_canvas_transform().affine_inverse() * viewport_rect
+			right = minf(right, canvas_rect.position.x - 12.0)
+	var left: float = SIDE_RESERVED
+	if is_inside_tree() and get_parent() != null:
+		var vitals: Control = get_parent().get_node_or_null(^"HealthPanel") as Control
+		if vitals != null:
+			left = maxf(left, vitals.get_global_rect().end.x + 12.0)
+	return Vector2(left, maxf(right, left + MIN_SLOT_SIZE))
 
 
 func _is_compact() -> bool:
-	return _slot_size.x < COMPACT_SLOT_SIZE
+	return true
 
 
 ## Quadrado por slot: SLOT_SIZE se couber na faixa livre, senão mais pequeno (compacto < 48).
@@ -114,7 +148,7 @@ func get_slot_size(count: int) -> Vector2:
 	var side: float = floorf((band.y - band.x - SEPARATION * (n - 1)) / float(n))
 	if side < COMPACT_SLOT_SIZE:
 		side = floorf((band.y - band.x - COMPACT_SEPARATION * (n - 1)) / float(n))
-	side = clampf(side, MIN_SLOT_SIZE, SLOT_SIZE.x)
+	side = clampf(side, MIN_SLOT_SIZE, minf(SLOT_SIZE.x * _text_scale(), 64.0))
 	return Vector2(side, side)
 
 
@@ -134,9 +168,13 @@ func _place() -> void:
 	if not is_inside_tree():
 		return
 	add_theme_constant_override("separation", COMPACT_SEPARATION if _is_compact() else SEPARATION)
+	var bottom_margin: float = get_viewport_rect().size.y * 0.05
+	offset_top = -bottom_margin - _slot_size.y
+	offset_bottom = -bottom_margin
 	var r: Rect2 = get_bar_rect(_slot_panels.size())
-	offset_left = r.get_center().x - get_viewport_rect().size.x * 0.5
-	offset_right = offset_left
+	offset_left = r.position.x - get_viewport_rect().size.x * 0.5
+	offset_right = offset_left + r.size.x
+	_last_band = _band()
 
 
 func _make_slot_panel() -> PanelContainer:
@@ -168,7 +206,7 @@ func _make_slot_panel() -> PanelContainer:
 	art.add_child(swatch)
 	var icon: TextureRect = TextureRect.new()
 	icon.name = "Icon"
-	var icon_side: float = roundf(_slot_size.x * (0.7 if _is_compact() else 0.5))
+	var icon_side: float = minf(28.0, _slot_size.x - 4.0)
 	icon.custom_minimum_size = Vector2(icon_side, icon_side)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -188,7 +226,7 @@ func _make_slot_panel() -> PanelContainer:
 	overlay.name = "Overlay"
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(overlay)
-	var key: Label = _make_label("Key", 15, Color(1, 1, 1, 0.6))
+	var key: Label = _make_label("Key", 13, UiPalette.PAPER_LIGHT)
 	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	key.custom_minimum_size = Vector2.ZERO
 	# Sem largura própria: com o clip do _make_label o número sumia (#146).
@@ -203,12 +241,26 @@ func _make_slot_panel() -> PanelContainer:
 	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mark.anchor_left = 1.0
 	mark.anchor_right = 1.0
-	var mark_side: float = minf(MARK_SIDE, roundf(_slot_size.x * 0.4))
+	var mark_side: float = minf(12.0, roundf(_slot_size.x * 0.3))
 	mark.offset_left = -mark_side
 	mark.offset_right = 0.0
-	mark.offset_top = 0.0
-	mark.offset_bottom = mark_side
+	mark.offset_top = -2.0
+	mark.offset_bottom = mark_side - 2.0
 	overlay.add_child(mark)
+	var count: Label = _make_label("Count", 13, UiPalette.PAPER_LIGHT)
+	count.custom_minimum_size = Vector2.ZERO
+	count.clip_text = false
+	count.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	count.anchor_left = 1.0
+	count.anchor_right = 1.0
+	count.anchor_top = 1.0
+	count.anchor_bottom = 1.0
+	count.offset_left = -28.0
+	count.offset_right = 0.0
+	count.offset_top = -22.0 * _text_scale()
+	count.offset_bottom = 0.0
+	overlay.add_child(count)
 	return panel
 
 
@@ -230,6 +282,18 @@ func _make_label(label_name: String, size: int, color: Color) -> Label:
 func _fill_slot(i: int) -> void:
 	var box: VBoxContainer = _slot_panels[i].get_node("Box") as VBoxContainer
 	var c: CarriedItem = inventory.get_item(i)
+	var count: Label = _slot_panels[i].get_node(^"Overlay/Count") as Label
+	if c != null and c.is_tool() and c.charges >= 0:
+		count.text = str(c.charges)
+		count.add_theme_color_override("font_color", UiPalette.PAPER_LIGHT)
+	elif c != null and c.is_tool() and c.wear >= 0:
+		var wear_ratio: float = c.wear_ratio()
+		count.text = "%d%%" % int(ceilf(wear_ratio * 100.0))
+		count.add_theme_color_override("font_color", UiPalette.RED_BURNT if wear_ratio <= 0.2 else Color(0.9, 0.9, 0.9))
+	else:
+		count.text = ""
+		count.remove_theme_color_override("font_color")
+	count.visible = not count.text.is_empty()
 	(_slot_panels[i].get_node("Overlay/Key") as Label).text = str(i + 1)
 	var swatch: ColorRect = box.find_child("Swatch", true, false) as ColorRect
 	var icon: TextureRect = box.find_child("Icon", true, false) as TextureRect
@@ -299,21 +363,18 @@ func _on_selected_slot_changed(index: int) -> void:
 	for i: int in _slot_panels.size():
 		var selected: bool = (i == index)
 		var style: StyleBoxFlat = StyleBoxFlat.new()
-		style.bg_color = UiPalette.INK if selected else COLOR_BG
+		style.bg_color = Color(UiPalette.INK, 0.65 if selected else 0.42)
 		style.border_color = COLOR_SELECTED if selected else COLOR_BORDER
-		var w: int = 3 if selected else 1
-		if selected:
-			style.shadow_color = Color(UiPalette.ORANGE, 0.55)
-			style.shadow_size = 6
+		var w: int = 2 if selected else 1
 		style.border_width_left = w
 		style.border_width_top = w
 		style.border_width_right = w
 		style.border_width_bottom = w
-		style.set_corner_radius_all(6)
-		style.content_margin_left = 4.0
-		style.content_margin_right = 4.0
+		style.set_corner_radius_all(4)
+		style.content_margin_left = 2.0
+		style.content_margin_right = 2.0
 		style.content_margin_top = 2.0
-		style.content_margin_bottom = 4.0
+		style.content_margin_bottom = 2.0
 		var panel: PanelContainer = _slot_panels[i]
 		panel.add_theme_stylebox_override("panel", style)
 		# Escala só no desenho (o HBox não reorganiza): cresce a partir do centro.

@@ -89,3 +89,5 @@ oferta sem Label3D filha direta única: %s
 alvo não está pronto ou deixou a raiz
 Label3D repetida na lista
 conjunto de oito alvos ou fontes incompleto
+# QA #203 / contexto #131: nome de nó criado por hotbar._make_label (Count), não texto da label.
+Count
