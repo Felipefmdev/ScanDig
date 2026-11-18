@@ -1,6 +1,16 @@
 # Teste headless: "C:/Godot/Godot_v4.3-stable_win64_console.exe" --headless --path . --script res://ui/tests/quest_toast_test.gd
 extends SceneTree
 
+class NotebookProbe extends Node:
+	var _actor: Node = null
+	var _opened: bool = false
+
+	func _ready() -> void:
+		add_to_group(SessionUI.EXPEDITION_NOTEBOOK_GROUP)
+
+	func is_open_for(player: Node) -> bool:
+		return _opened and is_instance_valid(player) and _actor == player
+
 var _fails: int = 0
 
 func _check(cond: bool, msg: String) -> void:
@@ -9,7 +19,7 @@ func _check(cond: bool, msg: String) -> void:
 		_fails += 1
 
 func _wait(frames: int) -> void:
-	for i in range(frames):
+	for _i: int in range(frames):
 		await process_frame
 
 func _initialize() -> void:
@@ -74,6 +84,53 @@ func _run() -> void:
 	session.set("_current_map", null)
 	gs.secret_found.emit(s0)
 	_check(not ui.toast_panel.visible, "sem aviso fora da expedição")
+
+	# 6. Caderno de expedição aberto (#212): adia avisos novos, recolhe aviso já visível para a frente
+	# da fila sem duplicar, preserva durante o timer real e exibe ao fechar (ou limpa ao sair da expedição).
+	session.set("_current_map", load("res://items/maps/praia.tres"))
+	ui._clear_toasts()
+	var local_actor: Node = Node.new()
+	local_actor.add_to_group(Player.LOCAL_GROUP)
+	root.add_child(local_actor)
+	var probe: NotebookProbe = NotebookProbe.new()
+	probe._actor = local_actor
+	probe._opened = true
+	root.add_child(probe)
+	await _wait(2)
+	gs.quest_completed.emit("ze_anzol", 600)
+	gs.secret_found.emit(s0)
+	_check(not ui.toast_panel.visible, "caderno aberto: aviso novo não oclui o caderno")
+	_check(ui._toast_queue == ["Missão concluída: O anzol de ouro (+R$\u00a0600)", "Segredo encontrado! (Praia\u00a03/6)"], "caderno aberto: fila conserva ordem e conteúdo")
+	await create_timer(SessionUI.TOAST_SEC + 0.2, true, false, true).timeout
+	_check(not ui.toast_panel.visible and ui._toast_queue.size() == 2, "caderno aberto: avisos retidos não expiram durante a consulta")
+	probe._opened = false
+	await _wait(2)
+	_check(ui.toast_panel.visible and ui.toast_label.text == "Missão concluída: O anzol de ouro (+R$\u00a0600)", "fechar caderno: exibe primeiro aviso retido")
+	_check(ui._toast_queue == ["Segredo encontrado! (Praia\u00a03/6)"], "fechar caderno: segundo aviso permanece na fila")
+	var token_before_reopen: int = ui._toast_token
+	probe._opened = true
+	await _wait(2)
+	_check(not ui.toast_panel.visible and ui._toast_token > token_before_reopen, "reabrir caderno com toast visível: oculta painel e invalida timer ativo")
+	_check(ui._toast_queue == ["Missão concluída: O anzol de ouro (+R$\u00a0600)", "Segredo encontrado! (Praia\u00a03/6)"], "reabrir caderno com toast visível: devolve aviso atual à frente da fila sem duplicar")
+	# Se o caderno fechar enquanto um modal (UiFocus.modal_open) estiver aberto, mantém em espera sem consumir a fila.
+	ui.leave_confirm_panel.visible = true
+	probe._opened = false
+	await _wait(2)
+	_check(not ui.toast_panel.visible and ui._toast_queue.size() == 2, "modal aberto ao fechar caderno: mantém fila retida em espera")
+	ui.leave_confirm_panel.visible = false
+	await _wait(2)
+	_check(ui.toast_panel.visible and ui.toast_label.text == "Missão concluída: O anzol de ouro (+R$\u00a0600)", "fechar modal: retoma aviso recolhido")
+	probe._opened = true
+	await _wait(2)
+	session.set("_current_map", null)
+	probe._opened = false
+	await _wait(2)
+	_check(not ui.toast_panel.visible and ui._toast_queue.is_empty(), "sair da expedição limpa avisos retidos obsoletos do caderno")
+	await create_timer(SessionUI.TOAST_SEC + 0.25, true, false, true).timeout
+	_check(not ui.toast_panel.visible and ui._toast_queue.is_empty(), "após expirar timers antigos invalidados: nenhum aviso reaparece")
+	probe.queue_free()
+	local_actor.queue_free()
+	await _wait(2)
 
 	gs.reset_state()
 	print("RESULT fails=%d" % _fails)

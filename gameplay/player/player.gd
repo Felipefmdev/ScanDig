@@ -454,6 +454,7 @@ func _ready() -> void:
 	_setup_nearby_items_ui()
 	_setup_extra_hud()
 	_setup_settings()
+	_setup_expedition_notebook()
 
 	_apply_backpack_capacity()
 	_apply_shovel_level()
@@ -583,6 +584,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion \
 			or event is InputEventJoypadButton or event is InputEventJoypadMotion:
 		_last_input_ms = Time.get_ticks_msec()
+	# Antes de radial/tirolesa/recaptura: a consulta local é dona das entradas.
+	if _is_expedition_notebook_open():
+		return
 
 	# Interceptação do menu radial de marcadores (#107):
 	if marker_wheel != null and marker_wheel.is_wheel_open():
@@ -887,8 +891,16 @@ func _update_aim_assist(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var notebook_open: bool = _is_expedition_notebook_open()
+	if notebook_open:
+		_jump_buffer_left = 0.0
+		_attack_buffer_left = 0.0
+		_drop_hold = 0.0
+		_drop_holding = false
+		cancel_eating()
 	if is_ziplining:
-		_process_zipline(delta)
+		if not notebook_open:
+			_process_zipline(delta)
 		return
 
 	if is_downed:
@@ -941,7 +953,7 @@ func _physics_process(delta: float) -> void:
 	var input_dir: Vector2 = Vector2.ZERO if is_settings_open() else Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
-	direction = _apply_chaos_effects(direction, delta)
+	direction = _apply_chaos_effects(direction, delta, not notebook_open)
 	if pushing_wheelbarrow != null and is_instance_valid(pushing_wheelbarrow):
 		var wb_factor: float = float(pushing_wheelbarrow.call("get_push_speed_factor"))
 		direction *= wb_factor
@@ -2437,6 +2449,22 @@ func push_pickups_in_cone(origin: Vector3, forward: Vector3, reach: float, cone_
 
 
 const SETTINGS_SCRIPT: Script = preload("res://gameplay/player/player_settings.gd")
+var expedition_notebook: Node = null
+
+
+func _setup_expedition_notebook() -> void:
+	if not is_local() or is_instance_valid(expedition_notebook):
+		return
+	# Load em runtime evita dependência circular entre Player e os dados de UI da Base.
+	var notebook_script: GDScript = load("res://ui/expedition_notebook.gd") as GDScript
+	expedition_notebook = notebook_script.new()
+	expedition_notebook.name = "ExpeditionNotebook"
+	get_node(^"HUD").add_child(expedition_notebook)
+	expedition_notebook.call(&"bind", self)
+
+
+func _is_expedition_notebook_open() -> bool:
+	return is_instance_valid(expedition_notebook) and bool(expedition_notebook.call(&"is_open_for", self))
 
 
 ## Opções vêm do CoreSettings (#77); a tela é a aba Jogabilidade do menu de pausa.
@@ -2458,7 +2486,7 @@ func _on_core_settings_changed(section: String, values: Dictionary) -> void:
 
 ## Menu de pausa aberto: sem olhar, mover, atacar nem cavar (em coop o jogo segue).
 func is_settings_open() -> bool:
-	if PauseMenu.is_open() or VictoryScreen.is_open():
+	if PauseMenu.is_open() or VictoryScreen.is_open() or _is_expedition_notebook_open():
 		return true
 	if is_inside_tree():
 		for shop: Node in get_tree().get_nodes_in_group(&"world_upgrade_shops"):
@@ -4634,7 +4662,7 @@ func is_inked() -> bool:
 
 
 ## Corre no _physics_process do dono: conta os tempos e trava o andar enquanto enrolado.
-func _apply_chaos_effects(direction: Vector3, delta: float) -> Vector3:
+func _apply_chaos_effects(direction: Vector3, delta: float, allow_snare_escape_input: bool) -> Vector3:
 	if _disarm_time > 0.0:
 		_disarm_time -= delta
 		if _disarm_time <= 0.0:
@@ -4649,9 +4677,10 @@ func _apply_chaos_effects(direction: Vector3, delta: float) -> Vector3:
 	if _snare_time <= 0.0:
 		return direction
 	_snare_time -= delta
-	for action: StringName in [&"move_left", &"move_right", &"move_forward", &"move_backward"]:
-		if Input.is_action_just_pressed(action):
-			_snare_time -= SNARE_SHAKE_OFF
+	if allow_snare_escape_input:
+		for action: StringName in [&"move_left", &"move_right", &"move_forward", &"move_backward"]:
+			if Input.is_action_just_pressed(action):
+				_snare_time -= SNARE_SHAKE_OFF
 	if _snare_time <= 0.0:
 		_show_temporary_message("Você se soltou!", Color(0.8, 1.0, 0.7), 0.8)
 	return direction * SNARE_SPEED_FACTOR
