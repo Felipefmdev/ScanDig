@@ -45,17 +45,26 @@ func _exit_tree() -> void:
 	close()
 
 
-func _process(_delta: float) -> void:
-	if not _open:
-		return
+func _close_if_invalid() -> bool:
 	if get_tree().current_scene != _scene or not is_instance_valid(_counter) or not is_instance_valid(_actor):
 		close()
-		return
+		return true
 	if not _valid_actor(_counter, _actor):
 		close()
-		return
+		return true
 	if PauseMenu.is_open() or VictoryScreen.is_open():
 		close()
+		return true
+	return false
+
+
+func _physics_process(_delta: float) -> void:
+	if _open:
+		_close_if_invalid()
+
+
+func _process(_delta: float) -> void:
+	if not _open or _close_if_invalid():
 		return
 	if _pending_request != 0 and Time.get_ticks_msec() - _pending_started >= REQUEST_TIMEOUT_MSEC:
 		_pending_request = 0

@@ -85,6 +85,7 @@ var save_toast_label: Label = null
 var _session: Node = null
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _mouse_released: bool = false
+var _mouse_gameplay_scene_id: int = 0
 ## Incrementado a cada troca de cena para descartar esperas antigas do carregamento.
 var _loading_token: int = 0
 ## Falso ao entrar numa sessão até o primeiro state_synced: o snapshot inicial do host
@@ -737,11 +738,17 @@ func _update_mouse() -> void:
 	var any_open: bool = summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible
 	if any_open and not _mouse_released:
 		_previous_mouse_mode = Input.mouse_mode
+		var scene: Node = get_tree().current_scene
+		_mouse_gameplay_scene_id = scene.get_instance_id() if is_instance_valid(scene) and bool(_session_call(&"is_in_expedition", false)) else 0
 		_mouse_released = true
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif not any_open and _mouse_released:
 		_mouse_released = false
-		Input.mouse_mode = _previous_mouse_mode
+		var scene: Node = get_tree().current_scene
+		var same_gameplay: bool = is_instance_valid(scene) and scene.get_instance_id() == _mouse_gameplay_scene_id and bool(_session_call(&"is_in_expedition", false))
+		# A return clears the map before the deferred scene change; its old cursor is stale.
+		Input.mouse_mode = _previous_mouse_mode if same_gameplay and not UiFocus.modal_open() else Input.MOUSE_MODE_VISIBLE
+		_mouse_gameplay_scene_id = 0
 
 
 func _process(_delta: float) -> void:
