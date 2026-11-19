@@ -108,16 +108,23 @@ var _last_load_s: float = -1.0
 
 
 func _ready() -> void:
-	var script_path: String = _bot_arg()
-	if not OS.is_debug_build() or script_path.is_empty():
+	var script_path: String = bot_script_for(OS.get_cmdline_user_args(), OS.is_debug_build())
+	if script_path.is_empty():
+		# Autoload presente em todas as cenas: sem bot (ou fora de debug) fica inerte. Sem
+		# desligar o _process, o auto-comer rodaria no jogo normal (#210).
+		set_process(false)
 		return
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_run.call_deferred(script_path)
 
 
-## Lê --bot=<caminho> dos user args (depois de "--" na linha de comandos).
-static func _bot_arg() -> String:
-	for arg: String in OS.get_cmdline_user_args():
+## Caminho do roteiro pedido por --bot=<caminho> nos user args (depois de "--" na linha de
+## comandos). "" se não há o argumento ou se o build não é de debug (testado em
+## tests/unit/test_debug_bridge_inert.gd).
+static func bot_script_for(user_args: PackedStringArray, debug_build: bool) -> String:
+	if not debug_build:
+		return ""
+	for arg: String in user_args:
 		if arg.begins_with("--bot="):
 			return arg.substr(6)
 	return ""
