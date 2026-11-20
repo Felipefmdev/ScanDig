@@ -702,19 +702,35 @@ func _show_summary(summary: Dictionary) -> void:
 	var entries: Array = []
 	if summary.get("entries") is Array:
 		entries = summary["entries"] as Array
-	if entries.is_empty():
-		summary_list.add_item("Nenhum item vendido ou doado nesta expedição.")
+	var sold: int = 0
+	var donated: int = 0
 	for entry: Variant in entries:
 		if not entry is Dictionary:
 			continue
 		var e: Dictionary = entry as Dictionary
-		var action_text: String = tr("Doado ao museu") if str(e.get("action", "")) == "donated" else tr("Vendido")
-		summary_list.add_item("%s — %s (+%s)" % [tr(str(e.get("name", "?"))), action_text, UiFormat.money(int(e.get("value", 0)))])
-	summary_total_label.text = tr("Total ganho: %s  (saldo: %s → %s)") % [
-		UiFormat.money(int(summary.get("money_earned", 0))),
-		UiFormat.money(int(summary.get("money_start", 0))),
-		UiFormat.money(int(summary.get("money_end", 0))),
-	]
+		var amount: int = int(e.get("value", 0))
+		var action_text: String
+		match e.get("action"):
+			"sold":
+				sold += amount
+				action_text = tr("Vendido")
+			"donated":
+				donated += amount
+				action_text = tr("Doado ao museu")
+			_:
+				continue
+		summary_list.add_item("%s — %s (+%s)" % [tr(str(e.get("name", "?"))), action_text, UiFormat.money(amount)])
+	if summary_list.item_count == 0:
+		summary_list.add_item(tr("Nenhum item vendido ou doado nesta expedição."))
+	var money_end: int = int(summary.get("money_end", 0))
+	var balance: String = UiFormat.money(money_end)
+	if summary.has("money_start"):
+		balance = "%s → %s" % [UiFormat.money(int(summary["money_start"])), balance]
+	summary_total_label.text = "\n".join(PackedStringArray([
+		"%s  +%s" % [tr("Vendido"), UiFormat.money(sold)],
+		"%s  +%s" % [tr("Doado ao museu"), UiFormat.money(donated)],
+		tr("Saldo da equipe: %s") % balance,
+	]))
 	summary_panel.visible = true
 	_update_mouse()
 	_focus_panel([summary_list, summary_close_button], summary_close_button)
