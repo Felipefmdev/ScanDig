@@ -40,7 +40,7 @@ const MSG_NEWER: String = "Este save é de uma versão mais nova do jogo. Atuali
 ## Miniatura do slot (<save>.png), gravada junto com o save quando há render (#139).
 const THUMBNAIL_SIZE: Vector2i = Vector2i(256, 144)
 ## Campos que o apply_snapshot só aceita como Array.
-const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "seen_creatures", "intact_items", "rare_items", "built_shortcuts", "achievements"]
+const LIST_FIELDS: Array[String] = ["discovered_items", "unlocked_maps", "defeated_bosses", "completed_quests", "found_secrets", "found_field_clues", "seen_creatures", "intact_items", "rare_items", "built_shortcuts", "achievements"]
 ## Campos numéricos opcionais (team_money é obrigatório e conferido à parte).
 const NUMBER_FIELDS: Array[String] = ["current_day", "equipped_detector_level", "saved_at"]
 
@@ -561,6 +561,7 @@ func save_game(target_state: GameState = null) -> Error:
 		"defeated_bosses": Array(state.defeated_bosses),
 		"completed_quests": Array(state.completed_quests),
 		"found_secrets": Array(state.found_secrets),
+		"found_field_clues": Array(state.get_field_clue_ids()),
 		"seen_creatures": Array(state.seen_creatures),
 		"intact_items": Array(state.intact_items),
 		"rare_items": Array(state.rare_items),
@@ -797,6 +798,8 @@ func _upgrade_save_data(source: Dictionary) -> Dictionary:
 		save_data["completed_quests"] = []
 	if not save_data.has("found_secrets"):
 		save_data["found_secrets"] = []
+	if not save_data.has("found_field_clues"):
+		save_data["found_field_clues"] = []
 	# Diário de campo: saves anteriores começam com o diário vazio.
 	if not save_data.has("seen_creatures"):
 		save_data["seen_creatures"] = []

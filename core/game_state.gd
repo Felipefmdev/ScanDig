@@ -78,6 +78,17 @@ const SECRETS: Array[String] = ["praia_reliquia_navio", "praia_reliquia_pedra", 
 	"ruinas_mumia", "ruinas_ovo_esqueleto", "ruinas_ovo_pintura", "ruinas_reliquia_altar", "ruinas_reliquia_nicho", "ruinas_reliquia_parede",
 	"geleira_morsa_ancia", "geleira_ovo_boneco", "geleira_ovo_pinguim", "geleira_reliquia_iglu", "geleira_reliquia_lago", "geleira_reliquia_mamute", "geleira_yeti",
 	"cratera_o_eco", "cratera_ovo_disco", "cratera_ovo_sonda", "cratera_reliquia_engrenagem", "cratera_reliquia_geodo", "cratera_reliquia_orbe"]
+## IDs do save e as chaves de tradução das duas garrafas, em ordem de leitura do diário.
+const FIELD_CLUES: Dictionary = {
+	"praia_diario_capitao_1": {
+		"source": ^"PraiaSecrets/Ground/BottleA",
+		"text": "Diário do Capitão, dia 3: o polvo dorme no casco do navio. Só a canção das conchas o acorda: primeiro a ROSA...",
+	},
+	"praia_diario_capitao_2": {
+		"source": ^"PraiaSecrets/Ground/BottleB",
+		"text": "...depois a AZUL, e por fim a DOURADA. Que ninguém as toque nesta ordem, ou o polvo acorda!",
+	},
+}
 ## Diário de campo (estudo How to Fish: o diário de peixes). Kind do EnemySpawner -> nome.
 ## Chefes ficam em defeated_bosses; aqui só as criaturas comuns.
 const CREATURES: Dictionary = {
@@ -138,6 +149,8 @@ const WORLD_UPGRADE_REPLY_LIMIT: int = 64
 var defeated_bosses: Array[String] = []
 var completed_quests: Array[String] = []
 var found_secrets: Array[String] = []
+var found_field_clues: Array[String] = []
+var _pending_field_clues: Array[String] = []
 var seen_creatures: Array[String] = []
 ## Coleção de peças entregues intactas (#93): uma entrada por item do catálogo.
 var intact_items: Array[String] = []
@@ -765,6 +778,31 @@ func _host_report_secret(secret_id: String) -> void:
 	_broadcast_snapshot()
 
 
+## Chamado pelo SessionManager após uma interação de pista validada no host.
+func report_field_clue(clue_id: String) -> void:
+	if not is_authority() or not FIELD_CLUES.has(clue_id):
+		return
+	if found_field_clues.has(clue_id) or _pending_field_clues.has(clue_id):
+		return
+	if _pending_field_clues.is_empty():
+		_publish_field_clues.call_deferred()
+	_pending_field_clues.append(clue_id)
+
+
+## Inclui as leituras validadas neste frame se o host salvar antes de publicar.
+func get_field_clue_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for clue_id: String in FIELD_CLUES:
+		if found_field_clues.has(clue_id) or _pending_field_clues.has(clue_id):
+			ids.append(clue_id)
+	return ids
+
+
+func _publish_field_clues() -> void:
+	if is_authority() and not _pending_field_clues.is_empty():
+		_broadcast_snapshot()
+
+
 ## Um achado chegou intacto à base (#93). Primeira vez de cada peça entra na coleção.
 func request_report_intact(item_id: String) -> void:
 	_send_to_host(&"_host_report_intact", [item_id])
@@ -880,6 +918,7 @@ func get_snapshot() -> Dictionary:
 		"defeated_bosses": Array(defeated_bosses),
 		"completed_quests": Array(completed_quests),
 		"found_secrets": Array(found_secrets),
+		"found_field_clues": Array(get_field_clue_ids()),
 		"seen_creatures": Array(seen_creatures),
 		"intact_items": Array(intact_items),
 		"rare_items": Array(rare_items),
@@ -912,6 +951,14 @@ func apply_snapshot(data: Dictionary) -> void:
 		var secrets: Array[String] = _to_id_list(data["found_secrets"])
 		new_secrets = _new_ids(found_secrets, secrets)
 		found_secrets = secrets
+	if data.get("found_field_clues") is Array:
+		var saved_clues: Array = data["found_field_clues"]
+		var clues: Array[String] = []
+		for clue_id: String in FIELD_CLUES:
+			if saved_clues.has(clue_id):
+				clues.append(clue_id)
+		found_field_clues = clues
+		_pending_field_clues.clear()
 	var new_creatures: Array[String] = []
 	if data.get("seen_creatures") is Array:
 		var seen: Array[String] = _to_id_list(data["seen_creatures"])
@@ -1118,6 +1165,8 @@ func reset_state() -> void:
 	defeated_bosses.clear()
 	completed_quests.clear()
 	found_secrets.clear()
+	found_field_clues.clear()
+	_pending_field_clues.clear()
 	seen_creatures.clear()
 	intact_items.clear()
 	rare_items.clear()
