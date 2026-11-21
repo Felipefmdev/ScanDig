@@ -75,6 +75,8 @@ func _run() -> void:
 	_check(not gs.is_map_unlocked("campo"), "chefe derrotado nao abre pelo menu")
 	_check(unlock_btn == null or (not unlock_btn.visible and unlock_btn.disabled), "sem Unlock mesmo com chefe e saldo")
 	_check(status_label.visible and status_label.text.contains("passagem"), "uso da chave na passagem fica explicito")
+	_check(status_label.text.contains("Praia → Campo Antigo"), "passagem informa origem e destino")
+	_check(depart_btn.tooltip_text.contains("Praia → Campo Antigo"), "tooltip informa origem e destino")
 	var money_before: int = gs.team_money
 	if unlock_btn != null:
 		unlock_btn.pressed.emit()

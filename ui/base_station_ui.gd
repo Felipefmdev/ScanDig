@@ -369,7 +369,7 @@ func _refresh_map_list() -> void:
 			map_list.add_item(_format_map_details(map))
 			continue
 		var idx: int = map_list.add_item(_format_map_row(map, status))
-		map_list.set_item_tooltip(idx, UiFormat.fix_money_spaces(tr(str(status.get("reason", "")))))
+		map_list.set_item_tooltip(idx, _map_progress_message(map, status))
 		if not bool(status.get("playable", false)):
 			# Continua selecionável para o jogador ver o motivo e poder desbloquear.
 			map_list.set_item_custom_fg_color(idx, MAP_LOCKED_COLOR)
@@ -414,6 +414,18 @@ func _get_map_status(map: MapData) -> Dictionary:
 	return result as Dictionary if result is Dictionary else {}
 
 
+func _map_progress_message(map: MapData, status: Dictionary) -> String:
+	var reason: String = UiFormat.fix_money_spaces(tr(str(status.get("reason", ""))))
+	if reason.is_empty() or bool(status.get("unlocked", false)) or not bool(status.get("boss_defeated", false)):
+		return reason
+	var route: Dictionary = GameState.MAP_UNLOCK_BOSSES.get(map.id, {})
+	var source_id: String = str(route.get("source_map", ""))
+	if source_id.is_empty():
+		return reason
+	var source_name: String = UiFormat.map_display_name(source_id, _maps)
+	return "%s\n%s → %s" % [reason, source_name, _map_name(map)]
+
+
 func _get_selected_map() -> MapData:
 	if map_list == null or not map_list.is_anything_selected():
 		return null
@@ -439,7 +451,7 @@ func _get_depart_block_reason(map: MapData) -> String:
 		return "Apenas o host pode iniciar a expedição."
 	var status: Dictionary = _get_map_status(map)
 	if not status.is_empty():
-		return str(status.get("reason", ""))
+		return _map_progress_message(map, status)
 	if not bool(_session_call(&"can_start_map", [map.id], false)):
 		return tr("Requer detector nível %d.") % map.required_detector_level
 	return ""
@@ -459,7 +471,7 @@ func _refresh_map_status_label() -> void:
 		return
 	var reason: String = _get_map_status_reason(_get_selected_map())
 	map_status_label.visible = not reason.is_empty()
-	map_status_label.text = "🔒 " + UiFormat.fix_money_spaces(tr(reason)) if not reason.is_empty() else ""
+	map_status_label.text = "🔒 " + reason if not reason.is_empty() else ""
 
 
 func _get_map_status_reason(map: MapData) -> String:
@@ -467,10 +479,10 @@ func _get_map_status_reason(map: MapData) -> String:
 		return ""
 	var status: Dictionary = _get_map_status(map)
 	if status.is_empty():
-		return _get_depart_block_reason(map)
+		return UiFormat.fix_money_spaces(tr(_get_depart_block_reason(map)))
 	if not bool(status.get("unlocked", true)):
-		return "" if bool(status.get("can_unlock", false)) else str(status.get("reason", ""))
-	return _get_depart_block_reason(map)
+		return "" if bool(status.get("can_unlock", false)) else _map_progress_message(map, status)
+	return UiFormat.fix_money_spaces(tr(_get_depart_block_reason(map)))
 
 
 func _can_request_unlock() -> bool:
