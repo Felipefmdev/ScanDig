@@ -259,20 +259,21 @@ func get_ready_peers() -> Array[int]:
 
 # --- Pedidos (só o host executa) -------------------------------------------------
 
-func request_start_expedition(map_id: String, night: bool = false) -> void:
+## Retorna o resultado da admissão. A partida aceita ainda carrega a cena pelo fluxo da sessão.
+func request_start_expedition(map_id: String, night: bool = false) -> Error:
 	if not multiplayer.is_server():
 		push_warning("SessionManager: apenas o host pode iniciar expedições.")
-		return
+		return ERR_UNAUTHORIZED
 	if is_in_expedition():
 		push_warning("SessionManager: já existe uma expedição em andamento.")
-		return
+		return ERR_BUSY
 	# Ninguém escolheu "Continuar"/"Novo jogo": aplica o save antes (o fim da expedição grava
 	# por cima dele). Vem antes do can_start_map, porque o save pode desbloquear o mapa.
 	if SaveManager.instance != null:
 		SaveManager.instance.ensure_progress_applied()
 	if not can_start_map(map_id):
 		push_warning("SessionManager: mapa '%s' indisponível." % map_id)
-		return
+		return ERR_UNAVAILABLE
 	var state: GameState = GameState.instance
 	var map_data: MapData = _find_map(map_id)
 	var money: int = state.team_money
@@ -288,6 +289,7 @@ func request_start_expedition(map_id: String, night: bool = false) -> void:
 		"entries": [],
 	}
 	_call_all(&"_rpc_enter_map", [map_id, night])
+	return OK
 
 
 func request_end_expedition() -> void:
