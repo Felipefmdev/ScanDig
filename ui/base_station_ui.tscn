@@ -121,6 +121,18 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Segredos: 0/0"
 
+[node name="MuseumCatalogFilter" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(176, 44)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="MuseumCatalogEmpty" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+autowrap_mode = 3
+
 [node name="MuseumItemList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
 unique_name_in_owner = true
 layout_mode = 2
