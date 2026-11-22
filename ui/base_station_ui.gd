@@ -14,6 +14,11 @@ extends Control
 
 enum MuseumFilter { ALL, DISCOVERED, PENDING }
 
+const CATALOG_SORT_ACCENTS: Dictionary = {
+	"á": "a", "à": "a", "â": "a", "ã": "a",
+	"é": "e", "ê": "e", "í": "i", "ó": "o", "ô": "o", "õ": "o", "ú": "u", "ü": "u", "ç": "c",
+}
+
 # Museu
 @onready var _museum_catalog_filter: OptionButton = get_node_or_null(^"%MuseumCatalogFilter") as OptionButton
 @onready var _museum_catalog_empty: Label = get_node_or_null(^"%MuseumCatalogEmpty") as Label
@@ -164,7 +169,9 @@ func _hide_hub_shop() -> void:
 ## montadas aqui (mapas, loja, museu, segredos, mapa do tesouro, diário) são refeitas.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
-		_fill_item_select_box()
+		var selected_item: ItemData = _get_selected_catalog_item()
+		_sort_catalog()
+		_fill_item_select_box(selected_item)
 		_refresh_map_list()
 		_refresh_shop_buttons()
 		_refresh_museum_filter_text()
@@ -679,13 +686,25 @@ func _load_catalog() -> void:
 					_catalog_items.append(res as ItemData)
 		file_name = dir.get_next()
 	
-	# Ordena pelo nome para exibição consistente
-	_catalog_items.sort_custom(func(a: ItemData, b: ItemData) -> bool:
-		return a.display_name < b.display_name
-	)
+	_sort_catalog()
 	if _catalog_items.is_empty():
 		push_warning("BaseStationUI: catálogo '%s' sem nenhum ItemData (.tres)." % catalog_dir)
 		_mark_catalog_unavailable("Catálogo de itens vazio.")
+
+
+## Compara pelo nome exibido. Acentos do português não mudam a letra na ordenação.
+func _sort_catalog() -> void:
+	var sort_keys: Dictionary = {}
+	for item: ItemData in _catalog_items:
+		var key: String = ""
+		for letter: String in tr(item.display_name).to_lower():
+			key += String(CATALOG_SORT_ACCENTS.get(letter, letter))
+		sort_keys[item] = key
+	_catalog_items.sort_custom(func(a: ItemData, b: ItemData) -> bool:
+		var a_key: String = sort_keys[a]
+		var b_key: String = sort_keys[b]
+		var comparison: int = a_key.naturalnocasecmp_to(b_key)
+		return a.id < b.id if comparison == 0 else comparison < 0)
 
 
 ## Museu sem catálogo: avisa na própria aba e trava os botões de teste.
@@ -1001,10 +1020,10 @@ func _ensure_museum_selection_visible(index: int) -> void:
 
 
 ## Itens do catálogo na caixa de teste do Museu (nome no idioma atual; a seleção fica).
-func _fill_item_select_box() -> void:
+func _fill_item_select_box(selected_item: ItemData = null) -> void:
 	if item_select_box == null:
 		return
-	var selected: int = item_select_box.selected
+	var selected: int = _catalog_items.find(selected_item)
 	item_select_box.clear()
 	for i in range(_catalog_items.size()):
 		var item: ItemData = _catalog_items[i]
