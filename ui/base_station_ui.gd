@@ -341,7 +341,9 @@ func _setup_expeditions() -> void:
 	_session = get_node_or_null(SESSION_PATH)
 	var refresh_one_arg: Callable = _refresh_expedition_buttons.unbind(1)
 	if map_list != null:
-		map_list.item_selected.connect(refresh_one_arg)
+		map_list.item_selected.connect(func(_index: int) -> void:
+			_set_expedition_feedback("")
+			_refresh_expedition_buttons())
 	if unlock_map_btn != null:
 		unlock_map_btn.pressed.connect(_on_unlock_map_pressed)
 	if depart_btn != null:
@@ -576,7 +578,14 @@ func _on_depart_pressed() -> void:
 	depart_btn.disabled = true
 	var night: bool = is_night_selected()
 	_set_expedition_feedback((tr("Preparando expedição noturna para %s...") if night else tr("Preparando expedição para %s...")) % _map_name(map))
-	_session_call(&"request_start_expedition", [map.id, night])
+	var result: Error = _session_call(&"request_start_expedition", [map.id, night], ERR_UNAVAILABLE)
+	if result != OK:
+		_refresh_expedition_buttons()
+		reason = UiFormat.fix_money_spaces(tr(_get_depart_block_reason(map)))
+		var reason_already_visible: bool = map_status_label != null and map_status_label.visible and map_status_label.text == "🔒 " + reason
+		if reason.is_empty():
+			reason = "Sistema de expedições indisponível."
+		_set_expedition_feedback("" if reason_already_visible else reason)
 
 
 func _build_night_check() -> void:
