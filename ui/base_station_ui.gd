@@ -971,7 +971,8 @@ func _setup_museum_controls() -> void:
 			_refresh_museum_display())
 	if museum_item_list != null:
 		museum_item_list.resized.connect(_sync_museum_catalog_width)
-		museum_item_list.item_selected.connect(_queue_museum_selection_visible)
+		museum_item_list.item_selected.connect(func(_index: int) -> void:
+			_ensure_museum_selection_visible.call_deferred())
 		_sync_museum_catalog_width.call_deferred()
 
 
@@ -996,14 +997,14 @@ func _sync_museum_catalog_width() -> void:
 	museum_item_list.fixed_column_width = maxi(1, floori(museum_item_list.size.x - padding))
 
 
-func _queue_museum_selection_visible(index: int) -> void:
-	_ensure_museum_selection_visible.call_deferred(index)
-
-
-## ItemList auto_height has no internal scroll; expose its selected row in the page.
-func _ensure_museum_selection_visible(index: int) -> void:
-	if index < 0 or index >= museum_item_list.item_count or not museum_item_list.is_visible_in_tree():
+## ItemList auto_height has no internal scroll; expose its current selection in the page.
+func _ensure_museum_selection_visible() -> void:
+	if not museum_item_list.has_focus() or not museum_item_list.is_visible_in_tree():
 		return
+	var selected: PackedInt32Array = museum_item_list.get_selected_items()
+	if selected.is_empty():
+		return
+	var index: int = selected[0]
 	var ancestor: Node = museum_item_list.get_parent()
 	while ancestor != null and not ancestor is ScrollContainer:
 		ancestor = ancestor.get_parent()
@@ -1174,6 +1175,8 @@ func _refresh_museum_display() -> void:
 	if museum_item_list == null:
 		return
 	
+	var selected: PackedInt32Array = museum_item_list.get_selected_items()
+	var selected_id: String = str(museum_item_list.get_item_metadata(selected[0])) if not selected.is_empty() else ""
 	museum_item_list.clear()
 	var discovered: Array[String] = []
 	if _game_state != null:
@@ -1185,7 +1188,10 @@ func _refresh_museum_display() -> void:
 		if (filter_id == MuseumFilter.DISCOVERED and not found) or (filter_id == MuseumFilter.PENDING and found):
 			continue
 		var intact: bool = _game_state != null and _game_state.intact_items.has(item.id)
-		museum_item_list.add_item(museum_line(item, found, intact))
+		var index: int = museum_item_list.add_item(museum_line(item, found, intact))
+		museum_item_list.set_item_metadata(index, item.id)
+		if item.id == selected_id and not selected_id.is_empty():
+			museum_item_list.select(index)
 
 	if _museum_catalog_empty != null:
 		var has_items: bool = museum_item_list.item_count > 0
@@ -1195,6 +1201,8 @@ func _refresh_museum_display() -> void:
 		_museum_catalog_empty.visible = not has_items
 		_sync_focus()
 		_queue_fit_height()
+	if museum_item_list.has_focus() and museum_item_list.is_anything_selected():
+		_ensure_museum_selection_visible.call_deferred()
 
 	if tab_container != null and tab_container.get_tab_count() > 1:
 		var museum_title: String = TAB_SHORT_TITLES.get(String(tab_container.get_tab_control(1).name), "Museu")
