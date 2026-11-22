@@ -12,7 +12,11 @@ extends Control
 @onready var buy_backpack_btn: Button = _resolve_node("BuyBackpackButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/BuyBackpackButton") as Button
 @onready var shop_feedback_label: Label = _resolve_node("ShopFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/ShopFeedbackLabel") as Label
 
+enum MuseumFilter { ALL, DISCOVERED, PENDING }
+
 # Museu
+@onready var _museum_catalog_filter: OptionButton = get_node_or_null(^"%MuseumCatalogFilter") as OptionButton
+@onready var _museum_catalog_empty: Label = get_node_or_null(^"%MuseumCatalogEmpty") as Label
 @onready var museum_item_list: ItemList = _resolve_node("MuseumItemList", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/MuseumItemList") as ItemList
 @onready var item_select_box: OptionButton = _resolve_node("ItemSelectBox", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/ItemSelectBox") as OptionButton
 @onready var sell_item_btn: Button = _resolve_node("SellItemButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/SellItemButton") as Button
@@ -163,6 +167,7 @@ func _notification(what: int) -> void:
 		_fill_item_select_box()
 		_refresh_map_list()
 		_refresh_shop_buttons()
+		_refresh_museum_filter_text()
 		_refresh_museum_display()
 		_refresh_secrets_label()
 		_refresh_journal_display()
@@ -941,10 +946,26 @@ func _setup_museum_controls() -> void:
 	if register_item_btn != null:
 		register_item_btn.pressed.connect(_on_register_test_pressed)
 	_build_view_museum_button()
+	if _museum_catalog_filter != null:
+		_refresh_museum_filter_text()
+		_museum_catalog_filter.item_selected.connect(func(_index: int) -> void:
+			_refresh_museum_display())
 	if museum_item_list != null:
 		museum_item_list.resized.connect(_sync_museum_catalog_width)
 		museum_item_list.item_selected.connect(_queue_museum_selection_visible)
 		_sync_museum_catalog_width.call_deferred()
+
+
+func _refresh_museum_filter_text() -> void:
+	if _museum_catalog_filter == null:
+		return
+	var selected: int = maxi(_museum_catalog_filter.selected, MuseumFilter.ALL)
+	_museum_catalog_filter.clear()
+	_museum_catalog_filter.add_item(tr("Todos"), MuseumFilter.ALL)
+	_museum_catalog_filter.add_item(tr("Descobertos"), MuseumFilter.DISCOVERED)
+	_museum_catalog_filter.add_item(tr("Pendentes"), MuseumFilter.PENDING)
+	_museum_catalog_filter.select(selected)
+	_museum_catalog_empty.text = tr("Nenhum item neste filtro.")
 
 
 static func museum_dev_enabled(debug_build: bool, args: PackedStringArray) -> bool:
@@ -1139,9 +1160,22 @@ func _refresh_museum_display() -> void:
 	if _game_state != null:
 		discovered = _game_state.discovered_items
 	
-	for item in _catalog_items:
+	var filter_id: int = _museum_catalog_filter.get_selected_id() if _museum_catalog_filter != null else MuseumFilter.ALL
+	for item: ItemData in _catalog_items:
+		var found: bool = discovered.has(item.id)
+		if (filter_id == MuseumFilter.DISCOVERED and not found) or (filter_id == MuseumFilter.PENDING and found):
+			continue
 		var intact: bool = _game_state != null and _game_state.intact_items.has(item.id)
-		museum_item_list.add_item(museum_line(item, discovered.has(item.id), intact))
+		museum_item_list.add_item(museum_line(item, found, intact))
+
+	if _museum_catalog_empty != null:
+		var has_items: bool = museum_item_list.item_count > 0
+		if not has_items and museum_item_list.has_focus():
+			_museum_catalog_filter.grab_focus()
+		museum_item_list.visible = has_items
+		_museum_catalog_empty.visible = not has_items
+		_sync_focus()
+		_queue_fit_height()
 
 	if tab_container != null and tab_container.get_tab_count() > 1:
 		var museum_title: String = TAB_SHORT_TITLES.get(String(tab_container.get_tab_control(1).name), "Museu")
