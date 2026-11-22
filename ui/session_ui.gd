@@ -253,6 +253,7 @@ func _connect_session() -> void:
 		return
 	_connect_if_has(_session, &"scene_changing", _on_scene_changing)
 	_connect_if_has(_session, &"expedition_started", _on_expedition_started)
+	_connect_if_has(_session, &"expedition_start_failed", _dismiss_scene_loading.unbind(1))
 	_connect_if_has(_session, &"expedition_ended", _on_expedition_ended)
 	_connect_if_has(_session, &"host_lost", _on_host_lost)
 	_connect_if_has(_session, &"passage_travel_failed", _on_passage_travel_failed)
@@ -379,10 +380,14 @@ func _on_expedition_started(_map_id: String) -> void:
 	_refresh_expedition_bar()
 
 
-func _on_passage_travel_failed(message: String) -> void:
+func _dismiss_scene_loading() -> void:
 	_loading_token += 1
 	loading_screen.hide()
 	_refresh_expedition_bar()
+
+
+func _on_passage_travel_failed(message: String) -> void:
+	_dismiss_scene_loading()
 	show_save_toast(tr(message))
 
 

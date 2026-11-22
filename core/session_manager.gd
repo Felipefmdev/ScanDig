@@ -6,6 +6,7 @@ extends Node
 
 signal scene_changing(target_scene: String)
 signal expedition_started(map_id: String)
+signal expedition_start_failed(message: String)
 signal expedition_ended(summary: Dictionary)
 signal host_lost()
 ## Só no host: um peer (inclusive o próprio host, id 1) terminou de carregar o mapa atual.
@@ -52,6 +53,9 @@ var _pending_summary: Dictionary = {}
 var _ready_peers: Array[int] = []
 ## Cena pedida em _change_scene e ainda não carregada ("" = nenhuma).
 var _pending_scene_path: String = ""
+var _starting_solo_expedition: bool = false
+## Identifica cada solicitação, inclusive duas trocas para o mesmo caminho.
+var _scene_change_sequence: int = 0
 ## Evita dois "aguarda frame" ao mesmo tempo em _process.
 var _awaiting_scene_frame: bool = false
 ## request_end_expedition() em andamento: impede reentrada vinda de quem ouve expedition_ending.
@@ -224,6 +228,10 @@ func is_in_expedition() -> bool:
 	return _current_map != null
 
 
+func is_starting_expedition() -> bool:
+	return _starting_solo_expedition
+
+
 func get_current_map() -> MapData:
 	return _current_map
 
@@ -264,7 +272,7 @@ func request_start_expedition(map_id: String, night: bool = false) -> Error:
 	if not multiplayer.is_server():
 		push_warning("SessionManager: apenas o host pode iniciar expedições.")
 		return ERR_UNAUTHORIZED
-	if is_in_expedition():
+	if is_in_expedition() or is_starting_expedition():
 		push_warning("SessionManager: já existe uma expedição em andamento.")
 		return ERR_BUSY
 	# Ninguém escolheu "Continuar"/"Novo jogo": aplica o save antes (o fim da expedição grava
@@ -839,11 +847,21 @@ func _rpc_enter_map(map_id: String, night: bool = false) -> void:
 	if map_data == null:
 		push_error("SessionManager: mapa '%s' não encontrado neste peer." % map_id)
 		return
+	var scene_path: String = MAP_SCENE_FORMAT % map_id
+	var tree: SceneTree = get_tree()
+	var current: Node = tree.current_scene if tree != null else null
+	if scene_change_enabled and current != null and current.scene_file_path == LOBBY_SCENE and not _is_online():
+		_change_scene(scene_path, map_data, night)
+		return
+	_set_expedition_map(map_data, night)
+	_change_scene(scene_path)
+	expedition_started.emit(map_id)
+
+
+func _set_expedition_map(map_data: MapData, night: bool) -> void:
 	_current_map = map_data
 	_passage_arrival.clear()
-	_night = night and NightMode.is_available(map_id)
-	_change_scene(MAP_SCENE_FORMAT % map_id)
-	expedition_started.emit(map_id)
+	_night = night and NightMode.is_available(map_data.id)
 
 
 @rpc("authority", "call_local", "reliable")
@@ -976,29 +994,44 @@ func _call_all(method: StringName, args: Array) -> void:
 		callv(method, args)
 
 
-func _change_scene(scene_path: String) -> void:
+func _change_scene(scene_path: String, solo_map: MapData = null, night: bool = false) -> void:
 	# Toda troca de cena invalida quem estava pronto; cada peer reavisa ao carregar.
 	_ready_peers.clear()
 	if not scene_change_enabled:
 		return
+	_scene_change_sequence += 1
+	var sequence: int = _scene_change_sequence
 	_pending_scene_path = scene_path
+	_starting_solo_expedition = solo_map != null
 	var tree: SceneTree = get_tree()
 	var current: Node = tree.current_scene
 	if current != null and current.scene_file_path == scene_path:
 		return
 	scene_changing.emit(scene_path)
-	_apply_scene_change.call_deferred(scene_path)
+	_apply_scene_change.call_deferred(scene_path, sequence, solo_map, night)
 
 
 func _perform_scene_change(scene_path: String) -> Error:
 	return get_tree().change_scene_to_file(scene_path)
 
 
-func _apply_scene_change(scene_path: String) -> void:
+func _apply_scene_change(scene_path: String, sequence: int, solo_map: MapData, night: bool) -> void:
 	# A newer request supersedes this deferred operation.
-	if _pending_scene_path != scene_path:
+	if sequence != _scene_change_sequence or _pending_scene_path != scene_path:
 		return
 	var error: Error = _perform_scene_change(scene_path)
+	if sequence != _scene_change_sequence:
+		return
+	if solo_map != null:
+		_starting_solo_expedition = false
+		if error == OK:
+			_set_expedition_map(solo_map, night)
+			expedition_started.emit(solo_map.id)
+		else:
+			_pending_scene_path = ""
+			_pending_summary.clear()
+			expedition_start_failed.emit("O destino não terminou de carregar. Tente novamente pela base.")
+		return
 	if error == OK:
 		return
 	_pending_scene_path = ""

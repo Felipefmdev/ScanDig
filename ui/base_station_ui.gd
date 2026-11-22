@@ -353,6 +353,8 @@ func _setup_expeditions() -> void:
 		for sig: StringName in [&"expedition_started", &"expedition_ended", &"scene_changing"]:
 			if _session.has_signal(sig):
 				_session.connect(sig, refresh_one_arg)
+		if _session.has_signal(&"expedition_start_failed"):
+			_session.connect(&"expedition_start_failed", _on_expedition_start_failed)
 	multiplayer.connected_to_server.connect(_refresh_expedition_buttons)
 	multiplayer.server_disconnected.connect(_refresh_expedition_buttons)
 	multiplayer.peer_connected.connect(refresh_one_arg)
@@ -459,7 +461,7 @@ func _get_depart_block_reason(map: MapData) -> String:
 		return "Sistema de expedições indisponível."
 	if map == null:
 		return "Selecione um mapa."
-	if bool(_session_call(&"is_in_expedition", [], false)):
+	if bool(_session_call(&"is_in_expedition", [], false)) or bool(_session_call(&"is_starting_expedition", [], false)):
 		return "Já existe uma expedição em andamento."
 	if not _is_host():
 		return "Apenas o host pode iniciar a expedição."
@@ -586,6 +588,11 @@ func _on_depart_pressed() -> void:
 		if reason.is_empty():
 			reason = "Sistema de expedições indisponível."
 		_set_expedition_feedback("" if reason_already_visible else reason)
+
+
+func _on_expedition_start_failed(message: String) -> void:
+	_refresh_expedition_buttons()
+	_set_expedition_feedback(message)
 
 
 func _build_night_check() -> void:
