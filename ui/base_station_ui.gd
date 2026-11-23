@@ -12,7 +12,16 @@ extends Control
 @onready var buy_backpack_btn: Button = _resolve_node("BuyBackpackButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/BuyBackpackButton") as Button
 @onready var shop_feedback_label: Label = _resolve_node("ShopFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Loja de Equipamentos/ShopFeedbackLabel") as Label
 
+enum MuseumFilter { ALL, DISCOVERED, PENDING }
+
+const CATALOG_SORT_ACCENTS: Dictionary = {
+	"á": "a", "à": "a", "â": "a", "ã": "a",
+	"é": "e", "ê": "e", "í": "i", "ó": "o", "ô": "o", "õ": "o", "ú": "u", "ü": "u", "ç": "c",
+}
+
 # Museu
+@onready var _museum_catalog_filter: OptionButton = get_node_or_null(^"%MuseumCatalogFilter") as OptionButton
+@onready var _museum_catalog_empty: Label = get_node_or_null(^"%MuseumCatalogEmpty") as Label
 @onready var museum_item_list: ItemList = _resolve_node("MuseumItemList", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/MuseumItemList") as ItemList
 @onready var item_select_box: OptionButton = _resolve_node("ItemSelectBox", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/ItemSelectBox") as OptionButton
 @onready var sell_item_btn: Button = _resolve_node("SellItemButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados/HBoxContainer/SellItemButton") as Button
@@ -23,8 +32,8 @@ extends Control
 # Expedições
 @onready var map_list: ItemList = _resolve_node("MapList", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapList") as ItemList
 @onready var unlock_map_btn: Button = _resolve_node("UnlockMapButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/UnlockMapButton") as Button
-@onready var depart_btn: Button = _resolve_node("DepartButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/DepartButton") as Button
-@onready var map_status_label: Label = _resolve_node("MapStatusLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapStatusLabel") as Label
+@onready var depart_btn: Button = _resolve_node("DepartButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/Actions/DepartButton") as Button
+@onready var map_status_label: Label = _resolve_node("MapStatusLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/Actions/MapStatusLabel") as Label
 @onready var expedition_feedback_label: Label = _resolve_node("ExpeditionFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/ExpeditionFeedbackLabel") as Label
 
 # Diário de Campo (#86)
@@ -160,9 +169,12 @@ func _hide_hub_shop() -> void:
 ## montadas aqui (mapas, loja, museu, segredos, mapa do tesouro, diário) são refeitas.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
-		_fill_item_select_box()
+		var selected_item: ItemData = _get_selected_catalog_item()
+		_sort_catalog()
+		_fill_item_select_box(selected_item)
 		_refresh_map_list()
 		_refresh_shop_buttons()
+		_refresh_museum_filter_text()
 		_refresh_museum_display()
 		_refresh_secrets_label()
 		_refresh_journal_display()
@@ -329,7 +341,9 @@ func _setup_expeditions() -> void:
 	_session = get_node_or_null(SESSION_PATH)
 	var refresh_one_arg: Callable = _refresh_expedition_buttons.unbind(1)
 	if map_list != null:
-		map_list.item_selected.connect(refresh_one_arg)
+		map_list.item_selected.connect(func(_index: int) -> void:
+			_set_expedition_feedback("")
+			_refresh_expedition_buttons())
 	if unlock_map_btn != null:
 		unlock_map_btn.pressed.connect(_on_unlock_map_pressed)
 	if depart_btn != null:
@@ -339,6 +353,8 @@ func _setup_expeditions() -> void:
 		for sig: StringName in [&"expedition_started", &"expedition_ended", &"scene_changing"]:
 			if _session.has_signal(sig):
 				_session.connect(sig, refresh_one_arg)
+		if _session.has_signal(&"expedition_start_failed"):
+			_session.connect(&"expedition_start_failed", _on_expedition_start_failed)
 	multiplayer.connected_to_server.connect(_refresh_expedition_buttons)
 	multiplayer.server_disconnected.connect(_refresh_expedition_buttons)
 	multiplayer.peer_connected.connect(refresh_one_arg)
@@ -369,7 +385,7 @@ func _refresh_map_list() -> void:
 			map_list.add_item(_format_map_details(map))
 			continue
 		var idx: int = map_list.add_item(_format_map_row(map, status))
-		map_list.set_item_tooltip(idx, UiFormat.fix_money_spaces(tr(str(status.get("reason", "")))))
+		map_list.set_item_tooltip(idx, _map_progress_message(map, status))
 		if not bool(status.get("playable", false)):
 			# Continua selecionável para o jogador ver o motivo e poder desbloquear.
 			map_list.set_item_custom_fg_color(idx, MAP_LOCKED_COLOR)
@@ -414,6 +430,18 @@ func _get_map_status(map: MapData) -> Dictionary:
 	return result as Dictionary if result is Dictionary else {}
 
 
+func _map_progress_message(map: MapData, status: Dictionary) -> String:
+	var reason: String = UiFormat.fix_money_spaces(tr(str(status.get("reason", ""))))
+	if reason.is_empty() or bool(status.get("unlocked", false)) or not bool(status.get("boss_defeated", false)):
+		return reason
+	var route: Dictionary = GameState.MAP_UNLOCK_BOSSES.get(map.id, {})
+	var source_id: String = str(route.get("source_map", ""))
+	if source_id.is_empty():
+		return reason
+	var source_name: String = UiFormat.map_display_name(source_id, _maps)
+	return "%s\n%s → %s" % [reason, source_name, _map_name(map)]
+
+
 func _get_selected_map() -> MapData:
 	if map_list == null or not map_list.is_anything_selected():
 		return null
@@ -433,13 +461,13 @@ func _get_depart_block_reason(map: MapData) -> String:
 		return "Sistema de expedições indisponível."
 	if map == null:
 		return "Selecione um mapa."
-	if bool(_session_call(&"is_in_expedition", [], false)):
+	if bool(_session_call(&"is_in_expedition", [], false)) or bool(_session_call(&"is_starting_expedition", [], false)):
 		return "Já existe uma expedição em andamento."
 	if not _is_host():
 		return "Apenas o host pode iniciar a expedição."
 	var status: Dictionary = _get_map_status(map)
 	if not status.is_empty():
-		return str(status.get("reason", ""))
+		return _map_progress_message(map, status)
 	if not bool(_session_call(&"can_start_map", [map.id], false)):
 		return tr("Requer detector nível %d.") % map.required_detector_level
 	return ""
@@ -459,7 +487,7 @@ func _refresh_map_status_label() -> void:
 		return
 	var reason: String = _get_map_status_reason(_get_selected_map())
 	map_status_label.visible = not reason.is_empty()
-	map_status_label.text = "🔒 " + UiFormat.fix_money_spaces(tr(reason)) if not reason.is_empty() else ""
+	map_status_label.text = "🔒 " + reason if not reason.is_empty() else ""
 
 
 func _get_map_status_reason(map: MapData) -> String:
@@ -467,10 +495,10 @@ func _get_map_status_reason(map: MapData) -> String:
 		return ""
 	var status: Dictionary = _get_map_status(map)
 	if status.is_empty():
-		return _get_depart_block_reason(map)
+		return UiFormat.fix_money_spaces(tr(_get_depart_block_reason(map)))
 	if not bool(status.get("unlocked", true)):
-		return "" if bool(status.get("can_unlock", false)) else str(status.get("reason", ""))
-	return _get_depart_block_reason(map)
+		return "" if bool(status.get("can_unlock", false)) else _map_progress_message(map, status)
+	return UiFormat.fix_money_spaces(tr(_get_depart_block_reason(map)))
 
 
 func _can_request_unlock() -> bool:
@@ -552,7 +580,19 @@ func _on_depart_pressed() -> void:
 	depart_btn.disabled = true
 	var night: bool = is_night_selected()
 	_set_expedition_feedback((tr("Preparando expedição noturna para %s...") if night else tr("Preparando expedição para %s...")) % _map_name(map))
-	_session_call(&"request_start_expedition", [map.id, night])
+	var result: Error = _session_call(&"request_start_expedition", [map.id, night], ERR_UNAVAILABLE)
+	if result != OK:
+		_refresh_expedition_buttons()
+		reason = UiFormat.fix_money_spaces(tr(_get_depart_block_reason(map)))
+		var reason_already_visible: bool = map_status_label != null and map_status_label.visible and map_status_label.text == "🔒 " + reason
+		if reason.is_empty():
+			reason = "Sistema de expedições indisponível."
+		_set_expedition_feedback("" if reason_already_visible else reason)
+
+
+func _on_expedition_start_failed(message: String) -> void:
+	_refresh_expedition_buttons()
+	_set_expedition_feedback(message)
 
 
 func _build_night_check() -> void:
@@ -601,6 +641,7 @@ func _on_night_toggled(on: bool) -> void:
 func _set_expedition_feedback(msg: String) -> void:
 	if expedition_feedback_label != null:
 		expedition_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
+		expedition_feedback_label.visible = not msg.is_empty()
 
 
 func _resolve_game_state() -> void:
@@ -662,13 +703,25 @@ func _load_catalog() -> void:
 					_catalog_items.append(res as ItemData)
 		file_name = dir.get_next()
 	
-	# Ordena pelo nome para exibição consistente
-	_catalog_items.sort_custom(func(a: ItemData, b: ItemData) -> bool:
-		return a.display_name < b.display_name
-	)
+	_sort_catalog()
 	if _catalog_items.is_empty():
 		push_warning("BaseStationUI: catálogo '%s' sem nenhum ItemData (.tres)." % catalog_dir)
 		_mark_catalog_unavailable("Catálogo de itens vazio.")
+
+
+## Compara pelo nome exibido. Acentos do português não mudam a letra na ordenação.
+func _sort_catalog() -> void:
+	var sort_keys: Dictionary = {}
+	for item: ItemData in _catalog_items:
+		var key: String = ""
+		for letter: String in tr(item.display_name).to_lower():
+			key += String(CATALOG_SORT_ACCENTS.get(letter, letter))
+		sort_keys[item] = key
+	_catalog_items.sort_custom(func(a: ItemData, b: ItemData) -> bool:
+		var a_key: String = sort_keys[a]
+		var b_key: String = sort_keys[b]
+		var comparison: int = a_key.naturalnocasecmp_to(b_key)
+		return a.id < b.id if comparison == 0 else comparison < 0)
 
 
 ## Museu sem catálogo: avisa na própria aba e trava os botões de teste.
@@ -929,10 +982,27 @@ func _setup_museum_controls() -> void:
 	if register_item_btn != null:
 		register_item_btn.pressed.connect(_on_register_test_pressed)
 	_build_view_museum_button()
+	if _museum_catalog_filter != null:
+		_refresh_museum_filter_text()
+		_museum_catalog_filter.item_selected.connect(func(_index: int) -> void:
+			_refresh_museum_display())
 	if museum_item_list != null:
 		museum_item_list.resized.connect(_sync_museum_catalog_width)
-		museum_item_list.item_selected.connect(_queue_museum_selection_visible)
+		museum_item_list.item_selected.connect(func(_index: int) -> void:
+			_ensure_museum_selection_visible.call_deferred())
 		_sync_museum_catalog_width.call_deferred()
+
+
+func _refresh_museum_filter_text() -> void:
+	if _museum_catalog_filter == null:
+		return
+	var selected: int = maxi(_museum_catalog_filter.selected, MuseumFilter.ALL)
+	_museum_catalog_filter.clear()
+	_museum_catalog_filter.add_item(tr("Todos"), MuseumFilter.ALL)
+	_museum_catalog_filter.add_item(tr("Descobertos"), MuseumFilter.DISCOVERED)
+	_museum_catalog_filter.add_item(tr("Pendentes"), MuseumFilter.PENDING)
+	_museum_catalog_filter.select(selected)
+	_museum_catalog_empty.text = tr("Nenhum item neste filtro.")
 
 
 static func museum_dev_enabled(debug_build: bool, args: PackedStringArray) -> bool:
@@ -944,14 +1014,14 @@ func _sync_museum_catalog_width() -> void:
 	museum_item_list.fixed_column_width = maxi(1, floori(museum_item_list.size.x - padding))
 
 
-func _queue_museum_selection_visible(index: int) -> void:
-	_ensure_museum_selection_visible.call_deferred(index)
-
-
-## ItemList auto_height has no internal scroll; expose its selected row in the page.
-func _ensure_museum_selection_visible(index: int) -> void:
-	if index < 0 or index >= museum_item_list.item_count or not museum_item_list.is_visible_in_tree():
+## ItemList auto_height has no internal scroll; expose its current selection in the page.
+func _ensure_museum_selection_visible() -> void:
+	if not museum_item_list.has_focus() or not museum_item_list.is_visible_in_tree():
 		return
+	var selected: PackedInt32Array = museum_item_list.get_selected_items()
+	if selected.is_empty():
+		return
+	var index: int = selected[0]
 	var ancestor: Node = museum_item_list.get_parent()
 	while ancestor != null and not ancestor is ScrollContainer:
 		ancestor = ancestor.get_parent()
@@ -968,10 +1038,10 @@ func _ensure_museum_selection_visible(index: int) -> void:
 
 
 ## Itens do catálogo na caixa de teste do Museu (nome no idioma atual; a seleção fica).
-func _fill_item_select_box() -> void:
+func _fill_item_select_box(selected_item: ItemData = null) -> void:
 	if item_select_box == null:
 		return
-	var selected: int = item_select_box.selected
+	var selected: int = _catalog_items.find(selected_item)
 	item_select_box.clear()
 	for i in range(_catalog_items.size()):
 		var item: ItemData = _catalog_items[i]
@@ -1122,14 +1192,34 @@ func _refresh_museum_display() -> void:
 	if museum_item_list == null:
 		return
 	
+	var selected: PackedInt32Array = museum_item_list.get_selected_items()
+	var selected_id: String = str(museum_item_list.get_item_metadata(selected[0])) if not selected.is_empty() else ""
 	museum_item_list.clear()
 	var discovered: Array[String] = []
 	if _game_state != null:
 		discovered = _game_state.discovered_items
 	
-	for item in _catalog_items:
+	var filter_id: int = _museum_catalog_filter.get_selected_id() if _museum_catalog_filter != null else MuseumFilter.ALL
+	for item: ItemData in _catalog_items:
+		var found: bool = discovered.has(item.id)
+		if (filter_id == MuseumFilter.DISCOVERED and not found) or (filter_id == MuseumFilter.PENDING and found):
+			continue
 		var intact: bool = _game_state != null and _game_state.intact_items.has(item.id)
-		museum_item_list.add_item(museum_line(item, discovered.has(item.id), intact))
+		var index: int = museum_item_list.add_item(museum_line(item, found, intact))
+		museum_item_list.set_item_metadata(index, item.id)
+		if item.id == selected_id and not selected_id.is_empty():
+			museum_item_list.select(index)
+
+	if _museum_catalog_empty != null:
+		var has_items: bool = museum_item_list.item_count > 0
+		if not has_items and museum_item_list.has_focus():
+			_museum_catalog_filter.grab_focus()
+		museum_item_list.visible = has_items
+		_museum_catalog_empty.visible = not has_items
+		_sync_focus()
+		_queue_fit_height()
+	if museum_item_list.has_focus() and museum_item_list.is_anything_selected():
+		_ensure_museum_selection_visible.call_deferred()
 
 	if tab_container != null and tab_container.get_tab_count() > 1:
 		var museum_title: String = TAB_SHORT_TITLES.get(String(tab_container.get_tab_control(1).name), "Museu")

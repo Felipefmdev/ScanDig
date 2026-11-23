@@ -140,9 +140,8 @@ size_flags_vertical = 3
 [node name="SummaryTotalLabel" type="Label" parent="SummaryPanel/Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Total ganho: R$ 0"
-horizontal_alignment = 1
 autowrap_mode = 3
+theme_override_constants/line_spacing = 4
 
 [node name="SummaryCloseButton" type="Button" parent="SummaryPanel/Margin/VBox"]
 unique_name_in_owner = true
