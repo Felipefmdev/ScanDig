@@ -147,6 +147,14 @@ func _row(grid: GridContainer, text: String, control: Control) -> void:
 func _option(items: Array) -> OptionButton:
 	var option: OptionButton = OptionButton.new()
 	option.focus_mode = Control.FOCUS_ALL
+	# Foco local fino: preserva o contorno acessível sem empilhar a moldura grossa do theme.
+	var focus: StyleBoxFlat = StyleBoxFlat.new()
+	focus.draw_center = false
+	focus.border_color = UiPalette.INK
+	focus.set_border_width_all(1)
+	focus.set_expand_margin_all(1.0)
+	focus.set_corner_radius_all(3)
+	option.add_theme_stylebox_override(&"focus", focus)
 	for item: Variant in items:
 		option.add_item(str(item))
 	return option

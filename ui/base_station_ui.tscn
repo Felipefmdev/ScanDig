@@ -19,7 +19,7 @@ grow_vertical = 2
 script = ExtResource("1_base_ui")
 theme = ExtResource("2_scandig_theme")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." groups=["save_toast_avoid"]]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -121,6 +121,18 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Segredos: 0/0"
 
+[node name="MuseumCatalogFilter" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(176, 44)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="MuseumCatalogEmpty" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+autowrap_mode = 3
+
 [node name="MuseumItemList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Museu de Achados"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -179,21 +191,22 @@ layout_mode = 2
 theme_override_constants/separation = 6
 metadata/_tab_index = 2
 
-[node name="ExpeditionInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
-layout_mode = 2
-text = "Escolha um local de escavação. Só o host pode iniciar a expedição."
-autowrap_mode = 3
-
 [node name="MapList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/v_separation = 1
+auto_height = true
 
-[node name="MapStatusLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+[node name="Actions" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MapStatusLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/Actions"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+size_flags_horizontal = 3
+vertical_alignment = 1
 theme_type_variation = &"StatusLabel"
 autowrap_mode = 3
 
@@ -204,16 +217,19 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Desbloquear"
 
-[node name="DepartButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
+[node name="DepartButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/Actions"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.45
 disabled = true
 text = "Partir"
 theme_type_variation = &"PrimaryButton"
 
 [node name="ExpeditionFeedbackLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
