@@ -944,6 +944,8 @@ func _rpc_commit_coop_departure(token: int) -> void:
 		NightMode.apply_to_spawner(EnemySpawner.find(get_tree()), map_id)
 	expedition_started.emit(map_id)
 	if multiplayer.is_server():
+		if map_id == "praia":
+			_connect_praia_field_clues()
 		for peer_id: int in ready_peers:
 			_mark_ready(peer_id, map_id)
 		for peer_id: int in waiting:
@@ -1274,11 +1276,39 @@ func _on_scene_loaded(scene_path: String) -> void:
 		_report_departure_result(true)
 		return
 	if multiplayer.is_server():
+		if _current_map.id == "praia":
+			_connect_praia_field_clues()
 		if _night:
 			NightMode.apply_to_spawner(EnemySpawner.find(get_tree()), _current_map.id)
 		_mark_ready(HOST_PEER_ID, _current_map.id)
 	elif _is_online():
 		_rpc_report_scene_ready.rpc_id(HOST_PEER_ID, _current_map.id)
+
+
+func _connect_praia_field_clues() -> void:
+	var scene: Node = get_tree().current_scene
+	if scene == null or scene.scene_file_path != MAP_SCENE_FORMAT % "praia":
+		return
+	for clue_id: String in GameState.FIELD_CLUES:
+		var path: NodePath = GameState.FIELD_CLUES[clue_id]["source"]
+		var bottle: FlagInteractable = scene.get_node_or_null(path) as FlagInteractable
+		if bottle != null:
+			var record: Callable = _on_field_clue_read.bind(clue_id, bottle)
+			if not bottle.interacted.is_connected(record):
+				bottle.interacted.connect(record)
+
+
+func _on_field_clue_read(peer_id: int, clue_id: String, bottle: FlagInteractable) -> void:
+	if not multiplayer.is_server() or not is_instance_valid(bottle):
+		return
+	if _ending or _current_map == null or _current_map.id != "praia":
+		return
+	var scene: Node = get_tree().current_scene
+	var player: Node3D = HostSync.player_of(get_tree(), peer_id)
+	if scene == null or not scene.is_ancestor_of(bottle) or player == null or not scene.is_ancestor_of(player):
+		return
+	if GameState.instance != null:
+		GameState.instance.report_field_clue(clue_id)
 
 
 func _mark_ready(peer_id: int, map_id: String) -> void:

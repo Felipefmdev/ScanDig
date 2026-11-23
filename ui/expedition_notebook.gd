@@ -332,6 +332,13 @@ func refresh() -> void:
 	_clear(_collection)
 	_entries.clear()
 	var gs: GameState = GameState.instance
+	if gs != null and not gs.found_field_clues.is_empty():
+		var heading: Label = Label.new()
+		heading.text = tr("Pistas da expedição: %d/%d") % [gs.found_field_clues.size(), GameState.FIELD_CLUES.size()]
+		_journal.add_child(heading)
+		for clue_id: String in gs.found_field_clues:
+			var text: String = str(GameState.FIELD_CLUES[clue_id]["text"])
+			_row(_journal, "clue:" + clue_id, tr("Praia"), tr(text), null)
 	var seen: Array = Array(gs.seen_creatures) if gs != null else []
 	var defeated: Array = Array(gs.defeated_bosses) if gs != null else []
 	for kind: String in BASE.CREATURE_ORDER:
