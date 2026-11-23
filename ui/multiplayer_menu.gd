@@ -226,6 +226,8 @@ func _update_collapse() -> void:
 func _on_collapse_pressed() -> void:
 	_collapsed = not _collapsed
 	_update_collapse()
+	if is_instance_valid(SessionUI.instance):
+		SessionUI.instance.refresh_save_toast_layout.call_deferred()
 	_relink_focus()
 	if not _collapsed and host_online_button != null and host_online_button.is_visible_in_tree():
 		host_online_button.grab_focus()

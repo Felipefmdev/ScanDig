@@ -19,7 +19,7 @@ grow_vertical = 2
 script = ExtResource("1_base_ui")
 theme = ExtResource("2_scandig_theme")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." groups=["save_toast_avoid"]]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
