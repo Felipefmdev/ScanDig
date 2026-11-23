@@ -1,7 +1,18 @@
 extends SceneTree
 ## #214: retorno diferido real do CoreSession; nenhum fim de dia/save/RPC de compra.
 const MAP: MapData = preload("res://items/maps/praia.tres")
+const NOTEBOOK: Script = preload("res://ui/expedition_notebook.gd")
 const SUMMARY: Dictionary = {"day": 1, "map_id": "praia", "map_name": "Praia", "entries": [], "money_start": 100, "money_end": 100, "money_earned": 0}
+
+class LocalActor extends Node:
+	var marker_wheel: Node = null
+
+	func is_local() -> bool:
+		return true
+
+	func is_alive() -> bool:
+		return true
+
 
 var _checks: int = 0
 var _fails: int = 0
@@ -140,6 +151,21 @@ func _run() -> void:
 	_ui.call("_show_summary", SUMMARY)
 	_ui.summary_close_button.pressed.emit()
 	_check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "resumo em gameplay respeita anterior Visible arbitrario")
+	var actor: LocalActor = LocalActor.new()
+	scene.add_child(actor)
+	actor.add_to_group(Player.LOCAL_GROUP)
+	var notebook: Node = NOTEBOOK.new()
+	scene.add_child(notebook)
+	notebook.call(&"bind", actor)
+	notebook.call(&"open")
+	_check(bool(notebook.call(&"is_open_for", actor)), "caderno aberto na expedição")
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_ui.call(&"_show_summary", SUMMARY)
+	_ui.summary_close_button.pressed.emit()
+	_check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "caderno conserva o cursor ao fechar o resumo")
+	notebook.call(&"close")
+	notebook.queue_free()
+	actor.queue_free()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	PauseMenu.instance.open()
 	_ui.call("_show_summary", SUMMARY)

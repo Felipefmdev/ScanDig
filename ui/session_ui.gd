@@ -31,6 +31,7 @@ const SAVE_TOAST_AVOID_GROUP: StringName = &"save_toast_avoid"
 ## Multiplayer, sem cobrir o título da Base (#146). Os nós desse grupo (Control) e os do
 ## MultiplayerMenu.SAVE_NOTICE_GROUP são evitados.
 const TOAST_AVOID_GROUP: StringName = &"toast_avoid"
+const EXPEDITION_NOTEBOOK_GROUP: StringName = &"expedition_notebooks"
 const TOAST_BASE_TOP: float = 12.0
 
 static var instance: SessionUI = null
@@ -95,6 +96,7 @@ var _loading_token: int = 0
 var _synced_once: bool = true
 var _toast_queue: Array[String] = []
 var _toast_token: int = 0
+var _toast_deferred_by_notebook: bool = false
 var _save_toast_token: int = 0
 var _save_toast_active: bool = false
 ## Último resumo do dia mostrado (refeito ao trocar o idioma com ele aberto).
@@ -132,11 +134,13 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(func() -> void:
 		if toast_panel.visible:
 			_place_toast())
+	get_viewport().gui_focus_changed.connect(_on_gui_focus_changed)
 	_build_save_toast()
 	get_viewport().size_changed.connect(refresh_save_toast_layout, CONNECT_DEFERRED)
 	# Mapa/dia sem cartão, como o resto do HUD de jogo (#122); o botão de sair segue do theme.
 	expedition_bar.add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
 	PlayerHudStyle.iconize(expedition_info_label, "map")
+	PlayerHudStyle.compact_expedition_bar(expedition_bar, expedition_info_label, leave_button)
 	# Encostado à direita, no canto: a largura vem do texto (sem reticências).
 	expedition_info_label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	expedition_info_label.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -362,6 +366,8 @@ func _on_scene_changing(target_scene: String) -> void:
 	loading_label.text = text
 	loading_screen.visible = true
 	_refresh_expedition_bar()
+	if _toast_deferred_by_notebook:
+		_clear_toasts()
 	_loading_token += 1
 	var token: int = _loading_token
 	# Esconde o carregamento depois que a nova cena entrar (com tempo mínimo na tela).
@@ -411,11 +417,15 @@ func _on_boss_key_available(route_id: String) -> void:
 
 func _on_expedition_ended(summary: Dictionary) -> void:
 	expedition_bar.visible = false
+	if _toast_deferred_by_notebook:
+		_clear_toasts()
 	_show_summary(summary)
 
 
 func _on_host_lost() -> void:
 	expedition_bar.visible = false
+	if _toast_deferred_by_notebook:
+		_clear_toasts()
 	summary_panel.visible = false
 	leave_confirm_panel.visible = false
 	host_lost_panel.visible = true
@@ -441,6 +451,7 @@ func _on_connected_to_server() -> void:
 
 
 func _clear_toasts() -> void:
+	_toast_deferred_by_notebook = false
 	_toast_queue.clear()
 	_toast_token += 1
 	toast_panel.visible = false
@@ -448,6 +459,53 @@ func _clear_toasts() -> void:
 
 func _should_show_toast() -> bool:
 	return _synced_once and bool(_session_call(&"is_in_expedition", false))
+
+
+func _is_expedition_notebook_open() -> bool:
+	if not is_inside_tree() or not bool(_session_call(&"is_in_expedition", false)):
+		return false
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	var local_actors: Array[Node] = tree.get_nodes_in_group(Player.LOCAL_GROUP)
+	for notebook: Node in tree.get_nodes_in_group(EXPEDITION_NOTEBOOK_GROUP):
+		if notebook == null or not is_instance_valid(notebook) or not notebook.has_method(&"is_open_for"):
+			continue
+		for actor: Node in local_actors:
+			if bool(notebook.call(&"is_open_for", actor)):
+				return true
+	return false
+
+
+func _defer_active_toast_for_notebook() -> void:
+	_toast_deferred_by_notebook = true
+	if not toast_panel.visible:
+		return
+	_toast_token += 1
+	toast_panel.visible = false
+	if not toast_label.text.is_empty():
+		_toast_queue.push_front(toast_label.text)
+
+
+func _sync_toast_with_notebook() -> void:
+	if _is_expedition_notebook_open():
+		if toast_panel.visible or not _toast_queue.is_empty():
+			_defer_active_toast_for_notebook()
+		return
+	if not _toast_deferred_by_notebook:
+		return
+	if loading_screen.visible or summary_panel.visible or host_lost_panel.visible or not _should_show_toast():
+		_clear_toasts()
+		return
+	if UiFocus.modal_open():
+		return
+	_toast_deferred_by_notebook = false
+	if not toast_panel.visible and not _toast_queue.is_empty():
+		_show_next_toast()
+
+
+func _on_gui_focus_changed(_control: Control) -> void:
+	_sync_toast_with_notebook()
 
 
 func _on_quest_completed(quest_id: String, reward: int) -> void:
@@ -487,12 +545,18 @@ func _enqueue_toast(text: String, anywhere: bool = false) -> void:
 	if not (_should_show_toast() or (anywhere and _synced_once)):
 		return
 	_toast_queue.append(text)
+	if _is_expedition_notebook_open() or (_toast_deferred_by_notebook and UiFocus.modal_open()):
+		_defer_active_toast_for_notebook()
+		return
 	if not toast_panel.visible:
 		_show_next_toast()
 
 
 ## Um aviso por vez; cada um fica TOAST_SEC na tela.
 func _show_next_toast() -> void:
+	if _is_expedition_notebook_open() or (_toast_deferred_by_notebook and UiFocus.modal_open()):
+		_defer_active_toast_for_notebook()
+		return
 	if _toast_queue.is_empty():
 		toast_panel.visible = false
 		return
@@ -814,11 +878,13 @@ func _update_mouse() -> void:
 		var scene: Node = get_tree().current_scene
 		var same_gameplay: bool = is_instance_valid(scene) and scene.get_instance_id() == _mouse_gameplay_scene_id and bool(_session_call(&"is_in_expedition", false))
 		# A return clears the map before the deferred scene change; its old cursor is stale.
-		Input.mouse_mode = _previous_mouse_mode if same_gameplay and not UiFocus.modal_open() else Input.MOUSE_MODE_VISIBLE
+		var restore_capture: bool = same_gameplay and not UiFocus.modal_open() and not _is_expedition_notebook_open()
+		Input.mouse_mode = _previous_mouse_mode if restore_capture else Input.MOUSE_MODE_VISIBLE
 		_mouse_gameplay_scene_id = 0
 
 
 func _process(_delta: float) -> void:
+	_sync_toast_with_notebook()
 	# O player recaptura o mouse ao clicar; mantém visível enquanto houver painel aberto.
 	if _mouse_released and Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

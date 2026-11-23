@@ -97,8 +97,8 @@ func test_selected_slot_has_gold_border_and_scale() -> void:
 	var other: PanelContainer = _hotbar._slot_panels[0]
 	var style: StyleBoxFlat = selected.get_theme_stylebox(&"panel") as StyleBoxFlat
 	assert_eq(style.border_color, Hotbar.COLOR_SELECTED)
-	assert_eq(style.border_width_top, 3)
-	assert_almost_eq(selected.scale.x, Hotbar.SELECTED_SCALE, 0.001, "selecionado cresce")
+	assert_eq(style.border_width_top, 2)
+	assert_almost_eq(selected.scale.x, Hotbar.SELECTED_SCALE, 0.001, "selecionado conserva tamanho, sem zoom")
 	assert_almost_eq(other.scale.x, 1.0, 0.001)
 	assert_eq(_hotbar.get_child_count(), 4, "um painel por slot")
 
