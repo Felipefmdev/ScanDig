@@ -936,15 +936,15 @@ func _rpc_commit_coop_departure(token: int) -> void:
 	if not _is_departure_authority() or token != _departure_token or _departure_phase != CoopDeparture.LOADING or not _departure_local_ready:
 		return
 	var map_id: String = _departure_map_id
-	var ready: Array[int] = _departure_ready.duplicate()
-	ready.sort()
+	var ready_peers: Array[int] = _departure_ready.duplicate()
+	ready_peers.sort()
 	var waiting: Array[int] = _departure_waiting.duplicate()
 	_clear_coop_departure()
 	if _night and multiplayer.is_server():
 		NightMode.apply_to_spawner(EnemySpawner.find(get_tree()), map_id)
 	expedition_started.emit(map_id)
 	if multiplayer.is_server():
-		for peer_id: int in ready:
+		for peer_id: int in ready_peers:
 			_mark_ready(peer_id, map_id)
 		for peer_id: int in waiting:
 			_sync_peer_scene(peer_id)
