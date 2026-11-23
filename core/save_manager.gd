@@ -116,7 +116,7 @@ func advance_play_clock(delta: float) -> void:
 		return
 	play_time_s += delta
 	var session: SessionManager = SessionManager.instance
-	if session != null and session.is_in_expedition():
+	if session != null and session.is_in_expedition() and not session.is_starting_expedition():
 		last_map = session.get_current_map().id
 
 
@@ -670,7 +670,7 @@ func _check_can_change_progress() -> Error:
 	if not state.is_authority():
 		return ERR_UNAUTHORIZED
 	var session: SessionManager = SessionManager.instance
-	if session != null and session.is_in_expedition():
+	if session != null and (session.is_in_expedition() or session.is_starting_expedition()):
 		return ERR_BUSY
 	return OK
 
