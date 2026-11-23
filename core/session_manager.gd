@@ -54,6 +54,19 @@ var _ready_peers: Array[int] = []
 ## Cena pedida em _change_scene e ainda não carregada ("" = nenhuma).
 var _pending_scene_path: String = ""
 var _starting_solo_expedition: bool = false
+
+## O mapa só passa a ter jogadores e efeitos da partida após todo o grupo carregar.
+enum CoopDeparture { IDLE, LOADING, RECOVERING }
+const COOP_DEPARTURE_TIMEOUT_MSEC: int = 30000
+const COOP_DEPARTURE_FAILED: String = "O destino não terminou de carregar. Tente novamente pela base."
+var _departure_phase: CoopDeparture = CoopDeparture.IDLE
+var _departure_token: int = 0
+var _departure_deadline: int = 0
+var _departure_map_id: String = ""
+var _departure_local_ready: bool = false
+var _departure_roster: Array[int] = []
+var _departure_ready: Array[int] = []
+var _departure_waiting: Array[int] = []
 ## Identifica cada solicitação, inclusive duas trocas para o mesmo caminho.
 var _scene_change_sequence: int = 0
 ## Evita dois "aguarda frame" ao mesmo tempo em _process.
@@ -115,6 +128,8 @@ func _ready() -> void:
 
 ## A Godot 4.3 não avisa quando change_scene_to_file termina: compara a cena atual com a pedida.
 func _process(_delta: float) -> void:
+	if multiplayer.is_server() and _departure_phase != CoopDeparture.IDLE and Time.get_ticks_msec() >= _departure_deadline:
+		_expire_coop_departure()
 	if multiplayer.is_server() and not _passage_loading.is_empty() and Time.get_ticks_msec() - int(_passage_loading["started"]) >= PASSAGE_LOAD_TIMEOUT_MSEC:
 		fail_passage_transition(int(_passage_loading["token"]), "O destino não terminou de carregar. Tente novamente pela base.")
 	if multiplayer.is_server() and _rocket_phase == "PREPARING" and Time.get_ticks_msec() - _rocket_prepare_started_msec >= ROCKET_PREPARE_TIMEOUT_MSEC:
@@ -128,6 +143,7 @@ func _process(_delta: float) -> void:
 	if current == null or current.scene_file_path != _pending_scene_path:
 		return
 	var scene_path: String = _pending_scene_path
+	var sequence: int = _scene_change_sequence
 	_pending_scene_path = ""
 	# Espera um frame para todos os _ready da cena nova rodarem.
 	_awaiting_scene_frame = true
@@ -136,7 +152,7 @@ func _process(_delta: float) -> void:
 	if not is_inside_tree():
 		return
 	# Outra troca começou durante a espera: o aviso desta cena já não vale.
-	if not _pending_scene_path.is_empty():
+	if sequence != _scene_change_sequence or not is_instance_valid(current) or tree.current_scene != current:
 		return
 	_on_scene_loaded(scene_path)
 
@@ -229,7 +245,7 @@ func is_in_expedition() -> bool:
 
 
 func is_starting_expedition() -> bool:
-	return _starting_solo_expedition
+	return _starting_solo_expedition or _departure_phase != CoopDeparture.IDLE
 
 
 func get_current_map() -> MapData:
@@ -296,7 +312,10 @@ func request_start_expedition(map_id: String, night: bool = false) -> Error:
 		"money_earned": 0,
 		"entries": [],
 	}
-	_call_all(&"_rpc_enter_map", [map_id, night])
+	if _is_online() and scene_change_enabled:
+		_start_coop_departure(map_id, night)
+	else:
+		_call_all(&"_rpc_enter_map", [map_id, night])
 	return OK
 
 
@@ -304,7 +323,7 @@ func request_end_expedition() -> void:
 	if not multiplayer.is_server():
 		push_warning("SessionManager: apenas o host pode encerrar a expedição.")
 		return
-	if not is_in_expedition() or _ending:
+	if not is_in_expedition() or is_starting_expedition() or _ending:
 		return
 	if _rocket_phase == "COMMITTING":
 		return
@@ -839,6 +858,167 @@ func _quiesce_rocket_host_syncs(root: Node) -> void:
 		_quiesce_rocket_host_syncs(child)
 
 
+# --- Partida cooperativa ----------------------------------------------------------
+
+func _start_coop_departure(map_id: String, night: bool) -> void:
+	_departure_roster = _rocket_connected_roster()
+	_call_all(&"_rpc_begin_coop_departure", [_departure_token + 1, map_id, night])
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_begin_coop_departure(token: int, map_id: String, night: bool) -> void:
+	if not _is_departure_authority() or token <= _departure_token or _departure_phase != CoopDeparture.IDLE or _current_map != null:
+		return
+	_departure_token = token
+	_departure_phase = CoopDeparture.LOADING
+	_departure_map_id = map_id
+	_departure_deadline = Time.get_ticks_msec() + COOP_DEPARTURE_TIMEOUT_MSEC
+	var map_data: MapData = _find_map(map_id)
+	if map_data == null:
+		_report_departure_result(false)
+		return
+	# O mapa deve estar definido durante o _ready para que a replicação espere o commit.
+	_set_expedition_map(map_data, night)
+	_change_scene(MAP_SCENE_FORMAT % map_id)
+
+
+func _report_departure_result(loaded: bool) -> void:
+	_departure_local_ready = loaded
+	var recovering: bool = _departure_phase == CoopDeparture.RECOVERING
+	if multiplayer.is_server():
+		_accept_departure_result(HOST_PEER_ID, _departure_token, _departure_map_id, recovering, loaded)
+	elif _is_online():
+		_rpc_report_departure_result.rpc_id(HOST_PEER_ID, _departure_token, _departure_map_id, recovering, loaded)
+		if recovering and not loaded:
+			_leave_failed_lobby()
+
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func _rpc_report_departure_result(token: int, map_id: String, recovering: bool, loaded: bool) -> void:
+	var sender: int = multiplayer.get_remote_sender_id()
+	if multiplayer.is_server() and sender > HOST_PEER_ID:
+		_accept_departure_result.call_deferred(sender, token, map_id, recovering, loaded)
+
+
+func _accept_departure_result(sender: int, token: int, map_id: String, recovering: bool, loaded: bool) -> void:
+	var expected: CoopDeparture = CoopDeparture.RECOVERING if recovering else CoopDeparture.LOADING
+	if not multiplayer.is_server() or _departure_phase != expected or token != _departure_token or map_id != _departure_map_id:
+		return
+	if sender not in _departure_roster or sender in _departure_ready:
+		return
+	if sender != HOST_PEER_ID and sender not in multiplayer.get_peers():
+		return
+	if not loaded:
+		if recovering:
+			if sender == HOST_PEER_ID:
+				_leave_failed_lobby()
+			else:
+				_remove_unrecovered_peer(sender)
+				_resolve_departure_if_ready()
+		else:
+			_call_all(&"_rpc_recover_coop_departure", [token])
+		return
+	_departure_ready.append(sender)
+	_resolve_departure_if_ready()
+
+
+func _resolve_departure_if_ready() -> void:
+	if not _departure_local_ready or _departure_ready.size() != _departure_roster.size():
+		return
+	if _departure_phase == CoopDeparture.LOADING:
+		_call_all(&"_rpc_commit_coop_departure", [_departure_token])
+	elif _departure_phase == CoopDeparture.RECOVERING:
+		_call_all(&"_rpc_finish_coop_recovery", [_departure_token])
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_commit_coop_departure(token: int) -> void:
+	if not _is_departure_authority() or token != _departure_token or _departure_phase != CoopDeparture.LOADING or not _departure_local_ready:
+		return
+	var map_id: String = _departure_map_id
+	var ready_peers: Array[int] = _departure_ready.duplicate()
+	ready_peers.sort()
+	var waiting: Array[int] = _departure_waiting.duplicate()
+	_clear_coop_departure()
+	if _night and multiplayer.is_server():
+		NightMode.apply_to_spawner(EnemySpawner.find(get_tree()), map_id)
+	expedition_started.emit(map_id)
+	if multiplayer.is_server():
+		for peer_id: int in ready_peers:
+			_mark_ready(peer_id, map_id)
+		for peer_id: int in waiting:
+			_sync_peer_scene(peer_id)
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_recover_coop_departure(token: int) -> void:
+	if not _is_departure_authority() or token != _departure_token or _departure_phase != CoopDeparture.LOADING:
+		return
+	_departure_phase = CoopDeparture.RECOVERING
+	_departure_deadline = Time.get_ticks_msec() + COOP_DEPARTURE_TIMEOUT_MSEC
+	_departure_local_ready = false
+	_departure_ready.clear()
+	_pending_summary.clear()
+	_change_scene(LOBBY_SCENE)
+
+
+@rpc("authority", "call_local", "reliable", 0)
+func _rpc_finish_coop_recovery(token: int) -> void:
+	if not _is_departure_authority() or token != _departure_token or _departure_phase != CoopDeparture.RECOVERING or not _departure_local_ready:
+		return
+	var waiting: Array[int] = _departure_waiting.duplicate()
+	_clear_coop_departure()
+	if multiplayer.is_server():
+		for peer_id: int in waiting:
+			_sync_peer_scene(peer_id)
+	expedition_start_failed.emit(COOP_DEPARTURE_FAILED)
+
+
+func _expire_coop_departure() -> void:
+	if _departure_phase == CoopDeparture.LOADING:
+		_call_all(&"_rpc_recover_coop_departure", [_departure_token])
+	elif _departure_phase == CoopDeparture.RECOVERING:
+		if not _departure_local_ready:
+			_leave_failed_lobby()
+			return
+		for peer_id: int in _departure_roster.duplicate():
+			if peer_id not in _departure_ready:
+				_remove_unrecovered_peer(peer_id)
+		_resolve_departure_if_ready()
+
+
+func _remove_unrecovered_peer(peer_id: int) -> void:
+	_departure_roster.erase(peer_id)
+	multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+
+
+func _leave_failed_lobby() -> void:
+	push_error("SessionManager: falha ao voltar à Base após uma partida cooperativa.")
+	if NetworkManager.instance != null:
+		NetworkManager.instance.disconnect_game()
+	_current_map = null
+	_night = false
+	_clear_coop_departure()
+	launch_mode = ""
+	_change_scene(TITLE_SCENE)
+	expedition_start_failed.emit(COOP_DEPARTURE_FAILED)
+
+
+func _is_departure_authority() -> bool:
+	var sender: int = multiplayer.get_remote_sender_id()
+	return sender == HOST_PEER_ID or (sender == 0 and multiplayer.is_server())
+
+
+func _clear_coop_departure() -> void:
+	_departure_phase = CoopDeparture.IDLE
+	_departure_deadline = 0
+	_departure_map_id = ""
+	_departure_local_ready = false
+	_departure_ready.clear()
+	_departure_roster.clear()
+	_departure_waiting.clear()
+
+
 # --- RPCs (host -> todos) -------------------------------------------------------
 
 @rpc("authority", "call_local", "reliable")
@@ -897,7 +1077,8 @@ func _rpc_sync_scene(map_id: String, night: bool = false, arrival: Dictionary = 
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_report_scene_ready(map_id: String) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
-	if not multiplayer.is_server() or sender == 0 or _current_map == null:
+	if not multiplayer.is_server() or sender <= HOST_PEER_ID or _current_map == null \
+			or _departure_phase != CoopDeparture.IDLE or sender not in multiplayer.get_peers():
 		return
 	# Aviso atrasado de um mapa anterior.
 	if map_id != _current_map.id:
@@ -908,6 +1089,9 @@ func _rpc_report_scene_ready(map_id: String) -> void:
 # --- Eventos ----------------------------------------------------------------------
 
 func _on_peer_connected(peer_id: int) -> void:
+	if multiplayer.is_server() and _departure_phase != CoopDeparture.IDLE:
+		_departure_waiting.append(peer_id)
+		return
 	if multiplayer.is_server() and not _passage_loading.is_empty():
 		var waiting: Array = _passage_loading["waiting_peers"]
 		if peer_id != HOST_PEER_ID and not waiting.has(peer_id):
@@ -926,6 +1110,15 @@ func _sync_peer_scene(peer_id: int) -> void:
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	if multiplayer.is_server() and _departure_phase != CoopDeparture.IDLE:
+		_departure_waiting.erase(peer_id)
+		if _departure_roster.has(peer_id):
+			_departure_roster.erase(peer_id)
+			_departure_ready.erase(peer_id)
+			if _departure_phase == CoopDeparture.LOADING:
+				_call_all(&"_rpc_recover_coop_departure", [_departure_token])
+			else:
+				_resolve_departure_if_ready()
 	if multiplayer.is_server() and _rocket_phase == "PREPARING":
 		cancel_rocket_transition(_rocket_token)
 	_ready_peers.erase(peer_id)
@@ -936,6 +1129,8 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 
 func _on_server_disconnected() -> void:
+	_clear_coop_departure()
+	_departure_token = 0
 	_passage_arrival.clear()
 	_passage_loading.clear()
 	_passage_recovering = false
@@ -955,11 +1150,14 @@ func _on_session_left(was_host: bool) -> void:
 	_passage_loading.clear()
 	_passage_recovering = false
 	_reset_rocket_transition(true, true)
-	if was_host and _current_map != null:
+	if was_host and _current_map != null and not is_starting_expedition():
 		# Guarda dinheiro e museu ganhos até aqui, sem avançar o dia.
 		var save: SaveManager = SaveManager.instance
 		if save != null:
 			save.save_game()
+	_clear_coop_departure()
+	if not was_host:
+		_departure_token = 0
 	_current_map = null
 	_night = false
 	_pending_summary = {}
@@ -1035,6 +1233,9 @@ func _apply_scene_change(scene_path: String, sequence: int, solo_map: MapData, n
 	if error == OK:
 		return
 	_pending_scene_path = ""
+	if _departure_phase != CoopDeparture.IDLE:
+		_report_departure_result(false)
+		return
 	var message: String = "Não foi possível carregar o destino. Retorne pela base e tente novamente."
 	if not _passage_loading.is_empty():
 		var token: int = int(_passage_loading["token"])
@@ -1056,12 +1257,25 @@ func _rpc_report_passage_failure(token: int) -> void:
 
 
 func _on_scene_loaded(scene_path: String) -> void:
+	var sequence: int = _scene_change_sequence
+	var recovered_lobby: bool = _departure_phase == CoopDeparture.RECOVERING and scene_path == LOBBY_SCENE
+	if recovered_lobby:
+		_current_map = null
+		_night = false
 	scene_loaded.emit(scene_path)
+	if sequence != _scene_change_sequence:
+		return
+	if recovered_lobby:
+		_report_departure_result(true)
+		return
 	if _current_map == null or scene_path != MAP_SCENE_FORMAT % _current_map.id:
 		return
-	if _night and multiplayer.is_server():
-		NightMode.apply_to_spawner(EnemySpawner.find(get_tree()), _current_map.id)
+	if _departure_phase == CoopDeparture.LOADING:
+		_report_departure_result(true)
+		return
 	if multiplayer.is_server():
+		if _night:
+			NightMode.apply_to_spawner(EnemySpawner.find(get_tree()), _current_map.id)
 		_mark_ready(HOST_PEER_ID, _current_map.id)
 	elif _is_online():
 		_rpc_report_scene_ready.rpc_id(HOST_PEER_ID, _current_map.id)
@@ -1111,10 +1325,11 @@ func return_to_title() -> void:
 	_abandon_rocket_transition()
 	var save: SaveManager = SaveManager.instance
 	var state: GameState = GameState.instance
-	if _current_map == null and save != null and state != null and state.is_authority() and save.is_progress_applied():
+	if _current_map == null and not is_starting_expedition() and save != null and state != null and state.is_authority() and save.is_progress_applied():
 		save.save_game()
 	if _is_online() and NetworkManager.instance != null:
 		NetworkManager.instance.disconnect_game()
+	_clear_coop_departure()
 	_current_map = null
 	_night = false
 	_pending_summary = {}

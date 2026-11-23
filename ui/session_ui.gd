@@ -291,7 +291,8 @@ func _is_online() -> bool:
 # --- Barra de expedição -------------------------------------------------------
 
 func _refresh_expedition_bar() -> void:
-	var in_expedition: bool = bool(_session_call(&"is_in_expedition", false))
+	var in_expedition: bool = bool(_session_call(&"is_in_expedition", false)) \
+			and not bool(_session_call(&"is_starting_expedition", false))
 	expedition_bar.visible = in_expedition and not loading_screen.visible
 	var can_leave: bool = in_expedition and _is_online()
 	# Solo/offline: "Voltar à base" (pausa) é o caminho; online, host e clientes podem sair.
@@ -312,7 +313,8 @@ func _refresh_expedition_bar() -> void:
 
 ## "Voltar à base" do menu de pausa (#122): só o host, em expedição. Retorna se pediu.
 func request_return_to_base() -> bool:
-	if not _is_host() or not bool(_session_call(&"is_in_expedition", false)):
+	if not _is_host() or not bool(_session_call(&"is_in_expedition", false)) \
+			or bool(_session_call(&"is_starting_expedition", false)):
 		return false
 	_session_call(&"request_end_expedition")
 	return true
@@ -359,7 +361,7 @@ func _on_scene_changing(target_scene: String) -> void:
 		text = "Partindo para a expedição..."
 	loading_label.text = text
 	loading_screen.visible = true
-	expedition_bar.visible = false
+	_refresh_expedition_bar()
 	_loading_token += 1
 	var token: int = _loading_token
 	# Esconde o carregamento depois que a nova cena entrar (com tempo mínimo na tela).
@@ -373,11 +375,14 @@ func _on_scene_changing(target_scene: String) -> void:
 	if tree == null:
 		return
 	await tree.process_frame
-	if not is_inside_tree() or token != _loading_token:
-		return
-	loading_screen.visible = false
-	_refresh_expedition_bar()
-	refresh_save_toast_layout()
+	while is_inside_tree() and token == _loading_token:
+		var session: SessionManager = _session as SessionManager
+		if not is_instance_valid(session) or not session.is_starting_expedition():
+			loading_screen.visible = false
+			_refresh_expedition_bar()
+			refresh_save_toast_layout()
+			return
+		await tree.process_frame
 
 
 func _on_expedition_started(_map_id: String) -> void:
