@@ -17,19 +17,19 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="Chips" type="VBoxContainer" parent="MarginContainer" groups=["toast_avoid"]]
+[node name="Chips" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="MoneyChip" type="PanelContainer" parent="MarginContainer/Chips"]
+[node name="MoneyChip" type="PanelContainer" parent="MarginContainer/Chips" groups=["toast_avoid"]]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 script = ExtResource("3_chip")
 icon_name = "coin"
 
-[node name="DetectorChip" type="PanelContainer" parent="MarginContainer/Chips"]
+[node name="DetectorChip" type="PanelContainer" parent="MarginContainer/Chips" groups=["toast_avoid"]]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -37,7 +37,7 @@ script = ExtResource("3_chip")
 primary = false
 icon_name = "detector"
 
-[node name="MuseumChip" type="PanelContainer" parent="MarginContainer/Chips"]
+[node name="MuseumChip" type="PanelContainer" parent="MarginContainer/Chips" groups=["toast_avoid"]]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0

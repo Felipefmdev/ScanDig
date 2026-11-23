@@ -26,6 +26,7 @@ const SAVE_TOAST_WIDTH: float = 560.0
 const SAVE_TOAST_MIN_WIDTH: float = 240.0
 const SAVE_TOAST_TOP: float = 180.0
 const SAVE_TOAST_GAP: float = 8.0
+const SAVE_TOAST_AVOID_GROUP: StringName = &"save_toast_avoid"
 ## Fora da expedição (Base) o aviso sobe para a faixa do topo, entre os chips do HUD e o menu
 ## Multiplayer, sem cobrir o título da Base (#146). Os nós desse grupo (Control) e os do
 ## MultiplayerMenu.SAVE_NOTICE_GROUP são evitados.
@@ -95,6 +96,7 @@ var _synced_once: bool = true
 var _toast_queue: Array[String] = []
 var _toast_token: int = 0
 var _save_toast_token: int = 0
+var _save_toast_active: bool = false
 ## Último resumo do dia mostrado (refeito ao trocar o idioma com ele aberto).
 var _last_summary: Dictionary = {}
 
@@ -131,6 +133,7 @@ func _ready() -> void:
 		if toast_panel.visible:
 			_place_toast())
 	_build_save_toast()
+	get_viewport().size_changed.connect(refresh_save_toast_layout, CONNECT_DEFERRED)
 	# Mapa/dia sem cartão, como o resto do HUD de jogo (#122); o botão de sair segue do theme.
 	expedition_bar.add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
 	PlayerHudStyle.iconize(expedition_info_label, "map")
@@ -374,6 +377,7 @@ func _on_scene_changing(target_scene: String) -> void:
 		return
 	loading_screen.visible = false
 	_refresh_expedition_bar()
+	refresh_save_toast_layout()
 
 
 func _on_expedition_started(_map_id: String) -> void:
@@ -521,21 +525,26 @@ func _place_toast() -> void:
 		_fit_toast_height()
 		return
 	var strip_bottom: float = TOAST_BASE_TOP + maxf(home.size.y, toast_panel.get_combined_minimum_size().y)
+	var strip: Vector2 = _free_toast_strip(view, TOAST_BASE_TOP, strip_bottom)
+	var width: float = minf(safe_width, strip.y - strip.x)
+	var center: float = (strip.x + strip.y) * 0.5 - view.size.x * 0.5
+	toast_panel.offset_left = center - width * 0.5
+	toast_panel.offset_right = center + width * 0.5
+	toast_panel.offset_top = TOAST_BASE_TOP
+	_fit_toast_height()
+
+
+func _free_toast_strip(view: Rect2, top: float, bottom: float) -> Vector2:
 	var free_left: float = 0.0
 	var free_right: float = view.size.x
 	for rect: Rect2 in _toast_avoid_rects():
-		if not rect.has_area() or rect.position.y > strip_bottom + SAVE_TOAST_GAP or rect.end.y < TOAST_BASE_TOP:
+		if not rect.has_area() or rect.position.y > bottom + SAVE_TOAST_GAP or rect.end.y < top:
 			continue
 		if rect.get_center().x < view.size.x * 0.5:
 			free_left = maxf(free_left, rect.end.x + SAVE_TOAST_GAP)
 		else:
 			free_right = minf(free_right, rect.position.x - SAVE_TOAST_GAP)
-	var width: float = minf(safe_width, free_right - free_left)
-	var center: float = (free_left + free_right) * 0.5 - view.size.x * 0.5
-	toast_panel.offset_left = center - width * 0.5
-	toast_panel.offset_right = center + width * 0.5
-	toast_panel.offset_top = TOAST_BASE_TOP
-	_fit_toast_height()
+	return Vector2(free_left, free_right)
 
 
 ## Altura do texto completo; nenhum reposicionamento reinicia a fila ou o timer.
@@ -616,11 +625,12 @@ func _on_save_load_failed(message: String) -> void:
 func show_save_toast(text: String) -> void:
 	if save_toast_panel == null:
 		return
+	_save_toast_active = true
 	save_toast_label.text = text
 	save_toast_panel.visible = true
 	_reset_save_toast_place()
 	# Depois dos outros ouvintes do sinal: o painel do menu já tem o aviso dele.
-	_fit_save_toast.call_deferred()
+	refresh_save_toast_layout.call_deferred()
 	_save_toast_token += 1
 	var token: int = _save_toast_token
 	var tree: SceneTree = get_tree()
@@ -628,7 +638,7 @@ func show_save_toast(text: String) -> void:
 		return
 	await tree.create_timer(SAVE_TOAST_SEC, true, false, true).timeout
 	if is_inside_tree() and token == _save_toast_token:
-		save_toast_panel.visible = false
+		hide_save_toast()
 
 
 func _reset_save_toast_place() -> void:
@@ -640,21 +650,50 @@ func _reset_save_toast_place() -> void:
 
 ## No título o MultiplayerMenu mostra o aviso no painel dele (#137): o mesmo texto lá = some o
 ## toast (o painel fica com ele, perto de Continuar/Novo jogo); outro texto = o toast vai para o
-## lado livre do menu e, sem largura, para baixo dele. Nunca cobre o painel.
-func _fit_save_toast() -> void:
-	if save_toast_panel == null or not save_toast_panel.visible:
+## lado livre do menu e, sem largura, para baixo dele. Na Base, aproveita a faixa acima do painel.
+func refresh_save_toast_layout() -> void:
+	if save_toast_panel == null or not _save_toast_active:
 		return
+	_reset_save_toast_place()
 	var text: String = save_toast_label.atr(save_toast_label.text)
 	var view: Rect2 = save_toast_panel.get_viewport_rect()
+	var menu_rects: Array[Rect2] = []
 	for node: Node in get_tree().get_nodes_in_group(MultiplayerMenu.SAVE_NOTICE_GROUP):
 		if not node.has_method(&"get_save_notice_rect"):
 			continue
 		if str(node.call(&"get_save_notice")) == text:
-			hide_save_toast()
+			# O mesmo aviso pode voltar ao toast se o menu recolher antes do prazo.
+			save_toast_panel.hide()
 			return
-		var avoid: Rect2 = node.call(&"get_save_notice_rect")
+		menu_rects.append(node.call(&"get_save_notice_rect"))
+	save_toast_panel.show()
+	for node: Node in get_tree().get_nodes_in_group(SAVE_TOAST_AVOID_GROUP):
+		var panel: Control = node as Control
+		if panel == null or not panel.is_visible_in_tree():
+			continue
+		var avoid: Rect2 = panel.get_global_rect()
+		if not save_toast_rect().intersects(avoid):
+			continue
+		if not _place_save_toast_above_base(avoid, view):
+			_place_save_toast_beside(avoid, view)
+	for avoid: Rect2 in menu_rects:
 		if avoid.has_area() and save_toast_rect().intersects(avoid):
 			_place_save_toast_beside(avoid, view)
+	if toast_panel.visible:
+		_place_toast()
+
+
+func _place_save_toast_above_base(base: Rect2, view: Rect2) -> bool:
+	var strip: Vector2 = _free_toast_strip(view, TOAST_BASE_TOP, base.position.y - SAVE_TOAST_GAP)
+	var width: float = minf(SAVE_TOAST_WIDTH, strip.y - strip.x)
+	if width < SAVE_TOAST_MIN_WIDTH:
+		return false
+	var center: float = (strip.x + strip.y) * 0.5 - view.size.x * 0.5
+	save_toast_panel.offset_left = center - width * 0.5
+	save_toast_panel.offset_right = center + width * 0.5
+	save_toast_panel.offset_top = TOAST_BASE_TOP
+	save_toast_panel.offset_bottom = TOAST_BASE_TOP
+	return true
 
 
 ## Retângulo do aviso (o tamanho mínimo vale antes do container ajustar a altura).
@@ -680,6 +719,7 @@ func _place_save_toast_beside(avoid: Rect2, view: Rect2) -> void:
 
 func hide_save_toast() -> void:
 	_save_toast_token += 1
+	_save_toast_active = false
 	if save_toast_panel != null:
 		save_toast_panel.visible = false
 
@@ -690,6 +730,7 @@ func hide_save_toast() -> void:
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_TRANSLATION_CHANGED or not is_node_ready() or expedition_bar == null:
 		return
+	refresh_save_toast_layout.call_deferred()
 	_refresh_expedition_bar()
 	if summary_panel.visible and not _last_summary.is_empty():
 		_show_summary(_last_summary)
