@@ -32,8 +32,8 @@ const CATALOG_SORT_ACCENTS: Dictionary = {
 # Expedições
 @onready var map_list: ItemList = _resolve_node("MapList", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapList") as ItemList
 @onready var unlock_map_btn: Button = _resolve_node("UnlockMapButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/UnlockMapButton") as Button
-@onready var depart_btn: Button = _resolve_node("DepartButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/DepartButton") as Button
-@onready var map_status_label: Label = _resolve_node("MapStatusLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/MapStatusLabel") as Label
+@onready var depart_btn: Button = _resolve_node("DepartButton", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/Actions/DepartButton") as Button
+@onready var map_status_label: Label = _resolve_node("MapStatusLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/Actions/MapStatusLabel") as Label
 @onready var expedition_feedback_label: Label = _resolve_node("ExpeditionFeedbackLabel", "PanelContainer/MarginContainer/VBoxContainer/TabContainer/Expedições/ExpeditionFeedbackLabel") as Label
 
 # Diário de Campo (#86)
@@ -641,6 +641,7 @@ func _on_night_toggled(on: bool) -> void:
 func _set_expedition_feedback(msg: String) -> void:
 	if expedition_feedback_label != null:
 		expedition_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
+		expedition_feedback_label.visible = not msg.is_empty()
 
 
 func _resolve_game_state() -> void:
