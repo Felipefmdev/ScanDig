@@ -3,11 +3,15 @@ extends CanvasLayer
 
 ## HUD principal exibindo recursos da equipe, detector e museu, um UiChip para cada (#119).
 
+@onready var money_chip: UiChip = get_node_or_null("%MoneyChip") as UiChip
+@onready var detector_chip: UiChip = get_node_or_null("%DetectorChip") as UiChip
+@onready var museum_chip: UiChip = get_node_or_null("%MuseumChip") as UiChip
 @onready var money_label: Label = _chip_label("MoneyChip")
 @onready var detector_label: Label = _chip_label("DetectorChip")
 @onready var museum_label: Label = _chip_label("MuseumChip")
 
 var _game_state: GameState = null
+var _chip_tweens: Dictionary = {}
 
 
 func _chip_label(unique_id: String) -> Label:
@@ -67,14 +71,30 @@ func update_museum(total_found: int, max_items: int) -> void:
 		museum_label.text = tr("Museu  %d/%d") % [total_found, max_items]
 
 
+func _pulse_chip(chip: UiChip) -> void:
+	if chip == null or not is_inside_tree() or not chip.is_visible_in_tree():
+		return
+	var prev: Tween = _chip_tweens.get(chip) as Tween
+	if prev != null and prev.is_valid():
+		prev.kill()
+	chip.pivot_offset = chip.size * 0.5
+	chip.scale = Vector2(1.045, 1.045)
+	var tw: Tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(chip, ^"scale", Vector2.ONE, 0.18)
+	_chip_tweens[chip] = tw
+
+
 func _on_money_changed(new_amount: int) -> void:
 	update_money(new_amount)
+	_pulse_chip(money_chip)
 
 
 func _on_upgrades_changed(_levels: Dictionary) -> void:
 	if _game_state != null:
 		update_detector(_game_state.equipped_detector_level)
+		_pulse_chip(detector_chip)
 
 
 func _on_collection_updated(total_found: int, max_items: int) -> void:
 	update_museum(total_found, max_items)
+	_pulse_chip(museum_chip)

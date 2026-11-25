@@ -63,11 +63,17 @@ func _run() -> void:
 	root.add_child(fake)
 	menu.set_save_manager(fake)
 
-	# 3 segredos da Praia encontrados: o Museu mostra a contagem por mapa.
-	GameState.instance.load_snapshot({"found_secrets": [GameState.SECRETS[0], GameState.SECRETS[1], GameState.SECRETS[2]]})
+	# 3 segredos da Praia encontrados + amostra de criaturas/chefes para inspecionar o Diário (#248).
+	GameState.instance.load_snapshot({
+		"found_secrets": [GameState.SECRETS[0], GameState.SECRETS[1], GameState.SECRETS[2]],
+		"seen_creatures": ["crab", "seagull", "snake", "ice_wolf"],
+		"defeated_bosses": ["king_crab", "ancient_guardian"],
+		"discovered_items": ["moeda_antiga", "alianca_ouro"],
+		"intact_items": ["alianca_ouro"],
+	})
 	var tabs: TabContainer = base.get_node("%TabContainer") as TabContainer
-	var shot_names: Array[String] = ["loja", "museu", "expedicoes"]
-	for i in range(3):
+	var shot_names: Array[String] = ["loja", "museu", "expedicoes", "diario"]
+	for i in range(shot_names.size()):
 		tabs.current_tab = i
 		if shot_names[i] == "expedicoes":
 			# Campo Antigo travado pelo chefe: o motivo aparece embaixo da lista (#59).
@@ -76,6 +82,13 @@ func _run() -> void:
 		await _shot("lobby_%s" % shot_names[i])
 		print("RECT %s %s base %s min_h %d" % [_tag, shot_names[i], _rect(base.get_child(0) as Control), int((base.get_child(0) as Control).get_combined_minimum_size().y)])
 	tabs.current_tab = 0
+	var museum_view: MuseumView = current_scene.get_node_or_null(^"MuseumView") as MuseumView
+	if museum_view != null and museum_view.is_available():
+		museum_view.open()
+		await create_timer(MuseumView.TWEEN_TIME + 0.15, true, false, true).timeout
+		await _shot("vitrine_museu")
+		museum_view.close()
+		await create_timer(MuseumView.TWEEN_TIME + 0.15, true, false, true).timeout
 	print("RECT %s menu %s" % [_tag, _rect(menu.get_child(0) as Control)])
 	if hud != null:
 		print("RECT %s hud %s" % [_tag, _rect(hud.get_node("MarginContainer/Chips") as Control)])
@@ -118,7 +131,32 @@ func _run() -> void:
 			{"name": "Lata enferrujada", "action": "sold", "value": 200},
 		]})
 	await _shot("resumo_do_dia")
+	ui._show_summary({"day": 3, "map_name": "Praia", "money_start": 1200, "money_end": 1200, "money_earned": 0, "entries": []})
+	await _shot("resumo_vazio")
 	ui._on_summary_close_pressed()
+	ui.leave_confirm_label.text = SessionUI.LEAVE_HOST_TEXT
+	ui.leave_confirm_panel.visible = true
+	await _shot("sair_confirmacao")
+	ui.leave_confirm_panel.visible = false
+	ui.loading_label.text = "Partindo para a expedição..."
+	ui.loading_screen.visible = true
+	await _shot("carregamento")
+	ui.loading_screen.visible = false
+	if DeathScreen.instance != null:
+		DeathScreen.instance.open({"dropped_items": 3, "map_name": "Praia", "day": 3})
+		await create_timer(DeathScreen.FADE_DURATION + 0.05, true, false, true).timeout
+		await _shot("tela_morte")
+		DeathScreen.instance.open({"dropped_items": 0, "map_name": "Praia", "day": 3})
+		await _shot("tela_morte_vazia")
+		DeathScreen.instance.close(false)
+	var world_shop: CanvasLayer = (load("res://ui/world_upgrade_shop.gd") as GDScript).new() as CanvasLayer
+	root.add_child(world_shop)
+	await process_frame
+	GameState.instance.load_snapshot({"team_money": 1450, "upgrade_levels": {"detector": 2, "pinpointer": 1, "shovel": 3, "backpack": 2}})
+	(world_shop.get("_root") as Control).show()
+	world_shop.call("_refresh")
+	await _shot("banca_melhorias")
+	world_shop.queue_free()
 
 	var bars_layer: CanvasLayer = CanvasLayer.new()
 	bars_layer.layer = 60
@@ -160,6 +198,9 @@ func _run() -> void:
 	var pause: PauseMenu = PauseMenu.instance
 	if pause != null and pause.open():
 		await _shot("pausa")
+		pause.quit_button.pressed.emit()
+		await _shot("pausa_sair")
+		pause.quit_no_button.pressed.emit()
 		pause.settings_button.pressed.emit()
 		await _shot("config_video")
 		pause.settings_menu.tabs.current_tab = 1
@@ -168,6 +209,9 @@ func _run() -> void:
 		await _shot("config_controles")
 		pause.settings_menu.tabs.current_tab = 3
 		await _shot("config_jogabilidade")
+		pause.settings_menu.tabs.current_tab = SettingsMenu.TAB_ACCESSIBILITY
+		await _shot("config_acessibilidade")
+		pause.settings_menu.tabs.current_tab = 3
 		# Fim da aba (Idioma) com o contador de FPS ligado (sem gravar no arquivo do jogador).
 		var page: ScrollContainer = pause.settings_menu.tabs.get_child(3) as ScrollContainer
 		page.scroll_vertical = 10000
@@ -234,6 +278,11 @@ func _run() -> void:
 		await _shot("clima_aviso_icone")
 		print("RECT clima aviso ", _rect(WeatherHud.instance.toast_panel))
 		WeatherManager.instance.stop()
+		if CaptionsHud.instance != null:
+			CaptionsHud.instance.show_line(A11y.CAPTION_CREATURE)
+			CaptionsHud.instance.show_line(A11y.CAPTION_WEATHER)
+			await _shot("legendas_a11y")
+			CaptionsHud.instance.clear()
 		if ui_layer != null:
 			ui_layer.visible = true
 

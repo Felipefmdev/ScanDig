@@ -576,6 +576,8 @@ func _windows() -> void:
 	_theme.set_font_size("title_font_size", "Window", FONT_SIZE)
 
 	var dialog_panel: StyleBoxFlat = _flat(P.PAPER, 0, 0, 12, 10)
+	dialog_panel.border_width_top = 2
+	dialog_panel.border_color = P.GOLD
 	_theme.set_stylebox("panel", "AcceptDialog", dialog_panel)
 	_theme.set_constant("buttons_separation", "AcceptDialog", 12)
 

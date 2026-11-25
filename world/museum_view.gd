@@ -2,8 +2,8 @@ class_name MuseumView
 extends CanvasLayer
 
 ## "Ver museu" (aba Museu da Base): a câmera do lobby sai da tenda e vai, num Tween suave, até a
-## frente da vitrine (MuseumDisplay). Enquanto isso os painéis da Base (UILayer) somem e fica só o
-## botão "Voltar"; Voltar, Esc ou B (ui_cancel) levam a câmera de volta à tenda e os painéis voltam.
+## frente da vitrine (MuseumDisplay). Os painéis da Base e o HUD dão lugar ao cabeçalho do museu
+## e ao botão "Voltar". Voltar, Esc ou B (ui_cancel) restauram a câmera e a interface da Base.
 ## Um nó destes no lobby_base; a BaseStationUI o acha pelo grupo GROUP.
 
 signal opened
@@ -23,6 +23,9 @@ const BACK_MARGIN: float = 24.0
 @export var hide_paths: Array[NodePath] = [^"../UILayer"]
 
 var back_button: Button = null
+var _header: PanelContainer = null
+var _header_title: Label = null
+var _header_progress: Label = null
 var _open: bool = false
 var _tent_transform: Transform3D = Transform3D.IDENTITY
 var _tween: Tween = null
@@ -37,6 +40,22 @@ func _ready() -> void:
 	if camera != null:
 		_tent_transform = camera.transform
 	_build_back_button()
+	_build_header()
+	_refresh_text()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _header_progress != null:
+		_refresh_text()
+
+
+func _refresh_text() -> void:
+	back_button.text = tr("Voltar")
+	_header_title.text = tr("Museu de Achados")
+	var game_state: GameState = GameState.instance
+	var discovered: int = game_state.discovered_items.size() if game_state != null else 0
+	var total: int = game_state.get_total_catalog_items() if game_state != null else 0
+	_header_progress.text = tr("Museu  %d/%d") % [discovered, total]
 
 
 func is_open() -> bool:
@@ -69,6 +88,12 @@ func open() -> void:
 		if node != null and "visible" in node:
 			_hidden[node] = node.get(&"visible")
 			node.set(&"visible", false)
+	var hud: Node = get_parent().get_node_or_null(^"HUD") if get_parent() != null else null
+	if hud != null and "visible" in hud and not _hidden.has(hud):
+		_hidden[hud] = hud.get(&"visible")
+		hud.set(&"visible", false)
+	_refresh_text()
+	_header.show()
 	back_button.visible = true
 	back_button.grab_focus.call_deferred()
 	var camera: Camera3D = get_node(camera_path) as Camera3D
@@ -84,6 +109,7 @@ func close() -> void:
 	if not _open:
 		return
 	_open = false
+	_header.hide()
 	back_button.visible = false
 	if back_button.has_focus():
 		back_button.release_focus()
@@ -114,7 +140,6 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_back_button() -> void:
 	back_button = Button.new()
 	back_button.name = "BackButton"
-	back_button.text = "Voltar"
 	back_button.icon = UiIcons.get_icon("door", 48)
 	back_button.add_theme_constant_override(&"icon_max_width", 20)
 	back_button.theme = load("res://ui/theme/scandig_theme.tres") as Theme
@@ -134,3 +159,55 @@ func _build_back_button() -> void:
 	back_button.visible = false
 	back_button.pressed.connect(close)
 	add_child(back_button)
+
+
+func _build_header() -> void:
+	_header = PanelContainer.new()
+	_header.name = "MuseumHeader"
+	_header.theme = back_button.theme
+	_header.theme_type_variation = &"WornPanel"
+	_header.anchor_left = 0.5
+	_header.anchor_right = 0.5
+	_header.anchor_top = 0.0
+	_header.anchor_bottom = 0.0
+	_header.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_header.offset_left = 0.0
+	_header.offset_right = 0.0
+	_header.offset_top = 16.0
+	_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_header.hide()
+	add_child(_header)
+
+	var margin: MarginContainer = MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_theme_constant_override(&"margin_left", 12)
+	margin.add_theme_constant_override(&"margin_right", 12)
+	margin.add_theme_constant_override(&"margin_top", 8)
+	margin.add_theme_constant_override(&"margin_bottom", 8)
+	_header.add_child(margin)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 10)
+	margin.add_child(row)
+
+	var icon: TextureRect = TextureRect.new()
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.texture = UiIcons.get_icon("museum", 48)
+	icon.custom_minimum_size = Vector2(24, 24)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	row.add_child(icon)
+
+	_header_title = Label.new()
+	_header_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_header_title.theme_type_variation = &"SubtitleLabel"
+	row.add_child(_header_title)
+
+	var separator: VSeparator = VSeparator.new()
+	separator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(separator)
+
+	_header_progress = Label.new()
+	_header_progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(_header_progress)
