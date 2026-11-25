@@ -8,7 +8,7 @@ extends VBoxContainer
 
 const TAB_NAME: String = "Conquistas"
 const ICON_SIDE: int = 32
-const LOCKED_TINT: Color = Color(0.55, 0.55, 0.55, 0.9)
+const LOCKED_TINT: Color = Color(0.95, 0.93, 0.89, 1.0)
 const DONE_MARK: String = "✔"
 
 var header_label: Label = null
@@ -25,9 +25,23 @@ func _init() -> void:
 
 func _ready() -> void:
 	add_theme_constant_override(&"separation", 8)
+	var header_card: PanelContainer = PanelContainer.new()
+	header_card.name = "HeaderCard"
+	header_card.theme_type_variation = &"SummaryTotalPanel"
+	var header_row: HBoxContainer = HBoxContainer.new()
+	header_row.add_theme_constant_override(&"separation", 8)
+	header_card.add_child(header_row)
+	var trophy_icon: TextureRect = TextureRect.new()
+	trophy_icon.texture = UiIcons.get_icon("trophy", 24)
+	trophy_icon.custom_minimum_size = Vector2(20, 20)
+	trophy_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	trophy_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	trophy_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header_row.add_child(trophy_icon)
 	header_label = Label.new()
 	header_label.name = "AchievementsHeader"
-	add_child(header_label)
+	header_row.add_child(header_label)
+	add_child(header_card)
 	_list = VBoxContainer.new()
 	_list.name = "AchievementsList"
 	_list.add_theme_constant_override(&"separation", 6)
@@ -110,14 +124,14 @@ func _build_row(id: String) -> Button:
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var card: PanelContainer = PanelContainer.new()
 	card.name = "Card"
-	card.theme_type_variation = &"WornPanel"
+	card.theme_type_variation = &"InsetPanel"
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	row.add_child(card)
 	var margin: MarginContainer = MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side: String in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 6)
+		margin.add_theme_constant_override("margin_" + side, 4)
 	card.add_child(margin)
 	var hbox: HBoxContainer = HBoxContainer.new()
 	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -125,7 +139,7 @@ func _build_row(id: String) -> Button:
 	margin.add_child(hbox)
 	var icon: TextureRect = TextureRect.new()
 	icon.name = "Icon"
-	icon.custom_minimum_size = Vector2(ICON_SIDE, ICON_SIDE)
+	icon.custom_minimum_size = Vector2(ICON_SIDE, ICON_SIDE * 2)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -187,9 +201,29 @@ func _fill_row(row: Button, def: Dictionary, data: Dictionary, unlocked: bool) -
 	var bar: ProgressBar = row.find_child("Bar", true, false) as ProgressBar
 	bar.max_value = p.y
 	bar.value = p.x
+	var fill: StyleBoxFlat = StyleBoxFlat.new()
+	fill.bg_color = UiPalette.GREEN_BOTTLE if unlocked else UiPalette.ORANGE
+	fill.border_color = UiPalette.INK
+	fill.set_border_width_all(2)
+	fill.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override(&"fill", fill)
+	progress.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if unlocked else UiPalette.WOOD)
+	var desc: Label = row.find_child("Desc", true, false) as Label
+	desc.add_theme_color_override(&"font_color", UiPalette.INK if unlocked else UiPalette.WOOD)
+	var card: PanelContainer = row.find_child("Card", true, false) as PanelContainer
+	var card_style: StyleBoxFlat = StyleBoxFlat.new()
+	card_style.bg_color = UiPalette.PAPER_LIGHT if unlocked else UiPalette.PAPER
+	card_style.border_color = UiPalette.GREEN_BOTTLE if unlocked else Color(UiPalette.WOOD, 0.65)
+	card_style.set_border_width_all(2)
+	card_style.set_corner_radius_all(4)
+	card_style.content_margin_left = 8.0
+	card_style.content_margin_right = 8.0
+	card_style.content_margin_top = 4.0
+	card_style.content_margin_bottom = 4.0
+	card.add_theme_stylebox_override(&"panel", card_style)
 	var icon: TextureRect = row.find_child("Icon", true, false) as TextureRect
 	icon.texture = UiIcons.get_icon(str(def["icon"]), ICON_SIDE * 2) if unlocked else _gray_icon(str(def["icon"]))
-	(row.find_child("Card", true, false) as Control).modulate = Color.WHITE if unlocked else LOCKED_TINT
+	card.modulate = Color.WHITE if unlocked else LOCKED_TINT
 	row.tooltip_text = tr(str(def["desc"]))
 
 
@@ -205,7 +239,9 @@ static func _gray_icon(icon_name: String) -> Texture2D:
 		for x: int in image.get_width():
 			var c: Color = image.get_pixel(x, y)
 			var v: float = c.get_luminance()
-			image.set_pixel(x, y, Color(v, v, v, c.a))
+			# Sépia suave no tom da madeira/papel em vez de cinza frio.
+			image.set_pixel(x, y, Color(clampf(v * 0.96 + 0.08, 0.0, 1.0), clampf(v * 0.84 + 0.05, 0.0, 1.0), clampf(v * 0.68 + 0.02, 0.0, 1.0), c.a * 0.88))
 	var texture: ImageTexture = ImageTexture.create_from_image(image)
+	texture.set_size_override(Vector2i(ICON_SIDE, ICON_SIDE * 2))
 	_gray_cache[icon_name] = texture
 	return texture

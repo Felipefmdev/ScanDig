@@ -20,6 +20,8 @@ var _feedback: Label = null
 var _close_button: Button = null
 var _buttons: Dictionary = {}
 var _details: Dictionary = {}
+var _names: Dictionary = {}
+var _pips: Dictionary = {}
 var _pending_request: int = 0
 var _pending_started: int = 0
 ## Timeout is an unknown result, not permission to charge a new intent.
@@ -68,7 +70,7 @@ func _process(_delta: float) -> void:
 		return
 	if _pending_request != 0 and Time.get_ticks_msec() - _pending_started >= REQUEST_TIMEOUT_MSEC:
 		_pending_request = 0
-		_feedback.text = tr("Sem resposta do host. Tente novamente.")
+		_set_feedback(tr("Sem resposta do host. Tente novamente."), UiPalette.RED_BURNT)
 		_refresh()
 
 
@@ -101,7 +103,7 @@ func open_for(counter: Node3D, actor: Player) -> bool:
 	_previous_focus = weakref(focus) if focus != null else null
 	_previous_mouse = Input.mouse_mode
 	_pending_request = 0
-	_feedback.text = ""
+	_set_feedback("")
 	_open = true
 	_root.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -147,49 +149,153 @@ func _build() -> void:
 	_root.theme = preload("res://ui/theme/scandig_theme.tres")
 	add_child(_root)
 	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.03, 0.02, 0.6)
+	shade.color = Color(UiPalette.INK, 0.62)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(shade)
-	var center: CenterContainer = CenterContainer.new()
+	var center: FitCenterContainer = FitCenterContainer.new()
+	center.margin = 16.0
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(center)
+	UiFocus.follow_pointer(center)
 	var panel: PanelContainer = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(640, 400)
+	panel.theme_type_variation = &"WornPanel"
+	panel.custom_minimum_size = Vector2(620, 0)
 	center.add_child(panel)
 	var margin: MarginContainer = MarginContainer.new()
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
 	panel.add_child(margin)
 	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override(&"separation", 12)
+	column.add_theme_constant_override(&"separation", 10)
 	margin.add_child(column)
+
+	var header: HBoxContainer = HBoxContainer.new()
+	header.alignment = BoxContainer.ALIGNMENT_CENTER
+	header.add_theme_constant_override(&"separation", 10)
+	var wrench: TextureRect = TextureRect.new()
+	wrench.texture = UiIcons.get_icon("wrench", 32)
+	wrench.custom_minimum_size = Vector2(26, 26)
+	wrench.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wrench.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	wrench.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header.add_child(wrench)
 	var title: Label = Label.new()
 	title.text = "Melhorias"
-	title.add_theme_font_size_override(&"font_size", 28)
-	column.add_child(title)
+	title.theme_type_variation = &"TitleLabel"
+	header.add_child(title)
+	column.add_child(header)
+	column.add_child(HSeparator.new())
+
+	var money_card: PanelContainer = PanelContainer.new()
+	money_card.theme_type_variation = &"SummaryTotalPanel"
+	var money_row: HBoxContainer = HBoxContainer.new()
+	money_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	money_row.add_theme_constant_override(&"separation", 8)
+	money_card.add_child(money_row)
+	var coin_icon: TextureRect = TextureRect.new()
+	coin_icon.texture = UiIcons.get_icon("coin", 24)
+	coin_icon.custom_minimum_size = Vector2(20, 20)
+	coin_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	coin_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	money_row.add_child(coin_icon)
 	_money = Label.new()
-	column.add_child(_money)
+	money_row.add_child(_money)
+	column.add_child(money_card)
+
 	for id: String in IDS:
+		var card: PanelContainer = PanelContainer.new()
+		card.theme_type_variation = &"InsetPanel"
+		column.add_child(card)
 		var row: HBoxContainer = HBoxContainer.new()
-		column.add_child(row)
+		row.add_theme_constant_override(&"separation", 10)
+		card.add_child(row)
+		var icon: TextureRect = TextureRect.new()
+		icon.texture = UiIcons.get_icon(id, 64)
+		icon.custom_minimum_size = Vector2(32, 32)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(icon)
+		var info: VBoxContainer = VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.alignment = BoxContainer.ALIGNMENT_CENTER
+		info.add_theme_constant_override(&"separation", 2)
+		row.add_child(info)
+		var name_label: Label = Label.new()
+		info.add_child(name_label)
+		_names[id] = name_label
+		var sub_row: HBoxContainer = HBoxContainer.new()
+		sub_row.add_theme_constant_override(&"separation", 8)
+		info.add_child(sub_row)
+		var pips: HBoxContainer = HBoxContainer.new()
+		pips.add_theme_constant_override(&"separation", 3)
+		pips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sub_row.add_child(pips)
+		_pips[id] = pips
 		var detail: Label = Label.new()
+		detail.theme_type_variation = &"HintLabel"
 		detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(detail)
+		sub_row.add_child(detail)
 		_details[id] = detail
 		var button: Button = Button.new()
 		button.name = "Buy_" + id
-		button.custom_minimum_size = Vector2(180, 48)
+		button.theme_type_variation = &"PrimaryButton"
+		button.custom_minimum_size = Vector2(168, 44)
+		button.add_theme_constant_override(&"icon_max_width", 18)
+		button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		button.pressed.connect(_buy.bind(id))
 		row.add_child(button)
 		_buttons[id] = button
 	_feedback = Label.new()
+	_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_feedback.custom_minimum_size.y = 42
+	_feedback.custom_minimum_size.y = 26
 	column.add_child(_feedback)
+	column.add_child(HSeparator.new())
 	_close_button = Button.new()
 	_close_button.text = "Fechar"
+	_close_button.icon = UiIcons.get_icon("door", 32)
+	_close_button.add_theme_constant_override(&"icon_max_width", 18)
+	_close_button.custom_minimum_size = Vector2(180, 44)
+	_close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_close_button.pressed.connect(close)
 	column.add_child(_close_button)
+
+
+func _set_feedback(message: String, accent: Color = UiPalette.WOOD) -> void:
+	_feedback.text = message
+	if message.is_empty():
+		_feedback.remove_theme_stylebox_override(&"normal")
+		return
+	var pill: StyleBoxFlat = StyleBoxFlat.new()
+	pill.bg_color = UiPalette.PAPER_LIGHT.lerp(accent, 0.12)
+	pill.border_color = accent
+	pill.set_border_width_all(1)
+	pill.set_corner_radius_all(10)
+	pill.content_margin_left = 10.0
+	pill.content_margin_right = 10.0
+	pill.content_margin_top = 4.0
+	pill.content_margin_bottom = 4.0
+	_feedback.add_theme_color_override(&"font_color", accent)
+	_feedback.add_theme_stylebox_override(&"normal", pill)
+
+
+func _rebuild_pips(pips: HBoxContainer, level: int, maximum: int) -> void:
+	for child: Node in pips.get_children():
+		pips.remove_child(child)
+		child.queue_free()
+	var fill: Color = UiPalette.GREEN_BOTTLE if level >= maximum else UiPalette.ORANGE
+	for i: int in maximum:
+		var pip: Panel = Panel.new()
+		pip.custom_minimum_size = Vector2(14, 8)
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = fill if i < level else UiPalette.PAPER_DARK
+		sb.border_color = UiPalette.INK
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(2)
+		pip.add_theme_stylebox_override(&"panel", sb)
+		pips.add_child(pip)
 
 
 func _refresh() -> void:
@@ -201,11 +307,23 @@ func _refresh() -> void:
 		var level: int = state.get_upgrade_level(id)
 		var maximum: int = state.get_upgrade_max_level(id)
 		var cost: int = state.get_next_upgrade_cost(id)
+		var name_label: Label = _names[id] as Label
+		name_label.text = tr(str(GameState.UPGRADES[id]["name"]))
+		_rebuild_pips(_pips[id] as HBoxContainer, level, maximum)
 		var detail: Label = _details[id] as Label
-		detail.text = "%s  ·  %s" % [tr(str(GameState.UPGRADES[id]["name"])), tr("Nível %d/%d") % [level, maximum]]
+		detail.text = tr("Nível %d/%d") % [level, maximum]
 		var button: Button = _buttons[id] as Button
 		var reason: String = state.get_upgrade_block_reason(id)
-		button.text = tr("Máximo") if cost < 0 else "%s  %s" % [tr("Comprar"), MoneyFormat.money(cost)]
+		var at_maximum: bool = cost < 0
+		var icon_name: String = "check" if at_maximum else ("coin" if reason.is_empty() else "lock")
+		button.icon = UiIcons.get_icon(icon_name, 32)
+		button.text = tr("Máximo") if at_maximum else "%s  %s" % [tr("Comprar"), MoneyFormat.money(cost)]
+		if at_maximum:
+			detail.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE)
+			button.add_theme_color_override(&"font_disabled_color", UiPalette.GREEN_BOTTLE)
+		else:
+			detail.remove_theme_color_override(&"font_color")
+			button.remove_theme_color_override(&"font_disabled_color")
 		button.tooltip_text = reason
 		if _intent_request != 0:
 			button.disabled = _pending_request != 0 or id != _intent_upgrade
@@ -237,17 +355,17 @@ func _buy(upgrade_id: String) -> void:
 		return
 	_pending_request = _intent_request
 	_pending_started = Time.get_ticks_msec()
-	_feedback.text = tr("Processando compra...")
+	_set_feedback(tr("Processando compra..."))
 	_refresh()
 	purchase_requested.emit(upgrade_id, _pending_request)
 
 
 ## A counter only completes the matching request; a late reply cannot complete a newer one.
-func complete_purchase(request_id: int, _success: bool, message: String) -> void:
+func complete_purchase(request_id: int, success: bool, message: String) -> void:
 	if request_id == 0 or request_id != _intent_request:
 		return
 	_pending_request = 0
 	_intent_request = 0
 	_intent_upgrade = ""
-	_feedback.text = message
+	_set_feedback(message, UiPalette.GREEN_BOTTLE if success else UiPalette.RED_BURNT)
 	_refresh()

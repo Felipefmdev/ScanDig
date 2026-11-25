@@ -129,6 +129,7 @@ func open() -> void:
 	if SessionUI.instance != null:
 		SessionUI.instance._place_toast()
 	UiFocus.link_chain([continue_button, credits_button])
+	UiFocus.link_row([continue_button, credits_button])
 	var before: Control = get_viewport().gui_get_focus_owner()
 	if before != null and not root_control.is_ancestor_of(before):
 		_focus_before = before
@@ -186,11 +187,22 @@ func refresh() -> void:
 	var gs: GameState = GameState.instance
 	if gs == null:
 		return
-	items_value.text = "%d / %d" % [gs.discovered_items.size(), gs.get_total_catalog_items()]
+	var total_items: int = gs.get_total_catalog_items()
+	var found_items: int = gs.discovered_items.size()
+	items_value.text = "%d / %d" % [found_items, total_items]
+	items_value.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if total_items > 0 and found_items >= total_items else UiPalette.WOOD_DARK)
 	var intact: Variant = gs.get(&"intact_items")
-	intact_value.text = "%d / %d" % [(intact as Array).size() if intact is Array else 0, gs.get_total_catalog_items()]
-	secrets_value.text = "%d / %d" % [gs.found_secrets.size(), GameState.SECRETS.size()]
-	creatures_value.text = "%d / %d" % [gs.seen_creatures.size(), GameState.CREATURES.size()]
+	var intact_count: int = (intact as Array).size() if intact is Array else 0
+	intact_value.text = "%d / %d" % [intact_count, total_items]
+	intact_value.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if total_items > 0 and intact_count >= total_items else UiPalette.WOOD_DARK)
+	var found_secrets: int = gs.found_secrets.size()
+	var total_secrets: int = GameState.SECRETS.size()
+	secrets_value.text = "%d / %d" % [found_secrets, total_secrets]
+	secrets_value.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if total_secrets > 0 and found_secrets >= total_secrets else UiPalette.WOOD_DARK)
+	var seen_creatures: int = gs.seen_creatures.size()
+	var total_creatures: int = GameState.CREATURES.size()
+	creatures_value.text = "%d / %d" % [seen_creatures, total_creatures]
+	creatures_value.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if total_creatures > 0 and seen_creatures >= total_creatures else UiPalette.WOOD_DARK)
 	for row: Array in CAMPAIGN_ROWS:
 		(campaign_values[row[0]] as Label).text = campaign_value_text(gs, str(row[0]))
 
@@ -230,13 +242,15 @@ func _build() -> void:
 	card.custom_minimum_size = Vector2(720, 0)
 	center.add_child(card)
 	var margin: MarginContainer = MarginContainer.new()
-	for side: String in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 26)
+	for side: String in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, 24)
+	for side: String in ["top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 20)
 	card.add_child(margin)
 	var views: VBoxContainer = VBoxContainer.new()
 	margin.add_child(views)
 	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 14)
+	box.add_theme_constant_override("separation", 12)
 	summary_view = box
 	summary_view.name = "SummaryView"
 	views.add_child(box)
@@ -244,16 +258,16 @@ func _build() -> void:
 	var title_row: HBoxContainer = HBoxContainer.new()
 	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	title_row.add_theme_constant_override("separation", 10)
-	var star: Label = Label.new()
-	star.text = "★"
-	star.theme_type_variation = &"TitleLabel"
-	star.add_theme_color_override(&"font_color", UiPalette.GOLD)
-	star.add_theme_color_override(&"font_outline_color", UiPalette.WOOD_DARK)
-	star.add_theme_constant_override(&"outline_size", 4)
+	var trophy_icon: TextureRect = TextureRect.new()
+	trophy_icon.texture = UiIcons.get_icon("trophy", 48)
+	trophy_icon.custom_minimum_size = Vector2(30, 30)
+	trophy_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	trophy_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	trophy_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var title: Label = Label.new()
 	title.text = TITLE_TEXT
 	title.theme_type_variation = &"TitleLabel"
-	title_row.add_child(star)
+	title_row.add_child(trophy_icon)
 	title_row.add_child(title)
 	box.add_child(title_row)
 
@@ -266,35 +280,41 @@ func _build() -> void:
 
 	var columns: HBoxContainer = HBoxContainer.new()
 	columns.alignment = BoxContainer.ALIGNMENT_CENTER
-	columns.add_theme_constant_override("separation", 22)
+	columns.add_theme_constant_override("separation", 14)
 	box.add_child(columns)
-	var grid: GridContainer = _stats_column(columns, "Coleção", 2)
+	var grid: GridContainer = _stats_column(columns, "Coleção", 2, "museum")
 	items_value = _count_row(grid, "Peças do museu")
 	intact_value = _count_row(grid, "Peças intactas")
 	secrets_value = _count_row(grid, "Segredos")
 	creatures_value = _count_row(grid, "Diário de campo")
-	columns.add_child(VSeparator.new())
 	# Duas colunas de pares (rótulo, valor): a mesma altura das contagens ao lado.
-	var campaign: GridContainer = _stats_column(columns, "Campanha", 4)
+	var campaign: GridContainer = _stats_column(columns, "Campanha", 4, "compass")
 	campaign.name = "CampaignGrid"
 	for row: Array in CAMPAIGN_ROWS:
 		campaign_values[row[0]] = _count_row(campaign, str(row[1]))
 
+	var actions_row: HBoxContainer = HBoxContainer.new()
+	actions_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions_row.add_theme_constant_override("separation", 12)
+	box.add_child(actions_row)
+
 	continue_button = Button.new()
 	continue_button.text = "Continuar explorando"
 	continue_button.theme_type_variation = &"PrimaryButton"
-	continue_button.custom_minimum_size = Vector2(320, 48)
+	continue_button.icon = UiIcons.get_icon("play", 20)
+	continue_button.custom_minimum_size = Vector2(280, 46)
 	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	continue_button.focus_mode = Control.FOCUS_ALL
 	continue_button.pressed.connect(close)
-	box.add_child(continue_button)
+	actions_row.add_child(continue_button)
 	credits_button = Button.new()
 	credits_button.text = "Créditos"
-	credits_button.custom_minimum_size = Vector2(320, 44)
+	credits_button.icon = UiIcons.get_icon("heart", 20)
+	credits_button.custom_minimum_size = Vector2(200, 46)
 	credits_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	credits_button.focus_mode = Control.FOCUS_ALL
 	credits_button.pressed.connect(show_credits)
-	box.add_child(credits_button)
+	actions_row.add_child(credits_button)
 
 	credits_view = _build_credits()
 	credits_view.name = "CreditsView"
@@ -310,20 +330,37 @@ func _build_credits() -> CreditsView:
 	return view
 
 
-## Coluna com título e grade (columns = 2 × pares rótulo/valor).
-func _stats_column(parent: Control, title_text: String, grid_columns: int) -> GridContainer:
+## Coluna em cartão InsetPanel com subtítulo e grade (columns = 2 × pares rótulo/valor).
+func _stats_column(parent: Control, title_text: String, grid_columns: int, icon_name: String = "") -> GridContainer:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.theme_type_variation = &"InsetPanel"
+	parent.add_child(panel)
 	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 8)
-	parent.add_child(column)
+	column.add_theme_constant_override("separation", 6)
+	panel.add_child(column)
+	var header_row: HBoxContainer = HBoxContainer.new()
+	header_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	header_row.add_theme_constant_override("separation", 6)
+	if not icon_name.is_empty():
+		var col_icon: TextureRect = TextureRect.new()
+		col_icon.texture = UiIcons.get_icon(icon_name, 18)
+		col_icon.custom_minimum_size = Vector2(18, 18)
+		col_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		col_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		col_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		header_row.add_child(col_icon)
 	var title: Label = Label.new()
 	title.text = title_text
+	title.theme_type_variation = &"SubtitleLabel"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override(&"font_color", UiPalette.WOOD)
-	column.add_child(title)
+	title.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
+	header_row.add_child(title)
+	column.add_child(header_row)
+	column.add_child(HSeparator.new())
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = grid_columns
-	grid.add_theme_constant_override("h_separation", 18)
-	grid.add_theme_constant_override("v_separation", 10)
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 8)
 	column.add_child(grid)
 	return grid
 

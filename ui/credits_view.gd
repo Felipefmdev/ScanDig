@@ -153,18 +153,32 @@ func _build() -> void:
 	body.add_theme_constant_override("separation", 10)
 	margin.add_child(body)
 
+	var team_card: PanelContainer = PanelContainer.new()
+	team_card.theme_type_variation = &"InsetPanel"
+	body.add_child(team_card)
 	team_label = _wrapped_label(UiPalette.INK)
 	team_label.text = TEAM_TEXT
 	team_label.add_theme_constant_override(&"line_spacing", 6)
-	body.add_child(team_label)
+	team_card.add_child(team_label)
 	body.add_child(HSeparator.new())
+	var sounds_row: HBoxContainer = HBoxContainer.new()
+	sounds_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	sounds_row.add_theme_constant_override(&"separation", 8)
+	var sounds_icon: TextureRect = TextureRect.new()
+	sounds_icon.texture = UiIcons.get_icon("audio", 40)
+	sounds_icon.custom_minimum_size = Vector2(20, 20)
+	sounds_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sounds_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sounds_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sounds_row.add_child(sounds_icon)
 	var sounds_title: Label = Label.new()
 	sounds_title.name = "SoundsTitle"
 	sounds_title.text = SOUNDS_TITLE
+	sounds_title.theme_type_variation = &"SubtitleLabel"
 	sounds_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sounds_title.add_theme_font_size_override(&"font_size", 24)
 	sounds_title.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
-	body.add_child(sounds_title)
+	sounds_row.add_child(sounds_title)
+	body.add_child(sounds_row)
 	var intro: Label = _wrapped_label(UiPalette.WOOD)
 	intro.text = SOUNDS_INTRO
 	body.add_child(intro)
@@ -173,20 +187,27 @@ func _build() -> void:
 	license_url.text = AudioCredits.short_url(AudioCredits.LICENSE_URL)
 	body.add_child(license_url)
 	for author: Dictionary in _authors:
+		var author_card: PanelContainer = PanelContainer.new()
+		author_card.theme_type_variation = &"InsetPanel"
+		var author_box: VBoxContainer = VBoxContainer.new()
+		author_box.add_theme_constant_override(&"separation", 4)
+		author_card.add_child(author_box)
 		var header: Label = _wrapped_label(UiPalette.WOOD_DARK)
 		header.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		header.add_theme_font_size_override(&"font_size", 22)
-		body.add_child(header)
+		header.theme_type_variation = &"SubtitleLabel"
+		author_box.add_child(header)
 		author_labels[author["name"]] = header
 		var detail: Label = _wrapped_label(UiPalette.INK)
 		detail.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		body.add_child(detail)
+		author_box.add_child(detail)
+		body.add_child(author_card)
 		_detail_labels.append([detail, author])
 	_refresh_texts()
 
 	add_child(HSeparator.new())
 	back_button = Button.new()
 	back_button.text = "Voltar"
+	back_button.icon = UiIcons.get_icon("door", 22)
 	back_button.theme_type_variation = &"PrimaryButton"
 	back_button.custom_minimum_size = Vector2(320, 48)
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
