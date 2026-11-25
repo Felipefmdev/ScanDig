@@ -150,7 +150,7 @@ func _dialog_emblem(box: VBoxContainer, title_text: String = "") -> void:
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	icon.texture = UiIcons.get_icon("warning", 56)
+	icon.texture = UiIcons.get_icon("warning", 28)
 	box.add_child(icon)
 	if not title_text.is_empty():
 		var header: Label = Label.new()

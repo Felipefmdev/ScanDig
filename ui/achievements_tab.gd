@@ -139,7 +139,7 @@ func _build_row(id: String) -> Button:
 	margin.add_child(hbox)
 	var icon: TextureRect = TextureRect.new()
 	icon.name = "Icon"
-	icon.custom_minimum_size = Vector2(ICON_SIDE, ICON_SIDE * 2)
+	icon.custom_minimum_size = Vector2(ICON_SIDE, ICON_SIDE)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -222,7 +222,7 @@ func _fill_row(row: Button, def: Dictionary, data: Dictionary, unlocked: bool) -
 	card_style.content_margin_bottom = 4.0
 	card.add_theme_stylebox_override(&"panel", card_style)
 	var icon: TextureRect = row.find_child("Icon", true, false) as TextureRect
-	icon.texture = UiIcons.get_icon(str(def["icon"]), ICON_SIDE * 2) if unlocked else _gray_icon(str(def["icon"]))
+	icon.texture = UiIcons.get_icon(str(def["icon"]), ICON_SIDE) if unlocked else _gray_icon(str(def["icon"]))
 	card.modulate = Color.WHITE if unlocked else LOCKED_TINT
 	row.tooltip_text = tr(str(def["desc"]))
 
@@ -230,7 +230,7 @@ func _fill_row(row: Button, def: Dictionary, data: Dictionary, unlocked: bool) -
 static func _gray_icon(icon_name: String) -> Texture2D:
 	if _gray_cache.has(icon_name):
 		return _gray_cache[icon_name]
-	var source: Texture2D = UiIcons.get_icon(icon_name, ICON_SIDE * 2)
+	var source: Texture2D = UiIcons.get_icon(icon_name, ICON_SIDE)
 	if source == null:
 		return null
 	var image: Image = source.get_image()
@@ -242,6 +242,6 @@ static func _gray_icon(icon_name: String) -> Texture2D:
 			# Sépia suave no tom da madeira/papel em vez de cinza frio.
 			image.set_pixel(x, y, Color(clampf(v * 0.96 + 0.08, 0.0, 1.0), clampf(v * 0.84 + 0.05, 0.0, 1.0), clampf(v * 0.68 + 0.02, 0.0, 1.0), c.a * 0.88))
 	var texture: ImageTexture = ImageTexture.create_from_image(image)
-	texture.set_size_override(Vector2i(ICON_SIDE, ICON_SIDE * 2))
+	texture.set_size_override(Vector2i(ICON_SIDE, ICON_SIDE))
 	_gray_cache[icon_name] = texture
 	return texture

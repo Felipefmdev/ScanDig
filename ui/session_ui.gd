@@ -253,7 +253,7 @@ func _setup_visual_icons() -> void:
 		medallion.add_theme_stylebox_override(&"panel", med_style)
 	var loading_icon: TextureRect = get_node_or_null(^"%LoadingIcon") as TextureRect
 	if loading_icon != null:
-		loading_icon.texture = UiIcons.get_icon("detector", 64)
+		loading_icon.texture = UiIcons.get_icon("detector", 56)
 		loading_screen.visibility_changed.connect(_sync_loading_anim.bind(loading_icon))
 		_sync_loading_anim(loading_icon)
 	var total_icon: TextureRect = get_node_or_null(^"%SummaryTotalIcon") as TextureRect
@@ -310,7 +310,7 @@ func _sync_toast_icon() -> void:
 			icon_name = "coin"
 		elif low.contains("chave") or low.contains("key"):
 			icon_name = "lock"
-		_toast_icon.texture = UiIcons.get_icon(icon_name, 44)
+		_toast_icon.texture = UiIcons.get_icon(icon_name, 22)
 		_toast_icon.visible = _toast_icon.texture != null
 	else:
 		_toast_icon.visible = false
@@ -735,7 +735,7 @@ func _build_save_toast() -> void:
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	icon.texture = UiIcons.get_icon("warning", 44)
+	icon.texture = UiIcons.get_icon("warning", 22)
 	row.add_child(icon)
 	save_toast_label = Label.new()
 	save_toast_label.theme_type_variation = &"ToastLabel"

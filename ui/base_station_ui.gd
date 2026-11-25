@@ -1490,7 +1490,7 @@ const BOSS_FIELD_META: Dictionary = {
 }
 
 const JOURNAL_MINI_SIDE: int = 28
-const JOURNAL_MINI_SCALE: float = 1.0
+const JOURNAL_MINI_SCALE: float = 4.0
 const JOURNAL_UNKNOWN_MARK: String = "M19 20Q19 15 24 15Q30 15 30 20Q30 23 27 25L24 28V30M24 34h.1"
 
 # Coordenadas no viewBox 48 × 48: contorno, sombra, luz e detalhes de cada ficha.

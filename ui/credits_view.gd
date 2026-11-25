@@ -165,7 +165,7 @@ func _build() -> void:
 	sounds_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	sounds_row.add_theme_constant_override(&"separation", 8)
 	var sounds_icon: TextureRect = TextureRect.new()
-	sounds_icon.texture = UiIcons.get_icon("audio", 40)
+	sounds_icon.texture = UiIcons.get_icon("audio", 20)
 	sounds_icon.custom_minimum_size = Vector2(20, 20)
 	sounds_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sounds_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

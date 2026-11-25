@@ -146,7 +146,7 @@ func show_toast(text: String) -> void:
 	toast_label.text = text
 	if _toast_icon != null:
 		var icon_name: String = _icon_for_toast(text)
-		_toast_icon.texture = UiIcons.get_icon(icon_name, 44) if not icon_name.is_empty() else null
+		_toast_icon.texture = UiIcons.get_icon(icon_name, 22) if not icon_name.is_empty() else null
 		_toast_icon.visible = _toast_icon.texture != null
 	toast_panel.modulate.a = 1.0
 	toast_panel.show()

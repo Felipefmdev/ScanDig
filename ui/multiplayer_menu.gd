@@ -866,7 +866,7 @@ func _setup_visual_icons() -> void:
 			_players_empty_box.add_theme_constant_override(&"separation", 6)
 			_players_empty_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			var empty_icon: TextureRect = TextureRect.new()
-			empty_icon.texture = UiIcons.get_icon("multiplayer", 56)
+			empty_icon.texture = UiIcons.get_icon("multiplayer", 32)
 			empty_icon.custom_minimum_size = Vector2(16, 16)
 			empty_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			empty_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

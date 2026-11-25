@@ -290,7 +290,7 @@ func _build() -> void:
 	quit_box.add_theme_constant_override("separation", 12)
 	quit_icon = TextureRect.new()
 	quit_icon.name = "QuitIcon"
-	quit_icon.texture = UiIcons.get_icon("warning", 56)
+	quit_icon.texture = UiIcons.get_icon("warning", 28)
 	quit_icon.custom_minimum_size = Vector2(28, 28)
 	quit_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	quit_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

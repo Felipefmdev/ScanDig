@@ -259,7 +259,7 @@ func _build() -> void:
 	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	title_row.add_theme_constant_override("separation", 10)
 	var trophy_icon: TextureRect = TextureRect.new()
-	trophy_icon.texture = UiIcons.get_icon("trophy", 48)
+	trophy_icon.texture = UiIcons.get_icon("trophy", 30)
 	trophy_icon.custom_minimum_size = Vector2(30, 30)
 	trophy_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	trophy_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

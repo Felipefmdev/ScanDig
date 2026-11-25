@@ -57,7 +57,7 @@ func _apply_hierarchy() -> void:
 	add_theme_stylebox_override(&"panel", make_style() if primary else make_secondary_style())
 	if icon_rect != null:
 		icon_rect.custom_minimum_size = Vector2(side, side)
-		icon_rect.texture = UiIcons.get_icon(icon_name, side * 2)
+		icon_rect.texture = UiIcons.get_icon(icon_name, side)
 		icon_rect.visible = icon_rect.texture != null
 	if label != null:
 		label.add_theme_font_size_override(&"font_size", PRIMARY_FONT_SIZE if primary else SECONDARY_FONT_SIZE)

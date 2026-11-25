@@ -309,7 +309,7 @@ func _build() -> void:
 	skull_badge.add_theme_stylebox_override(&"panel", badge_style)
 	var skull: TextureRect = TextureRect.new()
 	skull.name = "SkullIcon"
-	skull.texture = UiIcons.get_icon("skull", 64)
+	skull.texture = UiIcons.get_icon("skull", 40)
 	skull.custom_minimum_size = Vector2(40, 40)
 	skull.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	skull.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

@@ -571,7 +571,7 @@ func _build() -> void:
 	confirm_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	confirm_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	confirm_emblem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	confirm_emblem.texture = UiIcons.get_icon("warning", 56)
+	confirm_emblem.texture = UiIcons.get_icon("warning", 28)
 	confirm_box.add_child(confirm_emblem)
 	confirm_label = Label.new()
 	confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

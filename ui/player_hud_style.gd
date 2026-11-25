@@ -128,7 +128,7 @@ static func iconize(label: Label, icon_name: String) -> void:
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		label.add_child(icon)
-	icon.texture = UiIcons.get_icon(icon_name, ICON_SIDE * 2)
+	icon.texture = UiIcons.get_icon(icon_name, ICON_SIDE)
 	icon.anchor_top = 0.5
 	icon.anchor_bottom = 0.5
 	icon.offset_left = 0.0

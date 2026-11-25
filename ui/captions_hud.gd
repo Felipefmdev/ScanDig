@@ -86,7 +86,7 @@ func show_line(text: String) -> PanelContainer:
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.texture = UiIcons.get_icon(icon_name, 36)
+		icon.texture = UiIcons.get_icon(icon_name, 18)
 		row.add_child(icon)
 	var label: Label = Label.new()
 	label.name = "CaptionLabel"
