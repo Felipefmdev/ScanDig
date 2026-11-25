@@ -33,6 +33,53 @@ static func apply(hud: Node) -> void:
 		for chip: Node in chips.get_children():
 			if chip is UiChip:
 				(chip as UiChip).add_theme_stylebox_override(&"panel", quiet_chip_style())
+	var message_stack: VBoxContainer = hud.get_node_or_null(^"MessageStack") as VBoxContainer
+	if message_stack != null:
+		_setup_message_stack(message_stack)
+
+
+## Pílula translúcida nos Labels de MessageStack (dicas e alertas temporários, #247),
+## preservando cada filho como Label direto para o Player iterar e atualizar texto.
+static func _setup_message_stack(message_stack: VBoxContainer) -> void:
+	message_stack.add_theme_constant_override(&"separation", 6)
+	for child: Node in message_stack.get_children():
+		_style_message_label(child, message_stack)
+	if not message_stack.has_meta(&"_hud_style_connected"):
+		message_stack.set_meta(&"_hud_style_connected", true)
+		message_stack.child_entered_tree.connect(_style_message_label.bind(message_stack))
+
+
+static func _style_message_label(node: Node, message_stack: VBoxContainer) -> void:
+	var label: Label = node as Label
+	if label == null:
+		return
+	var pill: StyleBoxFlat = StyleBoxFlat.new()
+	pill.bg_color = Color(UiPalette.INK, 0.66)
+	pill.border_color = Color(UiPalette.WOOD_DARK, 0.85)
+	pill.set_border_width_all(1)
+	pill.set_corner_radius_all(6)
+	pill.content_margin_left = 12.0
+	pill.content_margin_right = 12.0
+	pill.content_margin_top = 4.0
+	pill.content_margin_bottom = 4.0
+	label.add_theme_stylebox_override(&"normal", pill)
+	_fit_message_pill(label, message_stack)
+	_fit_message_pill.call_deferred(label, message_stack)
+
+
+static func _fit_message_pill(label: Label, message_stack: VBoxContainer) -> void:
+	if not is_instance_valid(label) or not is_instance_valid(message_stack):
+		return
+	var font: Font = label.get_theme_font(&"font")
+	var font_size: int = label.get_theme_font_size(&"font_size")
+	var text_w: float = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x if font != null else 0.0
+	var stack_w: float = maxf(message_stack.size.x - 28.0, 620.0)
+	if not label.text.is_empty() and text_w <= stack_w and not label.text.contains("\n"):
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	else:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.size_flags_horizontal = Control.SIZE_FILL
 
 
 ## Texto claro com contorno e sombra de tinta, legível sobre qualquer chão.

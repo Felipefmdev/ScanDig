@@ -18,11 +18,11 @@ const JOIN_STAGE_TEXTS: Dictionary = {
 
 @onready var name_line_edit: LineEdit = _resolve_node("NameLineEdit", "PanelContainer/MarginContainer/VBoxContainer/NameLineEdit") as LineEdit
 @onready var progress_box: Control = _resolve_node("ProgressBox", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox") as Control
-@onready var continue_button: Button = _resolve_node("ContinueButton", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ContinueButton") as Button
-@onready var progress_label: Label = _resolve_node("ProgressLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressRow/ProgressLabel") as Label
-@onready var progress_info_label: Label = _resolve_node("ProgressInfoLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressRow/ProgressInfoLabel") as Label
-@onready var new_game_button: Button = _resolve_node("NewGameButton", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressRow/NewGameButton") as Button
-@onready var progress_warning_label: Label = _resolve_node("ProgressWarningLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressWarningLabel") as Label
+@onready var continue_button: Button = _resolve_node("ContinueButton", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressVBox/ContinueButton") as Button
+@onready var progress_label: Label = _resolve_node("ProgressLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressVBox/ProgressRow/ProgressLabel") as Label
+@onready var progress_info_label: Label = _resolve_node("ProgressInfoLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressVBox/ProgressRow/ProgressInfoLabel") as Label
+@onready var new_game_button: Button = _resolve_node("NewGameButton", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressVBox/ProgressRow/NewGameButton") as Button
+@onready var progress_warning_label: Label = _resolve_node("ProgressWarningLabel", "PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressVBox/ProgressWarningLabel") as Label
 @onready var new_game_dialog: ConfirmationDialog = _resolve_node("NewGameDialog", "NewGameDialog") as ConfirmationDialog
 @onready var mode_tabs: TabContainer = _resolve_node("ModeTabs", "PanelContainer/MarginContainer/VBoxContainer/ModeTabs") as TabContainer
 @onready var host_online_button: Button = _resolve_node("HostOnlineButton", "PanelContainer/MarginContainer/VBoxContainer/ModeTabs/Online (código)/HostOnlineButton") as Button
@@ -53,6 +53,8 @@ var _net_manager: NetworkManager = null
 var _avoid: Control = null
 var _panel: Control = null
 var _collapse_button: Button = null
+var _players_empty_box: HBoxContainer = null
+var _players_empty_label: Label = null
 ## Recolhido (só vale enquanto o menu cruza o painel de avoid_path).
 var _collapsed: bool = true
 ## Tentativa online em andamento: "" | "host" | "join". Bloqueia hospedar/entrar.
@@ -130,6 +132,7 @@ func _ready() -> void:
 		# Comando/teclado (#102): no coop o foco começa em "Criar sala online".
 		_focus_for_pad.call_deferred()
 
+	_setup_visual_icons()
 	_resolve_network_manager()
 	_setup_name_field()
 	_setup_online_mode()
@@ -191,6 +194,7 @@ func _setup_collapse() -> void:
 		return
 	_collapse_button = Button.new()
 	_collapse_button.name = "CollapseButton"
+	_collapse_button.icon = UiIcons.get_icon("multiplayer", 18)
 	_collapse_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_collapse_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_collapse_button.pressed.connect(_on_collapse_pressed)
@@ -785,6 +789,7 @@ func _refresh_players_list() -> void:
 
 	players_list.clear()
 	if _net_manager == null:
+		_sync_players_empty_hint()
 		return
 
 	if not _net_manager.has_method(&"get_player_name"):
@@ -793,6 +798,7 @@ func _refresh_players_list() -> void:
 			var player_info: Dictionary = _net_manager.connected_players[peer_id]
 			var player_name: String = str(player_info.get("name", "Jogador"))
 			players_list.add_item(tr("Peer ID %s: %s") % [str(peer_id), player_name])
+		_sync_players_empty_hint()
 		return
 
 	var ids: Array[int] = []
@@ -814,7 +820,67 @@ func _refresh_players_list() -> void:
 			line = tr("%s (host)") % line
 		if peer_id == my_id:
 			line = tr("%s (você)") % line
-		players_list.add_item(line)
+		var icon: Texture2D = UiIcons.get_icon("new" if peer_id == 1 else "multiplayer", 20)
+		players_list.add_item(line, icon)
+	_sync_players_empty_hint()
+
+
+func _sync_players_empty_hint() -> void:
+	if _players_empty_box == null or players_list == null:
+		return
+	if _players_empty_label != null:
+		_players_empty_label.text = tr("Modo Solo (Não conectado)")
+	_players_empty_box.visible = players_list.item_count == 0
+
+
+func _setup_visual_icons() -> void:
+	if room_code_box is PanelContainer:
+		var box_style: StyleBoxFlat = get_theme_stylebox(&"panel", &"InsetPanel").duplicate() as StyleBoxFlat
+		if box_style != null:
+			box_style.content_margin_left = 4.0
+			box_style.content_margin_right = 4.0
+			box_style.content_margin_top = 5.0
+			box_style.content_margin_bottom = 5.0
+			(room_code_box as PanelContainer).add_theme_stylebox_override(&"panel", box_style)
+	if host_online_button != null:
+		host_online_button.icon = UiIcons.get_icon("multiplayer", 18)
+	if host_button != null:
+		host_button.icon = UiIcons.get_icon("multiplayer", 18)
+	if join_code_button != null:
+		join_code_button.icon = UiIcons.get_icon("play", 16)
+	if join_button != null:
+		join_button.icon = UiIcons.get_icon("play", 16)
+	if copy_ip_button != null:
+		copy_ip_button.icon = UiIcons.get_icon("copy", 16)
+	if retry_button != null:
+		retry_button.icon = UiIcons.get_icon("wrench", 16)
+	if leave_button != null:
+		leave_button.icon = UiIcons.get_icon("door", 18)
+	if players_list != null:
+		players_list.fixed_icon_size = Vector2i(18, 18)
+		if _players_empty_box == null:
+			_players_empty_box = HBoxContainer.new()
+			_players_empty_box.name = "PlayersEmptyHint"
+			_players_empty_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			_players_empty_box.alignment = BoxContainer.ALIGNMENT_CENTER
+			_players_empty_box.add_theme_constant_override(&"separation", 6)
+			_players_empty_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var empty_icon: TextureRect = TextureRect.new()
+			empty_icon.texture = UiIcons.get_icon("multiplayer", 56)
+			empty_icon.custom_minimum_size = Vector2(16, 16)
+			empty_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			empty_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			empty_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			empty_icon.modulate = Color(1.0, 1.0, 1.0, 0.55)
+			empty_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_players_empty_box.add_child(empty_icon)
+			_players_empty_label = Label.new()
+			_players_empty_label.theme_type_variation = &"HintLabel"
+			_players_empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			_players_empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_players_empty_box.add_child(_players_empty_label)
+			players_list.add_child(_players_empty_box)
+			_sync_players_empty_hint()
 
 
 func _set_status(msg: String) -> void:

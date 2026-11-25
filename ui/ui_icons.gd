@@ -72,6 +72,8 @@ const SHAPES: Dictionary = {
 	"sun": "<circle cx=\"12\" cy=\"12\" r=\"5\" fill=\"#F2C65A\" {s}/><path d=\"M12 2.5 V5 M12 19 V21.5 M2.5 12 H5 M19 12 H21.5\" {s}/>",
 	"warning": "<path d=\"M12 3.5 L21.5 20 H2.5 Z\" fill=\"#E0A82E\" {s}/><path d=\"M12 9.5 V14.5\" {s}/><circle cx=\"12\" cy=\"17.5\" r=\"1.1\" fill=\"#2B2118\"/>",
 	"audio": "<path d=\"M4 9.5 H8 L13.5 5 V19 L8 14.5 H4 Z\" fill=\"#E0A82E\" {s}/><path d=\"M16.5 8.5 A5 5 0 0 1 16.5 15.5\" fill=\"none\" {s}/>",
+	"copy": "<rect x=\"8\" y=\"3.5\" width=\"12\" height=\"14\" rx=\"1.8\" fill=\"#DFCFA8\" {s}/><rect x=\"4\" y=\"6.5\" width=\"12\" height=\"14\" rx=\"1.8\" fill=\"#F3EAD3\" {s}/>",
+	"bulb": "<path d=\"M12 3.5 A6 6 0 0 0 8.5 14.5 V17 H15.5 V14.5 A6 6 0 0 0 12 3.5 Z\" fill=\"#F2C65A\" {s}/><rect x=\"9\" y=\"17\" width=\"6\" height=\"3.5\" rx=\"1\" fill=\"#AEB7BE\" {s}/>",
 	"trophy": "<path d=\"M7.5 5.5 H4 Q4 10 8.5 10.5 M16.5 5.5 H20 Q20 10 15.5 10.5\" fill=\"none\" {s}/>"
 		+ "<path d=\"M7 3.5 H17 V8 Q17 13.5 12 13.5 Q7 13.5 7 8 Z\" fill=\"#E0A82E\" {s}/>"
 		+ "<path d=\"M12 13.5 V17\" {s}/><rect x=\"7.5\" y=\"17\" width=\"9\" height=\"3.5\" rx=\"1\" fill=\"#9A5A28\" {s}/>"
