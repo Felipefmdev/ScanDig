@@ -85,7 +85,7 @@ static func skip_disabled(buttons: Array) -> void:
 ## Uma camada por cima (resumo do dia, aviso da sessão, pausa, vitória) está aberta: telas de baixo
 ## que acabam de abrir (lobby carregando atrás do resumo) não tiram o foco dela (#135).
 static func modal_open() -> bool:
-	if PauseMenu.is_open() or VictoryScreen.is_open():
+	if PauseMenu.is_open() or VictoryScreen.is_open() or DeathScreen.is_open():
 		return true
 	var ui: SessionUI = SessionUI.instance
 	if ui == null or ui.summary_panel == null:

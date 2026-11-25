@@ -79,9 +79,12 @@ var toast_panel: Control = null
 ## Foco antes de abrir um painel (#135), devolvido ao fechar.
 var _focus_before: Control = null
 var toast_label: Label = null
+var _toast_icon: TextureRect = null
 ## Aviso de save: em qualquer tela (título, base, mapa) e por cima do carregamento.
 var save_toast_panel: PanelContainer = null
 var save_toast_label: Label = null
+## Tela de morte (#244), montada junto da SessionUI (camada 47).
+var death_screen: DeathScreen = null
 
 var _session: Node = null
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
@@ -97,6 +100,7 @@ var _toast_queue: Array[String] = []
 var _toast_token: int = 0
 var _save_toast_token: int = 0
 var _save_toast_active: bool = false
+var _loading_tween: Tween = null
 ## Último resumo do dia mostrado (refeito ao trocar o idioma com ele aberto).
 var _last_summary: Dictionary = {}
 
@@ -128,15 +132,22 @@ func _ready() -> void:
 	# A quebra de linha é medida pelo Container após trocar texto/largura.
 	toast_panel.minimum_size_changed.connect(func() -> void:
 		if toast_panel.visible:
+			_sync_toast_icon()
 			_place_toast(), CONNECT_DEFERRED)
+	toast_panel.visibility_changed.connect(func() -> void:
+		if toast_panel.visible:
+			_sync_toast_icon())
 	get_viewport().size_changed.connect(func() -> void:
 		if toast_panel.visible:
 			_place_toast())
+	_setup_death_screen()
 	_build_save_toast()
 	get_viewport().size_changed.connect(refresh_save_toast_layout, CONNECT_DEFERRED)
+	_setup_visual_icons()
 	# Mapa/dia sem cartão, como o resto do HUD de jogo (#122); o botão de sair segue do theme.
 	expedition_bar.add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
 	PlayerHudStyle.iconize(expedition_info_label, "map")
+	leave_button.icon = UiIcons.get_icon("door", 16)
 	# Encostado à direita, no canto: a largura vem do texto (sem reticências).
 	expedition_info_label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	expedition_info_label.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -203,6 +214,125 @@ func _restore_focus() -> void:
 		var current: Control = get_viewport().gui_get_focus_owner()
 		if current == null or not current.is_visible_in_tree():
 			get_tree().call_group(UiFocus.HOME_GROUP, &"focus_home")
+
+func _setup_death_screen() -> void:
+	death_screen = DeathScreen.new()
+	death_screen.name = "DeathScreen"
+	add_child(death_screen)
+
+
+func show_death_screen(context: Dictionary = {}) -> void:
+	if death_screen != null:
+		death_screen.open(context)
+
+
+func _setup_visual_icons() -> void:
+	_toast_icon = get_node_or_null(^"%ToastIcon") as TextureRect
+	var loading_card: PanelContainer = get_node_or_null(^"%LoadingCard") as PanelContainer
+	if loading_card != null:
+		var card_style: StyleBoxFlat = StyleBoxFlat.new()
+		card_style.bg_color = Color(UiPalette.INK, 0.45)
+		card_style.border_color = Color(UiPalette.GOLD, 0.55)
+		card_style.set_border_width_all(2)
+		card_style.set_corner_radius_all(8)
+		card_style.shadow_color = Color(0, 0, 0, 0.35)
+		card_style.shadow_size = 4
+		card_style.shadow_offset = Vector2(0, 3)
+		loading_card.add_theme_stylebox_override(&"panel", card_style)
+	var medallion: PanelContainer = get_node_or_null(^"%LoadingMedallion") as PanelContainer
+	if medallion != null:
+		var med_style: StyleBoxFlat = StyleBoxFlat.new()
+		med_style.bg_color = UiPalette.PAPER
+		med_style.border_color = UiPalette.INK
+		med_style.set_border_width_all(3)
+		med_style.set_corner_radius_all(38)
+		med_style.content_margin_left = 10.0
+		med_style.content_margin_right = 10.0
+		med_style.content_margin_top = 10.0
+		med_style.content_margin_bottom = 10.0
+		medallion.add_theme_stylebox_override(&"panel", med_style)
+	var loading_icon: TextureRect = get_node_or_null(^"%LoadingIcon") as TextureRect
+	if loading_icon != null:
+		loading_icon.texture = UiIcons.get_icon("detector", 64)
+		loading_screen.visibility_changed.connect(_sync_loading_anim.bind(loading_icon))
+		_sync_loading_anim(loading_icon)
+	var total_icon: TextureRect = get_node_or_null(^"%SummaryTotalIcon") as TextureRect
+	if total_icon != null:
+		total_icon.texture = UiIcons.get_icon("coin", 24)
+	summary_list.fixed_icon_size = Vector2i(20, 20)
+	if leave_confirm_button != null:
+		leave_confirm_button.icon = UiIcons.get_icon("door", 18)
+	if summary_close_button != null:
+		summary_close_button.icon = UiIcons.get_icon("check", 18)
+	if host_lost_close_button != null:
+		host_lost_close_button.icon = UiIcons.get_icon("check", 18)
+	for emblem_path: NodePath in [^"%HostLostIcon", ^"%LeaveConfirmIcon"]:
+		var emblem: TextureRect = get_node_or_null(emblem_path) as TextureRect
+		if emblem != null:
+			emblem.texture = UiIcons.get_icon("warning", 28)
+	var backdrop: Control = get_node_or_null(^"%ModalBackdrop") as Control
+	if backdrop != null:
+		var sync_backdrop: Callable = func() -> void:
+			backdrop.visible = summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible
+		for modal: Control in [summary_panel, host_lost_panel, leave_confirm_panel]:
+			modal.visibility_changed.connect(sync_backdrop)
+		sync_backdrop.call()
+
+
+func _sync_loading_anim(loading_icon: TextureRect) -> void:
+	if _loading_tween != null:
+		_loading_tween.kill()
+		_loading_tween = null
+	if loading_icon == null:
+		return
+	loading_icon.rotation_degrees = 0.0
+	if loading_screen == null or not loading_screen.visible or not is_inside_tree():
+		return
+	loading_icon.pivot_offset = Vector2(28.0, 28.0)
+	_loading_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_loops()
+	_loading_tween.tween_property(loading_icon, ^"rotation_degrees", 7.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_loading_tween.tween_property(loading_icon, ^"rotation_degrees", -7.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _sync_toast_icon() -> void:
+	if _toast_icon == null or toast_label == null:
+		return
+	var text: String = toast_label.text
+	var show_icon: bool = not text.is_empty() and not text.begins_with("📖") and not text.begins_with("🏆")
+	if show_icon:
+		var low: String = text.to_lower()
+		var icon_name: String = "new"
+		if low.contains("segredo") or low.contains("secret"):
+			icon_name = "gem"
+		elif low.contains("conquista") or low.contains("achievement"):
+			icon_name = "trophy"
+		elif low.contains("miss") or low.contains("quest") or low.contains("r$"):
+			icon_name = "coin"
+		elif low.contains("chave") or low.contains("key"):
+			icon_name = "lock"
+		_toast_icon.texture = UiIcons.get_icon(icon_name, 44)
+		_toast_icon.visible = _toast_icon.texture != null
+	else:
+		_toast_icon.visible = false
+	_fit_toast_label_wrap()
+
+
+func _fit_toast_label_wrap() -> void:
+	if toast_label == null or toast_panel == null:
+		return
+	var font: Font = toast_label.get_theme_font(&"font")
+	var font_size: int = toast_label.get_theme_font_size(&"font_size")
+	var rendered: String = toast_label.atr(toast_label.text)
+	var text_w: float = font.get_string_size(rendered, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x if font != null else 0.0
+	var icon_extra: float = 30.0 if (_toast_icon != null and _toast_icon.visible) else 0.0
+	var panel_w: float = maxf(toast_panel.offset_right - toast_panel.offset_left, _toast_home.size.x)
+	var avail_w: float = maxf(panel_w - 28.0 - icon_extra, 120.0)
+	if text_w <= avail_w and not rendered.contains("\n"):
+		toast_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		toast_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	else:
+		toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		toast_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
 ## Resolve os nós únicos; retorna falso (com erro listando os ausentes) se faltar algum.
@@ -498,6 +628,7 @@ func _show_next_toast() -> void:
 		return
 	toast_label.text = _toast_queue.pop_front()
 	toast_panel.visible = true
+	_sync_toast_icon()
 	_place_toast()
 	_toast_token += 1
 	var token: int = _toast_token
@@ -591,12 +722,28 @@ func _build_save_toast() -> void:
 	_reset_save_toast_place()
 	save_toast_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	save_toast_panel.visible = false
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "SaveToastRow"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 8)
+	save_toast_panel.add_child(row)
+	var icon: TextureRect = TextureRect.new()
+	icon.name = "SaveToastIcon"
+	icon.custom_minimum_size = Vector2(22, 22)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.texture = UiIcons.get_icon("warning", 44)
+	row.add_child(icon)
 	save_toast_label = Label.new()
 	save_toast_label.theme_type_variation = &"ToastLabel"
+	save_toast_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	save_toast_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	save_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	save_toast_panel.add_child(save_toast_label)
+	row.add_child(save_toast_label)
 	add_child(save_toast_panel)
 	for changed: Signal in [save_toast_panel.resized, save_toast_panel.visibility_changed]:
 		changed.connect(func() -> void:
@@ -753,6 +900,7 @@ func _show_summary(summary: Dictionary) -> void:
 	var entries: Array = []
 	if summary.get("entries") is Array:
 		entries = summary["entries"] as Array
+	summary_list.fixed_icon_size = Vector2i(20, 20)
 	var sold: int = 0
 	var donated: int = 0
 	for entry: Variant in entries:
@@ -761,6 +909,7 @@ func _show_summary(summary: Dictionary) -> void:
 		var e: Dictionary = entry as Dictionary
 		var amount: int = int(e.get("value", 0))
 		var action_text: String
+		var is_donated: bool = false
 		match e.get("action"):
 			"sold":
 				sold += amount
@@ -768,11 +917,15 @@ func _show_summary(summary: Dictionary) -> void:
 			"donated":
 				donated += amount
 				action_text = tr("Doado ao museu")
+				is_donated = true
 			_:
 				continue
-		summary_list.add_item("%s — %s (+%s)" % [tr(str(e.get("name", "?"))), action_text, UiFormat.money(amount)])
+		var icon: Texture2D = UiIcons.get_icon("museum" if is_donated else "coin", 24)
+		var row_idx: int = summary_list.add_item("%s — %s (+%s)" % [tr(str(e.get("name", "?"))), action_text, UiFormat.money(amount)], icon)
+		summary_list.set_item_custom_bg_color(row_idx, Color(UiPalette.GREEN_BOTTLE, 0.08) if is_donated else Color(UiPalette.GOLD, 0.08))
 	if summary_list.item_count == 0:
-		summary_list.add_item(tr("Nenhum item vendido ou doado nesta expedição."))
+		var empty_idx: int = summary_list.add_item(tr("Nenhum item vendido ou doado nesta expedição."), UiIcons.get_icon("compass", 24))
+		summary_list.set_item_custom_fg_color(empty_idx, UiPalette.WOOD)
 	var money_end: int = int(summary.get("money_end", 0))
 	var balance: String = UiFormat.money(money_end)
 	if summary.has("money_start"):

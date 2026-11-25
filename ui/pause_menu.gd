@@ -145,7 +145,7 @@ func _on_settings_changed(section: String, values: Dictionary) -> void:
 
 ## Carregamento, resumo do dia, queda do host, tela de morte ou tela de vitória: o menu não abre por cima.
 func can_open() -> bool:
-	if root_control == null or VictoryScreen.is_open():
+	if root_control == null or VictoryScreen.is_open() or DeathScreen.is_open():
 		return false
 	var ui: SessionUI = SessionUI.instance
 	if ui == null:
