@@ -34,6 +34,7 @@ func _initialize() -> void:
 	_labels()
 	_panels()
 	_buttons()
+	_checkboxes()
 	_inputs()
 	_tabs()
 	_lists()
@@ -120,7 +121,7 @@ func _panel_flat(bg: Color) -> StyleBoxFlat:
 ## Botão em degrau: borda de baixo mais grossa; o pressed passa a borda grossa para cima
 ## e o texto desce 2 px, sem mudar o tamanho mínimo.
 func _button_box(bg: Color, pressed: bool = false) -> StyleBoxFlat:
-	var sb: StyleBoxFlat = _flat(bg, 2, 3, 10, 3)
+	var sb: StyleBoxFlat = _flat(bg, 2, 4, 10, 3)
 	if pressed:
 		sb.border_width_top = 4
 		sb.content_margin_top = 5
@@ -129,6 +130,9 @@ func _button_box(bg: Color, pressed: bool = false) -> StyleBoxFlat:
 		sb.border_width_bottom = 4
 		sb.content_margin_top = 3
 		sb.content_margin_bottom = 5
+		sb.shadow_color = Color(P.INK, 0.16)
+		sb.shadow_size = 1
+		sb.shadow_offset = Vector2(0, 1)
 	return sb
 
 
@@ -195,6 +199,34 @@ func _paint_radio_unchecked(img: Image) -> void:
 			var d: float = Vector2(x + 0.5, y + 0.5).distance_to(Vector2(7, 7))
 			if d <= 6.5 and d >= 4.8:
 				img.set_pixel(x, y, P.INK)
+
+
+func _paint_checkbox(img: Image, fill: Color, border: Color, checked: bool, check_color: Color) -> void:
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	for y in range(h):
+		for x in range(w):
+			# Cantos arredondados de 1 px (tira os 4 pixels extremos).
+			if (x == 0 or x == w - 1) and (y == 0 or y == h - 1):
+				continue
+			var on_border: bool = x < 2 or x >= w - 2 or y < 2 or y >= h - 2 \
+				or ((x == 2 or x == w - 3) and (y == 2 or y == h - 3))
+			img.set_pixel(x, y, border if on_border else fill)
+	if not checked:
+		return
+	# Visto desenhado à mão com espessura de 2 px (de 4,9 -> 7,12 -> 13,5).
+	var pts: Array[Vector2i] = [
+		Vector2i(4, 9), Vector2i(5, 10), Vector2i(6, 11), Vector2i(7, 12),
+		Vector2i(8, 11), Vector2i(9, 10), Vector2i(10, 9), Vector2i(11, 8),
+		Vector2i(12, 7), Vector2i(13, 6), Vector2i(14, 5),
+	]
+	for p: Vector2i in pts:
+		for dy: int in [0, 1]:
+			for dx: int in [0, 1]:
+				var px: int = p.x + dx
+				var py: int = p.y + dy
+				if px >= 2 and px < w - 2 and py >= 2 and py < h - 2:
+					img.set_pixel(px, py, check_color)
 
 
 # --- Tipos ---------------------------------------------------------------------------------
@@ -293,13 +325,31 @@ func _panels() -> void:
 		_theme.set_stylebox("panel", "WornPanel", _worn_box(worn_tex))
 
 	var toast: StyleBoxFlat = _panel_flat(P.GREEN_BOTTLE)
-	toast.content_margin_left = 12
-	toast.content_margin_right = 12
+	toast.set_corner_radius_all(5)
+	toast.content_margin_left = 14
+	toast.content_margin_right = 14
+	toast.content_margin_top = 6
+	toast.content_margin_bottom = 6
 	_variation("ToastPanel", "PanelContainer")
 	_theme.set_stylebox("panel", "ToastPanel", toast)
 
-	var tooltip: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 2, 6, 4)
+	var tooltip: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 4, 8, 5)
+	tooltip.shadow_color = P.SHADOW
+	tooltip.shadow_size = 1
+	tooltip.shadow_offset = Vector2(2, 2)
 	_theme.set_stylebox("panel", "TooltipPanel", tooltip)
+
+	# Cartão interno em papel claro com borda quente (seções dentro de WornPanel, #242).
+	var inset: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 4, 8, 6)
+	inset.border_color = Color(P.WOOD, 0.7)
+	_variation("InsetPanel", "PanelContainer")
+	_theme.set_stylebox("panel", "InsetPanel", inset)
+
+	# Rodapé de totalização (Resumo do Dia, #242): papel dourado suave com moldura de madeira.
+	var total_box: StyleBoxFlat = _flat(P.PAPER_DARK.lerp(P.PAPER_LIGHT, 0.5), 2, 4, 12, 6)
+	total_box.border_color = P.WOOD
+	_variation("SummaryTotalPanel", "PanelContainer")
+	_theme.set_stylebox("panel", "SummaryTotalPanel", total_box)
 
 
 func _button_type(type: String, bg: Color, hover: Color, pressed: Color, text: Color) -> void:
@@ -333,9 +383,35 @@ func _buttons() -> void:
 	_theme.set_constant("arrow_margin", "OptionButton", 6)
 
 
+func _checkboxes() -> void:
+	# CheckBox próprio (#242): papel claro em ambos os estados (sem bloco escuro ao marcar) e
+	# caixinha desenhada em tinta/laranja no lugar do quadrado branco padrão da Godot.
+	var normal: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 4, 8, 4)
+	var hover: StyleBoxFlat = _flat(P.PAPER_LIGHT.lerp(P.ORANGE, 0.14), 2, 4, 8, 4)
+	var disabled: StyleBoxFlat = _flat(P.PAPER_DARK, 2, 4, 8, 4)
+	disabled.border_color = P.METAL
+	_theme.set_stylebox("normal", "CheckBox", normal)
+	_theme.set_stylebox("hover", "CheckBox", hover)
+	_theme.set_stylebox("pressed", "CheckBox", normal)
+	_theme.set_stylebox("hover_pressed", "CheckBox", hover)
+	_theme.set_stylebox("disabled", "CheckBox", disabled)
+	_theme.set_stylebox("focus", "CheckBox", _focus_box())
+	_set_font_colors("CheckBox", ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"], P.INK)
+	_theme.set_color("font_disabled_color", "CheckBox", P.WOOD)
+	_theme.set_color("font_outline_color", "CheckBox", P.INK)
+	_theme.set_constant("h_separation", "CheckBox", 8)
+	_theme.set_constant("check_v_offset", "CheckBox", 0)
+	_theme.set_icon("checked", "CheckBox", _icon("checkbox_checked", Vector2i(18, 18), _paint_checkbox.bind(P.ORANGE, P.INK, true, P.INK)))
+	_theme.set_icon("unchecked", "CheckBox", _icon("checkbox_unchecked", Vector2i(18, 18), _paint_checkbox.bind(P.PAPER_LIGHT, P.INK, false, P.INK)))
+	_theme.set_icon("checked_disabled", "CheckBox", _icon("checkbox_checked_disabled", Vector2i(18, 18), _paint_checkbox.bind(P.PAPER_DARK, P.METAL, true, P.WOOD)))
+	_theme.set_icon("unchecked_disabled", "CheckBox", _icon("checkbox_unchecked_disabled", Vector2i(18, 18), _paint_checkbox.bind(P.PAPER_DARK, P.METAL, false, P.WOOD)))
+	_theme.set_icon("radio_checked", "CheckBox", _icon("radio_checked", Vector2i(14, 14), _paint_radio_checked))
+	_theme.set_icon("radio_unchecked", "CheckBox", _icon("radio_unchecked", Vector2i(14, 14), _paint_radio_unchecked))
+
+
 func _inputs() -> void:
-	var normal: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 2, 6, 4)
-	var read_only: StyleBoxFlat = _flat(P.PAPER_DARK, 2, 2, 6, 4)
+	var normal: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 4, 8, 4)
+	var read_only: StyleBoxFlat = _flat(P.PAPER_DARK, 2, 4, 8, 4)
 	var focus: StyleBoxFlat = _focus_box()
 	_theme.set_stylebox("normal", "LineEdit", normal)
 	_theme.set_stylebox("read_only", "LineEdit", read_only)
@@ -380,26 +456,38 @@ func _tabs() -> void:
 
 
 func _lists() -> void:
-	_theme.set_stylebox("panel", "ItemList", _flat(P.PAPER_LIGHT, 2, 2, 4, 4))
+	_theme.set_stylebox("panel", "ItemList", _flat(P.PAPER_LIGHT, 2, 4, 6, 4))
 	_theme.set_stylebox("focus", "ItemList", _empty())
-	var selected: StyleBoxFlat = _flat(P.ORANGE, 0, 2, 2, 2)
+	var selected: StyleBoxFlat = _flat(P.ORANGE, 2, 3, 4, 0)
 	_theme.set_stylebox("selected", "ItemList", selected)
 	_theme.set_stylebox("selected_focus", "ItemList", selected)
-	_theme.set_stylebox("hovered", "ItemList", _flat(P.PAPER_DARK, 0, 2, 2, 2))
+	_theme.set_stylebox("hovered", "ItemList", _flat(P.PAPER_DARK.lerp(P.PAPER_LIGHT, 0.45), 0, 3, 4, 2))
 	_theme.set_stylebox("cursor", "ItemList", _empty())
 	_theme.set_stylebox("cursor_unfocused", "ItemList", _empty())
 	_set_font_colors("ItemList", ["font_color", "font_hovered_color", "font_selected_color"], P.INK)
 	_theme.set_color("font_outline_color", "ItemList", P.INK)
-	_theme.set_color("guide_color", "ItemList", Color(P.INK, 0.12))
+	_theme.set_color("guide_color", "ItemList", Color(P.WOOD, 0.24))
+	_theme.set_constant("v_separation", "ItemList", 4)
+	_theme.set_constant("h_separation", "ItemList", 8)
+	_theme.set_constant("icon_margin", "ItemList", 6)
 
 
 func _popups() -> void:
-	_theme.set_stylebox("panel", "PopupMenu", _flat(P.PAPER_LIGHT, 2, 2, 4, 4))
-	_theme.set_stylebox("hover", "PopupMenu", _flat(P.ORANGE, 0, 2, 4, 2))
+	var popup_panel: StyleBoxFlat = _flat(P.PAPER_LIGHT, 2, 4, 6, 6)
+	popup_panel.shadow_color = P.SHADOW
+	popup_panel.shadow_size = 1
+	popup_panel.shadow_offset = Vector2(3, 3)
+	_theme.set_stylebox("panel", "PopupMenu", popup_panel)
+	var popup_hover: StyleBoxFlat = _flat(P.PAPER_LIGHT.lerp(P.ORANGE, 0.32), 1, 3, 6, 3)
+	popup_hover.border_color = P.WOOD
+	_theme.set_stylebox("hover", "PopupMenu", popup_hover)
 	var sep: StyleBoxLine = StyleBoxLine.new()
-	sep.color = P.WOOD
+	sep.color = Color(P.WOOD, 0.65)
 	sep.thickness = 2
 	_theme.set_stylebox("separator", "PopupMenu", sep)
+	_theme.set_constant("v_separation", "PopupMenu", 6)
+	_theme.set_constant("item_start_padding", "PopupMenu", 6)
+	_theme.set_constant("item_end_padding", "PopupMenu", 6)
 	_set_font_colors("PopupMenu", ["font_color", "font_hover_color", "font_accelerator_color", "font_separator_color"], P.INK)
 	_theme.set_color("font_disabled_color", "PopupMenu", P.METAL)
 	_theme.set_color("font_outline_color", "PopupMenu", P.INK)
@@ -409,22 +497,24 @@ func _popups() -> void:
 
 func _scroll_and_separators() -> void:
 	var line: StyleBoxLine = StyleBoxLine.new()
-	line.color = P.WOOD
+	line.color = Color(P.WOOD, 0.65)
 	line.thickness = 2
 	_theme.set_stylebox("separator", "HSeparator", line)
 	_theme.set_constant("separation", "HSeparator", 6)
 	var vline: StyleBoxLine = StyleBoxLine.new()
-	vline.color = P.WOOD
+	vline.color = Color(P.WOOD, 0.65)
 	vline.thickness = 2
 	vline.vertical = true
 	_theme.set_stylebox("separator", "VSeparator", vline)
 
 	for type: String in ["VScrollBar", "HScrollBar"]:
-		_theme.set_stylebox("scroll", type, _flat(P.PAPER_DARK, 0, 2, 5, 5))
-		_theme.set_stylebox("scroll_focus", type, _flat(P.PAPER_DARK, 0, 2, 5, 5))
-		_theme.set_stylebox("grabber", type, _flat(P.WOOD, 1, 2, 0, 0))
-		_theme.set_stylebox("grabber_highlight", type, _flat(P.ORANGE, 1, 2, 0, 0))
-		_theme.set_stylebox("grabber_pressed", type, _flat(P.ORANGE.darkened(0.12), 1, 2, 0, 0))
+		var track: StyleBoxFlat = _flat(Color(P.PAPER_DARK, 0.85), 1, 4, 5, 5)
+		track.border_color = Color(P.WOOD, 0.45)
+		_theme.set_stylebox("scroll", type, track)
+		_theme.set_stylebox("scroll_focus", type, track)
+		_theme.set_stylebox("grabber", type, _flat(P.WOOD, 1, 4, 0, 0))
+		_theme.set_stylebox("grabber_highlight", type, _flat(P.ORANGE, 1, 4, 0, 0))
+		_theme.set_stylebox("grabber_pressed", type, _flat(P.ORANGE.darkened(0.12), 1, 4, 0, 0))
 
 
 ## Barras de progresso (HP padrão em RED_BURNT, ThreatBar em ORANGE e BossBar com painel/sombra).
@@ -469,15 +559,15 @@ func _progress_bars() -> void:
 
 
 func _windows() -> void:
-	# Janela embutida (AcceptDialog/ConfirmationDialog): barra de título em madeira escura.
-	var border: StyleBoxFlat = _flat(P.WOOD_DARK, 3, 3, 0, 0)
+	# Janela embutida (AcceptDialog/ConfirmationDialog): barra de título em madeira escura e filete dourado.
+	var border: StyleBoxFlat = _flat(P.WOOD_DARK, 3, 4, 0, 0)
 	border.expand_margin_left = 6
 	border.expand_margin_right = 6
 	border.expand_margin_top = 32
 	border.expand_margin_bottom = 6
 	border.shadow_color = P.SHADOW
 	border.shadow_size = 1
-	border.shadow_offset = Vector2(3, 3)
+	border.shadow_offset = Vector2(4, 4)
 	_theme.set_stylebox("embedded_border", "Window", border)
 	_theme.set_stylebox("embedded_unfocused_border", "Window", border)
 	_theme.set_color("title_color", "Window", P.PAPER)
@@ -485,9 +575,9 @@ func _windows() -> void:
 	_theme.set_constant("title_height", "Window", 30)
 	_theme.set_font_size("title_font_size", "Window", FONT_SIZE)
 
-	var dialog_panel: StyleBoxFlat = _flat(P.PAPER, 0, 0, 10, 8)
+	var dialog_panel: StyleBoxFlat = _flat(P.PAPER, 0, 0, 12, 10)
 	_theme.set_stylebox("panel", "AcceptDialog", dialog_panel)
-	_theme.set_constant("buttons_separation", "AcceptDialog", 10)
+	_theme.set_constant("buttons_separation", "AcceptDialog", 12)
 
 
 # --- Fonte desenhada à mão (#51) ---------------------------------------------------------

@@ -59,18 +59,34 @@ anchor_right = 0.5
 offset_left = -240.0
 offset_top = 132.0
 offset_right = 240.0
-offset_bottom = 172.0
+offset_bottom = 174.0
 grow_horizontal = 2
 mouse_filter = 2
 theme = ExtResource("2_scandig_theme")
 theme_type_variation = &"ToastPanel"
 
-[node name="ToastLabel" type="Label" parent="ToastPanel"]
+[node name="ToastRow" type="HBoxContainer" parent="ToastPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="ToastIcon" type="TextureRect" parent="ToastPanel/ToastRow"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ToastLabel" type="Label" parent="ToastPanel/ToastRow"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 4
 horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 3
 theme_type_variation = &"ToastLabel"
 
 [node name="LoadingScreen" type="ColorRect" parent="."]
@@ -83,18 +99,64 @@ grow_vertical = 2
 color = Color(0.243137, 0.164706, 0.105882, 1)
 theme = ExtResource("2_scandig_theme")
 
-[node name="LoadingLabel" type="Label" parent="LoadingScreen"]
-unique_name_in_owner = true
+[node name="LoadingCenter" type="CenterContainer" parent="LoadingScreen"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="LoadingCard" type="PanelContainer" parent="LoadingScreen/LoadingCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+
+[node name="LoadingMargin" type="MarginContainer" parent="LoadingScreen/LoadingCenter/LoadingCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
+
+[node name="LoadingVBox" type="VBoxContainer" parent="LoadingScreen/LoadingCenter/LoadingCard/LoadingMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="LoadingMedallion" type="PanelContainer" parent="LoadingScreen/LoadingCenter/LoadingCard/LoadingMargin/LoadingVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="LoadingIcon" type="TextureRect" parent="LoadingScreen/LoadingCenter/LoadingCard/LoadingMargin/LoadingVBox/LoadingMedallion"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LoadingSep" type="HSeparator" parent="LoadingScreen/LoadingCenter/LoadingCard/LoadingMargin/LoadingVBox"]
+layout_mode = 2
+
+[node name="LoadingLabel" type="Label" parent="LoadingScreen/LoadingCenter/LoadingCard/LoadingMargin/LoadingVBox"]
+unique_name_in_owner = true
+layout_mode = 2
 text = "Carregando..."
 horizontal_alignment = 1
 vertical_alignment = 1
 theme_type_variation = &"LoadingLabel"
+
+[node name="ModalBackdrop" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.168627, 0.129412, 0.094118, 0.52)
 
 [node name="SummaryPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -103,10 +165,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -280.0
-offset_top = -200.0
-offset_right = 280.0
-offset_bottom = 200.0
+offset_left = -290.0
+offset_top = -210.0
+offset_right = 290.0
+offset_bottom = 210.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("2_scandig_theme")
@@ -114,10 +176,10 @@ theme_type_variation = &"WornPanel"
 
 [node name="Margin" type="MarginContainer" parent="SummaryPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
 
 [node name="VBox" type="VBoxContainer" parent="SummaryPanel/Margin"]
 layout_mode = 2
@@ -131,20 +193,42 @@ horizontal_alignment = 1
 autowrap_mode = 3
 theme_type_variation = &"TitleLabel"
 
+[node name="HeaderSep" type="HSeparator" parent="SummaryPanel/Margin/VBox"]
+layout_mode = 2
+
 [node name="SummaryList" type="ItemList" parent="SummaryPanel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="SummaryTotalLabel" type="Label" parent="SummaryPanel/Margin/VBox"]
+[node name="SummaryTotalBox" type="PanelContainer" parent="SummaryPanel/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"SummaryTotalPanel"
+
+[node name="SummaryTotalRow" type="HBoxContainer" parent="SummaryPanel/Margin/VBox/SummaryTotalBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="SummaryTotalIcon" type="TextureRect" parent="SummaryPanel/Margin/VBox/SummaryTotalBox/SummaryTotalRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SummaryTotalLabel" type="Label" parent="SummaryPanel/Margin/VBox/SummaryTotalBox/SummaryTotalRow"]
 unique_name_in_owner = true
 layout_mode = 2
-autowrap_mode = 3
-theme_override_constants/line_spacing = 4
+text = "Total ganho: R$ 0"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="SummaryCloseButton" type="Button" parent="SummaryPanel/Margin/VBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Fechar"
@@ -157,24 +241,33 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -80.0
-offset_right = 220.0
-offset_bottom = 80.0
+offset_left = -230.0
+offset_top = -86.0
+offset_right = 230.0
+offset_bottom = 86.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("2_scandig_theme")
+theme_type_variation = &"WornPanel"
 
 [node name="Margin" type="MarginContainer" parent="HostLostPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
 
 [node name="VBox" type="VBoxContainer" parent="HostLostPanel/Margin"]
 layout_mode = 2
 theme_override_constants/separation = 10
+
+[node name="HostLostIcon" type="TextureRect" parent="HostLostPanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_horizontal = 4
+expand_mode = 1
+stretch_mode = 5
 
 [node name="HostLostLabel" type="Label" parent="HostLostPanel/Margin/VBox"]
 layout_mode = 2
@@ -183,11 +276,16 @@ Você voltou para a base."
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="HostLostSep" type="HSeparator" parent="HostLostPanel/Margin/VBox"]
+layout_mode = 2
+
 [node name="HostLostCloseButton" type="Button" parent="HostLostPanel/Margin/VBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "OK"
+theme_type_variation = &"PrimaryButton"
 
 [node name="LeaveConfirmPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -197,24 +295,33 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -240.0
+offset_left = -250.0
 offset_top = -90.0
-offset_right = 240.0
+offset_right = 250.0
 offset_bottom = 90.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("2_scandig_theme")
+theme_type_variation = &"WornPanel"
 
 [node name="Margin" type="MarginContainer" parent="LeaveConfirmPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
 
 [node name="VBox" type="VBoxContainer" parent="LeaveConfirmPanel/Margin"]
 layout_mode = 2
 theme_override_constants/separation = 10
+
+[node name="LeaveConfirmIcon" type="TextureRect" parent="LeaveConfirmPanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_horizontal = 4
+expand_mode = 1
+stretch_mode = 5
 
 [node name="LeaveConfirmLabel" type="Label" parent="LeaveConfirmPanel/Margin/VBox"]
 unique_name_in_owner = true
@@ -223,6 +330,9 @@ text = "Sair da sessão?"
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="LeaveSep" type="HSeparator" parent="LeaveConfirmPanel/Margin/VBox"]
+layout_mode = 2
+
 [node name="HBox" type="HBoxContainer" parent="LeaveConfirmPanel/Margin/VBox"]
 layout_mode = 2
 size_flags_horizontal = 4
@@ -230,11 +340,13 @@ theme_override_constants/separation = 12
 
 [node name="LeaveConfirmButton" type="Button" parent="LeaveConfirmPanel/Margin/VBox/HBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Sair"
 theme_type_variation = &"DangerButton"
 
 [node name="LeaveCancelButton" type="Button" parent="LeaveConfirmPanel/Margin/VBox/HBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Cancelar"

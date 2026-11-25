@@ -31,6 +31,7 @@ func _run() -> void:
 	_check_contrast()
 	_check_fonts()
 	_check_progress_bars()
+	_check_checkboxes_and_cards()
 	root.size = LOGICAL_SIZES[0]
 	change_scene_to_file("res://world/lobby_base.tscn")
 	# Save isolado: nada deste teste toca o user://scandig_save.json do jogador.
@@ -114,10 +115,15 @@ func _check_scenes(base: BaseStationUI, menu: MultiplayerMenu, hud: Node, ui: Se
 	_check(_same_box(ui.toast_panel, "panel", "ToastPanel"), "SessionUI: aviso com ToastPanel")
 	_check(_same_color(ui.toast_label, "font_color", "ToastLabel"), "SessionUI: texto do aviso do theme")
 	_check(_same_box(ui.summary_panel, "panel", "WornPanel"), "SessionUI: resumo WornPanel")
+	_check(_same_box(ui.host_lost_panel, "panel", "WornPanel"), "SessionUI: host_lost WornPanel")
+	_check(_same_box(ui.leave_confirm_panel, "panel", "WornPanel"), "SessionUI: sair confirmação WornPanel")
 	_check(_same_color(ui.summary_total_label, "font_color", "Label"), "SessionUI: cor do Label do theme")
 	_check((ui.loading_screen as ColorRect).color.is_equal_approx(UiPalette.WOOD_DARK), "SessionUI: carregamento em WOOD_DARK")
 	_check(ui.loading_label.get_theme_color("font_color").is_equal_approx(UiPalette.PAPER), "SessionUI: texto do carregamento em PAPER")
 	_check(_same_box(ui.leave_confirm_button, "normal", "DangerButton"), "SessionUI: confirmar saída como DangerButton")
+	_check(_same_box(menu.progress_box, "panel", "InsetPanel"), "menu: bloco de progresso em InsetPanel")
+	_check(_same_box(menu.continue_button, "normal", "Button"), "menu: Continuar como Button secundário (hierarquia)")
+	_check(_same_box(menu.join_code_button, "normal", "Button"), "menu: Entrar (código) como Button secundário (hierarquia)")
 
 
 # --- 2. Nenhum override de cor ou tamanho de fonte -----------------------------------------
@@ -194,6 +200,19 @@ func _check_progress_bars() -> void:
 	_check(_theme.get_type_variation_base("BossBar") == &"ProgressBar", "BossBar herda de ProgressBar")
 	_check(boss_fill != null and boss_fill.bg_color.is_equal_approx(UiPalette.RED_BURNT) and boss_fill.border_width_top == 3, "BossBar fill em RED_BURNT com borda 3")
 	_check(boss_bg != null and boss_bg.bg_color.is_equal_approx(UiPalette.PAPER_DARK) and boss_bg.shadow_size > 0, "BossBar background em PAPER_DARK com sombra")
+
+
+func _check_checkboxes_and_cards() -> void:
+	var cb_normal: StyleBoxFlat = _theme.get_stylebox("normal", "CheckBox") as StyleBoxFlat
+	var cb_pressed: StyleBoxFlat = _theme.get_stylebox("pressed", "CheckBox") as StyleBoxFlat
+	var cb_disabled: StyleBoxFlat = _theme.get_stylebox("disabled", "CheckBox") as StyleBoxFlat
+	_check(cb_normal != null and cb_normal.bg_color.is_equal_approx(UiPalette.PAPER_LIGHT), "CheckBox normal em PAPER_LIGHT")
+	_check(cb_pressed != null and cb_pressed.bg_color.is_equal_approx(UiPalette.PAPER_LIGHT), "CheckBox marcado mantém PAPER_LIGHT")
+	_check(cb_disabled != null and cb_disabled.bg_color.is_equal_approx(UiPalette.PAPER_DARK) and cb_disabled.border_color.is_equal_approx(UiPalette.METAL), "CheckBox desativado em PAPER_DARK/METAL")
+	for icon_name: String in ["checked", "unchecked", "checked_disabled", "unchecked_disabled"]:
+		_check(_theme.has_icon(icon_name, "CheckBox") and _theme.get_icon(icon_name, "CheckBox") != null, "CheckBox ícone %s do tema" % icon_name)
+	_check(_theme.get_type_variation_base("InsetPanel") == &"PanelContainer" and _theme.has_stylebox("panel", "InsetPanel"), "InsetPanel herda de PanelContainer")
+	_check(_theme.get_type_variation_base("SummaryTotalPanel") == &"PanelContainer" and _theme.has_stylebox("panel", "SummaryTotalPanel"), "SummaryTotalPanel herda de PanelContainer")
 
 
 
