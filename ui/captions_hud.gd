@@ -71,11 +71,29 @@ func show_line(text: String) -> PanelContainer:
 	panel.theme_type_variation = &"ToastPanel"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "CaptionRow"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 6)
+	panel.add_child(row)
+	var icon_name: String = _icon_for_caption(text)
+	if not icon_name.is_empty():
+		var icon: TextureRect = TextureRect.new()
+		icon.name = "CaptionIcon"
+		icon.custom_minimum_size = Vector2(18, 18)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.texture = UiIcons.get_icon(icon_name, 36)
+		row.add_child(icon)
 	var label: Label = Label.new()
+	label.name = "CaptionLabel"
 	label.theme_type_variation = &"ToastLabel"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.text = text
-	panel.add_child(label)
+	row.add_child(label)
 	stack.add_child(panel)
 	# Nunca mais linhas que o A11y deixa: a mais velha sai (avisos não passam pelo limite).
 	while stack.get_child_count() > A11y.CAPTION_MAX:
@@ -87,11 +105,26 @@ func show_line(text: String) -> PanelContainer:
 	return panel
 
 
+static func _icon_for_caption(text: String) -> String:
+	var low: String = text.to_lower()
+	if low.contains("chefe") or low.contains("boss") or low.contains("criatura") or low.contains("creature"):
+		return "skull"
+	if low.contains("clima") or low.contains("weather"):
+		return "rain"
+	if low.contains("explos") or low.contains("perigo"):
+		return "warning"
+	if low.contains("cuidado") or low.contains("careful"):
+		return "check"
+	return ""
+
+
 func lines() -> PackedStringArray:
 	var out: PackedStringArray = []
 	for child: Node in stack.get_children():
 		if not child.is_queued_for_deletion():
-			out.append((child.get_child(0) as Label).text)
+			var lbl: Label = child.find_child("CaptionLabel", true, false) as Label
+			if lbl != null:
+				out.append(lbl.text)
 	return out
 
 

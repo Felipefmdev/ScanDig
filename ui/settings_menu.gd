@@ -136,6 +136,32 @@ func _margin(child: Control, px: int) -> MarginContainer:
 	return margin
 
 
+func _inset_card(child: Control, px: int = 12) -> PanelContainer:
+	var card: PanelContainer = PanelContainer.new()
+	card.theme_type_variation = &"InsetPanel"
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_child(_margin(child, px))
+	return card
+
+
+func _dialog_emblem(box: VBoxContainer, title_text: String = "") -> void:
+	var icon: TextureRect = TextureRect.new()
+	icon.custom_minimum_size = Vector2(28, 28)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	icon.texture = UiIcons.get_icon("warning", 56)
+	box.add_child(icon)
+	if not title_text.is_empty():
+		var header: Label = Label.new()
+		header.text = title_text
+		header.theme_type_variation = &"SubtitleLabel"
+		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		header.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
+		box.add_child(header)
+		box.add_child(HSeparator.new())
+
+
 func _row(grid: GridContainer, text: String, control: Control) -> void:
 	var label: Label = Label.new()
 	label.text = text
@@ -246,7 +272,7 @@ func _build() -> void:
 	video_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	video_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	video.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var video_page: MarginContainer = _margin(video, 14)
+	var video_page: MarginContainer = _margin(_inset_card(video, 10), 10)
 	video_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	video_scroll.add_child(video_page)
 	video_scroll.name = "Vídeo"
@@ -254,6 +280,7 @@ func _build() -> void:
 
 	# Áudio
 	var audio: GridContainer = _grid()
+	audio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for key: String in AUDIO_LABELS.keys():
 		var row: Array = _slider_row(audio, AUDIO_LABELS[key], 0.0, 100.0, 5.0)
 		var slider: HSlider = row[0]
@@ -261,7 +288,9 @@ func _build() -> void:
 		slider.value_changed.connect(func(v: float) -> void: value.text = "Mudo" if v <= 0.0 else "%d %%" % int(v))
 		audio_sliders[key] = slider
 		audio_values[key] = value
-	var audio_page: MarginContainer = _margin(audio, 14)
+	var audio_card: PanelContainer = _inset_card(audio, 14)
+	audio_card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var audio_page: MarginContainer = _margin(audio_card, 14)
 	audio_page.name = "Áudio"
 	tabs.add_child(audio_page)
 
@@ -273,8 +302,9 @@ func _build() -> void:
 	for header: String in ["Teclado/Mouse", "Comando"]:
 		var header_label: Label = Label.new()
 		header_label.text = header
+		header_label.theme_type_variation = &"SubtitleLabel"
 		header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		header_label.add_theme_color_override(&"font_color", UiPalette.WOOD)
+		header_label.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
 		controls.add_child(header_label)
 	for action: String in SettingsManager.CONTROL_ACTIONS:
 		var label: Label = Label.new()
@@ -301,15 +331,15 @@ func _build() -> void:
 	vibration_value = vibration_row[1]
 	vibration_slider.value_changed.connect(_on_vibration_changed)
 	var controls_box: VBoxContainer = VBoxContainer.new()
-	controls_box.add_theme_constant_override("separation", 18)
-	controls_box.add_child(vibration_grid)
-	controls_box.add_child(controls)
+	controls_box.add_theme_constant_override("separation", 10)
+	controls_box.add_child(_inset_card(vibration_grid, 10))
+	controls_box.add_child(_inset_card(controls, 10))
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	controls_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var controls_page: MarginContainer = _margin(controls_box, 14)
+	var controls_page: MarginContainer = _margin(controls_box, 10)
 	controls_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(controls_page)
 	scroll.name = "Controles"
@@ -348,6 +378,7 @@ func _build() -> void:
 	# Imediato (não passa pelo Aplicar): as dicas já vistas voltam a aparecer uma vez.
 	review_hints_button = Button.new()
 	review_hints_button.text = "Rever dicas"
+	review_hints_button.icon = UiIcons.get_icon("bulb", 18)
 	review_hints_button.custom_minimum_size = Vector2(0, 36)
 	review_hints_button.focus_mode = Control.FOCUS_ALL
 	review_hints_button.pressed.connect(_on_review_hints_pressed)
@@ -370,7 +401,7 @@ func _build() -> void:
 	gameplay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	gameplay_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var gameplay_page: MarginContainer = _margin(gameplay, 14)
+	var gameplay_page: MarginContainer = _margin(_inset_card(gameplay, 10), 10)
 	gameplay_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gameplay_scroll.add_child(gameplay_page)
 	gameplay_scroll.name = "Jogabilidade"
@@ -378,6 +409,7 @@ func _build() -> void:
 
 	# Acessibilidade (#140): quem usa os valores é o A11y.
 	var a11y: GridContainer = _grid()
+	a11y.add_theme_constant_override("v_separation", 8)
 	colorblind_option = _option(COLORBLIND_LABELS.values())
 	_row(a11y, "Modo daltônico", colorblind_option)
 	var shake_row: Array = _slider_row(a11y, "Tremor de tela", 0.0, 100.0, 5.0)
@@ -394,22 +426,30 @@ func _build() -> void:
 	a11y_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	a11y_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	a11y.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var a11y_page: MarginContainer = _margin(a11y, 14)
+	var a11y_page: MarginContainer = _margin(_inset_card(a11y, 8), 8)
 	a11y_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	a11y_scroll.add_child(a11y_page)
 	a11y_scroll.name = "Acessibilidade"
 	tabs.add_child(a11y_scroll)
+	var tab_bar: TabBar = tabs.get_tab_bar()
+	tab_bar.add_theme_constant_override(&"icon_max_width", 16)
+	var tab_icons: Array[String] = ["display", "audio", "wrench", "compass", "bulb"]
+	for i: int in mini(tabs.get_tab_count(), tab_icons.size()):
+		tabs.set_tab_icon(i, UiIcons.get_icon(tab_icons[i], 16))
 
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons_row = buttons
 	buttons.add_theme_constant_override("separation", 12)
 	defaults_button = Button.new()
 	defaults_button.text = "Restaurar padrão"
+	defaults_button.icon = UiIcons.get_icon("wrench", 18)
 	back_button = Button.new()
 	back_button.text = "Voltar"
+	back_button.icon = UiIcons.get_icon("door", 18)
 	apply_button = Button.new()
 	apply_button.text = "Aplicar"
 	apply_button.theme_type_variation = &"PrimaryButton"
+	apply_button.icon = UiIcons.get_icon("check", 18)
 	for button: Button in [defaults_button, back_button, apply_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -422,20 +462,24 @@ func _build() -> void:
 
 	# Confirmação do modo de vídeo (por cima das abas).
 	confirm_panel = PanelContainer.new()
-	confirm_panel.theme_type_variation = &"WornPanel"
+	confirm_panel.theme_type_variation = &"InsetPanel"
 	confirm_panel.visible = false
 	var confirm_box: VBoxContainer = VBoxContainer.new()
-	confirm_box.add_theme_constant_override("separation", 12)
+	confirm_box.add_theme_constant_override("separation", 10)
+	_dialog_emblem(confirm_box, "Modo de janela")
 	confirm_label = Label.new()
 	confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	confirm_box.add_child(confirm_label)
+	confirm_box.add_child(HSeparator.new())
 	var confirm_buttons: HBoxContainer = HBoxContainer.new()
 	confirm_buttons.add_theme_constant_override("separation", 12)
 	keep_button = Button.new()
 	keep_button.text = "Manter"
 	keep_button.theme_type_variation = &"PrimaryButton"
+	keep_button.icon = UiIcons.get_icon("check", 18)
 	revert_button = Button.new()
 	revert_button.text = "Voltar ao anterior"
+	revert_button.icon = UiIcons.get_icon("door", 18)
 	for button: Button in [revert_button, keep_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -446,14 +490,16 @@ func _build() -> void:
 	box.add_child(confirm_panel)
 	# Conflito de tecla (por cima das abas).
 	conflict_panel = PanelContainer.new()
-	conflict_panel.theme_type_variation = &"WornPanel"
+	conflict_panel.theme_type_variation = &"InsetPanel"
 	conflict_panel.visible = false
 	var conflict_box: VBoxContainer = VBoxContainer.new()
-	conflict_box.add_theme_constant_override("separation", 12)
+	conflict_box.add_theme_constant_override("separation", 10)
+	_dialog_emblem(conflict_box, "Controles")
 	conflict_label = Label.new()
 	conflict_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	conflict_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	conflict_box.add_child(conflict_label)
+	conflict_box.add_child(HSeparator.new())
 	var conflict_buttons: HBoxContainer = HBoxContainer.new()
 	conflict_buttons.add_theme_constant_override("separation", 12)
 	conflict_cancel_button = Button.new()
@@ -461,6 +507,7 @@ func _build() -> void:
 	swap_button = Button.new()
 	swap_button.text = "Trocar"
 	swap_button.theme_type_variation = &"PrimaryButton"
+	swap_button.icon = UiIcons.get_icon("check", 18)
 	for button: Button in [conflict_cancel_button, swap_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -471,14 +518,16 @@ func _build() -> void:
 	box.add_child(conflict_panel)
 	# Descartar alterações (Voltar com mudanças pendentes).
 	discard_panel = PanelContainer.new()
-	discard_panel.theme_type_variation = &"WornPanel"
+	discard_panel.theme_type_variation = &"InsetPanel"
 	discard_panel.visible = false
 	var discard_box: VBoxContainer = VBoxContainer.new()
-	discard_box.add_theme_constant_override("separation", 12)
+	discard_box.add_theme_constant_override("separation", 10)
+	_dialog_emblem(discard_box, "Aviso")
 	var discard_label: Label = Label.new()
 	discard_label.text = DISCARD_TEXT
 	discard_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	discard_box.add_child(discard_label)
+	discard_box.add_child(HSeparator.new())
 	var discard_buttons: HBoxContainer = HBoxContainer.new()
 	discard_buttons.add_theme_constant_override("separation", 12)
 	discard_cancel_button = Button.new()
@@ -486,6 +535,7 @@ func _build() -> void:
 	discard_button = Button.new()
 	discard_button.text = "Descartar"
 	discard_button.theme_type_variation = &"DangerButton"
+	discard_button.icon = UiIcons.get_icon("door", 18)
 	for button: Button in [discard_cancel_button, discard_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL

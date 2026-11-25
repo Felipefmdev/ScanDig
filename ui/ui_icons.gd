@@ -66,6 +66,12 @@ const SHAPES: Dictionary = {
 	# Conquistas (#141).
 	"home": "<path d=\"M3 11 L12 3.5 L21 11\" fill=\"none\" {s}/><path d=\"M5.5 9.5 V19.5 H18.5 V9.5 L12 4.2 Z\" fill=\"#E8DCC0\" {s}/>",
 	"check": "<circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"#4A8F5D\" {s}/><path d=\"M7.5 12.2 L10.6 15.2 L16.6 9\" fill=\"none\" stroke=\"#F3EAD3\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>",
+	"rain": "<path d=\"M6 14 H18 A3.5 3.5 0 0 0 18 7 A5 5 0 0 0 8.5 6.5 A4 4 0 0 0 6 14 Z\" fill=\"#9AA6AE\" {s}/><path d=\"M8.5 16.5 L7 20 M12.5 16.5 L11 20 M16.5 16.5 L15 20\" {s}/>",
+	"snow": "<path d=\"M12 3 V21 M4.2 7.5 L19.8 16.5 M19.8 7.5 L4.2 16.5\" {s}/>",
+	"ash": "<path d=\"M6 14 H18 A3.5 3.5 0 0 0 18 7 A5 5 0 0 0 8.5 6.5 A4 4 0 0 0 6 14 Z\" fill=\"#8E857D\" {s}/><circle cx=\"9\" cy=\"18\" r=\"1.4\" fill=\"#D9772B\" {s}/>",
+	"sun": "<circle cx=\"12\" cy=\"12\" r=\"5\" fill=\"#F2C65A\" {s}/><path d=\"M12 2.5 V5 M12 19 V21.5 M2.5 12 H5 M19 12 H21.5\" {s}/>",
+	"warning": "<path d=\"M12 3.5 L21.5 20 H2.5 Z\" fill=\"#E0A82E\" {s}/><path d=\"M12 9.5 V14.5\" {s}/><circle cx=\"12\" cy=\"17.5\" r=\"1.1\" fill=\"#2B2118\"/>",
+	"audio": "<path d=\"M4 9.5 H8 L13.5 5 V19 L8 14.5 H4 Z\" fill=\"#E0A82E\" {s}/><path d=\"M16.5 8.5 A5 5 0 0 1 16.5 15.5\" fill=\"none\" {s}/>",
 	"trophy": "<path d=\"M7.5 5.5 H4 Q4 10 8.5 10.5 M16.5 5.5 H20 Q20 10 15.5 10.5\" fill=\"none\" {s}/>"
 		+ "<path d=\"M7 3.5 H17 V8 Q17 13.5 12 13.5 Q7 13.5 7 8 Z\" fill=\"#E0A82E\" {s}/>"
 		+ "<path d=\"M12 13.5 V17\" {s}/><rect x=\"7.5\" y=\"17\" width=\"9\" height=\"3.5\" rx=\"1\" fill=\"#9A5A28\" {s}/>"
