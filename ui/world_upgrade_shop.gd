@@ -241,7 +241,7 @@ func _build() -> void:
 		var button: Button = Button.new()
 		button.name = "Buy_" + id
 		button.theme_type_variation = &"PrimaryButton"
-		button.custom_minimum_size = Vector2(168, 44)
+		button.custom_minimum_size = Vector2(192, 44)
 		button.add_theme_constant_override(&"icon_max_width", 18)
 		button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		button.pressed.connect(_buy.bind(id))

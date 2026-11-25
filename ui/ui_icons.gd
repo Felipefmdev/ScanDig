@@ -74,6 +74,9 @@ const SHAPES: Dictionary = {
 	"audio": "<path d=\"M4 9.5 H8 L13.5 5 V19 L8 14.5 H4 Z\" fill=\"#E0A82E\" {s}/><path d=\"M16.5 8.5 A5 5 0 0 1 16.5 15.5\" fill=\"none\" {s}/>",
 	"copy": "<rect x=\"8\" y=\"3.5\" width=\"12\" height=\"14\" rx=\"1.8\" fill=\"#DFCFA8\" {s}/><rect x=\"4\" y=\"6.5\" width=\"12\" height=\"14\" rx=\"1.8\" fill=\"#F3EAD3\" {s}/>",
 	"bulb": "<path d=\"M12 3.5 A6 6 0 0 0 8.5 14.5 V17 H15.5 V14.5 A6 6 0 0 0 12 3.5 Z\" fill=\"#F2C65A\" {s}/><rect x=\"9\" y=\"17\" width=\"6\" height=\"3.5\" rx=\"1\" fill=\"#AEB7BE\" {s}/>",
+	"compass": "<circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"#E0A82E\" {s}/><circle cx=\"12\" cy=\"12\" r=\"6.5\" fill=\"#F3EAD3\" {s}/><polygon points=\"12,7 14,12 10,12\" fill=\"#C8463A\"/>",
+	"book": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\" fill=\"#9A5A28\" {s}/><rect x=\"4.5\" y=\"4.5\" width=\"15\" height=\"13.5\" rx=\"1\" fill=\"#F3EAD3\" {s}/><path d=\"M12 4.5 V18\" {s}/>",
+	"display": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12.5\" rx=\"2\" fill=\"#AEB7BE\" {s}/><rect x=\"5\" y=\"6\" width=\"14\" height=\"8.5\" fill=\"#F3EAD3\"/><path d=\"M12 16.5 V20 M8 20 H16\" {s}/>",
 	"trophy": "<path d=\"M7.5 5.5 H4 Q4 10 8.5 10.5 M16.5 5.5 H20 Q20 10 15.5 10.5\" fill=\"none\" {s}/>"
 		+ "<path d=\"M7 3.5 H17 V8 Q17 13.5 12 13.5 Q7 13.5 7 8 Z\" fill=\"#E0A82E\" {s}/>"
 		+ "<path d=\"M12 13.5 V17\" {s}/><rect x=\"7.5\" y=\"17\" width=\"9\" height=\"3.5\" rx=\"1\" fill=\"#9A5A28\" {s}/>"

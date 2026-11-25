@@ -74,20 +74,31 @@ const SHOP_STATE_LOCKED: Color = UiPalette.METAL
 const WAITING_GAME_STATE_TOOLTIP: String = "Aguardando conexão com o estado do jogo..."
 ## Tempo máximo aguardando purchase_result antes de liberar os botões novamente.
 const PURCHASE_TIMEOUT_SEC: float = 5.0
+const TAB_FADE_DURATION: float = 0.11
 
 var _purchase_timer: SceneTreeTimer = null
 var _pending_unlock: bool = false
 var _unlock_timer: SceneTreeTimer = null
+var _tab_tween: Tween = null
+var _animated_tab: Control = null
 
 ## Rótulos curtos das abas (nome do nó -> rótulo): com os nomes completos a TabBar passava
 ## da largura da Base e aparecia a seta, com a Loja fora da vista. O nome do nó (usado nos
 ## caminhos do _resolve_node e no ui_tab dos bots) fica igual e vira a dica (tooltip) da aba.
+const MUSEUM_TAB_NAME: String = "Museu de Achados"
 const TAB_SHORT_TITLES: Dictionary = {
 	"Loja de Equipamentos": "Loja",
-	"Museu de Achados": "Museu",
+	MUSEUM_TAB_NAME: "Museu",
 	"Expedições": "Expedições",
 	"Diário": "Diário",
 	AchievementsTab.TAB_NAME: "Conquistas",
+}
+const TAB_ICONS: Dictionary = {
+	"Loja de Equipamentos": "wrench",
+	MUSEUM_TAB_NAME: "museum",
+	"Expedições": "compass",
+	"Diário": "book",
+	AchievementsTab.TAB_NAME: "trophy",
 }
 const MUSEUM_DONE_MARK: String = " ★"
 ## Aba Conquistas (#141), criada em runtime.
@@ -123,6 +134,16 @@ func _resolve_node(unique_id: String, rel_path: String) -> Node:
 
 
 func _ready() -> void:
+	_decorate_header()
+	_style_journal_heading(journal_info_label, "book")
+	_style_journal_heading(bosses_header_label, "skull")
+	if bosses_header_label != null:
+		var content: Node = bosses_header_label.get_parent()
+		var header_index: int = bosses_header_label.get_index()
+		if header_index == 0 or not (content.get_child(header_index - 1) is HSeparator):
+			var separator: HSeparator = HSeparator.new()
+			content.add_child(separator)
+			content.move_child(separator, header_index)
 	if secrets_label != null:
 		# Segredos por mapa: quebra só entre mapas (NBSP dentro de cada um).
 		secrets_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -143,6 +164,7 @@ func _ready() -> void:
 	if tab_container != null:
 		tab_container.resized.connect(_sync_hidden_tab_widths)
 		tab_container.tab_changed.connect(func(_tab: int) -> void:
+			_animate_tab_content()
 			_sync_hidden_tab_widths()
 			_queue_fit_height()
 			_sync_focus.call_deferred()
@@ -151,6 +173,55 @@ func _ready() -> void:
 		_focus_initial.call_deferred()
 		get_viewport().size_changed.connect(_queue_fit_height)
 		_queue_fit_height()
+
+
+func _decorate_header() -> void:
+	var header: Label = get_node_or_null(^"PanelContainer/MarginContainer/VBoxContainer/HeaderLabel") as Label
+	if header == null or header.get_parent() is HBoxContainer:
+		return
+	var vbox: Control = header.get_parent() as Control
+	var idx: int = header.get_index()
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "HeaderRow"
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 8)
+	vbox.add_child(row)
+	vbox.move_child(row, idx)
+	var icon: TextureRect = TextureRect.new()
+	icon.name = "HeaderIcon"
+	icon.custom_minimum_size = Vector2(24, 24)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.texture = UiIcons.get_icon("home", 48)
+	row.add_child(icon)
+	header.reparent(row, false)
+
+
+func _style_journal_heading(label: Label, icon_name: String) -> void:
+	if label == null:
+		return
+	label.theme_type_variation = &"SubtitleLabel"
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var style: StyleBox = label.get_theme_stylebox(&"panel", &"SummaryTotalPanel").duplicate() as StyleBox
+	var icon_left: float = style.get_margin(SIDE_LEFT)
+	var icon_side: float = 20.0
+	style.content_margin_left = icon_left + icon_side + 8.0
+	label.add_theme_stylebox_override(&"normal", style)
+	var icon: TextureRect = TextureRect.new()
+	icon.name = "Icon"
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture = UiIcons.get_icon(icon_name, 40)
+	label.add_child(icon)
+	icon.anchor_top = 0.5
+	icon.anchor_bottom = 0.5
+	icon.offset_left = icon_left
+	icon.offset_right = icon_left + icon_side
+	icon.offset_top = -icon_side * 0.5
+	icon.offset_bottom = icon_side * 0.5
 
 
 ## Retain the old page as an inaccessible compatibility view while its presentation
@@ -180,16 +251,34 @@ func _notification(what: int) -> void:
 		_refresh_journal_display()
 
 
-## Rótulos curtos + nome completo na dica de cada aba.
+## Rótulo, dica e ícone definidos pelo nome da página.
 func _apply_tab_titles() -> void:
 	if tab_container == null:
 		return
+	# O TabContainer repassa o limite à barra interna quando o tema muda.
+	tab_container.add_theme_constant_override(&"icon_max_width", 16)
 	var bar: TabBar = tab_container.get_tab_bar()
+	bar.add_theme_constant_override(&"icon_max_width", 16)
 	for i: int in tab_container.get_tab_count():
 		var page_name: String = tab_container.get_tab_control(i).name
 		if TAB_SHORT_TITLES.has(page_name):
 			tab_container.set_tab_title(i, TAB_SHORT_TITLES[page_name])
+			tab_container.set_tab_icon(i, UiIcons.get_icon(TAB_ICONS[page_name], 32))
 			bar.set_tab_tooltip(i, page_name)
+
+
+func _animate_tab_content() -> void:
+	if _tab_tween != null:
+		_tab_tween.kill()
+		_tab_tween = null
+	if is_instance_valid(_animated_tab):
+		_animated_tab.modulate.a = 1.0
+	_animated_tab = tab_container.get_current_tab_control()
+	if _animated_tab == null or not tab_container.is_visible_in_tree():
+		return
+	_animated_tab.modulate.a = 0.8
+	_tab_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tab_tween.tween_property(_animated_tab, ^"modulate:a", 1.0, TAB_FADE_DURATION)
 
 
 ## Comando/teclado (#102): a base abre com o foco na aba atual (no coop o menu de rede pega o
@@ -299,6 +388,8 @@ func _wrap_pages_in_scroll() -> void:
 		tab_container.add_child(scroll)
 		tab_container.move_child(scroll, index)
 		page.reparent(scroll, false)
+		# ScrollContainer owns the page bounds after reparenting.
+		page.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		page.visible = true
 		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -339,14 +430,30 @@ func _fit_height() -> void:
 
 func _setup_expeditions() -> void:
 	_session = get_node_or_null(SESSION_PATH)
+	if map_status_label != null:
+		var warning_box: StyleBoxFlat = StyleBoxFlat.new()
+		warning_box.bg_color = Color(UiPalette.RED_BURNT, 0.10)
+		warning_box.border_color = Color(UiPalette.RED_BURNT, 0.55)
+		warning_box.set_border_width_all(1)
+		warning_box.border_width_left = 3
+		warning_box.set_corner_radius_all(4)
+		warning_box.content_margin_left = 5.0
+		warning_box.content_margin_right = 4.0
+		warning_box.content_margin_top = 0.0
+		warning_box.content_margin_bottom = 0.0
+		map_status_label.add_theme_stylebox_override(&"normal", warning_box)
+		map_status_label.add_theme_constant_override(&"line_spacing", -2)
 	var refresh_one_arg: Callable = _refresh_expedition_buttons.unbind(1)
 	if map_list != null:
+		map_list.fixed_icon_size = Vector2i(16, 16)
 		map_list.item_selected.connect(func(_index: int) -> void:
 			_set_expedition_feedback("")
 			_refresh_expedition_buttons())
 	if unlock_map_btn != null:
 		unlock_map_btn.pressed.connect(_on_unlock_map_pressed)
 	if depart_btn != null:
+		depart_btn.size_flags_stretch_ratio = 0.32
+		depart_btn.icon = UiIcons.get_icon("play", 18)
 		depart_btn.pressed.connect(_on_depart_pressed)
 		_build_night_check()
 	if _session != null:
@@ -382,11 +489,16 @@ func _refresh_map_list() -> void:
 		var status: Dictionary = _get_map_status(map)
 		if status.is_empty():
 			# Core sem progressão de mapas: linha antiga.
-			map_list.add_item(_format_map_details(map))
+			var legacy_idx: int = map_list.add_item(_format_map_details(map))
+			map_list.set_item_icon(legacy_idx, UiIcons.get_icon("map", 18))
 			continue
+		var playable: bool = bool(status.get("playable", false))
 		var idx: int = map_list.add_item(_format_map_row(map, status))
+		map_list.set_item_icon(idx, UiIcons.get_icon("map" if playable else "lock", 18))
+		if not playable:
+			map_list.set_item_icon_modulate(idx, Color(0.82, 0.78, 0.72, 0.75))
 		map_list.set_item_tooltip(idx, _map_progress_message(map, status))
-		if not bool(status.get("playable", false)):
+		if not playable:
 			# Continua selecionável para o jogador ver o motivo e poder desbloquear.
 			map_list.set_item_custom_fg_color(idx, MAP_LOCKED_COLOR)
 	if not _maps.is_empty():
@@ -1059,8 +1171,8 @@ func _build_view_museum_button() -> void:
 	if secrets_label != null:
 		var progress: PanelContainer = PanelContainer.new()
 		progress.name = "MuseumProgress"
-		progress.theme_type_variation = &"WornPanel"
-		var panel_style: StyleBox = get_theme_stylebox(&"panel", &"WornPanel").duplicate() as StyleBox
+		progress.theme_type_variation = &"SummaryTotalPanel"
+		var panel_style: StyleBox = get_theme_stylebox(&"panel", &"SummaryTotalPanel").duplicate() as StyleBox
 		for side: Side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 			panel_style.set_content_margin(side, 8.0)
 		progress.add_theme_stylebox_override(&"panel", panel_style)
@@ -1207,6 +1319,10 @@ func _refresh_museum_display() -> void:
 		var intact: bool = _game_state != null and _game_state.intact_items.has(item.id)
 		var index: int = museum_item_list.add_item(museum_line(item, found, intact))
 		museum_item_list.set_item_metadata(index, item.id)
+		if found:
+			museum_item_list.set_item_custom_bg_color(index, Color(UiPalette.GOLD, 0.13) if intact else Color(UiPalette.GREEN_BOTTLE, 0.07))
+		else:
+			museum_item_list.set_item_custom_fg_color(index, UiPalette.WOOD)
 		if item.id == selected_id and not selected_id.is_empty():
 			museum_item_list.select(index)
 
@@ -1221,11 +1337,13 @@ func _refresh_museum_display() -> void:
 	if museum_item_list.has_focus() and museum_item_list.is_anything_selected():
 		_ensure_museum_selection_visible.call_deferred()
 
-	if tab_container != null and tab_container.get_tab_count() > 1:
-		var museum_title: String = TAB_SHORT_TITLES.get(String(tab_container.get_tab_control(1).name), "Museu")
-		if _game_state != null and _game_state.game_completed:
-			museum_title = tr(museum_title) + MUSEUM_DONE_MARK
-		tab_container.set_tab_title(1, museum_title)
+	if tab_container != null:
+		var museum_tab: Control = tab_container.get_node_or_null(NodePath(MUSEUM_TAB_NAME)) as Control
+		if museum_tab != null:
+			var museum_title: String = TAB_SHORT_TITLES[MUSEUM_TAB_NAME]
+			if _game_state != null and _game_state.game_completed:
+				museum_title = tr(museum_title) + MUSEUM_DONE_MARK
+			tab_container.set_tab_title(tab_container.get_tab_idx_from_control(museum_tab), museum_title)
 	if museum_feedback_label != null and museum_feedback_label.text.is_empty() and _game_state != null and _game_state.game_completed:
 		museum_feedback_label.text = "🏆 Jogo concluído — Modo Museu completo ativo!"
 
@@ -1371,6 +1489,172 @@ const BOSS_FIELD_META: Dictionary = {
 	"lunar_warden": {"name": "Guardião do Sinal", "region": "Lua", "color": Color(0.60, 0.23, 0.91)},
 }
 
+const JOURNAL_MINI_SIDE: int = 28
+const JOURNAL_MINI_SCALE: float = 1.0
+const JOURNAL_UNKNOWN_MARK: String = "M19 20Q19 15 24 15Q30 15 30 20Q30 23 27 25L24 28V30M24 34h.1"
+
+# Coordenadas no viewBox 48 × 48: contorno, sombra, luz e detalhes de cada ficha.
+const JOURNAL_MINI_PATHS: Dictionary = {
+	"crab": [
+		"M14 23L10 21Q5 20 6 14L9 11L10 15L14 14L16 18L15 21L18 23Q24 19 31 23L34 20L33 16L36 13L38 16L42 14L42 19Q40 23 35 23L33 25L39 28L40 31L34 29L33 30L38 34L36 36L31 32Q24 37 17 32L12 36L10 34L15 30L9 32L8 29Z",
+		"M15 27Q23 30 34 25L34 29Q29 36 20 34Q16 33 15 27Z",
+		"M17 25L20 21L22 24Z M26 24L28 21L31 25Z",
+		"M21 28h.1M28 27h.1",
+	],
+	"hermit_crab": [
+		"M13 32L8 33L6 31L9 28L7 25L10 21L13 24L12 27L16 27Q12 24 13 17Q14 9 25 9Q35 9 38 18Q41 25 36 30L41 34L39 37L33 34L29 37L25 35L21 37L17 34L13 37L10 36Z",
+		"M16 25Q21 31 32 26L38 22Q39 27 34 31L27 34L20 31Z",
+		"M16 17Q22 9 30 13L33 17Q24 14 21 20L18 23Z",
+		"M33 17Q33 24 25 24Q20 24 21 20Q22 16 27 17Q30 18 27 20M12 28l2-2",
+	],
+	"seagull": [
+		"M6 18Q12 15 18 19L23 23L29 16Q34 12 42 10L40 16L35 20L40 19L34 24L28 27Q27 31 22 32L16 35L17 31L10 32L14 28Q10 27 11 25L7 24L13 22Z",
+		"M14 27L24 26L29 22L40 16L35 20L40 19L34 24L28 27Q27 31 22 32L16 35L17 31L10 32Z",
+		"M7 24L12 22L15 24L12 26Z M21 23L29 17L36 14L31 19L25 24Z",
+		"M15 23h.1M25 27l4-3",
+	],
+	"snake": [
+		"M36 34Q29 36 25 31Q21 27 23 22L28 14Q29 11 25 12L21 17L16 19L10 18L7 14L10 10L19 9L23 7Q32 6 36 13Q39 19 34 23L29 27Q28 29 31 29L40 27Q43 27 41 30Z",
+		"M24 9Q34 7 36 14Q38 19 34 23L29 27Q28 29 31 29L36 28L33 32Q25 33 26 27L31 20Q37 13 24 9Z",
+		"M7 14L14 14L18 12L21 14L17 17L10 18Z",
+		"M15 12h.1M30 16l4 2M27 20l4 3",
+	],
+	"mole": [
+		"M6 33L10 30L11 24Q12 18 18 16Q19 11 27 11Q35 11 39 21L41 27L36 31L41 34L39 37L33 36L30 38L25 35L20 37L15 35L11 37Z",
+		"M13 26Q19 32 27 28L37 24L41 27L35 32L39 34L33 35L26 34L19 36L13 33Z",
+		"M7 33L11 30L17 32L13 34Z M24 27L31 21L38 24L39 27L35 29L30 28Z",
+		"M29 18h.1M35 25h.1M14 32l-2 3",
+	],
+	"crow": [
+		"M7 19L15 17Q16 10 22 10Q28 10 30 16L29 19Q34 22 35 27L42 33L39 34L41 38L34 35L35 39L28 34L24 33L22 37L18 37L20 33Q15 31 15 25L17 22L9 23Z",
+		"M17 25L23 21Q29 20 34 27L40 34L35 33L38 37L30 33L26 32L21 33Z",
+		"M8 19L17 17L19 20L16 22L9 22Z M22 13L25 14L23 16Z",
+		"M19 18h.1M24 25l7 4",
+	],
+	"stone_guardian": [
+		"M7 18L13 15L17 17L17 11L22 7L30 9L33 15L31 18L36 17L41 22L39 31L34 32L33 36L27 38L23 34L19 38L13 36L13 32L8 32L6 25Z",
+		"M19 14L27 14L32 12L31 18L28 21L33 24L35 30L32 35L26 37L23 33L19 37L15 35L16 27Z",
+		"M19 12L22 8L29 10L26 13Z M20 21L25 19L29 22L25 26Z",
+		"M11 22l-2 5M21 16h5M36 23l2 4",
+	],
+	"bat": [
+		"M6 11Q15 12 19 19L20 13L24 17L28 13L29 19Q35 12 42 11L40 20L41 26Q35 24 34 32Q29 29 26 35L24 37L22 35Q18 29 14 32Q12 26 7 27L8 20Z",
+		"M7 13Q13 17 15 25L16 30Q12 26 7 27L8 20Z M41 13L40 20L41 26Q35 24 34 32L33 26Z",
+		"M19 24L23 25L21 28Z M25 25L29 24L27 28Z M23 30L25 30L24 33Z",
+		"M14 18l4 8M34 18l-4 9",
+	],
+	"ice_wolf": [
+		"M7 25L12 18L16 19L20 14L25 15L29 11L33 8L35 15L39 10L40 20L42 23L38 29L33 30L30 37L26 37L26 30L20 29L17 37L13 37L13 29L8 32L6 30L11 25Z",
+		"M13 23L24 21L28 17L35 20L40 19L42 23L38 29L33 30L30 37L26 37L26 30L20 29L17 37L13 37L15 28Z",
+		"M21 16L26 16L29 12L33 9L34 15L28 19L24 21Z M36 24L42 23L38 28L34 28Z",
+		"M36 20h.1M40 24h.1M18 25l5 1",
+	],
+	"penguin": [
+		"M18 12Q22 7 28 9Q32 11 33 16L39 19L34 22Q39 28 38 32L33 30L32 34L37 36L35 39L28 38L25 36L22 39L15 39L12 37L16 34L14 30L9 32L9 28L15 21Z",
+		"M17 17Q23 13 30 16L34 22Q38 28 38 32L33 30L32 34L28 37L23 35L18 35Q14 30 15 24Z",
+		"M26 16Q32 16 31 22Q33 27 29 33Q24 35 21 31Q18 27 22 22L23 17Z M33 17L38 19L34 21Z",
+		"M28 14h.1M13 37l5-1M30 36l4 1",
+	],
+	"walrus": [
+		"M6 30Q8 26 13 24Q14 17 21 15Q25 10 33 12Q37 13 37 18Q42 20 41 23L37 27L37 33L33 37L30 36L29 31L25 34L18 34L13 37L8 36Z",
+		"M10 30Q18 29 21 25L25 23L28 28L29 31L25 34L18 34L13 37L8 36Z",
+		"M27 22Q30 18 33 20Q37 17 40 21L39 25L36 25L36 32L33 36L33 26L30 25L30 31L27 34L27 26Z",
+		"M31 17h.1M36 22h.1M27 23l-3 1M38 24l3 1",
+	],
+	"crawler": [
+		"M6 33L11 25L15 24L13 20L16 14L22 13L25 9L30 15L35 12L34 18L40 19L42 24L39 29L42 33L39 36L34 31L29 32L26 37L22 36L24 31L18 30L13 36L9 35L13 29L11 29L8 35Z",
+		"M14 23L20 19L29 20L34 18L40 19L42 24L39 29L33 31L25 32L18 29Z",
+		"M18 23Q26 19 32 23L29 27L22 28Z M24 14L25 10L28 15Z M34 25L38 22L39 25L36 28Z",
+		"M25 24v2M18 16l2 1",
+	],
+	"floater": [
+		"M8 20L11 15L17 13L18 7L23 12L28 11L31 7L32 13L39 16L42 21L39 26L34 28L36 33L33 38L30 36L31 31L28 28L27 35L23 39L20 36L22 29L18 27L15 32L15 36L11 37L10 32L13 27L9 24Z",
+		"M8 20L15 22L22 20L29 22L37 20L42 21L39 26L34 28L27 26L22 29L13 27L9 24Z",
+		"M13 21Q13 18 16 18Q19 18 19 21Q19 24 16 24Q13 24 13 21Z M21 21Q21 17 24 17Q27 17 27 21Q27 24 24 24Q21 24 21 21Z M30 22Q30 19 33 19Q36 19 36 22Q36 25 33 25Q30 25 30 22Z",
+		"M16 21h.1M24 20h.1M33 22h.1",
+	],
+	"king_crab": [
+		"M6 15L8 10L10 15L14 11L17 16L15 21L19 23L17 15L20 17L24 10L27 17L32 14L30 22L34 20L33 15L36 10L39 15L42 12L42 20L38 24L41 29L39 32L34 28L34 31L40 35L36 37L31 33L27 37L20 37L16 33L11 37L8 35L13 31L13 28L8 32L6 29L10 23L6 21Z",
+		"M13 25L20 27L28 25L36 23L34 31L31 33L27 37L20 37L16 33Z",
+		"M18 15L21 17L24 11L27 17L31 15L29 20L20 21Z M19 26L23 27L22 30Z M25 27L29 25L27 30Z",
+		"M8 20l4-2M36 20l4-2M22 33h4",
+	],
+	"giant_mole": [
+		"M6 29L8 23L14 23L16 16L22 11L31 11L37 15L39 20L42 24L39 29L34 30L41 33L40 37L34 35L33 39L27 36L24 39L20 36L14 38L13 36L7 37L6 33L10 30Z",
+		"M8 28L16 26L22 28L29 26L34 23L42 24L39 29L34 30L40 34L39 37L34 35L33 39L27 36L24 39L20 36L14 38Z",
+		"M23 24L26 19L34 20L39 23L39 26L33 28L27 27Z M7 33L12 29L16 31L13 34L9 36Z M29 32L34 31L39 34L34 34L33 38Z",
+		"M26 16h.1M34 23h.1M31 22l-4 1",
+	],
+	"ancient_guardian": [
+		"M6 22L9 15L14 14L18 17L18 11L21 8L24 10L27 7L32 10L32 16L36 14L41 17L42 24L40 30L34 30L33 36L27 39L24 35L21 39L15 36L14 30L8 31Z",
+		"M7 22L15 22L19 17L23 19L30 16L35 21L42 24L40 30L34 30L33 36L27 39L24 35L21 39L15 36L14 30L8 31Z",
+		"M19 11L22 9L24 11L27 8L31 11L28 14L21 14Z M24 20L28 25L24 31L20 26Z M10 17L13 16L15 19L10 21Z M35 19L38 16L40 19L38 22Z",
+		"M21 16h2M26 16h2M10 26h2M36 26h2",
+	],
+	"frozen_mammoth": [
+		"M6 27L9 18L14 15L17 9L21 14Q29 10 35 15L40 20L39 27L36 29L36 32Q38 34 41 30L42 33Q40 39 35 38L32 35L31 30L28 30L27 37L22 37L21 31L16 31L15 37L10 37L10 30L7 33Z",
+		"M7 25L13 23L17 26L24 24L28 19L33 21L39 20L39 27L36 29L36 32Q38 34 41 30L42 33Q40 39 35 38L32 35L31 30L28 30L27 37L22 37L21 31L16 31L15 37L10 37L10 30L7 33Z",
+		"M10 20L15 16L17 10L20 15L17 19L13 21Z M30 26Q32 32 37 32L40 29Q38 36 33 34L29 31L27 28Z",
+		"M34 22h.1M27 18l-2 5M14 28l-1 2",
+	],
+	"octopus": [
+		"M17 25Q12 21 14 15Q17 8 24 8Q32 8 35 15Q37 21 32 25Q39 29 42 23L42 28Q40 34 34 32Q37 38 40 35L40 38Q33 43 29 33Q29 39 24 40Q20 40 19 36Q23 38 24 31Q20 37 15 37Q9 37 8 32Q13 36 17 30Q9 32 6 26L6 23Q12 29 17 25Z",
+		"M15 21Q24 25 34 20L32 25Q39 29 42 23L42 28Q40 34 34 32L36 36L34 37L29 30L27 33L23 31L19 34L15 33L17 30Q9 32 6 26L6 23Q12 29 17 25Z",
+		"M18 14Q21 10 26 11L29 13L23 15L18 18Z M17 20L22 21L20 24Z M26 21L31 19L30 23Z",
+		"M21 26q3 1 6-1M13 29h.1M36 30h.1",
+	],
+	"crow_king": [
+		"M6 16L11 18L14 12L18 17L22 14L22 18L25 17L29 18L28 9L32 13L35 8L36 15L40 12L39 18L42 21L38 25L39 28L35 28L38 33L34 32L35 38L29 34L28 38L25 34L23 38L19 38L20 33Q13 30 13 27L10 29L11 25L7 25L8 21Z",
+		"M11 21L19 23L23 20L29 21L32 19L38 20L42 21L38 25L39 28L35 28L38 33L34 32L35 38L29 34L28 38L25 34L23 38L19 38L20 33Q15 30 13 27L10 29L11 25L7 25Z",
+		"M28 9L32 13L35 8L36 15L40 12L39 17L30 17Z M35 21L41 21L38 25L35 24Z",
+		"M34 19h.1M17 22l4 7M20 22l5 6",
+	],
+	"scarecrow": [
+		"M7 19L13 19L17 18L12 15L16 13L20 12L22 7L29 8L34 14L38 16L34 19L29 19L30 22L36 22L41 20L42 23L39 26L37 25L33 29L29 29L29 34L26 37L23 35L22 40L19 39L19 34L16 35L17 28L13 26L11 25L8 27L6 24Z",
+		"M14 22L20 24L24 22L30 22L36 22L41 20L42 23L39 26L37 25L33 29L29 29L29 34L26 37L23 35L21 36L22 30L18 27Z",
+		"M21 17L28 16L31 19L29 23L26 25L21 23Z M18 12L22 8L28 9L30 12L24 13Z",
+		"M22 20h.1M27 19h.1M23 23l4-1M16 25l3-2",
+	],
+	"idol_mummy": [
+		"M9 34L11 24L16 21L16 14L20 10L27 7L33 12L34 19L38 20L42 26L39 31L34 29L32 36L26 39L23 36L18 39L14 36L12 37Z",
+		"M20 14L25 12L32 13L34 19L38 20L42 26L39 31L34 29L32 36L26 39L23 36L18 39L16 36L18 26L22 23Z",
+		"M18 14L26 8L32 12L25 13Z M18 18L33 15L34 18L22 22L18 21Z M15 26L26 24L30 27L20 31L14 30Z M18 34L29 31L30 34L21 37Z",
+		"M21 16l7-1M29 21l3-1M36 24l4 2",
+	],
+	"cave_yeti": [
+		"M6 26L10 19L15 17L17 13L16 9L20 12L24 9L28 12L33 8L32 15L36 17L42 25L40 31L36 33L33 29L31 35L26 40L23 36L19 39L15 35L14 30L10 34L7 31Z",
+		"M7 25L15 24L18 18L23 22L29 19L34 22L41 25L40 31L36 33L33 29L31 35L26 40L23 36L19 39L15 35L14 30L10 34L7 31Z",
+		"M19 19L24 16L30 19L31 25L27 28L22 27L18 24Z M8 29l4-4 2 4-4 4Z M35 28l4-2 1 3-3 3Z",
+		"M21 21h.1M27 21h.1M22 25l5-1",
+	],
+	"ancient_walrus": [
+		"M6 31Q8 28 13 27Q13 20 19 18L16 13L22 15L26 8L29 14L34 11L34 17L39 19L42 24L39 29L38 35L34 39L31 38L31 32L28 33L24 37L18 36L14 39L8 38Z",
+		"M7 32L16 29L20 24L25 23L28 26L31 29L31 32L28 33L24 37L18 36L14 39L8 38Z",
+		"M17 14L22 16L26 9L29 15L33 12L33 17L23 19Z M26 24L32 22L37 21L41 24L38 28L37 34L34 38L34 27L31 28L30 34L27 37L27 28Z",
+		"M29 20h.1M34 24h.1M25 27l-4 1M38 26l3 1",
+	],
+	"the_sleeper": [
+		"M6 32L9 24L13 22L12 16L16 19L18 13L21 17L24 7L28 15L33 10L34 18L38 17L37 22L41 26L42 34L38 38L34 35L32 37L28 34L25 38L20 35L15 38L14 34L10 38Z",
+		"M8 30L14 26L21 24L24 18L28 21L34 20L41 26L42 34L38 38L34 35L32 37L28 34L25 38L20 35L15 38L14 34L10 38Z",
+		"M24 8L27 15L24 18L22 15Z M29 18L33 11L34 18L32 20Z M24 22L29 27L25 33L20 28Z M14 25L17 23L18 27L14 29Z",
+		"M10 32l4-3M34 29l4 4M23 27l2-1",
+	],
+	"the_echo": [
+		"M7 23L10 19L12 24L9 28Z M10 10L16 13L18 18L22 15L25 18L30 15L32 9L38 7L36 16L33 19L35 24L32 29L29 30L28 35L24 38L20 35L19 30L15 28L13 24L15 19L11 16Z M38 23L42 21L41 28L37 31Z M12 31L16 33L14 37L10 35Z M32 34L36 32L38 36L34 39Z",
+		"M14 22L20 24L24 20L29 24L35 24L32 29L29 30L28 35L24 38L20 35L19 30L15 28Z",
+		"M11 11L16 14L17 18L13 16Z M33 11L37 8L35 15L32 18Z M16 22L22 23L20 27L17 26Z M26 23L32 21L31 26L28 27Z M23 30L26 31L24 35Z",
+		"M24 26v2",
+	],
+	"lunar_warden": [
+		"M7 19L11 13L16 15L17 12L22 11L24 7L29 11L33 12L34 15L39 13L42 18L41 26L38 31L34 29L31 35L27 36L24 40L21 36L16 35L14 29L10 31L6 26Z",
+		"M9 20L15 22L18 18L24 20L31 17L35 21L42 18L41 26L38 31L34 29L31 35L27 36L24 40L21 36L16 35L14 29L10 31L6 26Z",
+		"M20 12L24 8L28 12L24 16Z M24 18L31 23L29 30L24 34L19 30L17 23Z M9 19L11 15L14 17L12 22Z M35 16L38 14L40 18L37 21Z",
+		"M24 22l3 4-3 4-3-4z M13 24l1 2M36 24l-1 2",
+	],
+}
+static var _journal_mini_cache: Dictionary = {}
+
+
 var _journal_slot_labels: Dictionary = {}
 var _boss_slot_labels: Dictionary = {}
 
@@ -1431,32 +1715,50 @@ func _refresh_journal_display() -> void:
 
 
 func _build_journal_slot(id: String, title_text: String, sub_text: String, discovered: bool, accent: Color, is_boss: bool) -> PanelContainer:
-	var card := PanelContainer.new()
+	var card: PanelContainer = PanelContainer.new()
 	card.name = ("BossSlot_" if is_boss else "JournalSlot_") + id
-	card.theme_type_variation = &"WornPanel"
-	card. size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.theme_type_variation = &"InsetPanel"
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.custom_minimum_size = Vector2(150, 44)
+	var frame: StyleBoxFlat = StyleBoxFlat.new()
+	frame.bg_color = UiPalette.PAPER_LIGHT if discovered else UiPalette.PAPER
+	frame.border_color = Color(UiPalette.WOOD, 0.75 if discovered else 0.45)
+	frame.set_border_width_all(2)
+	frame.set_corner_radius_all(4)
+	card.add_theme_stylebox_override(&"panel", frame)
+	if discovered:
+		frame.border_width_left = 4
+		# StyleBoxFlat usa uma só cor de borda. Desenha a borda de destaque à esquerda por cima.
+		var accent_border: StyleBoxFlat = StyleBoxFlat.new()
+		accent_border.draw_center = false
+		accent_border.border_width_left = 4
+		accent_border.border_color = accent.darkened(0.1).lerp(UiPalette.INK, 0.35)
+		accent_border.set_corner_radius_all(4)
+		card.draw.connect(func() -> void:
+			card.draw_style_box(accent_border, Rect2(Vector2.ZERO, card.size)))
+		card.resized.connect(card.queue_redraw)
 
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 6)
-	margin.add_theme_constant_override("margin_top", 4)
-	margin.add_theme_constant_override("margin_right", 6)
-	margin.add_theme_constant_override("margin_bottom", 4)
+	var margin: MarginContainer = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 4)
+	margin.add_theme_constant_override("margin_top", 2)
+	margin.add_theme_constant_override("margin_right", 4)
+	margin.add_theme_constant_override("margin_bottom", 2)
 	card.add_child(margin)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
 	margin.add_child(row)
 
-	var icon_rect := TextureRect.new()
+	var icon_rect: TextureRect = TextureRect.new()
 	icon_rect.name = "MiniIcon"
 	icon_rect.custom_minimum_size = Vector2(28, 28)
 	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon_rect.texture = _build_journal_mini_texture(id, discovered, accent, is_boss)
 	row.add_child(icon_rect)
 
-	var lbl := Label.new()
+	var lbl: Label = Label.new()
 	lbl.name = "SlotLabel"
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.add_theme_font_size_override("font_size", 15)
@@ -1464,7 +1766,7 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 	# A grade rola na vertical: texto longo ganha linhas, sem reduzir a legibilidade.
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not discovered:
-		lbl.modulate = Color(0.68, 0.64, 0.58, 0.92)
+		lbl.add_theme_color_override(&"font_color", UiPalette.WOOD)
 	row.add_child(lbl)
 
 	if is_boss:
@@ -1475,53 +1777,52 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 
 
 static func _build_journal_mini_texture(id: String, discovered: bool, accent: Color, is_boss: bool) -> ImageTexture:
-	var tex_size: int = 28
-	var img: Image = Image.create(tex_size, tex_size, false, Image.FORMAT_RGBA8)
-	var bg: Color = Color(0.20, 0.16, 0.12, 0.95) if discovered else Color(0.11, 0.09, 0.08, 0.95)
-	var border: Color = accent.lightened(0.18) if discovered else Color(0.28, 0.24, 0.20, 0.85)
-	var body_col: Color = accent if discovered else Color(0.04, 0.04, 0.05, 0.96)
-	img.fill(bg)
+	var paths: Array = JOURNAL_MINI_PATHS.get(id, []) if discovered else []
+	var shape_known: bool = not paths.is_empty()
+	var plate_key: String = "boss" if is_boss else "fauna"
+	var cache_key: String = plate_key + ":" + (id + ":" + accent.to_html(false) if shape_known else "?")
+	var cached: ImageTexture = _journal_mini_cache.get(cache_key) as ImageTexture
+	if cached != null:
+		return cached
 
-	# Moldura tipo ficha de campo
-	for i in range(tex_size):
-		img.set_pixel(i, 0, border)
-		img.set_pixel(i, tex_size - 1, border)
-		img.set_pixel(0, i, border)
-		img.set_pixel(tex_size - 1, i, border)
+	var paper: Color = UiPalette.PAPER_LIGHT if shape_known else UiPalette.PAPER_DARK
+	var rim: Color = UiPalette.GOLD if is_boss else accent
+	var border: Color = UiPalette.INK if shape_known else UiPalette.WOOD
+	if not shape_known:
+		rim = UiPalette.WOOD.lerp(UiPalette.PAPER_DARK, 0.55)
 
-	# Silhueta / miniatura estilizada (variada por hash do id para dar forma própria a cada espécie)
-	var h: int = absi(id.hash())
-	var rx: float = 7.0 + float(h % 3)
-	var ry: float = 6.0 + float(int(h / 3.0) % 3)
-	var cx: float = 13.5
-	var cy: float = 14.5
-	for y in range(4, tex_size - 4):
-		for x in range(4, tex_size - 4):
-			var dx: float = (float(x) - cx) / rx
-			var dy: float = (float(y) - cy) / ry
-			var d2: float = dx * dx + dy * dy
-			if d2 <= 1.0:
-				img.set_pixel(x, y, body_col)
-			elif is_boss and y <= 8 and absf(float(x) - cx) <= 6.0 and ((x + y) % 2 == 0):
-				# Coroa/crista de guardião
-				img.set_pixel(x, y, border if discovered else body_col)
-
-	if discovered:
-		var eye_col := Color(0.98, 0.96, 0.88, 1.0)
-		img.set_pixel(11, 13, eye_col)
-		img.set_pixel(16, 13, eye_col)
+	var drawing: String
+	if shape_known:
+		var shade: Color = accent.lerp(UiPalette.INK, 0.36)
+		var light: Color = accent.lerp(UiPalette.PAPER_LIGHT, 0.66)
+		drawing = (
+			"<path d=\"%s\" fill=\"#%s\" stroke=\"#%s\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>"
+			+ "<path d=\"%s\" fill=\"#%s\"/><path d=\"%s\" fill=\"#%s\"/>"
+			+ "<path d=\"%s\" fill=\"none\" stroke=\"#%s\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+		) % [paths[0], accent.to_html(false), border.to_html(false), paths[1], shade.to_html(false),
+			paths[2], light.to_html(false), paths[3], border.to_html(false)]
 	else:
-		# Ponto de interrogação central na silhueta escura
-		var q_col := Color(0.56, 0.50, 0.42, 0.9)
-		for px in range(12, 16):
-			img.set_pixel(px, 10, q_col)
-		img.set_pixel(15, 11, q_col)
-		img.set_pixel(14, 12, q_col)
-		img.set_pixel(13, 13, q_col)
-		img.set_pixel(13, 14, q_col)
-		img.set_pixel(13, 17, q_col)
+		# A ficha fechada não revela a espécie pelo contorno ou pela cor.
+		drawing = (
+			"<path d=\"M24 10L35 16L39 26L34 34L24 39L14 34L9 26L13 16Z\" fill=\"#%s\"/>"
+			+ "<path d=\"%s\" fill=\"none\" stroke=\"#%s\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+		) % [UiPalette.WOOD_DARK.to_html(false), JOURNAL_UNKNOWN_MARK, UiPalette.PAPER_LIGHT.to_html(false)]
 
-	return ImageTexture.create_from_image(img)
+	var svg: String = (
+		"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 48 48\">"
+		+ "<rect x=\"1.5\" y=\"1.5\" width=\"45\" height=\"45\" rx=\"6\" fill=\"#%s\" stroke=\"#%s\" stroke-width=\"2\"/>"
+		+ "<rect x=\"4\" y=\"4\" width=\"40\" height=\"40\" rx=\"4\" fill=\"none\" stroke=\"#%s\"/>%s</svg>"
+	) % [JOURNAL_MINI_SIDE, JOURNAL_MINI_SIDE, paper.to_html(false), border.to_html(false),
+		rim.to_html(false), drawing]
+	var image: Image = Image.new()
+	if image.load_svg_from_string(svg, JOURNAL_MINI_SCALE) != OK or image.is_empty():
+		push_warning("BaseStationUI: falha ao renderizar miniatura do Diário (%s)." % id)
+		return null
+	var texture: ImageTexture = ImageTexture.create_from_image(image)
+	# O Caderno usa o tamanho lógico da textura para calcular a largura dos botões.
+	texture.set_size_override(Vector2i(JOURNAL_MINI_SIDE, JOURNAL_MINI_SIDE))
+	_journal_mini_cache[cache_key] = texture
+	return texture
 
 
 func get_journal_creature_count() -> int:
