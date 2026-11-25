@@ -64,6 +64,7 @@ const SHAPES: Dictionary = {
 		+ "<path d=\"M9 4 V18 M15 6 V20\" fill=\"none\" {s}/>"
 		+ "<path d=\"M11 13 L13 11 M11 11 L13 13\" fill=\"none\" stroke=\"#C8463A\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>",
 	# Conquistas (#141).
+	"home": "<path d=\"M3 11 L12 3.5 L21 11\" fill=\"none\" {s}/><path d=\"M5.5 9.5 V19.5 H18.5 V9.5 L12 4.2 Z\" fill=\"#E8DCC0\" {s}/>",
 	"trophy": "<path d=\"M7.5 5.5 H4 Q4 10 8.5 10.5 M16.5 5.5 H20 Q20 10 15.5 10.5\" fill=\"none\" {s}/>"
 		+ "<path d=\"M7 3.5 H17 V8 Q17 13.5 12 13.5 Q7 13.5 7 8 Z\" fill=\"#E0A82E\" {s}/>"
 		+ "<path d=\"M12 13.5 V17\" {s}/><rect x=\"7.5\" y=\"17\" width=\"9\" height=\"3.5\" rx=\"1\" fill=\"#9A5A28\" {s}/>"

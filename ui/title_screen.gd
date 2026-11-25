@@ -11,6 +11,9 @@ const ORBIT_SPEED: float = 0.05
 const TAGLINE: String = "Detecção de metais e escavação cooperativa"
 ## Hover/foco dos botões: leve escala a partir do centro.
 const BUTTON_FOCUS_SCALE: float = 1.04
+const BUTTON_PRESS_SCALE: float = 0.98
+const BUTTON_FEEDBACK_DURATION: float = 0.08
+const CARD_FADE_DURATION: float = 0.16
 ## Logo: balanço lento (graus) e respiração da escala.
 const LOGO_SWAY_DEG: float = 2.0
 const LOGO_SWAY_SECONDS: float = 2.6
@@ -82,6 +85,8 @@ var slot_mode: String = "load"
 
 var _confirm_action: Callable = Callable()
 var _pivot: Node3D = null
+var _card_tween: Tween = null
+var _animated_card: Control = null
 
 
 ## Bots (--bot=), GUT e testes/capturas (--script / -s) não passam pela tela inicial. --bot= só
@@ -176,6 +181,7 @@ func show_main() -> void:
 	settings_menu.visible = false
 	credits_panel.visible = false
 	main_card.visible = true
+	_animate_card(main_card)
 	_focus_first([continue_button, new_game_button])
 
 
@@ -187,6 +193,7 @@ func show_slots(mode: String) -> void:
 	main_card.visible = false
 	confirm_panel.visible = false
 	slots_panel.visible = true
+	_animate_card(slots_panel)
 	var preferred: int = _save().last_used_slot() if _save() != null else -1
 	if preferred < 1:
 		preferred = 1
@@ -197,6 +204,7 @@ func show_settings() -> void:
 	main_card.visible = false
 	settings_menu.refresh()
 	settings_menu.visible = true
+	_animate_card(settings_menu)
 	settings_menu.focus_first()
 
 
@@ -206,6 +214,7 @@ func show_credits() -> void:
 	confirm_panel.visible = false
 	settings_menu.visible = false
 	credits_panel.visible = true
+	_animate_card(credits_panel)
 	credits_view.focus_start()
 
 
@@ -222,6 +231,7 @@ func refresh() -> void:
 	if continue_button.visible:
 		var summary: Dictionary = save.get_slot_summary(save.last_used_slot())
 		continue_button.tooltip_text = _slot_line(summary)
+	new_game_button.theme_type_variation = &"" if continue_button.visible else &"PrimaryButton"
 	_link_focus([continue_button, new_game_button, load_button, coop_button, settings_button, credits_button, quit_button])
 
 
@@ -267,13 +277,30 @@ func refresh_slots() -> void:
 
 ## Card do slot: miniatura (ou o número), "Slot 1  •  Dia 3  ★", o resumo e tempo/data.
 func _fill_slot_card(i: int, summary: Dictionary) -> void:
+	var exists: bool = bool(summary.get("exists", false))
 	var valid: bool = bool(summary.get("valid", false))
 	slot_title_labels[i].text = _slot_title(i + 1, summary)
 	slot_summary_labels[i].text = _slot_summary_text(summary)
+	slot_summary_labels[i].add_theme_color_override(&"font_color", UiPalette.INK if exists else UiPalette.WOOD)
 	slot_meta_labels[i].text = _slot_meta_text(summary) if valid else ""
 	slot_meta_labels[i].visible = valid
 	slot_thumbnails[i].texture = _load_thumbnail(str(summary.get("thumbnail", "")))
 	slot_thumb_placeholders[i].visible = slot_thumbnails[i].texture == null
+	var btn: Button = slot_buttons[i]
+	if not exists:
+		var empty_box: StyleBoxFlat = StyleBoxFlat.new()
+		empty_box.bg_color = UiPalette.PAPER
+		empty_box.border_color = Color(UiPalette.WOOD, 0.7)
+		empty_box.set_border_width_all(2)
+		empty_box.border_width_bottom = 3
+		empty_box.set_corner_radius_all(4)
+		empty_box.content_margin_left = 10.0
+		empty_box.content_margin_right = 10.0
+		empty_box.content_margin_top = 3.0
+		empty_box.content_margin_bottom = 5.0
+		btn.add_theme_stylebox_override(&"normal", empty_box)
+	else:
+		btn.remove_theme_stylebox_override(&"normal")
 
 
 ## "Slot 1  •  Dia 3  ★"; vazio ou ilegível: só "Slot 1".
@@ -507,6 +534,7 @@ func _build() -> void:
 	slots_title.theme_type_variation = &"TitleLabel"
 	slots_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	slots_box.add_child(slots_title)
+	slots_box.add_child(HSeparator.new())
 	for i: int in SaveManager.SLOT_COUNT:
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
@@ -525,7 +553,7 @@ func _build() -> void:
 	open_folder_button = _button("Abrir pasta de saves", &"", "load")
 	open_folder_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	open_folder_button.pressed.connect(_on_open_folder_pressed)
-	slots_back_button = _button("Voltar")
+	slots_back_button = _button("Voltar", &"", "door")
 	slots_back_button.custom_minimum_size.x = 200
 	slots_back_button.pressed.connect(show_main)
 	bottom_row.add_child(open_folder_button)
@@ -538,13 +566,21 @@ func _build() -> void:
 	# Confirmação (apagar / jogo novo por cima de um save)
 	var confirm_box: VBoxContainer = VBoxContainer.new()
 	confirm_box.add_theme_constant_override("separation", 12)
+	var confirm_emblem: TextureRect = TextureRect.new()
+	confirm_emblem.custom_minimum_size = Vector2(28, 28)
+	confirm_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	confirm_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	confirm_emblem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	confirm_emblem.texture = UiIcons.get_icon("warning", 56)
+	confirm_box.add_child(confirm_emblem)
 	confirm_label = Label.new()
 	confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	confirm_box.add_child(confirm_label)
+	confirm_box.add_child(HSeparator.new())
 	var confirm_row: HBoxContainer = HBoxContainer.new()
 	confirm_row.add_theme_constant_override("separation", 12)
 	confirm_cancel_button = _button("Cancelar")
-	confirm_ok_button = _button("Confirmar", &"DangerButton")
+	confirm_ok_button = _button("Confirmar", &"DangerButton", "check")
 	for button: Button in [confirm_cancel_button, confirm_ok_button]:
 		button.custom_minimum_size = Vector2(200, 48)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -621,8 +657,8 @@ func _slot_card(n: int) -> Button:
 	frame.custom_minimum_size = SLOT_THUMB_SIZE
 	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var frame_style: StyleBoxFlat = StyleBoxFlat.new()
-	frame_style.bg_color = UiPalette.WOOD_DARK
-	frame_style.border_color = UiPalette.INK
+	frame_style.bg_color = UiPalette.PAPER_DARK
+	frame_style.border_color = UiPalette.WOOD
 	frame_style.set_border_width_all(2)
 	frame_style.set_corner_radius_all(4)
 	frame.add_theme_stylebox_override(&"panel", frame_style)
@@ -630,8 +666,8 @@ func _slot_card(n: int) -> Button:
 	placeholder.text = str(n)
 	placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	placeholder.add_theme_font_size_override(&"font_size", 34)
-	placeholder.add_theme_color_override(&"font_color", UiPalette.PAPER_DARK)
+	placeholder.add_theme_font_size_override(&"font_size", 32)
+	placeholder.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
 	frame.add_child(placeholder)
 	var thumb: TextureRect = TextureRect.new()
 	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -678,9 +714,8 @@ func _button(text: String, variation: StringName = &"", icon_name: String = "") 
 	if not variation.is_empty():
 		button.theme_type_variation = variation
 	if not icon_name.is_empty():
-		button.icon = UiIcons.get_icon(icon_name, 48)
+		button.icon = UiIcons.get_icon(icon_name, 24)
 		button.expand_icon = false
-		button.add_theme_constant_override(&"icon_max_width", 24)
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_add_focus_scale(button)
 	return button
@@ -690,18 +725,44 @@ func _button(text: String, variation: StringName = &"", icon_name: String = "") 
 ## tema só aparece fora do mouse. Foco com o mouse não cresce (#122): o primeiro botão focado ao
 ## abrir (Continuar) fica da largura dos outros, destacado só pela cor.
 func _add_focus_scale(button: Button) -> void:
-	var grow: Callable = func(on: bool) -> void:
+	var feedback_tween: Array[Tween] = [null]
+	var held: Array[bool] = [false]
+	var set_feedback: Callable = func(emphasize: bool) -> void:
 		button.pivot_offset = button.size * 0.5
-		var target: Vector2 = Vector2.ONE * (BUTTON_FOCUS_SCALE if on else 1.0)
+		var target_scale: float = BUTTON_FOCUS_SCALE if emphasize else 1.0
+		if held[0]:
+			target_scale = BUTTON_PRESS_SCALE
+		var target: Vector2 = Vector2.ONE * target_scale
+		if feedback_tween[0] != null:
+			feedback_tween[0].kill()
 		if not button.is_inside_tree():
 			button.scale = target
 			return
-		var tween: Tween = button.create_tween()
-		tween.tween_property(button, "scale", target, 0.08)
-	button.mouse_entered.connect(grow.bind(true))
-	button.focus_entered.connect(func() -> void: grow.call(not InputDevice.using_pointer()))
-	button.mouse_exited.connect(func() -> void: grow.call(button.has_focus() and not InputDevice.using_pointer()))
-	button.focus_exited.connect(func() -> void: grow.call(button.is_hovered()))
+		feedback_tween[0] = button.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		feedback_tween[0].tween_property(button, ^"scale", target, BUTTON_FEEDBACK_DURATION)
+	button.mouse_entered.connect(set_feedback.bind(true))
+	button.focus_entered.connect(func() -> void: set_feedback.call(not InputDevice.using_pointer()))
+	button.mouse_exited.connect(func() -> void: set_feedback.call(button.has_focus() and not InputDevice.using_pointer()))
+	button.focus_exited.connect(func() -> void: set_feedback.call(button.is_hovered()))
+	button.button_down.connect(func() -> void:
+		held[0] = true
+		set_feedback.call(false)
+	)
+	button.button_up.connect(func() -> void:
+		held[0] = false
+		set_feedback.call(button.is_hovered() or (button.has_focus() and not InputDevice.using_pointer()))
+	)
+
+
+func _animate_card(card: Control) -> void:
+	if _card_tween != null:
+		_card_tween.kill()
+	if is_instance_valid(_animated_card):
+		_animated_card.modulate.a = 1.0
+	_animated_card = card
+	card.modulate.a = 0.8
+	_card_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_card_tween.tween_property(card, ^"modulate:a", 1.0, CARD_FADE_DURATION)
 
 
 ## Balanço lento do logo (rotação em volta do centro), em loop.

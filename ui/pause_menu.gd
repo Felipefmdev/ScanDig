@@ -10,6 +10,8 @@ extends CanvasLayer
 
 signal open_changed(open: bool)
 
+const CARD_FADE_DURATION: float = 0.16
+
 const QUIT_TEXT: String = "Sair do jogo?\nO progresso da base é salvo ao fim de cada expedição."
 const MAIN_MENU_BASE_TEXT: String = "Voltar ao menu principal?\nO progresso da base é salvo agora."
 const MAIN_MENU_EXPEDITION_TEXT: String = "Voltar ao menu principal?\nA expedição em andamento não é salva."
@@ -19,12 +21,14 @@ static var instance: PauseMenu = null
 
 var root_control: Control = null
 var card: PanelContainer = null
+var pause_subtitle_label: Label = null
 var continue_button: Button = null
 var settings_button: Button = null
 var return_button: Button = null
 var leave_button: Button = null
 var main_menu_button: Button = null
 var quit_button: Button = null
+var quit_icon: TextureRect = null
 var quit_label: Label = null
 var quit_panel: PanelContainer = null
 var quit_yes_button: Button = null
@@ -38,6 +42,8 @@ var _open: bool = false
 var _paused_by_me: bool = false
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _fps_refresh: float = 0.0
+var _card_tween: Tween = null
+var _animated_card: Control = null
 ## O que o "Sim" da confirmação faz: "quit" (Sair do jogo) ou "title" (menu principal).
 var _confirm_target: String = "quit"
 
@@ -99,12 +105,31 @@ func _build_fps_label() -> void:
 	fps_label = Label.new()
 	fps_label.name = "FpsLabel"
 	fps_label.theme = root_control.theme
-	# Texto claro com contorno: legível sobre o mundo e sobre os painéis do HUD.
+	# Pílula escura no canto superior direito: não colide com o MoneyChip do canto esquerdo.
+	var fps_pill: StyleBoxFlat = StyleBoxFlat.new()
+	fps_pill.bg_color = Color(UiPalette.INK, 0.90)
+	fps_pill.border_color = Color(UiPalette.WOOD, 0.85)
+	fps_pill.set_border_width_all(1)
+	fps_pill.set_corner_radius_all(4)
+	fps_pill.content_margin_left = 8.0
+	fps_pill.content_margin_right = 8.0
+	fps_pill.content_margin_top = 2.0
+	fps_pill.content_margin_bottom = 2.0
+	fps_label.add_theme_stylebox_override(&"normal", fps_pill)
 	fps_label.add_theme_font_size_override(&"font_size", 14)
-	fps_label.add_theme_color_override(&"font_color", UiPalette.PAPER)
+	fps_label.add_theme_color_override(&"font_color", UiPalette.PAPER_LIGHT)
 	fps_label.add_theme_color_override(&"font_outline_color", UiPalette.INK)
-	fps_label.add_theme_constant_override(&"outline_size", 5)
-	fps_label.position = Vector2(6, 0)
+	fps_label.add_theme_constant_override(&"outline_size", 3)
+	fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fps_label.anchor_left = 1.0
+	fps_label.anchor_right = 1.0
+	fps_label.anchor_top = 0.0
+	fps_label.anchor_bottom = 0.0
+	fps_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	fps_label.offset_left = -82.0
+	fps_label.offset_right = -10.0
+	fps_label.offset_top = 8.0
+	fps_label.offset_bottom = 32.0
 	fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fps_label.visible = false
 	add_child(fps_label)
@@ -118,7 +143,7 @@ func _on_settings_changed(section: String, values: Dictionary) -> void:
 
 # --- Abrir / fechar ------------------------------------------------------------
 
-## Carregamento, resumo do dia, queda do host ou tela de vitória: o menu não abre por cima.
+## Carregamento, resumo do dia, queda do host, tela de morte ou tela de vitória: o menu não abre por cima.
 func can_open() -> bool:
 	if root_control == null or VictoryScreen.is_open():
 		return false
@@ -144,6 +169,7 @@ func open() -> bool:
 	quit_panel.visible = false
 	card.visible = true
 	root_control.visible = true
+	_animate_card(card)
 	_link_card_focus()
 	_focus_before = get_viewport().gui_get_focus_owner()
 	continue_button.grab_focus()
@@ -166,6 +192,7 @@ func close() -> void:
 	if settings_menu.visible:
 		settings_menu.discard()
 	root_control.visible = false
+	_reset_card_transition()
 	if _paused_by_me:
 		get_tree().paused = false
 		_paused_by_me = false
@@ -195,7 +222,7 @@ func toggle() -> void:
 
 # --- Montagem ------------------------------------------------------------------
 
-func _button(text: String, variation: StringName = &"") -> Button:
+func _button(text: String, variation: StringName = &"", icon_name: String = "") -> Button:
 	var button: Button = Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(320, 48)
@@ -203,6 +230,8 @@ func _button(text: String, variation: StringName = &"") -> Button:
 	button.focus_mode = Control.FOCUS_ALL
 	if not variation.is_empty():
 		button.theme_type_variation = variation
+	if not icon_name.is_empty():
+		button.icon = UiIcons.get_icon(icon_name, 22)
 	return button
 
 
@@ -231,7 +260,14 @@ func _build() -> void:
 	title.theme_type_variation = &"TitleLabel"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
-	continue_button = _button("Continuar", &"PrimaryButton")
+	pause_subtitle_label = Label.new()
+	pause_subtitle_label.name = "PauseSubtitleLabel"
+	pause_subtitle_label.theme_type_variation = &"HintLabel"
+	pause_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_subtitle_label.visible = false
+	box.add_child(pause_subtitle_label)
+	box.add_child(HSeparator.new())
+	continue_button = _button("Continuar", &"PrimaryButton", "play")
 	var continue_focus: StyleBoxFlat = root_control.theme.get_stylebox(&"focus", &"PrimaryButton").duplicate() as StyleBoxFlat
 	continue_focus.draw_center = false
 	continue_focus.border_color = UiPalette.PAPER_LIGHT
@@ -239,11 +275,11 @@ func _build() -> void:
 		continue_focus.set_border_width(side, 1)
 		continue_focus.set_expand_margin(side, 0.0)
 	continue_button.add_theme_stylebox_override(&"focus", continue_focus)
-	settings_button = _button("Configurações")
-	return_button = _button("Voltar à base")
-	leave_button = _button("Sair da sessão", &"DangerButton")
-	main_menu_button = _button("Sair para o menu principal")
-	quit_button = _button("Sair do jogo", &"DangerButton")
+	settings_button = _button("Configurações", &"", "gear")
+	return_button = _button("Voltar à base", &"", "map")
+	leave_button = _button("Sair da sessão", &"DangerButton", "multiplayer")
+	main_menu_button = _button("Sair para o menu principal", &"", "home")
+	quit_button = _button("Sair do jogo", &"DangerButton", "door")
 	for button: Button in [continue_button, settings_button, return_button, leave_button, main_menu_button, quit_button]:
 		box.add_child(button)
 	card = _card(box)
@@ -252,14 +288,28 @@ func _build() -> void:
 
 	var quit_box: VBoxContainer = VBoxContainer.new()
 	quit_box.add_theme_constant_override("separation", 12)
+	quit_icon = TextureRect.new()
+	quit_icon.name = "QuitIcon"
+	quit_icon.texture = UiIcons.get_icon("warning", 56)
+	quit_icon.custom_minimum_size = Vector2(28, 28)
+	quit_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	quit_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	quit_icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	quit_box.add_child(quit_icon)
 	quit_label = Label.new()
 	quit_label.text = QUIT_TEXT
 	quit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	quit_box.add_child(quit_label)
-	quit_yes_button = _button("Sair", &"DangerButton")
+	quit_box.add_child(HSeparator.new())
+	var quit_row: HBoxContainer = HBoxContainer.new()
+	quit_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	quit_row.add_theme_constant_override("separation", 12)
+	quit_yes_button = _button("Sair", &"DangerButton", "door")
 	quit_no_button = _button("Cancelar")
-	quit_box.add_child(quit_yes_button)
-	quit_box.add_child(quit_no_button)
+	for button: Button in [quit_yes_button, quit_no_button]:
+		button.custom_minimum_size = Vector2(184, 46)
+		quit_row.add_child(button)
+	quit_box.add_child(quit_row)
 	quit_panel = _card(quit_box)
 	quit_panel.name = "QuitPanel"
 	quit_panel.visible = false
@@ -290,11 +340,31 @@ func _show_card() -> void:
 	settings_menu.visible = false
 	quit_panel.visible = false
 	card.visible = true
+	_animate_card(card)
 	if continue_button.is_visible_in_tree():
 		continue_button.grab_focus()
 
 
 # --- Botões --------------------------------------------------------------------
+
+func _animate_card(panel: Control) -> void:
+	if not _open:
+		return
+	_reset_card_transition()
+	_animated_card = panel
+	panel.modulate.a = 0.8
+	_card_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_card_tween.tween_property(panel, ^"modulate:a", 1.0, CARD_FADE_DURATION)
+
+
+func _reset_card_transition() -> void:
+	if _card_tween != null:
+		_card_tween.kill()
+		_card_tween = null
+	if is_instance_valid(_animated_card):
+		_animated_card.modulate.a = 1.0
+	_animated_card = null
+
 
 func _session() -> Node:
 	return get_node_or_null(^"/root/CoreSession")
@@ -314,12 +384,25 @@ func _refresh_buttons() -> void:
 	var in_expedition: bool = session != null and bool(session.call(&"is_in_expedition"))
 	return_button.visible = in_expedition and _is_host()
 	leave_button.visible = _is_online()
+	if pause_subtitle_label != null:
+		if in_expedition and session.has_method(&"get_current_map"):
+			var map: MapData = session.call(&"get_current_map") as MapData
+			var map_name: String = ""
+			if map != null:
+				map_name = map.display_name if not map.display_name.is_empty() else map.id
+			var day: int = GameState.instance.current_day if GameState.instance != null else 1
+			pause_subtitle_label.text = tr("%s  •  Dia %d") % [tr(map_name), day] if not map_name.is_empty() else ""
+			pause_subtitle_label.visible = not pause_subtitle_label.text.is_empty()
+		else:
+			pause_subtitle_label.text = ""
+			pause_subtitle_label.visible = false
 
 
 func _on_settings_pressed() -> void:
 	card.visible = false
 	settings_menu.refresh()
 	settings_menu.visible = true
+	_animate_card(settings_menu)
 	settings_menu.focus_first()
 
 
@@ -343,9 +426,13 @@ func _on_quit_pressed() -> void:
 	_confirm_target = "quit"
 	quit_label.text = QUIT_TEXT
 	quit_yes_button.text = "Sair"
+	quit_yes_button.icon = UiIcons.get_icon("door", 22)
 	card.visible = false
 	quit_panel.visible = true
+	_animate_card(quit_panel)
 	UiFocus.link_chain([quit_yes_button, quit_no_button])
+	quit_yes_button.focus_neighbor_right = quit_yes_button.get_path_to(quit_no_button)
+	quit_no_button.focus_neighbor_left = quit_no_button.get_path_to(quit_yes_button)
 	quit_no_button.grab_focus()
 
 
@@ -359,9 +446,13 @@ func _on_main_menu_pressed() -> void:
 	else:
 		quit_label.text = MAIN_MENU_EXPEDITION_TEXT if in_expedition else MAIN_MENU_BASE_TEXT
 	quit_yes_button.text = "Ir para o menu"
+	quit_yes_button.icon = UiIcons.get_icon("home", 22)
 	card.visible = false
 	quit_panel.visible = true
+	_animate_card(quit_panel)
 	UiFocus.link_chain([quit_yes_button, quit_no_button])
+	quit_yes_button.focus_neighbor_right = quit_yes_button.get_path_to(quit_no_button)
+	quit_no_button.focus_neighbor_left = quit_no_button.get_path_to(quit_yes_button)
 	quit_no_button.grab_focus()
 
 
