@@ -764,7 +764,7 @@ func _build_night_check() -> void:
 	night_check.tooltip_text = "Expedição noturna: mais achados raros e criaturas noturnas, mas pouca visão. A Lanterna de Magnésio e o visor do detector iluminam."
 	night_check.focus_mode = Control.FOCUS_ALL
 	night_check.toggled.connect(_on_night_toggled)
-	UiMotion.attach_button(night_check, 1.018, 0.975)
+	UiMotion.attach_button(night_check, 1.0, 0.975)
 	var page: Node = depart_btn.get_parent()
 	page.add_child(night_check)
 	page.move_child(night_check, depart_btn.get_index())

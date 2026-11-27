@@ -168,7 +168,7 @@ func _open_after_die(player: Node, dropped_items: int) -> void:
 		"dropped_items": dropped_items,
 		"map_name": map_name,
 		"day": day,
-		"night": sm.is_night(),
+		"night": SessionManager.is_night(),
 	})
 
 

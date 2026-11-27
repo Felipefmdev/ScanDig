@@ -933,7 +933,7 @@ func _notification(what: int) -> void:
 
 ## A linha do título tem pelo menos a altura do aviso no tema atual: ele não invade as abas.
 func _fit_title_row() -> void:
-	var header_ctrl: Control = title_row if title_row != null else title_label
+	var header_ctrl: Control = (title_row as Control) if title_row != null else (title_label as Control)
 	header_ctrl.custom_minimum_size = Vector2(0, saved_notice.get_combined_minimum_size().y)
 
 
@@ -942,7 +942,7 @@ func _fit_title_row() -> void:
 ## a 130 %). Refeito a cada frame: o layout muda ao aplicar e ao trocar de aba.
 func _place_saved_notice() -> void:
 	saved_notice.reset_size()
-	var header_ctrl: Control = title_row if title_row != null else title_label
+	var header_ctrl: Control = (title_row as Control) if title_row != null else (title_label as Control)
 	var row: Rect2 = header_ctrl.get_global_rect()
 	var right: float = (header_ctrl.get_parent() as Control).get_global_rect().end.x
 	saved_notice.global_position = Vector2(right - saved_notice.size.x, row.position.y + (row.size.y - saved_notice.size.y) * 0.5)
