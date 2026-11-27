@@ -92,12 +92,15 @@ var captions_check: CheckBox = null
 var buttons_row: HBoxContainer = null
 var saved_notice: PanelContainer = null
 var saved_notice_label: Label = null
+var title_row: HBoxContainer = null
+var _title_icon: TextureRect = null
 var title_label: Label = null
 var discard_panel: PanelContainer = null
 var discard_button: Button = null
 var discard_cancel_button: Button = null
 ## Valores pendentes logo depois do último refresh/Aplicar: diferente disso = mudança não aplicada.
 var _clean_state: Dictionary = {}
+var _was_dirty: bool = false
 var _saved_token: int = 0
 
 var _resolutions: Array[Vector2i] = []
@@ -110,7 +113,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
 	_fit_title_row()
-	tabs.tab_changed.connect(func(_tab: int) -> void: focus_first.call_deferred())
+	tabs.tab_changed.connect(func(_tab: int) -> void:
+		UiMotion.switch_tab_page(tabs.get_current_tab_control(), true)
+		UiMotion.pulse(_title_icon, 1.12, 0.18, true)
+		focus_first.call_deferred())
 	var sm: SettingsManager = SettingsManager.instance
 	if sm != null:
 		sm.video_trial_finished.connect(_on_video_trial_finished)
@@ -120,6 +126,11 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if saved_notice != null and saved_notice.visible:
 		_place_saved_notice()
+	if is_visible_in_tree() and apply_button != null and not _clean_state.is_empty():
+		var dirty_now: bool = has_pending_changes()
+		if dirty_now and not _was_dirty:
+			UiMotion.pulse(apply_button, 1.032, 0.18, true)
+		_was_dirty = dirty_now
 	if confirm_panel == null or not confirm_panel.visible:
 		return
 	_trial_left = maxf(_trial_left - delta, 0.0)
@@ -152,6 +163,11 @@ func _dialog_emblem(box: VBoxContainer, title_text: String = "") -> void:
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	icon.texture = UiIcons.get_icon("warning", 28)
 	box.add_child(icon)
+	box.visibility_changed.connect(func() -> void:
+		if box.is_visible_in_tree():
+			UiMotion.breathe_emblem(icon, 1.06, 2.2, 1.05, true)
+		else:
+			UiMotion.stop(icon, true))
 	if not title_text.is_empty():
 		var header: Label = Label.new()
 		header.text = title_text
@@ -162,10 +178,23 @@ func _dialog_emblem(box: VBoxContainer, title_text: String = "") -> void:
 		box.add_child(HSeparator.new())
 
 
-func _row(grid: GridContainer, text: String, control: Control) -> void:
+func _row(grid: GridContainer, text: String, control: Control, icon_name: String = "") -> void:
 	var label: Label = Label.new()
 	label.text = text
-	grid.add_child(label)
+	if icon_name.is_empty():
+		grid.add_child(label)
+	else:
+		var lbl_row: HBoxContainer = HBoxContainer.new()
+		lbl_row.add_theme_constant_override(&"separation", 8)
+		var ico: TextureRect = TextureRect.new()
+		ico.texture = UiIcons.get_icon(icon_name, 20)
+		ico.custom_minimum_size = Vector2(18, 18)
+		ico.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ico.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ico.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		lbl_row.add_child(ico)
+		lbl_row.add_child(label)
+		grid.add_child(lbl_row)
 	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_child(control)
 
@@ -183,10 +212,11 @@ func _option(items: Array) -> OptionButton:
 	option.add_theme_stylebox_override(&"focus", focus)
 	for item: Variant in items:
 		option.add_item(str(item))
+	UiMotion.attach_button(option, 1.014, 0.985)
 	return option
 
 
-func _slider_row(grid: GridContainer, text: String, min_value: float, max_value: float, step: float) -> Array:
+func _slider_row(grid: GridContainer, text: String, min_value: float, max_value: float, step: float, icon_name: String = "") -> Array:
 	var box: HBoxContainer = HBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	var slider: HSlider = HSlider.new()
@@ -199,9 +229,13 @@ func _slider_row(grid: GridContainer, text: String, min_value: float, max_value:
 	var value: Label = Label.new()
 	value.custom_minimum_size = Vector2(64, 0)
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
+	slider.value_changed.connect(func(_v: float) -> void:
+		if slider.is_visible_in_tree():
+			UiMotion.pulse(value, 1.08, 0.12, true))
 	box.add_child(slider)
 	box.add_child(value)
-	_row(grid, text, box)
+	_row(grid, text, box, icon_name)
 	return [slider, value]
 
 
@@ -210,7 +244,10 @@ func _checkbox() -> CheckBox:
 	var check: CheckBox = CheckBox.new()
 	check.text = "Desligado"
 	check.focus_mode = Control.FOCUS_ALL
+	check.add_theme_color_override(&"font_color", UiPalette.WOOD)
+	check.add_theme_color_override(&"font_pressed_color", UiPalette.INK)
 	check.toggled.connect(func(on: bool) -> void: check.text = "Ligado" if on else "Desligado")
+	UiMotion.attach_button(check, 1.014, 0.982)
 	return check
 
 
@@ -228,13 +265,27 @@ func _build() -> void:
 	add_child(_margin(box, 18))
 
 	# Encolhido ao texto: o aviso de salvo aparece à direita dele, na mesma linha.
+	title_row = HBoxContainer.new()
+	title_row.name = "TitleRow"
+	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	title_row.add_theme_constant_override(&"separation", 8)
+	title_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var title_icon: TextureRect = TextureRect.new()
+	_title_icon = title_icon
+	title_icon.texture = UiIcons.get_icon("gear", 32)
+	title_icon.custom_minimum_size = Vector2(24, 24)
+	title_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	title_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	title_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title_row.add_child(title_icon)
 	title_label = Label.new()
 	title_label.text = "Configurações"
 	title_label.theme_type_variation = &"TitleLabel"
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	box.add_child(title_label)
+	title_row.add_child(title_label)
+	box.add_child(title_row)
 
 	tabs = TabContainer.new()
 	tabs.custom_minimum_size = Vector2(0, 300)
@@ -281,11 +332,14 @@ func _build() -> void:
 	# Áudio
 	var audio: GridContainer = _grid()
 	audio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var audio_icons: Dictionary = {"master": "audio", "music": "music", "sfx": "bulb"}
 	for key: String in AUDIO_LABELS.keys():
-		var row: Array = _slider_row(audio, AUDIO_LABELS[key], 0.0, 100.0, 5.0)
+		var row: Array = _slider_row(audio, AUDIO_LABELS[key], 0.0, 100.0, 5.0, str(audio_icons.get(key, "")))
 		var slider: HSlider = row[0]
 		var value: Label = row[1]
-		slider.value_changed.connect(func(v: float) -> void: value.text = "Mudo" if v <= 0.0 else "%d %%" % int(v))
+		slider.value_changed.connect(func(v: float) -> void:
+			value.text = "Mudo" if v <= 0.0 else "%d %%" % int(v)
+			value.add_theme_color_override(&"font_color", UiPalette.WOOD if v <= 0.0 else UiPalette.WOOD_DARK))
 		audio_sliders[key] = slider
 		audio_values[key] = value
 	var audio_card: PanelContainer = _inset_card(audio, 14)
@@ -317,6 +371,7 @@ func _build() -> void:
 			bind_button.focus_mode = Control.FOCUS_ALL
 			bind_button.clip_text = true
 			bind_button.pressed.connect(start_capture.bind(action, column))
+			UiMotion.attach_button(bind_button, 1.018, 0.975)
 			if column == COLUMN_PAD:
 				pad_buttons[action] = bind_button
 			else:
@@ -535,7 +590,7 @@ func _build() -> void:
 	discard_button = Button.new()
 	discard_button.text = "Descartar"
 	discard_button.theme_type_variation = &"DangerButton"
-	discard_button.icon = UiIcons.get_icon("door", 18)
+	discard_button.icon = UiIcons.get_icon("trash", 18)
 	for button: Button in [discard_cancel_button, discard_button]:
 		button.custom_minimum_size = Vector2(0, 44)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -563,6 +618,9 @@ func _build() -> void:
 	conflict_cancel_button.pressed.connect(_end_capture)
 	keep_button.pressed.connect(func() -> void: SettingsManager.instance.confirm_video_trial())
 	revert_button.pressed.connect(func() -> void: SettingsManager.instance.revert_video_trial())
+	for btn: Button in [defaults_button, back_button, apply_button, review_hints_button, keep_button, revert_button, conflict_cancel_button, swap_button, discard_cancel_button, discard_button]:
+		if btn != null:
+			UiMotion.attach_button(btn)
 
 
 # --- Valores -------------------------------------------------------------------
@@ -591,7 +649,9 @@ func refresh() -> void:
 	for key: String in audio_sliders.keys():
 		var slider: HSlider = audio_sliders[key]
 		slider.value = roundf(float(audio[key]) * 100.0)
-		(audio_values[key] as Label).text = "Mudo" if slider.value <= 0.0 else "%d %%" % int(slider.value)
+		var audio_lbl: Label = audio_values[key] as Label
+		audio_lbl.text = "Mudo" if slider.value <= 0.0 else "%d %%" % int(slider.value)
+		audio_lbl.add_theme_color_override(&"font_color", UiPalette.WOOD if slider.value <= 0.0 else UiPalette.WOOD_DARK)
 	var gameplay: Dictionary = sm.get_section(SettingsManager.GAMEPLAY)
 	sensitivity_slider.value = roundf(float(gameplay["mouse_sensitivity"]) / SENSITIVITY_UNIT * 100.0)
 	sensitivity_value.text = "%d %%" % int(sensitivity_slider.value)
@@ -657,6 +717,7 @@ func has_pending_changes() -> bool:
 
 func _mark_clean() -> void:
 	_clean_state = _pending_all()
+	_was_dirty = false
 
 
 func pending_video() -> Dictionary:
@@ -702,6 +763,7 @@ func _on_apply_pressed() -> void:
 	if SettingsManager.needs_video_trial(sm.get_section(SettingsManager.VIDEO), video):
 		_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
 		confirm_panel.visible = true
+		UiMotion.pop_in(confirm_panel, true, 0.95, 0.16)
 		tabs.visible = false
 		UiFocus.link_row([revert_button, keep_button])
 		keep_button.grab_focus()
@@ -732,6 +794,7 @@ func _on_defaults_pressed() -> void:
 		if SettingsManager.needs_video_trial(sm.get_section(SettingsManager.VIDEO), defaults):
 			_trial_left = SettingsManager.VIDEO_TRIAL_SECONDS
 			confirm_panel.visible = true
+			UiMotion.pop_in(confirm_panel, true, 0.95, 0.16)
 			tabs.visible = false
 			UiFocus.link_row([revert_button, keep_button])
 			keep_button.grab_focus()
@@ -752,6 +815,7 @@ func _on_back_pressed() -> void:
 	if not trial and capturing.is_empty() and has_pending_changes():
 		hide_saved_notice()
 		discard_panel.visible = true
+		UiMotion.pop_in(discard_panel, true, 0.95, 0.16)
 		tabs.visible = false
 		buttons_row.visible = false
 		UiFocus.link_row([discard_cancel_button, discard_button])
@@ -773,6 +837,7 @@ func discard() -> void:
 
 
 func _hide_discard() -> void:
+	UiMotion.stop(discard_panel)
 	discard_panel.visible = false
 	buttons_row.visible = true
 	tabs.visible = not confirm_panel.visible and not conflict_panel.visible
@@ -831,21 +896,30 @@ func show_saved_notice(text: String = SAVED_TEXT) -> void:
 	_saved_token += 1
 	var token: int = _saved_token
 	saved_notice_label.text = text
-	saved_notice.modulate.a = 1.0
+	UiMotion.stop(saved_notice)
 	saved_notice.visible = true
 	_place_saved_notice()
+	UiMotion.toast_enter(saved_notice, null, true)
 	await get_tree().create_timer(SAVED_SECONDS * 0.75, true, false, true).timeout
-	if token != _saved_token:
+	if token != _saved_token or not is_inside_tree():
 		return
-	var tween: Tween = create_tween()
+	if UiMotion.is_instant():
+		await get_tree().create_timer(SAVED_SECONDS * 0.25, true, false, true).timeout
+		if token == _saved_token:
+			saved_notice.visible = false
+		return
+	var tween: Tween = saved_notice.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(saved_notice, "modulate:a", 0.0, SAVED_SECONDS * 0.25)
+	saved_notice.set_meta(UiMotion.META_TWEEN, tween)
 	await tween.finished
 	if token == _saved_token:
+		UiMotion.stop(saved_notice)
 		saved_notice.visible = false
 
 
 func hide_saved_notice() -> void:
 	_saved_token += 1
+	UiMotion.stop(saved_notice)
 	saved_notice.visible = false
 
 
@@ -859,7 +933,8 @@ func _notification(what: int) -> void:
 
 ## A linha do título tem pelo menos a altura do aviso no tema atual: ele não invade as abas.
 func _fit_title_row() -> void:
-	title_label.custom_minimum_size = Vector2(0, saved_notice.get_combined_minimum_size().y)
+	var header_ctrl: Control = title_row if title_row != null else title_label
+	header_ctrl.custom_minimum_size = Vector2(0, saved_notice.get_combined_minimum_size().y)
 
 
 ## Na linha do título, encostado à direita (o título fica no centro, encolhido ao texto). Não
@@ -867,8 +942,9 @@ func _fit_title_row() -> void:
 ## a 130 %). Refeito a cada frame: o layout muda ao aplicar e ao trocar de aba.
 func _place_saved_notice() -> void:
 	saved_notice.reset_size()
-	var row: Rect2 = title_label.get_global_rect()
-	var right: float = (title_label.get_parent() as Control).get_global_rect().end.x
+	var header_ctrl: Control = title_row if title_row != null else title_label
+	var row: Rect2 = header_ctrl.get_global_rect()
+	var right: float = (header_ctrl.get_parent() as Control).get_global_rect().end.x
 	saved_notice.global_position = Vector2(right - saved_notice.size.x, row.position.y + (row.size.y - saved_notice.size.y) * 0.5)
 
 
@@ -901,7 +977,36 @@ func _on_vibration_changed(value: float) -> void:
 
 
 func _show_vibration_value() -> void:
-	vibration_value.text = "Desligada" if vibration_slider.value <= 0.0 else "%d %%" % int(vibration_slider.value)
+	var off: bool = vibration_slider.value <= 0.0
+	vibration_value.text = "Desligada" if off else "%d %%" % int(vibration_slider.value)
+	vibration_value.add_theme_color_override(&"font_color", UiPalette.WOOD if off else UiPalette.WOOD_DARK)
+
+
+func _style_bind_button(button: Button, waiting: bool) -> void:
+	if waiting:
+		var wait_box: StyleBoxFlat = StyleBoxFlat.new()
+		wait_box.bg_color = UiPalette.PAPER_LIGHT.lerp(UiPalette.ORANGE, 0.24)
+		wait_box.border_color = UiPalette.ORANGE
+		wait_box.set_border_width_all(2)
+		wait_box.border_width_bottom = 3
+		wait_box.set_corner_radius_all(4)
+		wait_box.content_margin_left = 4.0
+		wait_box.content_margin_right = 4.0
+		wait_box.content_margin_top = 4.0
+		wait_box.content_margin_bottom = 4.0
+		for state: StringName in [&"normal", &"hover", &"pressed"]:
+			button.add_theme_stylebox_override(state, wait_box)
+		button.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
+		button.add_theme_color_override(&"font_hover_color", UiPalette.WOOD_DARK)
+		button.add_theme_color_override(&"font_focus_color", UiPalette.WOOD_DARK)
+		if button.is_visible_in_tree():
+			UiMotion.breathe_emblem(button, 1.022, 0.0, 0.50, true)
+	else:
+		UiMotion.stop(button, true)
+		for state: StringName in [&"normal", &"hover", &"pressed"]:
+			button.remove_theme_stylebox_override(state)
+		for col_key: StringName in [&"font_color", &"font_hover_color", &"font_focus_color"]:
+			button.remove_theme_color_override(col_key)
 
 
 func _refresh_controls() -> void:
@@ -912,10 +1017,12 @@ func _refresh_controls() -> void:
 		var button: Button = control_buttons[action]
 		var waiting: bool = action == capturing and capture_column == COLUMN_KEYBOARD
 		button.text = CAPTURE_TEXT if waiting else SettingsManager.binding_label(sm.get_binding(action))
+		_style_bind_button(button, waiting)
 	for action: String in pad_buttons.keys():
 		var pad_button: Button = pad_buttons[action]
 		var waiting_pad: bool = action == capturing and capture_column == COLUMN_PAD
 		pad_button.text = CAPTURE_PAD_TEXT if waiting_pad else SettingsManager.binding_label(sm.get_pad_binding(action))
+		_style_bind_button(pad_button, waiting_pad)
 
 
 ## Clicou na ação: a próxima tecla/botão do mouse (coluna do teclado) ou o próximo botão/eixo
@@ -980,12 +1087,17 @@ func capture_binding(binding: Dictionary) -> void:
 		return
 	var other: String = sm.find_conflict(capturing, binding)
 	if other.is_empty():
+		var bound_action: String = capturing
+		var bound_col: String = capture_column
 		sm.set_binding(capturing, binding)
 		_end_capture()
+		var target_btns: Dictionary = pad_buttons if bound_col == COLUMN_PAD else control_buttons
+		UiMotion.pulse(target_btns.get(bound_action) as Control, 1.045, 0.18, true)
 		return
 	_conflict_binding = binding
 	conflict_label.text = tr("«%s» já está em %s.\nTrocar as duas ações?") % [SettingsManager.binding_label(binding), tr(SettingsManager.ACTION_LABELS[other])]
 	conflict_panel.visible = true
+	UiMotion.pop_in(conflict_panel, true, 0.95, 0.16)
 	tabs.visible = false
 	UiFocus.link_row([conflict_cancel_button, swap_button])
 	conflict_cancel_button.grab_focus()
@@ -993,6 +1105,10 @@ func capture_binding(binding: Dictionary) -> void:
 
 func _on_swap_pressed() -> void:
 	var sm: SettingsManager = SettingsManager.instance
+	var bound_action: String = capturing
+	var bound_col: String = capture_column
 	if sm != null and not capturing.is_empty() and not _conflict_binding.is_empty():
 		sm.set_binding(capturing, _conflict_binding, true)
 	_end_capture()
+	var target_btns: Dictionary = pad_buttons if bound_col == COLUMN_PAD else control_buttons
+	UiMotion.pulse(target_btns.get(bound_action) as Control, 1.045, 0.18, true)
