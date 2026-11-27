@@ -208,9 +208,9 @@ func _style_journal_heading(label: Label, icon_name: String) -> void:
 	var icon_left: float = style.get_margin(SIDE_LEFT)
 	var right_pad: float = style.get_margin(SIDE_RIGHT)
 	var icon_side: float = 20.0
-	var bar_w: float = 108.0
+	var bar_w: float = 84.0
 	style.content_margin_left = icon_left + icon_side + 8.0
-	style.content_margin_right = right_pad + bar_w + 10.0
+	style.content_margin_right = right_pad + bar_w + 8.0
 	label.add_theme_stylebox_override(&"normal", style)
 	var icon: TextureRect = TextureRect.new()
 	icon.name = "Icon"

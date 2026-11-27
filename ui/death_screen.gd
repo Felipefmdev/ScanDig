@@ -408,7 +408,7 @@ func _build() -> void:
 
 	return_base_button = Button.new()
 	return_base_button.name = "ReturnBaseButton"
-	return_base_button.icon = UiIcons.get_icon("map", 20)
+	return_base_button.icon = UiIcons.get_icon("home", 20)
 	return_base_button.custom_minimum_size = Vector2(180, 46)
 	return_base_button.focus_mode = Control.FOCUS_ALL
 	return_base_button.pressed.connect(_on_return_base_pressed)

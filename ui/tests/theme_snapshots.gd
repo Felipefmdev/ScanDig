@@ -125,6 +125,7 @@ func _run() -> void:
 	await _shot("aviso_segredo")
 	ui._clear_toasts()
 	ui.toast_panel.visible = false
+	boss_hud.visible = false
 
 	ui._show_summary({"day": 3, "map_name": "Praia", "money_start": 1200, "money_end": 2150, "money_earned": 950,
 		"entries": [

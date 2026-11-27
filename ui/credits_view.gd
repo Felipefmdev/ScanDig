@@ -19,7 +19,7 @@ const RECORDING_TEXT: String = "gravação: %s"
 const FILES_TEXT: String = "Arquivos: %d"
 ## Altura da área com rolagem: cabe no cartão da vitória em 960x540 (o FitCenterContainer encolhe
 ## o resto com ui_scale 1.3).
-const SCROLL_SIZE: Vector2 = Vector2(660, 300)
+const SCROLL_SIZE: Vector2 = Vector2(660, 316)
 const SCROLL_STEP: int = 48
 
 var scroll: ScrollContainer = null
@@ -145,8 +145,10 @@ func _build() -> void:
 	add_child(scroll)
 	var margin: MarginContainer = MarginContainer.new()
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for side: String in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 10)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 12)
 	scroll.add_child(margin)
 	var body: VBoxContainer = VBoxContainer.new()
 	body.name = "Body"

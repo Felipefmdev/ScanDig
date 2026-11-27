@@ -47,6 +47,8 @@ var _focus_before: Control = null
 var credits_label: Label = null
 var _trophy_icon: TextureRect = null
 var _collection_card: PanelContainer = null
+var _collection_bar: ProgressBar = null
+var _collection_pct_label: Label = null
 var _campaign_card: PanelContainer = null
 var _actions_row: HBoxContainer = null
 
@@ -224,6 +226,21 @@ func refresh() -> void:
 	var total_creatures: int = GameState.CREATURES.size()
 	creatures_value.text = "%d / %d" % [seen_creatures, total_creatures]
 	creatures_value.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if total_creatures > 0 and seen_creatures >= total_creatures else UiPalette.WOOD_DARK)
+	var sum_done: int = found_items + intact_count + found_secrets + seen_creatures
+	var sum_total: int = maxi(total_items * 2 + total_secrets + total_creatures, 1)
+	if _collection_bar != null:
+		_collection_bar.max_value = sum_total
+		_collection_bar.value = clampi(sum_done, 0, sum_total)
+		var bar_fill: StyleBoxFlat = StyleBoxFlat.new()
+		bar_fill.bg_color = UiPalette.GREEN_BOTTLE if sum_done >= sum_total else UiPalette.ORANGE
+		bar_fill.border_color = UiPalette.INK
+		bar_fill.set_border_width_all(1)
+		bar_fill.set_corner_radius_all(3)
+		_collection_bar.add_theme_stylebox_override(&"fill", bar_fill)
+	if _collection_pct_label != null:
+		var pct: int = roundi(100.0 * float(sum_done) / float(sum_total))
+		_collection_pct_label.text = "%d%%" % clampi(pct, 0, 100)
+		_collection_pct_label.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if sum_done >= sum_total else UiPalette.WOOD_DARK)
 	for row: Array in CAMPAIGN_ROWS:
 		(campaign_values[row[0]] as Label).text = campaign_value_text(gs, str(row[0]))
 
@@ -311,6 +328,31 @@ func _build() -> void:
 	intact_value = _count_row(grid, "Peças intactas")
 	secrets_value = _count_row(grid, "Segredos")
 	creatures_value = _count_row(grid, "Diário de campo")
+	var col_vbox: VBoxContainer = grid.get_parent() as VBoxContainer
+	if col_vbox != null:
+		var prog_row: HBoxContainer = HBoxContainer.new()
+		prog_row.add_theme_constant_override("separation", 8)
+		prog_row.size_flags_vertical = Control.SIZE_EXPAND | Control.SIZE_SHRINK_END
+		_collection_bar = ProgressBar.new()
+		_collection_bar.show_percentage = false
+		_collection_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_collection_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_collection_bar.custom_minimum_size = Vector2(120, 10)
+		_collection_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_collection_bar.focus_mode = Control.FOCUS_NONE
+		var bar_track: StyleBoxFlat = StyleBoxFlat.new()
+		bar_track.bg_color = UiPalette.PAPER_DARK
+		bar_track.border_color = UiPalette.INK
+		bar_track.set_border_width_all(1)
+		bar_track.set_corner_radius_all(3)
+		_collection_bar.add_theme_stylebox_override(&"background", bar_track)
+		prog_row.add_child(_collection_bar)
+		_collection_pct_label = Label.new()
+		_collection_pct_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_collection_pct_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_collection_pct_label.custom_minimum_size = Vector2(44, 0)
+		prog_row.add_child(_collection_pct_label)
+		col_vbox.add_child(prog_row)
 	# Duas colunas de pares (rótulo, valor): a mesma altura das contagens ao lado.
 	var campaign: GridContainer = _stats_column(columns, "Campanha", 4, "compass")
 	_campaign_card = campaign.get_parent().get_parent() as PanelContainer

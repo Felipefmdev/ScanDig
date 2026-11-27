@@ -499,8 +499,12 @@ func _is_world_shop_open() -> bool:
 	if tree == null:
 		return false
 	for shop: Node in tree.get_nodes_in_group(&"world_upgrade_shops"):
-		if shop != null and is_instance_valid(shop) and shop.has_method(&"is_open") and bool(shop.call(&"is_open")):
-			return true
+		if shop != null and is_instance_valid(shop):
+			if shop.has_method(&"is_open") and bool(shop.call(&"is_open")):
+				return true
+			var shop_root: Control = shop.get(&"_root") as Control
+			if shop_root != null and shop_root.visible:
+				return true
 	return false
 
 

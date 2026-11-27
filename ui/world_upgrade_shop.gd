@@ -31,6 +31,8 @@ var _pending_started: int = 0
 ## Timeout is an unknown result, not permission to charge a new intent.
 var _intent_request: int = 0
 var _intent_upgrade: String = ""
+var _displayed_money: int = -1
+var _money_tween: Tween = null
 
 
 func _ready() -> void:
@@ -134,6 +136,10 @@ func close() -> void:
 	UiMotion.stop(_panel)
 	UiMotion.stop(_shade)
 	UiMotion.stop(_coin_icon)
+	if _money_tween != null:
+		_money_tween.kill()
+		_money_tween = null
+	_displayed_money = -1
 	for id: String in IDS:
 		UiMotion.stop(_cards.get(id) as Control)
 	if is_instance_valid(_root):
@@ -165,6 +171,13 @@ func _build() -> void:
 	_root.name = "WorldShop"
 	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.theme = preload("res://ui/theme/scandig_theme.tres")
+	_root.visibility_changed.connect(func() -> void:
+		if not _root.visible and _money_tween != null:
+			_money_tween.kill()
+			_money_tween = null
+			_displayed_money = -1
+		if SessionUI.instance != null and SessionUI.instance.expedition_bar != null:
+			SessionUI.instance.call(&"_refresh_expedition_bar"))
 	add_child(_root)
 	var shade: ColorRect = ColorRect.new()
 	shade.color = Color(UiPalette.INK, 0.62)
@@ -322,11 +335,59 @@ func _rebuild_pips(pips: HBoxContainer, level: int, maximum: int) -> void:
 		pips.add_child(pip)
 
 
+func _set_button_state(btn: Button, accent: Color) -> void:
+	if accent.a <= 0.0:
+		btn.remove_theme_stylebox_override(&"disabled")
+		btn.remove_theme_color_override(&"font_disabled_color")
+		return
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = UiPalette.PAPER_LIGHT
+	style.border_color = accent
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 8.0
+	style.content_margin_right = 8.0
+	style.content_margin_top = 4.0
+	style.content_margin_bottom = 4.0
+	btn.add_theme_stylebox_override(&"disabled", style)
+	btn.add_theme_color_override(&"font_disabled_color", accent)
+
+
+func _map_display_name(map_id: String) -> String:
+	var res_path: String = "res://items/maps/%s.tres" % map_id
+	if ResourceLoader.exists(res_path):
+		var md: MapData = load(res_path) as MapData
+		if md != null and not md.display_name.is_empty():
+			return md.display_name
+	return map_id
+
+
+func _update_money_label(target_money: int) -> void:
+	if _money_tween != null:
+		_money_tween.kill()
+		_money_tween = null
+	if UiMotion.is_instant() or _displayed_money < 0 or _displayed_money == target_money or _root == null or not _root.visible or not is_inside_tree():
+		_displayed_money = target_money
+		_money.text = tr("Saldo da equipe: %s") % MoneyFormat.money(target_money)
+		return
+	var start_val: int = _displayed_money
+	_displayed_money = target_money
+	_money_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_money_tween.tween_method(func(val: float) -> void:
+		if is_instance_valid(_money):
+			_money.text = tr("Saldo da equipe: %s") % MoneyFormat.money(roundi(val)),
+		float(start_val), float(target_money), 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_money_tween.tween_callback(func() -> void:
+		if is_instance_valid(_money):
+			_money.text = tr("Saldo da equipe: %s") % MoneyFormat.money(target_money)
+		_money_tween = null)
+
+
 func _refresh() -> void:
 	var state: GameState = GameState.instance
 	if state == null or not is_instance_valid(_money):
 		return
-	_money.text = tr("Saldo da equipe: %s") % MoneyFormat.money(state.team_money)
+	_update_money_label(state.team_money)
 	for id: String in IDS:
 		var level: int = state.get_upgrade_level(id)
 		var maximum: int = state.get_upgrade_max_level(id)
@@ -335,19 +396,37 @@ func _refresh() -> void:
 		name_label.text = tr(str(GameState.UPGRADES[id]["name"]))
 		_rebuild_pips(_pips[id] as HBoxContainer, level, maximum)
 		var detail: Label = _details[id] as Label
-		detail.text = tr("Nível %d/%d") % [level, maximum]
+		var base_detail: String = tr("Nível %d/%d  •  radar Nv.%d") % [level, maximum, level + 1] if id == "detector" else tr("Nível %d/%d") % [level, maximum]
 		var button: Button = _buttons[id] as Button
 		var reason: String = state.get_upgrade_block_reason(id)
+		var required_map: String = state.get_next_upgrade_required_map(id)
 		var at_maximum: bool = cost < 0
-		var icon_name: String = "check" if at_maximum else ("coin" if reason.is_empty() else "lock")
-		button.icon = UiIcons.get_icon(icon_name, 32)
-		button.text = tr("Máximo") if at_maximum else "%s  %s" % [tr("Comprar"), MoneyFormat.money(cost)]
+		var map_locked: bool = not at_maximum and not required_map.is_empty() and not state.is_map_unlocked(required_map)
+		var no_money: bool = not at_maximum and not map_locked and not reason.is_empty() and state.team_money < cost
 		if at_maximum:
+			detail.text = base_detail
 			detail.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE)
-			button.add_theme_color_override(&"font_disabled_color", UiPalette.GREEN_BOTTLE)
-		else:
+			button.icon = UiIcons.get_icon("check", 32)
+			button.text = tr("Máximo")
+			_set_button_state(button, UiPalette.GREEN_BOTTLE)
+		elif map_locked:
+			detail.text = "%s  ·  %s" % [base_detail, tr("🔒 Requer %s") % tr(_map_display_name(required_map))]
+			detail.add_theme_color_override(&"font_color", UiPalette.METAL)
+			button.icon = UiIcons.get_icon("lock", 32)
+			button.text = MoneyFormat.money(cost)
+			_set_button_state(button, UiPalette.METAL)
+		elif no_money:
+			detail.text = base_detail
 			detail.remove_theme_color_override(&"font_color")
-			button.remove_theme_color_override(&"font_disabled_color")
+			button.icon = UiIcons.get_icon("coin", 32)
+			button.text = "%s · %s" % [tr("Sem saldo"), MoneyFormat.money(cost)]
+			_set_button_state(button, UiPalette.RED_BURNT)
+		else:
+			detail.text = base_detail
+			detail.remove_theme_color_override(&"font_color")
+			button.icon = UiIcons.get_icon("coin", 32)
+			button.text = "%s  %s" % [tr("Comprar"), MoneyFormat.money(cost)]
+			_set_button_state(button, Color.TRANSPARENT)
 		button.tooltip_text = reason
 		if _intent_request != 0:
 			button.disabled = _pending_request != 0 or id != _intent_upgrade
