@@ -12,6 +12,7 @@ const LOCKED_TINT: Color = Color(0.95, 0.93, 0.89, 1.0)
 const DONE_MARK: String = "✔"
 
 var header_label: Label = null
+var header_bar: ProgressBar = null
 var _list: VBoxContainer = null
 ## id -> botão da linha (testes e foco).
 var _rows: Dictionary = {}
@@ -40,7 +41,22 @@ func _ready() -> void:
 	header_row.add_child(trophy_icon)
 	header_label = Label.new()
 	header_label.name = "AchievementsHeader"
+	header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(header_label)
+	header_bar = ProgressBar.new()
+	header_bar.name = "HeaderBar"
+	header_bar.show_percentage = false
+	header_bar.custom_minimum_size = Vector2(124, 10)
+	header_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header_bar.focus_mode = Control.FOCUS_NONE
+	var header_track: StyleBoxFlat = StyleBoxFlat.new()
+	header_track.bg_color = UiPalette.PAPER_DARK
+	header_track.border_color = UiPalette.INK
+	header_track.set_border_width_all(2)
+	header_track.set_corner_radius_all(3)
+	header_bar.add_theme_stylebox_override(&"background", header_track)
+	header_row.add_child(header_bar)
 	add_child(header_card)
 	_list = VBoxContainer.new()
 	_list.name = "AchievementsList"
@@ -75,6 +91,15 @@ func refresh() -> void:
 		if unlocked.has(def["id"]):
 			done += 1
 	header_label.text = tr("Conquistas: %d/%d") % [done, defs.size()]
+	if header_bar != null:
+		header_bar.max_value = maxi(defs.size(), 1)
+		header_bar.value = done
+		var header_fill: StyleBoxFlat = StyleBoxFlat.new()
+		header_fill.bg_color = UiPalette.GREEN_BOTTLE if defs.size() > 0 and done >= defs.size() else UiPalette.ORANGE
+		header_fill.border_color = UiPalette.INK
+		header_fill.set_border_width_all(2)
+		header_fill.set_corner_radius_all(3)
+		header_bar.add_theme_stylebox_override(&"fill", header_fill)
 	if _rows.size() != defs.size():
 		_rebuild(defs)
 	for def: Dictionary in defs:
@@ -176,10 +201,45 @@ func _build_row(id: String) -> Button:
 	bar.custom_minimum_size = Vector2(120, 8)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar.focus_mode = Control.FOCUS_NONE
+	var bar_track: StyleBoxFlat = StyleBoxFlat.new()
+	bar_track.bg_color = UiPalette.PAPER_DARK
+	bar_track.border_color = UiPalette.INK
+	bar_track.set_border_width_all(1)
+	bar_track.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override(&"background", bar_track)
 	right.add_child(bar)
 	# O botão não é contêiner: a altura da linha acompanha a do cartão.
 	card.minimum_size_changed.connect(func() -> void: row.custom_minimum_size.y = card.get_combined_minimum_size().y)
+	var sync_card_hover: Callable = func() -> void: _sync_row_card_style(row)
+	row.mouse_entered.connect(sync_card_hover)
+	row.mouse_exited.connect(sync_card_hover)
+	row.focus_entered.connect(sync_card_hover)
+	row.focus_exited.connect(sync_card_hover)
+	UiMotion.attach_button(row, 1.01, 0.988)
 	return row
+
+
+func _sync_row_card_style(row: Button) -> void:
+	if not is_instance_valid(row):
+		return
+	var card: PanelContainer = row.find_child("Card", true, false) as PanelContainer
+	if card == null:
+		return
+	var unlocked: bool = bool(row.get_meta(&"unlocked", false))
+	var active: bool = row.is_hovered() or (row.has_focus() and not InputDevice.using_pointer())
+	var base_bg: Color = UiPalette.PAPER_LIGHT if unlocked else UiPalette.PAPER
+	var card_style: StyleBoxFlat = StyleBoxFlat.new()
+	card_style.bg_color = base_bg.lerp(UiPalette.ORANGE, 0.10) if active else base_bg
+	card_style.border_color = UiPalette.GREEN_BOTTLE if unlocked else (UiPalette.WOOD_DARK if active else Color(UiPalette.WOOD, 0.65))
+	card_style.set_border_width_all(2)
+	if unlocked:
+		card_style.border_width_left = 4
+	card_style.set_corner_radius_all(4)
+	card_style.content_margin_left = 8.0
+	card_style.content_margin_right = 8.0
+	card_style.content_margin_top = 4.0
+	card_style.content_margin_bottom = 4.0
+	card.add_theme_stylebox_override(&"panel", card_style)
 
 
 func _fill_row(row: Button, def: Dictionary, data: Dictionary, unlocked: bool) -> void:
@@ -211,16 +271,7 @@ func _fill_row(row: Button, def: Dictionary, data: Dictionary, unlocked: bool) -
 	var desc: Label = row.find_child("Desc", true, false) as Label
 	desc.add_theme_color_override(&"font_color", UiPalette.INK if unlocked else UiPalette.WOOD)
 	var card: PanelContainer = row.find_child("Card", true, false) as PanelContainer
-	var card_style: StyleBoxFlat = StyleBoxFlat.new()
-	card_style.bg_color = UiPalette.PAPER_LIGHT if unlocked else UiPalette.PAPER
-	card_style.border_color = UiPalette.GREEN_BOTTLE if unlocked else Color(UiPalette.WOOD, 0.65)
-	card_style.set_border_width_all(2)
-	card_style.set_corner_radius_all(4)
-	card_style.content_margin_left = 8.0
-	card_style.content_margin_right = 8.0
-	card_style.content_margin_top = 4.0
-	card_style.content_margin_bottom = 4.0
-	card.add_theme_stylebox_override(&"panel", card_style)
+	_sync_row_card_style(row)
 	var icon: TextureRect = row.find_child("Icon", true, false) as TextureRect
 	icon.texture = UiIcons.get_icon(str(def["icon"]), ICON_SIDE) if unlocked else _gray_icon(str(def["icon"]))
 	card.modulate = Color.WHITE if unlocked else LOCKED_TINT

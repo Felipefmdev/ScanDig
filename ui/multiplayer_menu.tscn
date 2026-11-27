@@ -74,7 +74,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Progresso"
 vertical_alignment = 1
-text_overrun_behavior = 3
+autowrap_mode = 3
 
 [node name="ProgressInfoLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/ProgressBox/ProgressVBox/ProgressRow"]
 unique_name_in_owner = true

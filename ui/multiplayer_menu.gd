@@ -120,9 +120,15 @@ func _ready() -> void:
 		new_game_dialog.get_ok_button().theme_type_variation = &"DangerButton"
 
 	_setup_collapse()
+	UiFocus.follow_pointer(get_node_or_null(^"PanelContainer") as Control)
 	get_viewport().gui_focus_changed.connect(_on_gui_focus_changed)
 	if mode_tabs != null:
-		mode_tabs.tab_changed.connect(func(_tab: int) -> void: _relink_focus.call_deferred())
+		mode_tabs.tab_changed.connect(func(_tab: int) -> void:
+			UiMotion.switch_tab_page(mode_tabs.get_current_tab_control(), false)
+			_relink_focus.call_deferred())
+	for btn: Button in [host_button, join_button, leave_button, copy_ip_button, host_online_button, retry_button, join_code_button, cancel_button, copy_code_button, continue_button, new_game_button, _collapse_button]:
+		if btn != null:
+			UiMotion.attach_button(btn)
 
 	# Base aberta pela tela inicial em "Novo jogo/Continuar/Carregar" (solo, #100): o menu de rede
 	# começa oculto. Modo vazio (bots, testes, lobby aberto direto) = como sempre.
@@ -232,6 +238,8 @@ func _on_collapse_pressed() -> void:
 	_update_collapse()
 	if is_instance_valid(SessionUI.instance):
 		SessionUI.instance.refresh_save_toast_layout.call_deferred()
+	if not _collapsed and _panel != null and _panel.visible:
+		UiMotion.pop_in(_panel, false, 0.96, 0.16)
 	_relink_focus()
 	if not _collapsed and host_online_button != null and host_online_button.is_visible_in_tree():
 		host_online_button.grab_focus()
@@ -312,7 +320,7 @@ func _apply_player_name() -> void:
 
 func _on_host_pressed() -> void:
 	if _net_manager == null:
-		_set_status("Erro: NetworkManager não encontrado.")
+		_set_status("Erro: NetworkManager não encontrado.", UiPalette.RED_BURNT)
 		return
 
 	var err: Error = _net_manager.host_game()
@@ -322,15 +330,15 @@ func _on_host_pressed() -> void:
 			_set_status(tr("Hospedando na porta %d. Abrindo a porta no roteador (UPnP)...") % NetworkManager.DEFAULT_PORT)
 			_net_manager.call(&"start_upnp")
 		else:
-			_set_status("Servidor iniciado (Host ativo).")
+			_set_status("Servidor iniciado (Host ativo).", UiPalette.GREEN_BOTTLE)
 	elif not _has_error_messages():
-		_set_status(tr("Falha ao iniciar host: erro %d") % err)
+		_set_status(tr("Falha ao iniciar host: erro %d") % err, UiPalette.RED_BURNT)
 	_refresh_session_buttons()
 
 
 func _on_join_pressed() -> void:
 	if _net_manager == null:
-		_set_status("Erro: NetworkManager não encontrado.")
+		_set_status("Erro: NetworkManager não encontrado.", UiPalette.RED_BURNT)
 		return
 
 	var ip: String = ip_line_edit.text.strip_edges() if ip_line_edit != null else "127.0.0.1"
@@ -340,14 +348,14 @@ func _on_join_pressed() -> void:
 	_set_status(tr("Conectando a %s...") % ip)
 	var err: Error = _net_manager.join_game(ip)
 	if err != OK and not _has_error_messages():
-		_set_status(tr("Erro ao tentar conectar: erro %d") % err)
+		_set_status(tr("Erro ao tentar conectar: erro %d") % err, UiPalette.RED_BURNT)
 	_refresh_session_buttons()
 
 
 func _on_leave_pressed() -> void:
 	# Sem confirmação: no lobby não há expedição a perder. Também cancela um "Conectando...".
 	if _net_manager == null:
-		_set_status("Erro: NetworkManager não encontrado.")
+		_set_status("Erro: NetworkManager não encontrado.", UiPalette.RED_BURNT)
 		return
 	_net_manager.disconnect_game()
 	_hide_share()
@@ -492,12 +500,16 @@ func _on_new_game_pressed() -> void:
 	if not _has_save_panel_api() or new_game_dialog == null:
 		return
 	var summary: Dictionary = _get_save_summary()
-	if bool(summary.get("valid", false)):
+	var has_valid: bool = bool(summary.get("valid", false))
+	if has_valid:
 		new_game_dialog.dialog_text = tr("Apagar o progresso salvo (%s)? Um backup será salvo.") % _format_day_money(int(summary.get("day", 1)), int(summary.get("money", 0)))
 		new_game_dialog.ok_button_text = "Apagar e começar"
 	else:
 		new_game_dialog.dialog_text = "Começar do zero?"
 		new_game_dialog.ok_button_text = "Começar"
+	var ok_btn: Button = new_game_dialog.get_ok_button()
+	if ok_btn != null:
+		ok_btn.icon = UiIcons.get_icon("trash" if has_valid else "new", 18)
 	new_game_dialog.popup_centered()
 
 
@@ -556,7 +568,7 @@ func _is_host_of_online_room() -> bool:
 
 func _on_host_online_pressed() -> void:
 	if not _has_online_rooms():
-		_set_status("Erro: salas online indisponíveis.")
+		_set_status("Erro: salas online indisponíveis.", UiPalette.RED_BURNT)
 		return
 	_online_attempt = "host"
 	_hide_room_code()
@@ -566,7 +578,7 @@ func _on_host_online_pressed() -> void:
 	if err != OK and _online_attempt == "host":
 		_online_attempt = ""
 		if not _has_error_messages():
-			_set_status(tr("Falha ao criar sala: erro %d") % err)
+			_set_status(tr("Falha ao criar sala: erro %d") % err, UiPalette.RED_BURNT)
 		_refresh_session_buttons()
 
 
@@ -614,7 +626,7 @@ func _on_code_submitted(_text: String) -> void:
 func _on_room_code_ready(code: String) -> void:
 	_online_attempt = ""
 	_show_room_code(code)
-	_set_status("Sala criada!")
+	_set_status("Sala criada!", UiPalette.GREEN_BOTTLE)
 	_refresh_players_list()
 	_refresh_session_buttons()
 
@@ -631,16 +643,20 @@ func _on_online_join_progress(stage: String) -> void:
 
 
 func _show_room_code(code: String) -> void:
+	var was_visible: bool = room_code_box != null and room_code_box.visible
 	_shown_room_code = RoomCode.normalize(code)
 	if room_code_label != null:
 		room_code_label.text = RoomCode.format_for_display(_shown_room_code)
 	if room_code_box != null:
 		room_code_box.visible = not _shown_room_code.is_empty()
+		if room_code_box.visible and not was_visible:
+			UiMotion.pop_in(room_code_box, false, 0.95, 0.18)
 
 
 func _hide_room_code() -> void:
 	_shown_room_code = ""
 	if room_code_box != null:
+		UiMotion.stop(room_code_box)
 		room_code_box.visible = false
 
 
@@ -653,13 +669,15 @@ func _on_copy_code_pressed() -> void:
 	if _shown_room_code.is_empty():
 		return
 	DisplayServer.clipboard_set(get_code_to_copy())
-	_set_status("Código copiado!")
+	_set_status("Código copiado!", UiPalette.GREEN_BOTTLE)
+	UiMotion.pulse(room_code_box, 1.035, 0.18, false)
+	UiMotion.pulse(status_label, 1.03, 0.18, false)
 
 
 # --- IP para compartilhar (UPnP) ------------------------------------------------
 
 func _on_upnp_finished(success: bool, public_ip: String, message: String) -> void:
-	_set_status(message)
+	_set_status(message, UiPalette.GREEN_BOTTLE if success else UiPalette.WOOD)
 	var local_addresses: Array[String] = _get_local_addresses()
 	var local_text: String = tr("Na mesma rede: %s") % ", ".join(local_addresses) if not local_addresses.is_empty() else tr("Sem IP de rede local.")
 	if share_label != null:
@@ -683,7 +701,8 @@ func _on_copy_ip_pressed() -> void:
 	if _net_manager == null or not &"public_ip" in _net_manager:
 		return
 	DisplayServer.clipboard_set(str(_net_manager.get(&"public_ip")))
-	_set_status("IP copiado!")
+	_set_status("IP copiado!", UiPalette.GREEN_BOTTLE)
+	UiMotion.pulse(status_label, 1.03, 0.18, false)
 
 
 func _hide_share() -> void:
@@ -696,7 +715,7 @@ func _hide_share() -> void:
 # --- Sinais do NetworkManager ---------------------------------------------------
 
 func _on_player_connected(peer_id: int) -> void:
-	_set_status(tr("Jogador conectado: Peer %d") % peer_id)
+	_set_status(tr("Jogador conectado: Peer %d") % peer_id, UiPalette.GREEN_BOTTLE)
 	_refresh_players_list()
 
 
@@ -706,7 +725,7 @@ func _on_player_disconnected(peer_id: int) -> void:
 
 
 func _on_connection_succeeded() -> void:
-	_set_status("Conectado com sucesso ao servidor!")
+	_set_status("Conectado com sucesso ao servidor!", UiPalette.GREEN_BOTTLE)
 	_refresh_players_list()
 	_refresh_session_buttons()
 
@@ -714,14 +733,16 @@ func _on_connection_succeeded() -> void:
 func _on_connection_failed() -> void:
 	# Com core novo, a mensagem vem do connection_error (antes ou depois deste sinal).
 	if not _has_error_messages():
-		_set_status("Falha na conexão com o servidor.")
+		_set_status("Falha na conexão com o servidor.", UiPalette.RED_BURNT)
+		UiMotion.shake(status_label, 1.8, 0.22, false)
 	_hide_share()
 	_refresh_players_list()
 	_refresh_session_buttons()
 
 
 func _on_connection_error(message: String) -> void:
-	_set_status(message)
+	_set_status(message, UiPalette.RED_BURNT)
+	UiMotion.shake(status_label, 1.8, 0.22, false)
 	var failed_host: bool = _online_attempt == "host"
 	_online_attempt = ""
 	if retry_button != null:
@@ -834,6 +855,25 @@ func _sync_players_empty_hint() -> void:
 
 
 func _setup_visual_icons() -> void:
+	var header: Label = get_node_or_null(^"PanelContainer/MarginContainer/VBoxContainer/TitleLabel") as Label
+	if header != null and not (header.get_parent() is HBoxContainer):
+		var vbox: Control = header.get_parent() as Control
+		var idx: int = header.get_index()
+		var header_row: HBoxContainer = HBoxContainer.new()
+		header_row.name = "TitleRow"
+		header_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		header_row.add_theme_constant_override(&"separation", 8)
+		vbox.add_child(header_row)
+		vbox.move_child(header_row, idx)
+		var header_icon: TextureRect = TextureRect.new()
+		header_icon.name = "TitleIcon"
+		header_icon.custom_minimum_size = Vector2(22, 22)
+		header_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		header_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		header_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		header_icon.texture = UiIcons.get_icon("multiplayer", 48)
+		header_row.add_child(header_icon)
+		header.reparent(header_row, false)
 	if room_code_box is PanelContainer:
 		var box_style: StyleBoxFlat = get_theme_stylebox(&"panel", &"InsetPanel").duplicate() as StyleBoxFlat
 		if box_style != null:
@@ -842,6 +882,10 @@ func _setup_visual_icons() -> void:
 			box_style.content_margin_top = 5.0
 			box_style.content_margin_bottom = 5.0
 			(room_code_box as PanelContainer).add_theme_stylebox_override(&"panel", box_style)
+	if continue_button != null:
+		continue_button.icon = UiIcons.get_icon("play", 16)
+	if new_game_button != null:
+		new_game_button.icon = UiIcons.get_icon("new", 14)
 	if host_online_button != null:
 		host_online_button.icon = UiIcons.get_icon("multiplayer", 18)
 	if host_button != null:
@@ -850,12 +894,28 @@ func _setup_visual_icons() -> void:
 		join_code_button.icon = UiIcons.get_icon("play", 16)
 	if join_button != null:
 		join_button.icon = UiIcons.get_icon("play", 16)
+	if copy_code_button != null:
+		copy_code_button.icon = UiIcons.get_icon("copy", 16)
 	if copy_ip_button != null:
 		copy_ip_button.icon = UiIcons.get_icon("copy", 16)
 	if retry_button != null:
 		retry_button.icon = UiIcons.get_icon("wrench", 16)
+	if cancel_button != null:
+		cancel_button.icon = UiIcons.get_icon("door", 16)
 	if leave_button != null:
 		leave_button.icon = UiIcons.get_icon("door", 18)
+	if new_game_dialog != null:
+		var ok_btn: Button = new_game_dialog.get_ok_button()
+		var cancel_btn: Button = new_game_dialog.get_cancel_button()
+		if ok_btn != null:
+			ok_btn.custom_minimum_size = Vector2(164, 42)
+			UiMotion.attach_button(ok_btn)
+			UiFocus.follow_pointer(ok_btn.get_parent() as Control)
+		if cancel_btn != null:
+			cancel_btn.custom_minimum_size = Vector2(120, 42)
+			UiMotion.attach_button(cancel_btn)
+	if status_label != null and not status_label.text.is_empty():
+		_style_status_label(status_label.text)
 	if players_list != null:
 		players_list.fixed_icon_size = Vector2i(18, 18)
 		if _players_empty_box == null:
@@ -883,6 +943,31 @@ func _setup_visual_icons() -> void:
 			_sync_players_empty_hint()
 
 
-func _set_status(msg: String) -> void:
+func _set_status(msg: String, accent: Color = UiPalette.WOOD) -> void:
 	if status_label != null:
 		status_label.text = tr(msg)
+		_style_status_label(status_label.text, accent)
+
+
+func _style_status_label(rendered: String, accent: Color = UiPalette.WOOD) -> void:
+	if status_label == null:
+		return
+	if rendered.is_empty():
+		status_label.remove_theme_stylebox_override(&"normal")
+		status_label.remove_theme_color_override(&"font_color")
+		return
+	var pill: StyleBoxFlat = StyleBoxFlat.new()
+	pill.bg_color = UiPalette.PAPER_LIGHT.lerp(accent, 0.10)
+	pill.border_color = Color(accent, 0.65)
+	pill.set_border_width_all(1)
+	pill.border_width_left = 3
+	pill.set_corner_radius_all(4)
+	pill.content_margin_left = 8.0
+	pill.content_margin_right = 8.0
+	pill.content_margin_top = 2.0
+	pill.content_margin_bottom = 2.0
+	status_label.add_theme_stylebox_override(&"normal", pill)
+	if accent == UiPalette.WOOD:
+		status_label.remove_theme_color_override(&"font_color")
+	else:
+		status_label.add_theme_color_override(&"font_color", accent)
