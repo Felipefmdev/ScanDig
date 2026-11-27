@@ -81,11 +81,25 @@ func _apply_interpolated_money(val: float) -> void:
 func update_detector(level: int) -> void:
 	if detector_label != null:
 		detector_label.text = tr("Detector  nível %d") % level
+	var max_det: int = (_game_state.get_upgrade_max_level("detector") + 1) if _game_state != null else 7
+	_style_secondary_chip_highlight(detector_chip, level >= max_det)
 
 
 func update_museum(total_found: int, max_items: int) -> void:
 	if museum_label != null:
 		museum_label.text = tr("Museu  %d/%d") % [total_found, max_items]
+	_style_secondary_chip_highlight(museum_chip, max_items > 0 and total_found >= max_items)
+
+
+func _style_secondary_chip_highlight(chip: UiChip, highlighted: bool) -> void:
+	if chip == null or chip.primary:
+		return
+	var style: StyleBoxFlat = UiChip.make_secondary_style()
+	if highlighted:
+		style.bg_color = Color(UiPalette.PAPER_LIGHT.lerp(UiPalette.GOLD, 0.16), 0.94)
+		style.border_color = UiPalette.GOLD.darkened(0.12)
+		style.set_border_width_all(2)
+	chip.add_theme_stylebox_override(&"panel", style)
 
 
 func _pulse_chip(chip: UiChip) -> void:

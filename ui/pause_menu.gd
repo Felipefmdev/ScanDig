@@ -22,6 +22,8 @@ static var instance: PauseMenu = null
 var root_control: Control = null
 var card: PanelContainer = null
 var pause_subtitle_label: Label = null
+var _pause_subtitle_row: HBoxContainer = null
+var _pause_subtitle_icon: TextureRect = null
 var continue_button: Button = null
 var settings_button: Button = null
 var return_button: Button = null
@@ -29,6 +31,7 @@ var leave_button: Button = null
 var main_menu_button: Button = null
 var quit_button: Button = null
 var quit_icon: TextureRect = null
+var _quit_badge: PanelContainer = null
 var quit_label: Label = null
 var quit_panel: PanelContainer = null
 var quit_yes_button: Button = null
@@ -276,12 +279,26 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_row.add_child(title)
 	box.add_child(title_row)
+	_pause_subtitle_row = HBoxContainer.new()
+	_pause_subtitle_row.name = "PauseSubtitleRow"
+	_pause_subtitle_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_pause_subtitle_row.add_theme_constant_override(&"separation", 6)
+	_pause_subtitle_row.visible = false
+	_pause_subtitle_icon = TextureRect.new()
+	_pause_subtitle_icon.name = "PauseSubtitleIcon"
+	_pause_subtitle_icon.texture = UiIcons.get_icon("map", 24)
+	_pause_subtitle_icon.custom_minimum_size = Vector2(18, 18)
+	_pause_subtitle_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_pause_subtitle_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_pause_subtitle_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_pause_subtitle_row.add_child(_pause_subtitle_icon)
 	pause_subtitle_label = Label.new()
 	pause_subtitle_label.name = "PauseSubtitleLabel"
 	pause_subtitle_label.theme_type_variation = &"HintLabel"
 	pause_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_subtitle_label.visible = false
-	box.add_child(pause_subtitle_label)
+	_pause_subtitle_row.add_child(pause_subtitle_label)
+	box.add_child(_pause_subtitle_row)
 	box.add_child(HSeparator.new())
 	continue_button = _button("Continuar", &"PrimaryButton", "play")
 	var continue_focus: StyleBoxFlat = root_control.theme.get_stylebox(&"focus", &"PrimaryButton").duplicate() as StyleBoxFlat
@@ -294,9 +311,9 @@ func _build() -> void:
 	if InputDevice.instance != null:
 		InputDevice.instance.pointer_changed.connect(_set_continue_focus.bind(continue_focus))
 	settings_button = _button("Configurações", &"", "gear")
-	return_button = _button("Voltar à base", &"", "map")
+	return_button = _button("Voltar à base", &"", "home")
 	leave_button = _button("Sair da sessão", &"DangerButton", "multiplayer")
-	main_menu_button = _button("Sair para o menu principal", &"", "home")
+	main_menu_button = _button("Sair para o menu principal", &"", "compass")
 	quit_button = _button("Sair do jogo", &"DangerButton", "door")
 	for button: Button in [continue_button, settings_button, return_button, leave_button, main_menu_button, quit_button]:
 		box.add_child(button)
@@ -306,6 +323,22 @@ func _build() -> void:
 
 	var quit_box: VBoxContainer = VBoxContainer.new()
 	quit_box.add_theme_constant_override("separation", 12)
+	_quit_badge = PanelContainer.new()
+	_quit_badge.name = "QuitBadge"
+	_quit_badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var qbadge_style: StyleBoxFlat = StyleBoxFlat.new()
+	qbadge_style.bg_color = UiPalette.PAPER_LIGHT
+	qbadge_style.border_color = UiPalette.INK
+	qbadge_style.set_border_width_all(2)
+	qbadge_style.set_corner_radius_all(28)
+	qbadge_style.shadow_color = UiPalette.SHADOW
+	qbadge_style.shadow_size = 1
+	qbadge_style.shadow_offset = Vector2(1, 2)
+	qbadge_style.content_margin_left = 10.0
+	qbadge_style.content_margin_right = 10.0
+	qbadge_style.content_margin_top = 10.0
+	qbadge_style.content_margin_bottom = 10.0
+	_quit_badge.add_theme_stylebox_override(&"panel", qbadge_style)
 	quit_icon = TextureRect.new()
 	quit_icon.name = "QuitIcon"
 	quit_icon.texture = UiIcons.get_icon("warning", 28)
@@ -313,7 +346,8 @@ func _build() -> void:
 	quit_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	quit_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	quit_icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	quit_box.add_child(quit_icon)
+	_quit_badge.add_child(quit_icon)
+	quit_box.add_child(_quit_badge)
 	quit_label = Label.new()
 	quit_label.text = QUIT_TEXT
 	quit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -378,10 +412,11 @@ func _animate_card(panel: Control) -> void:
 	_reset_card_transition()
 	_animated_card = panel
 	_card_tween = UiMotion.pop_in(panel, true, 0.955, CARD_FADE_DURATION)
-	if panel == quit_panel and quit_icon != null:
-		UiMotion.breathe_emblem(quit_icon, 1.06, 2.5, 1.1, true)
-	elif quit_icon != null:
-		UiMotion.stop(quit_icon, true)
+	var emblem: Control = (_quit_badge as Control) if _quit_badge != null else (quit_icon as Control)
+	if panel == quit_panel and emblem != null:
+		UiMotion.breathe_emblem(emblem, 1.055, 2.4, 1.1, true)
+	elif emblem != null:
+		UiMotion.stop(emblem, true)
 
 
 func _reset_card_transition() -> void:
@@ -391,8 +426,9 @@ func _reset_card_transition() -> void:
 	if is_instance_valid(_animated_card):
 		UiMotion.stop(_animated_card)
 	_animated_card = null
-	if quit_icon != null:
-		UiMotion.stop(quit_icon, true)
+	var emblem: Control = (_quit_badge as Control) if _quit_badge != null else (quit_icon as Control)
+	if emblem != null:
+		UiMotion.stop(emblem, true)
 
 
 func _session() -> Node:
@@ -420,14 +456,22 @@ func _refresh_buttons() -> void:
 			if map != null:
 				map_name = map.display_name if not map.display_name.is_empty() else map.id
 			var map_title: String = tr(map_name) if not map_name.is_empty() else ""
-			if not map_title.is_empty() and SessionManager.is_night():
+			var night: bool = SessionManager.is_night()
+			if not map_title.is_empty() and night:
 				map_title = tr("%s (noite)") % map_title
+			if _pause_subtitle_icon != null:
+				_pause_subtitle_icon.texture = UiIcons.get_icon("moon" if night else "map", 24)
 			var day: int = GameState.instance.current_day if GameState.instance != null else 1
 			pause_subtitle_label.text = tr("%s  •  Dia %d") % [map_title, day] if not map_title.is_empty() else ""
-			pause_subtitle_label.visible = not pause_subtitle_label.text.is_empty()
+			var has_sub: bool = not pause_subtitle_label.text.is_empty()
+			pause_subtitle_label.visible = has_sub
+			if _pause_subtitle_row != null:
+				_pause_subtitle_row.visible = has_sub
 		else:
 			pause_subtitle_label.text = ""
 			pause_subtitle_label.visible = false
+			if _pause_subtitle_row != null:
+				_pause_subtitle_row.visible = false
 
 
 func _on_settings_pressed() -> void:
@@ -478,7 +522,7 @@ func _on_main_menu_pressed() -> void:
 	else:
 		quit_label.text = MAIN_MENU_EXPEDITION_TEXT if in_expedition else MAIN_MENU_BASE_TEXT
 	quit_yes_button.text = "Ir para o menu"
-	quit_yes_button.icon = UiIcons.get_icon("home", 22)
+	quit_yes_button.icon = UiIcons.get_icon("compass", 22)
 	card.visible = false
 	quit_panel.visible = true
 	_animate_card(quit_panel)

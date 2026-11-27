@@ -672,6 +672,22 @@ func _on_copy_code_pressed() -> void:
 	_set_status("Código copiado!", UiPalette.GREEN_BOTTLE)
 	UiMotion.pulse(room_code_box, 1.035, 0.18, false)
 	UiMotion.pulse(status_label, 1.03, 0.18, false)
+	_flash_copy_button(copy_code_button)
+
+
+func _flash_copy_button(btn: Button) -> void:
+	if btn == null:
+		return
+	UiMotion.pulse(btn, 1.045, 0.18, false)
+	if UiMotion.is_instant() or not is_inside_tree():
+		return
+	btn.icon = UiIcons.get_icon("check", 16)
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(1.35, true, false, true).timeout
+	if is_instance_valid(btn):
+		btn.icon = UiIcons.get_icon("copy", 16)
 
 
 # --- IP para compartilhar (UPnP) ------------------------------------------------
@@ -703,6 +719,7 @@ func _on_copy_ip_pressed() -> void:
 	DisplayServer.clipboard_set(str(_net_manager.get(&"public_ip")))
 	_set_status("IP copiado!", UiPalette.GREEN_BOTTLE)
 	UiMotion.pulse(status_label, 1.03, 0.18, false)
+	_flash_copy_button(copy_ip_button)
 
 
 func _hide_share() -> void:

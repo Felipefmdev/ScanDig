@@ -102,6 +102,7 @@ var _toast_token: int = 0
 var _save_toast_token: int = 0
 var _save_toast_active: bool = false
 var _loading_tween: Tween = null
+var _loading_fill: Control = null
 var _summary_money_tween: Tween = null
 ## Último resumo do dia mostrado (refeito ao trocar o idioma com ele aberto).
 var _last_summary: Dictionary = {}
@@ -261,6 +262,29 @@ func _setup_visual_icons() -> void:
 	var loading_icon: TextureRect = get_node_or_null(^"%LoadingIcon") as TextureRect
 	if loading_icon != null:
 		loading_icon.texture = UiIcons.get_icon("detector", 36)
+		if loading_label != null and loading_label.get_parent() is VBoxContainer and _loading_fill == null:
+			var lvbox: VBoxContainer = loading_label.get_parent() as VBoxContainer
+			var track: Panel = Panel.new()
+			track.name = "LoadingSweepTrack"
+			track.custom_minimum_size = Vector2(188, 8)
+			track.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			var track_sb: StyleBoxFlat = StyleBoxFlat.new()
+			track_sb.bg_color = UiPalette.PAPER_DARK
+			track_sb.border_color = UiPalette.INK
+			track_sb.set_border_width_all(1)
+			track_sb.set_corner_radius_all(4)
+			track.add_theme_stylebox_override(&"panel", track_sb)
+			var fill: Panel = Panel.new()
+			fill.name = "LoadingSweepFill"
+			fill.size = Vector2(68, 6)
+			fill.position = Vector2(60, 1)
+			var fill_sb: StyleBoxFlat = StyleBoxFlat.new()
+			fill_sb.bg_color = UiPalette.ORANGE
+			fill_sb.set_corner_radius_all(3)
+			fill.add_theme_stylebox_override(&"panel", fill_sb)
+			track.add_child(fill)
+			lvbox.add_child(track)
+			_loading_fill = fill
 		loading_screen.visibility_changed.connect(_sync_loading_anim.bind(loading_icon))
 		_sync_loading_anim(loading_icon)
 	var total_icon: TextureRect = get_node_or_null(^"%SummaryTotalIcon") as TextureRect
@@ -301,16 +325,43 @@ func _setup_visual_icons() -> void:
 		var emblem: TextureRect = get_node_or_null(emblem_path) as TextureRect
 		if emblem != null:
 			emblem.texture = UiIcons.get_icon("warning", 28)
+			if not (emblem.get_parent() is PanelContainer):
+				var evbox: Control = emblem.get_parent() as Control
+				var eidx: int = emblem.get_index()
+				var ebadge: PanelContainer = PanelContainer.new()
+				ebadge.name = "EmblemBadge"
+				ebadge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+				var eb_style: StyleBoxFlat = StyleBoxFlat.new()
+				eb_style.bg_color = UiPalette.PAPER_LIGHT
+				eb_style.border_color = UiPalette.INK
+				eb_style.set_border_width_all(2)
+				eb_style.set_corner_radius_all(28)
+				eb_style.shadow_color = UiPalette.SHADOW
+				eb_style.shadow_size = 1
+				eb_style.shadow_offset = Vector2(1, 2)
+				eb_style.content_margin_left = 10.0
+				eb_style.content_margin_right = 10.0
+				eb_style.content_margin_top = 10.0
+				eb_style.content_margin_bottom = 10.0
+				ebadge.add_theme_stylebox_override(&"panel", eb_style)
+				evbox.add_child(ebadge)
+				evbox.move_child(ebadge, eidx)
+				emblem.reparent(ebadge, false)
 	var backdrop: Control = get_node_or_null(^"%ModalBackdrop") as Control
 	if backdrop != null:
 		var sync_backdrop: Callable = func() -> void:
 			var should_show: bool = summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible
 			var was_visible: bool = backdrop.visible
 			backdrop.visible = should_show
-			if should_show and not was_visible:
-				UiMotion.fade_backdrop(backdrop, true)
-			elif not should_show:
+			if should_show:
+				if expedition_bar != null:
+					expedition_bar.visible = false
+				if not was_visible:
+					UiMotion.fade_backdrop(backdrop, true)
+			else:
 				UiMotion.stop(backdrop)
+				if was_visible:
+					_refresh_expedition_bar()
 		for modal: Control in [summary_panel, host_lost_panel, leave_confirm_panel]:
 			modal.visibility_changed.connect(sync_backdrop)
 		sync_backdrop.call()
@@ -323,6 +374,8 @@ func _sync_loading_anim(loading_icon: TextureRect) -> void:
 	var medallion: Control = get_node_or_null(^"%LoadingMedallion") as Control
 	if medallion != null:
 		medallion.scale = Vector2.ONE
+	if _loading_fill != null:
+		_loading_fill.position = Vector2(60.0, 1.0)
 	if loading_icon == null:
 		return
 	loading_icon.rotation_degrees = 0.0
@@ -331,15 +384,21 @@ func _sync_loading_anim(loading_icon: TextureRect) -> void:
 	loading_icon.pivot_offset = Vector2(28.0, 28.0)
 	if UiMotion.is_instant():
 		return
+	if _loading_fill != null:
+		_loading_fill.position = Vector2(3.0, 1.0)
 	if medallion != null:
 		UiMotion.sync_center_pivot(medallion)
 	_loading_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_loops()
 	_loading_tween.tween_property(loading_icon, ^"rotation_degrees", 7.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	if medallion != null:
 		_loading_tween.parallel().tween_property(medallion, ^"scale", Vector2(1.038, 1.038), 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if _loading_fill != null:
+		_loading_tween.parallel().tween_property(_loading_fill, ^"position:x", 117.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_loading_tween.tween_property(loading_icon, ^"rotation_degrees", -7.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	if medallion != null:
 		_loading_tween.parallel().tween_property(medallion, ^"scale", Vector2.ONE, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if _loading_fill != null:
+		_loading_tween.parallel().tween_property(_loading_fill, ^"position:x", 3.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 func _sync_toast_icon() -> void:
@@ -1159,7 +1218,7 @@ func _on_summary_close_pressed() -> void:
 		_summary_money_tween = null
 	UiMotion.stop(summary_panel)
 	summary_panel.visible = false
-	if not leave_confirm_panel.visible:
+	if not leave_confirm_panel.visible and not host_lost_panel.visible:
 		_refresh_expedition_bar()
 	_update_mouse()
 	if leave_confirm_panel.visible:
