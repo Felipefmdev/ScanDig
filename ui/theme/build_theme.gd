@@ -145,11 +145,23 @@ func _focus_box() -> StyleBoxFlat:
 	sb.draw_center = false
 	# INK garante >=3:1 tanto no papel como sobre o laranja do botão primário; o laranja
 	# sozinho falhava (2,65:1) e não se distinguia do preenchimento.
+	# Com expand_margin=3 e border_width=3, corner_radius=8 (raio interno 5) sela os 4 cantos
+	# sobre a borda INK (r=4) dos botões/campos sem deixar frestas triangulares (#254).
 	sb.border_color = P.INK
 	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(3)
+	sb.set_corner_radius_all(8)
+	sb.corner_detail = 4
 	sb.set_expand_margin_all(3)
 	sb.anti_aliasing = false
+	return sb
+
+
+func _tab_focus_box() -> StyleBoxFlat:
+	var sb: StyleBoxFlat = _focus_box()
+	sb.corner_radius_top_left = 6
+	sb.corner_radius_top_right = 6
+	sb.corner_radius_bottom_left = 2
+	sb.corner_radius_bottom_right = 2
 	return sb
 
 
@@ -446,7 +458,7 @@ func _tabs() -> void:
 		var tab_disabled: StyleBoxFlat = _tab_box(P.PAPER_DARK, false)
 		tab_disabled.border_color = P.METAL
 		_theme.set_stylebox("tab_disabled", type, tab_disabled)
-		_theme.set_stylebox("tab_focus", type, _focus_box())
+		_theme.set_stylebox("tab_focus", type, _tab_focus_box())
 		_set_font_colors(type, ["font_selected_color", "font_unselected_color", "font_hovered_color"], P.INK)
 		_theme.set_color("font_disabled_color", type, P.WOOD)
 		_theme.set_color("font_outline_color", type, P.INK)

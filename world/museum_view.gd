@@ -23,9 +23,13 @@ const BACK_MARGIN: float = 24.0
 @export var hide_paths: Array[NodePath] = [^"../UILayer"]
 
 var back_button: Button = null
+var _root: Control = null
+var _focus_wrap: Control = null
 var _header: PanelContainer = null
+var _header_icon: TextureRect = null
 var _header_title: Label = null
 var _header_progress: Label = null
+var _header_bar: ProgressBar = null
 var _open: bool = false
 var _tent_transform: Transform3D = Transform3D.IDENTITY
 var _tween: Tween = null
@@ -39,6 +43,18 @@ func _ready() -> void:
 	var camera: Camera3D = get_node_or_null(camera_path) as Camera3D
 	if camera != null:
 		_tent_transform = camera.transform
+	_root = Control.new()
+	_root.name = "Root"
+	_root.theme = load("res://ui/theme/scandig_theme.tres") as Theme
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_root)
+	_focus_wrap = Control.new()
+	_focus_wrap.name = "FocusWrap"
+	_focus_wrap.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_focus_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_focus_wrap)
+	UiFocus.follow_pointer(_focus_wrap)
 	_build_back_button()
 	_build_header()
 	_refresh_text()
@@ -56,6 +72,21 @@ func _refresh_text() -> void:
 	var discovered: int = game_state.discovered_items.size() if game_state != null else 0
 	var total: int = game_state.get_total_catalog_items() if game_state != null else 0
 	_header_progress.text = tr("Museu  %d/%d") % [discovered, total]
+	var full: bool = total > 0 and discovered >= total
+	if full:
+		_header_progress.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE)
+	else:
+		_header_progress.remove_theme_color_override(&"font_color")
+	if _header_bar != null:
+		var safe_total: int = maxi(total, 1)
+		_header_bar.max_value = safe_total
+		_header_bar.value = clampi(discovered, 0, safe_total)
+		var fill: StyleBoxFlat = StyleBoxFlat.new()
+		fill.bg_color = UiPalette.GREEN_BOTTLE if full else UiPalette.ORANGE
+		fill.border_color = UiPalette.INK
+		fill.set_border_width_all(1)
+		fill.set_corner_radius_all(3)
+		_header_bar.add_theme_stylebox_override(&"fill", fill)
 
 
 func is_open() -> bool:
@@ -95,6 +126,9 @@ func open() -> void:
 	_refresh_text()
 	_header.show()
 	back_button.visible = true
+	UiMotion.pop_in(_header, false, 0.94, 0.24, 0.12)
+	UiMotion.pulse(_header_icon, 1.15, 0.26, false)
+	UiMotion.pop_in(back_button, false, 0.94, 0.22, 0.16)
 	back_button.grab_focus.call_deferred()
 	var camera: Camera3D = get_node(camera_path) as Camera3D
 	var target: Transform3D = get_view_transform()
@@ -109,6 +143,8 @@ func close() -> void:
 	if not _open:
 		return
 	_open = false
+	UiMotion.stop(_header)
+	UiMotion.stop(back_button)
 	_header.hide()
 	back_button.visible = false
 	if back_button.has_focus():
@@ -127,7 +163,7 @@ func _move_camera(camera: Camera3D, target: Transform3D) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	_tween = create_tween()
-	_tween.tween_property(camera, "transform", target, TWEEN_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_tween.tween_property(camera, "transform", target, TWEEN_TIME).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -142,7 +178,6 @@ func _build_back_button() -> void:
 	back_button.name = "BackButton"
 	back_button.icon = UiIcons.get_icon("door", 48)
 	back_button.add_theme_constant_override(&"icon_max_width", 20)
-	back_button.theme = load("res://ui/theme/scandig_theme.tres") as Theme
 	back_button.focus_mode = Control.FOCUS_ALL
 	back_button.custom_minimum_size = Vector2(200, 44)
 	# Canto de baixo à esquerda: no meio ficaria em cima da plaquinha do ídolo.
@@ -158,13 +193,13 @@ func _build_back_button() -> void:
 	back_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	back_button.visible = false
 	back_button.pressed.connect(close)
-	add_child(back_button)
+	UiMotion.attach_button(back_button)
+	_focus_wrap.add_child(back_button)
 
 
 func _build_header() -> void:
 	_header = PanelContainer.new()
 	_header.name = "MuseumHeader"
-	_header.theme = back_button.theme
 	_header.theme_type_variation = &"WornPanel"
 	_header.anchor_left = 0.5
 	_header.anchor_right = 0.5
@@ -176,7 +211,7 @@ func _build_header() -> void:
 	_header.offset_top = 16.0
 	_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_header.hide()
-	add_child(_header)
+	_focus_wrap.add_child(_header)
 
 	var margin: MarginContainer = MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -192,6 +227,7 @@ func _build_header() -> void:
 	margin.add_child(row)
 
 	var icon: TextureRect = TextureRect.new()
+	_header_icon = icon
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon.texture = UiIcons.get_icon("museum", 48)
 	icon.custom_minimum_size = Vector2(24, 24)
@@ -211,3 +247,18 @@ func _build_header() -> void:
 	_header_progress = Label.new()
 	_header_progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(_header_progress)
+
+	_header_bar = ProgressBar.new()
+	_header_bar.name = "MuseumHeaderBar"
+	_header_bar.show_percentage = false
+	_header_bar.custom_minimum_size = Vector2(92, 8)
+	_header_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_header_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_header_bar.focus_mode = Control.FOCUS_NONE
+	var track: StyleBoxFlat = StyleBoxFlat.new()
+	track.bg_color = UiPalette.PAPER_DARK
+	track.border_color = UiPalette.INK
+	track.set_border_width_all(1)
+	track.set_corner_radius_all(3)
+	_header_bar.add_theme_stylebox_override(&"background", track)
+	row.add_child(_header_bar)

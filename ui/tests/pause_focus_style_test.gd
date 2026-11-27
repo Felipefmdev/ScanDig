@@ -45,6 +45,7 @@ func _pad(button: JoyButton) -> void:
 func _run() -> void:
 	await process_frame
 	var menu: PauseMenu = root.get_node(^"CorePauseMenu") as PauseMenu
+	InputDevice.instance.set_using_pointer(false)
 	var shared: StyleBoxFlat = THEME.get_stylebox(&"focus", &"PrimaryButton") as StyleBoxFlat
 	var focus: StyleBoxFlat = menu.continue_button.get_theme_stylebox(&"focus") as StyleBoxFlat
 	_check(menu.continue_button.has_theme_stylebox_override(&"focus") and focus != shared, "Continuar possui foco privado sem alterar Theme")
@@ -62,6 +63,10 @@ func _run() -> void:
 	var mouse_before: Input.MouseMode = Input.mouse_mode
 	_check(menu.open(), "menu abre pelo fluxo existente")
 	_check(menu.continue_button.focus_mode == Control.FOCUS_ALL and menu.continue_button.has_focus(), "open mantem FOCUS_ALL e grab_focus em Continuar")
+	InputDevice.instance.set_using_pointer(true)
+	_check(menu.continue_button.get_theme_stylebox(&"focus") is StyleBoxEmpty, "ponteiro oculta a borda de Continuar")
+	InputDevice.instance.set_using_pointer(false)
+	_check(menu.continue_button.get_theme_stylebox(&"focus") == focus, "teclado restaura a borda privada")
 	await _key(KEY_TAB)
 	_check(menu.settings_button.has_focus(), "Tab navega de Continuar para Configuracoes")
 	await _key(KEY_UP)

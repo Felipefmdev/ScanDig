@@ -169,6 +169,9 @@ func open() -> bool:
 	quit_panel.visible = false
 	card.visible = true
 	root_control.visible = true
+	var dim: CanvasItem = root_control.get_node_or_null(^"Dim") as CanvasItem
+	if dim != null:
+		UiMotion.fade_backdrop(dim, true)
 	_animate_card(card)
 	_link_card_focus()
 	_focus_before = get_viewport().gui_get_focus_owner()
@@ -232,6 +235,7 @@ func _button(text: String, variation: StringName = &"", icon_name: String = "") 
 		button.theme_type_variation = variation
 	if not icon_name.is_empty():
 		button.icon = UiIcons.get_icon(icon_name, 22)
+	UiMotion.attach_button(button)
 	return button
 
 
@@ -250,16 +254,28 @@ func _build() -> void:
 	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root_control.add_child(center)
+	UiFocus.follow_pointer(center)
 	var stack: VBoxContainer = VBoxContainer.new()
 	center.add_child(stack)
 
 	var box: VBoxContainer = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
+	var title_row: HBoxContainer = HBoxContainer.new()
+	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	title_row.add_theme_constant_override(&"separation", 8)
+	var title_icon: TextureRect = TextureRect.new()
+	title_icon.texture = UiIcons.get_icon("compass", 32)
+	title_icon.custom_minimum_size = Vector2(24, 24)
+	title_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	title_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	title_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title_row.add_child(title_icon)
 	var title: Label = Label.new()
 	title.text = "Pausado"
 	title.theme_type_variation = &"TitleLabel"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
+	title_row.add_child(title)
+	box.add_child(title_row)
 	pause_subtitle_label = Label.new()
 	pause_subtitle_label.name = "PauseSubtitleLabel"
 	pause_subtitle_label.theme_type_variation = &"HintLabel"
@@ -274,7 +290,9 @@ func _build() -> void:
 	for side: Side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 		continue_focus.set_border_width(side, 1)
 		continue_focus.set_expand_margin(side, 0.0)
-	continue_button.add_theme_stylebox_override(&"focus", continue_focus)
+	_set_continue_focus(InputDevice.using_pointer(), continue_focus)
+	if InputDevice.instance != null:
+		InputDevice.instance.pointer_changed.connect(_set_continue_focus.bind(continue_focus))
 	settings_button = _button("Configurações", &"", "gear")
 	return_button = _button("Voltar à base", &"", "map")
 	leave_button = _button("Sair da sessão", &"DangerButton", "multiplayer")
@@ -331,6 +349,13 @@ func _build() -> void:
 	settings_menu.closed.connect(_show_card)
 
 
+func _set_continue_focus(pointer: bool, focus: StyleBoxFlat) -> void:
+	if pointer:
+		continue_button.remove_theme_stylebox_override(&"focus")
+	else:
+		continue_button.add_theme_stylebox_override(&"focus", focus)
+
+
 ## Cima/baixo entre os botões visíveis do cartão e da confirmação (#102).
 func _link_card_focus() -> void:
 	UiFocus.link_chain([continue_button, settings_button, return_button, leave_button, main_menu_button, quit_button])
@@ -352,18 +377,22 @@ func _animate_card(panel: Control) -> void:
 		return
 	_reset_card_transition()
 	_animated_card = panel
-	panel.modulate.a = 0.8
-	_card_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_card_tween.tween_property(panel, ^"modulate:a", 1.0, CARD_FADE_DURATION)
+	_card_tween = UiMotion.pop_in(panel, true, 0.955, CARD_FADE_DURATION)
+	if panel == quit_panel and quit_icon != null:
+		UiMotion.breathe_emblem(quit_icon, 1.06, 2.5, 1.1, true)
+	elif quit_icon != null:
+		UiMotion.stop(quit_icon, true)
 
 
 func _reset_card_transition() -> void:
-	if _card_tween != null:
+	if _card_tween != null and _card_tween.is_valid():
 		_card_tween.kill()
-		_card_tween = null
+	_card_tween = null
 	if is_instance_valid(_animated_card):
-		_animated_card.modulate.a = 1.0
+		UiMotion.stop(_animated_card)
 	_animated_card = null
+	if quit_icon != null:
+		UiMotion.stop(quit_icon, true)
 
 
 func _session() -> Node:
@@ -390,8 +419,11 @@ func _refresh_buttons() -> void:
 			var map_name: String = ""
 			if map != null:
 				map_name = map.display_name if not map.display_name.is_empty() else map.id
+			var map_title: String = tr(map_name) if not map_name.is_empty() else ""
+			if not map_title.is_empty() and SessionManager.is_night():
+				map_title = tr("%s (noite)") % map_title
 			var day: int = GameState.instance.current_day if GameState.instance != null else 1
-			pause_subtitle_label.text = tr("%s  •  Dia %d") % [tr(map_name), day] if not map_name.is_empty() else ""
+			pause_subtitle_label.text = tr("%s  •  Dia %d") % [map_title, day] if not map_title.is_empty() else ""
 			pause_subtitle_label.visible = not pause_subtitle_label.text.is_empty()
 		else:
 			pause_subtitle_label.text = ""
