@@ -117,7 +117,26 @@ func _run() -> void:
 	await _wait(0.05)
 	_check(btn.scale.is_equal_approx(Vector2.ONE), "botão desativado não escala no hover")
 
+	# 8. Contador suave de dinheiro no HUD (#255): interpola durante o Tween e converge exato.
+	var hud_scene: PackedScene = load("res://ui/hud.tscn") as PackedScene
+	var hud: HUD = hud_scene.instantiate() as HUD
+	root.add_child(hud)
+	await process_frame
+	hud.update_money(100)
+	hud._on_money_changed(1100)
+	await _wait(0.08)
+	_check(hud._displayed_money > 120.0 and hud._displayed_money < 1095.0,
+		"HUD interpola contador de dinheiro durante o Tween")
+	await _wait(0.28)
+	_check(hud.money_label.text == tr("Dinheiro  %s") % UiFormat.money(1100),
+		"HUD converge contador de dinheiro para o valor final exato")
+
 	UiMotion.force_enabled = false
+	hud._on_money_changed(2500)
+	_check(hud.money_label.text == tr("Dinheiro  %s") % UiFormat.money(2500),
+		"HUD atualiza dinheiro de forma síncrona em modo instantâneo")
+	hud.free()
+
 	host.free()
 	await process_frame
 	print("RESULT fails=%d" % _fails)

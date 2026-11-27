@@ -11,7 +11,9 @@ extends CanvasLayer
 @onready var museum_label: Label = _chip_label("MuseumChip")
 
 var _game_state: GameState = null
-var _chip_tweens: Dictionary = {}
+var _displayed_money: float = -1.0
+var _target_money: int = 0
+var _money_tween: Tween = null
 
 
 func _chip_label(unique_id: String) -> Label:
@@ -21,6 +23,10 @@ func _chip_label(unique_id: String) -> Label:
 
 func _ready() -> void:
 	_resolve_game_state()
+	var chips: Array[UiChip] = [money_chip, detector_chip, museum_chip]
+	for i: int in chips.size():
+		if chips[i] != null:
+			UiMotion.pop_in(chips[i], false, 0.95, 0.16, float(i) * 0.045)
 
 
 ## Idioma trocado (#131): os chips são montados por código.
@@ -57,8 +63,19 @@ func _resolve_game_state() -> void:
 
 
 func update_money(new_amount: int) -> void:
+	_target_money = new_amount
+	if _money_tween != null and _money_tween.is_valid():
+		_money_tween.kill()
+	_money_tween = null
+	_displayed_money = float(new_amount)
 	if money_label != null:
 		money_label.text = tr("Dinheiro  %s") % UiFormat.money(new_amount)
+
+
+func _apply_interpolated_money(val: float) -> void:
+	_displayed_money = val
+	if money_label != null:
+		money_label.text = tr("Dinheiro  %s") % UiFormat.money(int(roundf(val)))
 
 
 func update_detector(level: int) -> void:
@@ -74,18 +91,26 @@ func update_museum(total_found: int, max_items: int) -> void:
 func _pulse_chip(chip: UiChip) -> void:
 	if chip == null or not is_inside_tree() or not chip.is_visible_in_tree():
 		return
-	var prev: Tween = _chip_tweens.get(chip) as Tween
-	if prev != null and prev.is_valid():
-		prev.kill()
-	chip.pivot_offset = chip.size * 0.5
-	chip.scale = Vector2(1.045, 1.045)
-	var tw: Tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(chip, ^"scale", Vector2.ONE, 0.18)
-	_chip_tweens[chip] = tw
+	UiMotion.pulse(chip, 1.048, 0.18, false)
+	if chip.icon_rect != null:
+		UiMotion.pulse(chip.icon_rect, 1.16, 0.22, false)
 
 
 func _on_money_changed(new_amount: int) -> void:
-	update_money(new_amount)
+	if UiMotion.is_instant() or not is_inside_tree() or money_label == null or _displayed_money < 0.0 or int(roundf(_displayed_money)) == new_amount:
+		update_money(new_amount)
+		_pulse_chip(money_chip)
+		return
+	_target_money = new_amount
+	if _money_tween != null and _money_tween.is_valid():
+		_money_tween.kill()
+	var from_val: float = _displayed_money
+	_money_tween = create_tween()
+	_money_tween.tween_method(_apply_interpolated_money, from_val, float(new_amount), 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_money_tween.tween_callback(func() -> void:
+		_displayed_money = float(_target_money)
+		if money_label != null:
+			money_label.text = tr("Dinheiro  %s") % UiFormat.money(_target_money))
 	_pulse_chip(money_chip)
 
 

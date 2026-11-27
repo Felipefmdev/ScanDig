@@ -206,8 +206,11 @@ func _style_journal_heading(label: Label, icon_name: String) -> void:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var style: StyleBox = label.get_theme_stylebox(&"panel", &"SummaryTotalPanel").duplicate() as StyleBox
 	var icon_left: float = style.get_margin(SIDE_LEFT)
+	var right_pad: float = style.get_margin(SIDE_RIGHT)
 	var icon_side: float = 20.0
+	var bar_w: float = 108.0
 	style.content_margin_left = icon_left + icon_side + 8.0
+	style.content_margin_right = right_pad + bar_w + 10.0
 	label.add_theme_stylebox_override(&"normal", style)
 	var icon: TextureRect = TextureRect.new()
 	icon.name = "Icon"
@@ -222,6 +225,47 @@ func _style_journal_heading(label: Label, icon_name: String) -> void:
 	icon.offset_right = icon_left + icon_side
 	icon.offset_top = -icon_side * 0.5
 	icon.offset_bottom = icon_side * 0.5
+	var bar: ProgressBar = _make_compact_progress_bar("HeadingBar", Vector2(bar_w, 8.0))
+	label.add_child(bar)
+	bar.anchor_left = 1.0
+	bar.anchor_right = 1.0
+	bar.anchor_top = 0.5
+	bar.anchor_bottom = 0.5
+	bar.offset_left = -(right_pad + bar_w)
+	bar.offset_right = -right_pad
+	bar.offset_top = -4.0
+	bar.offset_bottom = 4.0
+
+
+func _make_compact_progress_bar(bar_name: String, min_size: Vector2) -> ProgressBar:
+	var bar: ProgressBar = ProgressBar.new()
+	bar.name = bar_name
+	bar.show_percentage = false
+	bar.custom_minimum_size = min_size
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.focus_mode = Control.FOCUS_NONE
+	var track: StyleBoxFlat = StyleBoxFlat.new()
+	track.bg_color = UiPalette.PAPER_DARK
+	track.border_color = UiPalette.INK
+	track.set_border_width_all(1)
+	track.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override(&"background", track)
+	_update_compact_progress_bar(bar, 0, 1)
+	return bar
+
+
+func _update_compact_progress_bar(bar: ProgressBar, current: int, total: int) -> void:
+	if bar == null:
+		return
+	var safe_total: int = maxi(total, 1)
+	bar.max_value = safe_total
+	bar.value = clampi(current, 0, safe_total)
+	var fill: StyleBoxFlat = StyleBoxFlat.new()
+	fill.bg_color = UiPalette.GREEN_BOTTLE if total > 0 and current >= total else UiPalette.ORANGE
+	fill.border_color = UiPalette.INK
+	fill.set_border_width_all(1)
+	fill.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override(&"fill", fill)
 
 
 ## Retain the old page as an inaccessible compatibility view while its presentation
@@ -272,13 +316,11 @@ func _animate_tab_content() -> void:
 		_tab_tween.kill()
 		_tab_tween = null
 	if is_instance_valid(_animated_tab):
-		_animated_tab.modulate.a = 1.0
+		UiMotion.stop(_animated_tab)
 	_animated_tab = tab_container.get_current_tab_control()
 	if _animated_tab == null or not tab_container.is_visible_in_tree():
 		return
-	_animated_tab.modulate.a = 0.8
-	_tab_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_tab_tween.tween_property(_animated_tab, ^"modulate:a", 1.0, TAB_FADE_DURATION)
+	_tab_tween = UiMotion.switch_tab_page(_animated_tab, false, TAB_FADE_DURATION)
 
 
 ## Comando/teclado (#102): a base abre com o foco na aba atual (no coop o menu de rede pega o
@@ -455,6 +497,7 @@ func _setup_expeditions() -> void:
 		depart_btn.size_flags_stretch_ratio = 0.32
 		depart_btn.icon = UiIcons.get_icon("play", 18)
 		depart_btn.pressed.connect(_on_depart_pressed)
+		UiMotion.attach_button(depart_btn, 1.0)
 		_build_night_check()
 	if _session != null:
 		for sig: StringName in [&"expedition_started", &"expedition_ended", &"scene_changing"]:
@@ -494,9 +537,9 @@ func _refresh_map_list() -> void:
 			continue
 		var playable: bool = bool(status.get("playable", false))
 		var idx: int = map_list.add_item(_format_map_row(map, status))
-		map_list.set_item_icon(idx, UiIcons.get_icon("map" if playable else "lock", 18))
+		map_list.set_item_icon(idx, UiIcons.get_icon("map", 18))
 		if not playable:
-			map_list.set_item_icon_modulate(idx, Color(0.82, 0.78, 0.72, 0.75))
+			map_list.set_item_icon_modulate(idx, Color(0.76, 0.71, 0.64, 0.62))
 		map_list.set_item_tooltip(idx, _map_progress_message(map, status))
 		if not playable:
 			# Continua selecionável para o jogador ver o motivo e poder desbloquear.
@@ -653,10 +696,12 @@ func _on_unlock_timeout(timer: SceneTreeTimer) -> void:
 	_refresh_unlock_button()
 
 
-func _on_map_unlock_result(_map_id: String, _success: bool, message: String) -> void:
+func _on_map_unlock_result(_map_id: String, success: bool, message: String) -> void:
 	_pending_unlock = false
 	_unlock_timer = null
-	_set_expedition_feedback(message)
+	_set_expedition_feedback(message, UiPalette.GREEN_BOTTLE if success else UiPalette.RED_BURNT)
+	if expedition_feedback_label != null and not success:
+		UiMotion.shake(expedition_feedback_label, 1.6, 0.22, false)
 	_refresh_map_list()
 
 
@@ -688,6 +733,9 @@ func _on_depart_pressed() -> void:
 	var reason: String = _get_depart_block_reason(map)
 	if not reason.is_empty():
 		_set_expedition_feedback(reason)
+		UiMotion.shake(expedition_feedback_label, 1.6, 0.22, false)
+		if map_status_label != null and map_status_label.visible:
+			UiMotion.shake(map_status_label, 1.4, 0.22, false)
 		return
 	depart_btn.disabled = true
 	var night: bool = is_night_selected()
@@ -716,6 +764,7 @@ func _build_night_check() -> void:
 	night_check.tooltip_text = "Expedição noturna: mais achados raros e criaturas noturnas, mas pouca visão. A Lanterna de Magnésio e o visor do detector iluminam."
 	night_check.focus_mode = Control.FOCUS_ALL
 	night_check.toggled.connect(_on_night_toggled)
+	UiMotion.attach_button(night_check, 1.018, 0.975)
 	var page: Node = depart_btn.get_parent()
 	page.add_child(night_check)
 	page.move_child(night_check, depart_btn.get_index())
@@ -750,10 +799,10 @@ func _on_night_toggled(on: bool) -> void:
 	_refresh_depart_button()
 
 
-func _set_expedition_feedback(msg: String) -> void:
+func _set_expedition_feedback(msg: String, accent: Color = UiPalette.WOOD_DARK) -> void:
 	if expedition_feedback_label != null:
-		expedition_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
 		expedition_feedback_label.visible = not msg.is_empty()
+	_apply_feedback_pill(expedition_feedback_label, msg, accent)
 
 
 func _resolve_game_state() -> void:
@@ -852,6 +901,7 @@ func _setup_shop_buttons() -> void:
 		var btn: Button = _get_shop_button(upgrade_id)
 		if btn != null:
 			btn.pressed.connect(_purchase_upgrade.bind(upgrade_id))
+			UiMotion.attach_button(btn)
 			_build_shop_row(upgrade_id, btn)
 
 
@@ -1176,9 +1226,16 @@ func _build_view_museum_button() -> void:
 		for side: Side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 			panel_style.set_content_margin(side, 8.0)
 		progress.add_theme_stylebox_override(&"panel", panel_style)
+		var progress_box: VBoxContainer = VBoxContainer.new()
+		progress_box.name = "ProgressBox"
+		progress_box.add_theme_constant_override(&"separation", 5)
+		progress.add_child(progress_box)
 		page.add_child(progress)
 		page.move_child(progress, 0)
-		secrets_label.reparent(progress, false)
+		secrets_label.reparent(progress_box, false)
+		var museum_bar: ProgressBar = _make_compact_progress_bar("MuseumCollectionBar", Vector2(0.0, 8.0))
+		museum_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		progress_box.add_child(museum_bar)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "MuseumInfoRow"
 	page.add_child(row)
@@ -1204,6 +1261,7 @@ func _build_view_museum_button() -> void:
 	view_museum_btn.add_theme_constant_override(&"icon_max_width", 20)
 	view_museum_btn.focus_mode = Control.FOCUS_ALL
 	view_museum_btn.pressed.connect(_on_view_museum_pressed)
+	UiMotion.attach_button(view_museum_btn)
 	row.add_child(view_museum_btn)
 	_refresh_view_museum_button.call_deferred()
 
@@ -1261,11 +1319,23 @@ func _on_purchase_timeout(timer: SceneTreeTimer) -> void:
 	_refresh_shop_buttons()
 
 
-func _on_purchase_result(_upgrade_id: String, _success: bool, message: String) -> void:
+func _on_purchase_result(upgrade_id: String, success: bool, message: String) -> void:
 	_pending_purchase = false
 	_purchase_timer = null
-	_set_shop_feedback(message)
+	_set_shop_feedback(message, UiPalette.GREEN_BOTTLE if success else UiPalette.RED_BURNT)
 	_refresh_shop_buttons()
+	if success:
+		if _shop_rows.has(upgrade_id):
+			var row_dict: Dictionary = _shop_rows[upgrade_id]
+			UiMotion.pulse(row_dict.get("row") as Control, 1.03, 0.20, false)
+			var pips_box: HBoxContainer = row_dict.get("pips") as HBoxContainer
+			var lv: int = _game_state.get_upgrade_level(upgrade_id) if _game_state != null else 0
+			if pips_box != null and lv > 0 and lv <= pips_box.get_child_count():
+				UiMotion.pulse(pips_box.get_child(lv - 1) as Control, 1.32, 0.22, false)
+		if shop_feedback_label != null:
+			UiMotion.pulse(shop_feedback_label, 1.03, 0.18, false)
+	elif shop_feedback_label != null:
+		UiMotion.shake(shop_feedback_label, 1.8, 0.22, false)
 
 
 func _on_upgrades_changed(_levels: Dictionary) -> void:
@@ -1337,6 +1407,9 @@ func _refresh_museum_display() -> void:
 	if museum_item_list.has_focus() and museum_item_list.is_anything_selected():
 		_ensure_museum_selection_visible.call_deferred()
 
+	if secrets_label != null and secrets_label.get_parent() != null:
+		var museum_bar: ProgressBar = secrets_label.get_parent().get_node_or_null(^"MuseumCollectionBar") as ProgressBar
+		_update_compact_progress_bar(museum_bar, discovered.size(), _catalog_items.size())
 	if tab_container != null:
 		var museum_tab: Control = tab_container.get_node_or_null(NodePath(MUSEUM_TAB_NAME)) as Control
 		if museum_tab != null:
@@ -1345,7 +1418,7 @@ func _refresh_museum_display() -> void:
 				museum_title = tr(museum_title) + MUSEUM_DONE_MARK
 			tab_container.set_tab_title(tab_container.get_tab_idx_from_control(museum_tab), museum_title)
 	if museum_feedback_label != null and museum_feedback_label.text.is_empty() and _game_state != null and _game_state.game_completed:
-		museum_feedback_label.text = "🏆 Jogo concluído — Modo Museu completo ativo!"
+		_set_museum_feedback("🏆 Jogo concluído — Modo Museu completo ativo!", UiPalette.GREEN_BOTTLE)
 
 
 ## Linha do Museu. Itens que não são escavados (missão, relíquia escondida, troféu de chefe,
@@ -1354,7 +1427,7 @@ static func museum_line(item: ItemData, is_found: bool, is_intact: bool = false)
 	var status_str: String = I18n.t("[DESCOBERTO]") if is_found else "[ ? ]"
 	var detail: String = I18n.t("Profundidade: %d cm") % item.depth_cm if item.depth_cm > 0 else I18n.t("Achado especial")
 	var line: String = I18n.t("%s %s (Valor: %s | %s)") % [status_str, I18n.t(item.display_name), UiFormat.money(item.base_value), detail]
-	return line + (I18n.t("  ✦ intacto") if is_intact else "")
+	return line + ("\n" + I18n.t("  ✦ intacto").strip_edges() if is_intact else "")
 
 
 func _refresh_secrets_label() -> void:
@@ -1415,21 +1488,43 @@ func _on_collection_updated(_total_found: int, _max_items: int) -> void:
 
 
 func _on_item_sold(item_name: String, value: int) -> void:
-	_set_museum_feedback(tr("Venda concluída: %s (+%s)") % [tr(item_name), UiFormat.money(value)])
+	_set_museum_feedback(tr("Venda concluída: %s (+%s)") % [tr(item_name), UiFormat.money(value)], UiPalette.WOOD_DARK)
 
 
 func _on_item_donated(item_name: String, reward: int) -> void:
-	_set_museum_feedback(tr("%s doado ao Museu! (+%s de recompensa)") % [tr(item_name), UiFormat.money(reward)])
+	_set_museum_feedback(tr("%s doado ao Museu! (+%s de recompensa)") % [tr(item_name), UiFormat.money(reward)], UiPalette.GREEN_BOTTLE)
 
 
-func _set_shop_feedback(msg: String) -> void:
-	if shop_feedback_label != null:
-		shop_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
+func _set_shop_feedback(msg: String, accent: Color = UiPalette.WOOD_DARK) -> void:
+	_apply_feedback_pill(shop_feedback_label, msg, accent)
 
 
-func _set_museum_feedback(msg: String) -> void:
-	if museum_feedback_label != null:
-		museum_feedback_label.text = UiFormat.fix_money_spaces(tr(msg))
+func _set_museum_feedback(msg: String, accent: Color = UiPalette.WOOD_DARK) -> void:
+	_apply_feedback_pill(museum_feedback_label, msg, accent)
+
+
+func _apply_feedback_pill(label: Label, msg: String, accent: Color = UiPalette.WOOD_DARK) -> void:
+	if label == null:
+		return
+	var clean: String = UiFormat.fix_money_spaces(tr(msg)) if not msg.is_empty() else ""
+	label.text = clean
+	if clean.is_empty():
+		label.remove_theme_stylebox_override(&"normal")
+		label.remove_theme_color_override(&"font_color")
+		return
+	var pill: StyleBoxFlat = StyleBoxFlat.new()
+	pill.bg_color = UiPalette.PAPER_LIGHT.lerp(accent, 0.12)
+	pill.border_color = accent
+	pill.set_border_width_all(1)
+	pill.set_corner_radius_all(8)
+	pill.content_margin_left = 10.0
+	pill.content_margin_right = 10.0
+	pill.content_margin_top = 3.0
+	pill.content_margin_bottom = 3.0
+	label.add_theme_color_override(&"font_color", accent)
+	label.add_theme_stylebox_override(&"normal", pill)
+	if label.is_visible_in_tree():
+		UiMotion.pop_in(label, false, 0.97, 0.15)
 
 
 # --- Conquistas (#141) ---------------------------------------------------------
@@ -1689,6 +1784,7 @@ func _refresh_journal_display() -> void:
 
 	if journal_info_label != null:
 		journal_info_label.text = tr("Caderno de Campo — Fauna dos Sítios (%d/%d) e Guardiões Abatidos:") % [seen_count, GameState.CREATURES.size()]
+		_update_compact_progress_bar(journal_info_label.get_node_or_null(^"HeadingBar") as ProgressBar, seen_count, GameState.CREATURES.size())
 
 	if bosses_grid != null:
 		for child: Node in bosses_grid.get_children():
@@ -1712,17 +1808,22 @@ func _refresh_journal_display() -> void:
 
 		if bosses_header_label != null:
 			bosses_header_label.text = tr("Guardiões e Chefes de Sítio (%d/%d):") % [defeated_count, BOSS_ORDER.size()]
+			_update_compact_progress_bar(bosses_header_label.get_node_or_null(^"HeadingBar") as ProgressBar, defeated_count, BOSS_ORDER.size())
 
 
 func _build_journal_slot(id: String, title_text: String, sub_text: String, discovered: bool, accent: Color, is_boss: bool) -> PanelContainer:
 	var card: PanelContainer = PanelContainer.new()
 	card.name = ("BossSlot_" if is_boss else "JournalSlot_") + id
-	card.theme_type_variation = &"InsetPanel"
+	card.theme_type_variation = &"WornPanel"
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.custom_minimum_size = Vector2(150, 44)
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
+	card.tooltip_text = "%s — %s" % [title_text, sub_text]
+	var base_bg: Color = UiPalette.PAPER_LIGHT if discovered else UiPalette.PAPER
+	var base_border: Color = Color(UiPalette.WOOD, 0.75 if discovered else 0.45)
 	var frame: StyleBoxFlat = StyleBoxFlat.new()
-	frame.bg_color = UiPalette.PAPER_LIGHT if discovered else UiPalette.PAPER
-	frame.border_color = Color(UiPalette.WOOD, 0.75 if discovered else 0.45)
+	frame.bg_color = base_bg
+	frame.border_color = base_border
 	frame.set_border_width_all(2)
 	frame.set_corner_radius_all(4)
 	card.add_theme_stylebox_override(&"panel", frame)
@@ -1739,6 +1840,7 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 		card.resized.connect(card.queue_redraw)
 
 	var margin: MarginContainer = MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_theme_constant_override("margin_left", 4)
 	margin.add_theme_constant_override("margin_top", 2)
 	margin.add_theme_constant_override("margin_right", 4)
@@ -1746,11 +1848,13 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 	card.add_child(margin)
 
 	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 8)
 	margin.add_child(row)
 
 	var icon_rect: TextureRect = TextureRect.new()
 	icon_rect.name = "MiniIcon"
+	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon_rect.custom_minimum_size = Vector2(28, 28)
 	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -1760,6 +1864,7 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 
 	var lbl: Label = Label.new()
 	lbl.name = "SlotLabel"
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.add_theme_font_size_override("font_size", 15)
 	lbl.text = "%s\n%s" % [title_text, sub_text]
@@ -1768,6 +1873,15 @@ func _build_journal_slot(id: String, title_text: String, sub_text: String, disco
 	if not discovered:
 		lbl.add_theme_color_override(&"font_color", UiPalette.WOOD)
 	row.add_child(lbl)
+
+	card.mouse_entered.connect(func() -> void:
+		frame.bg_color = base_bg.lerp(UiPalette.GOLD, 0.14 if discovered else 0.07)
+		frame.border_color = UiPalette.WOOD_DARK if discovered else Color(UiPalette.WOOD, 0.72)
+		if discovered:
+			UiMotion.pulse(icon_rect, 1.11, 0.16, false))
+	card.mouse_exited.connect(func() -> void:
+		frame.bg_color = base_bg
+		frame.border_color = base_border)
 
 	if is_boss:
 		_boss_slot_labels[id] = lbl
