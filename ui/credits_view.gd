@@ -155,6 +155,17 @@ func _build() -> void:
 
 	var team_card: PanelContainer = PanelContainer.new()
 	team_card.theme_type_variation = &"InsetPanel"
+	var team_style: StyleBoxFlat = StyleBoxFlat.new()
+	team_style.bg_color = UiPalette.PAPER_LIGHT
+	team_style.border_color = UiPalette.GOLD.darkened(0.12)
+	team_style.set_border_width_all(2)
+	team_style.border_width_left = 4
+	team_style.set_corner_radius_all(4)
+	team_style.content_margin_left = 12.0
+	team_style.content_margin_right = 12.0
+	team_style.content_margin_top = 8.0
+	team_style.content_margin_bottom = 8.0
+	team_card.add_theme_stylebox_override(&"panel", team_style)
 	body.add_child(team_card)
 	team_label = _wrapped_label(UiPalette.INK)
 	team_label.text = TEAM_TEXT
@@ -189,17 +200,38 @@ func _build() -> void:
 	for author: Dictionary in _authors:
 		var author_card: PanelContainer = PanelContainer.new()
 		author_card.theme_type_variation = &"InsetPanel"
+		author_card.mouse_filter = Control.MOUSE_FILTER_PASS
+		var astyle: StyleBoxFlat = StyleBoxFlat.new()
+		astyle.bg_color = UiPalette.PAPER_LIGHT
+		astyle.border_color = Color(UiPalette.WOOD, 0.72)
+		astyle.set_border_width_all(2)
+		astyle.border_width_left = 3
+		astyle.set_corner_radius_all(4)
+		astyle.content_margin_left = 10.0
+		astyle.content_margin_right = 10.0
+		astyle.content_margin_top = 6.0
+		astyle.content_margin_bottom = 6.0
+		author_card.add_theme_stylebox_override(&"panel", astyle)
 		var author_box: VBoxContainer = VBoxContainer.new()
+		author_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		author_box.add_theme_constant_override(&"separation", 4)
 		author_card.add_child(author_box)
 		var header: Label = _wrapped_label(UiPalette.WOOD_DARK)
+		header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		header.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		header.theme_type_variation = &"SubtitleLabel"
 		author_box.add_child(header)
 		author_labels[author["name"]] = header
 		var detail: Label = _wrapped_label(UiPalette.INK)
+		detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		detail.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		author_box.add_child(detail)
+		author_card.mouse_entered.connect(func() -> void:
+			astyle.bg_color = UiPalette.PAPER_LIGHT.lerp(UiPalette.GOLD, 0.11)
+			astyle.border_color = UiPalette.WOOD_DARK)
+		author_card.mouse_exited.connect(func() -> void:
+			astyle.bg_color = UiPalette.PAPER_LIGHT
+			astyle.border_color = Color(UiPalette.WOOD, 0.72))
 		body.add_child(author_card)
 		_detail_labels.append([detail, author])
 	_refresh_texts()
@@ -213,6 +245,7 @@ func _build() -> void:
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back_button.focus_mode = Control.FOCUS_ALL
 	back_button.pressed.connect(back_pressed.emit)
+	UiMotion.attach_button(back_button)
 	add_child(back_button)
 	# Anel área <-> Voltar em todas as direções: nada prende o foco.
 	var to_back: NodePath = scroll.get_path_to(back_button)

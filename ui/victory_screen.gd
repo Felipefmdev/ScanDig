@@ -45,6 +45,10 @@ var credits_view: CreditsView = null
 ## Foco antes de abrir (#135), devolvido ao fechar.
 var _focus_before: Control = null
 var credits_label: Label = null
+var _trophy_icon: TextureRect = null
+var _collection_card: PanelContainer = null
+var _campaign_card: PanelContainer = null
+var _actions_row: HBoxContainer = null
 
 var _open: bool = false
 var _previous_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
@@ -126,6 +130,15 @@ func open() -> void:
 	show_summary()
 	_open = true
 	root_control.visible = true
+	var dim: CanvasItem = root_control.get_node_or_null(^"Dim") as CanvasItem
+	if dim != null:
+		UiMotion.fade_backdrop(dim, true)
+	UiMotion.pop_in(card, true, 0.94, 0.20)
+	UiMotion.pop_in(_collection_card, true, 0.96, 0.18, 0.04)
+	UiMotion.pop_in(_campaign_card, true, 0.96, 0.18, 0.08)
+	UiMotion.pop_in(_actions_row, true, 0.97, 0.17, 0.11)
+	if _trophy_icon != null:
+		UiMotion.breathe_emblem(_trophy_icon, 1.07, 2.8, 1.2, true)
 	if SessionUI.instance != null:
 		SessionUI.instance._place_toast()
 	UiFocus.link_chain([continue_button, credits_button])
@@ -146,6 +159,11 @@ func close() -> void:
 	if not _open:
 		return
 	_open = false
+	for item: Control in [card, _collection_card, _campaign_card, _actions_row]:
+		if item != null:
+			UiMotion.stop(item)
+	if _trophy_icon != null:
+		UiMotion.stop(_trophy_icon, true)
 	root_control.visible = false
 	_fit_center.offset_top = 0.0
 	Input.mouse_mode = _previous_mouse_mode
@@ -172,12 +190,15 @@ func reserve_notice_space(height: float) -> void:
 func show_credits() -> void:
 	summary_view.visible = false
 	credits_view.visible = true
+	UiMotion.switch_tab_page(credits_view, true)
 	credits_view.focus_start()
 
 
 func show_summary() -> void:
 	credits_view.visible = false
 	summary_view.visible = true
+	if _open:
+		UiMotion.switch_tab_page(summary_view, true)
 	if credits_button.is_visible_in_tree():
 		credits_button.grab_focus()
 
@@ -235,6 +256,7 @@ func _build() -> void:
 	_fit_center = center
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root_control.add_child(center)
+	UiFocus.follow_pointer(center)
 
 	card = PanelContainer.new()
 	card.name = "VictoryCard"
@@ -259,6 +281,7 @@ func _build() -> void:
 	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	title_row.add_theme_constant_override("separation", 10)
 	var trophy_icon: TextureRect = TextureRect.new()
+	_trophy_icon = trophy_icon
 	trophy_icon.texture = UiIcons.get_icon("trophy", 30)
 	trophy_icon.custom_minimum_size = Vector2(30, 30)
 	trophy_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -283,17 +306,20 @@ func _build() -> void:
 	columns.add_theme_constant_override("separation", 14)
 	box.add_child(columns)
 	var grid: GridContainer = _stats_column(columns, "Coleção", 2, "museum")
+	_collection_card = grid.get_parent().get_parent() as PanelContainer
 	items_value = _count_row(grid, "Peças do museu")
 	intact_value = _count_row(grid, "Peças intactas")
 	secrets_value = _count_row(grid, "Segredos")
 	creatures_value = _count_row(grid, "Diário de campo")
 	# Duas colunas de pares (rótulo, valor): a mesma altura das contagens ao lado.
 	var campaign: GridContainer = _stats_column(columns, "Campanha", 4, "compass")
+	_campaign_card = campaign.get_parent().get_parent() as PanelContainer
 	campaign.name = "CampaignGrid"
 	for row: Array in CAMPAIGN_ROWS:
 		campaign_values[row[0]] = _count_row(campaign, str(row[1]))
 
 	var actions_row: HBoxContainer = HBoxContainer.new()
+	_actions_row = actions_row
 	actions_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions_row.add_theme_constant_override("separation", 12)
 	box.add_child(actions_row)
@@ -306,6 +332,7 @@ func _build() -> void:
 	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	continue_button.focus_mode = Control.FOCUS_ALL
 	continue_button.pressed.connect(close)
+	UiMotion.attach_button(continue_button)
 	actions_row.add_child(continue_button)
 	credits_button = Button.new()
 	credits_button.text = "Créditos"
@@ -314,6 +341,7 @@ func _build() -> void:
 	credits_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	credits_button.focus_mode = Control.FOCUS_ALL
 	credits_button.pressed.connect(show_credits)
+	UiMotion.attach_button(credits_button)
 	actions_row.add_child(credits_button)
 
 	credits_view = _build_credits()

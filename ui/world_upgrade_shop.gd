@@ -15,10 +15,14 @@ var _scene: Node = null
 var _previous_focus: WeakRef = null
 var _previous_mouse: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
 var _root: Control = null
+var _shade: ColorRect = null
+var _panel: PanelContainer = null
+var _coin_icon: TextureRect = null
 var _money: Label = null
 var _feedback: Label = null
 var _close_button: Button = null
 var _buttons: Dictionary = {}
+var _cards: Dictionary = {}
 var _details: Dictionary = {}
 var _names: Dictionary = {}
 var _pips: Dictionary = {}
@@ -71,6 +75,7 @@ func _process(_delta: float) -> void:
 	if _pending_request != 0 and Time.get_ticks_msec() - _pending_started >= REQUEST_TIMEOUT_MSEC:
 		_pending_request = 0
 		_set_feedback(tr("Sem resposta do host. Tente novamente."), UiPalette.RED_BURNT)
+		UiMotion.shake(_feedback, 1.8, 0.22, false)
 		_refresh()
 
 
@@ -106,6 +111,12 @@ func open_for(counter: Node3D, actor: Player) -> bool:
 	_set_feedback("")
 	_open = true
 	_root.show()
+	if SessionUI.instance != null and SessionUI.instance.expedition_bar != null:
+		SessionUI.instance.expedition_bar.visible = false
+	UiMotion.fade_backdrop(_shade, false)
+	UiMotion.pop_in(_panel, false, 0.94, 0.18)
+	for idx: int in IDS.size():
+		UiMotion.pop_in(_cards.get(IDS[idx]) as Control, false, 0.97, 0.16, float(idx) * 0.03)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_refresh()
 	_close_button.grab_focus()
@@ -120,9 +131,16 @@ func close() -> void:
 	_actor = null
 	_counter = null
 	_scene = null
+	UiMotion.stop(_panel)
+	UiMotion.stop(_shade)
+	UiMotion.stop(_coin_icon)
+	for id: String in IDS:
+		UiMotion.stop(_cards.get(id) as Control)
 	if is_instance_valid(_root):
 		_root.hide()
 	Input.mouse_mode = _previous_mouse
+	if SessionUI.instance != null and SessionUI.instance.expedition_bar != null:
+		SessionUI.instance.call(&"_refresh_expedition_bar")
 	if _previous_focus != null:
 		var focus: Control = _previous_focus.get_ref() as Control
 		if is_instance_valid(focus) and focus.is_inside_tree() and focus.is_visible_in_tree():
@@ -152,6 +170,7 @@ func _build() -> void:
 	shade.color = Color(UiPalette.INK, 0.62)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(shade)
+	_shade = shade
 	var center: FitCenterContainer = FitCenterContainer.new()
 	center.margin = 16.0
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -161,6 +180,7 @@ func _build() -> void:
 	panel.theme_type_variation = &"WornPanel"
 	panel.custom_minimum_size = Vector2(620, 0)
 	center.add_child(panel)
+	_panel = panel
 	var margin: MarginContainer = MarginContainer.new()
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
@@ -193,6 +213,7 @@ func _build() -> void:
 	money_row.add_theme_constant_override(&"separation", 8)
 	money_card.add_child(money_row)
 	var coin_icon: TextureRect = TextureRect.new()
+	_coin_icon = coin_icon
 	coin_icon.texture = UiIcons.get_icon("coin", 24)
 	coin_icon.custom_minimum_size = Vector2(20, 20)
 	coin_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -207,6 +228,7 @@ func _build() -> void:
 		var card: PanelContainer = PanelContainer.new()
 		card.theme_type_variation = &"InsetPanel"
 		column.add_child(card)
+		_cards[id] = card
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override(&"separation", 10)
 		card.add_child(row)
@@ -245,6 +267,7 @@ func _build() -> void:
 		button.add_theme_constant_override(&"icon_max_width", 18)
 		button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		button.pressed.connect(_buy.bind(id))
+		UiMotion.attach_button(button)
 		row.add_child(button)
 		_buttons[id] = button
 	_feedback = Label.new()
@@ -260,6 +283,7 @@ func _build() -> void:
 	_close_button.custom_minimum_size = Vector2(180, 44)
 	_close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_close_button.pressed.connect(close)
+	UiMotion.attach_button(_close_button)
 	column.add_child(_close_button)
 
 
@@ -364,8 +388,19 @@ func _buy(upgrade_id: String) -> void:
 func complete_purchase(request_id: int, success: bool, message: String) -> void:
 	if request_id == 0 or request_id != _intent_request:
 		return
+	var target_id: String = _intent_upgrade
 	_pending_request = 0
 	_intent_request = 0
 	_intent_upgrade = ""
 	_set_feedback(message, UiPalette.GREEN_BOTTLE if success else UiPalette.RED_BURNT)
 	_refresh()
+	if success:
+		UiMotion.pulse(_cards.get(target_id) as Control, 1.035, 0.20, false)
+		UiMotion.pulse(_coin_icon, 1.22, 0.22, false)
+		UiMotion.pulse(_feedback, 1.03, 0.18, false)
+		var pips: HBoxContainer = _pips.get(target_id) as HBoxContainer
+		var lv: int = GameState.instance.get_upgrade_level(target_id) if GameState.instance != null else 0
+		if pips != null and lv > 0 and lv <= pips.get_child_count():
+			UiMotion.pulse(pips.get_child(lv - 1) as Control, 1.32, 0.22, false)
+	else:
+		UiMotion.shake(_feedback, 1.8, 0.22, false)

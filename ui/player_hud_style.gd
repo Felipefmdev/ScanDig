@@ -65,6 +65,7 @@ static func _style_message_label(node: Node, message_stack: VBoxContainer) -> vo
 	label.add_theme_stylebox_override(&"normal", pill)
 	_fit_message_pill(label, message_stack)
 	_fit_message_pill.call_deferred(label, message_stack)
+	UiMotion.pop_in(label, false, 0.96, 0.16)
 
 
 static func _fit_message_pill(label: Label, message_stack: VBoxContainer) -> void:
