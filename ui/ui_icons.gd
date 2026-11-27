@@ -278,6 +278,22 @@ const SHAPES: Dictionary = {
 		+ "<path d=\"M7 16.5 Q12 13.5 16.5 16.2 T25 15.4 V19 H7 Z\" fill=\"#DFCFA8\"/>"
 		+ "<circle cx=\"21.5\" cy=\"11\" r=\"1.6\" fill=\"#F2C144\"/>"
 		+ "<path d=\"M16 22 V26.6 M10.5 26.8 H21.5\" fill=\"none\" {o}/>",
+
+	# Lixeira de lata clara contornada em INK para botoes destrutivos (Apagar slot).
+	"trash": "<path d=\"M12.2 6.8 V4.8 Q12.2 3.6 13.6 3.6 H18.4 Q19.8 3.6 19.8 4.8 V6.8\" fill=\"none\" {o}/>"
+		+ "<rect x=\"5.6\" y=\"6.6\" width=\"20.8\" height=\"3.4\" rx=\"1.4\" fill=\"#FAF0D7\" {o}/>"
+		+ "<path d=\"M7.6 10 H24.4 L22.8 26.2 Q22.6 27.6 21 27.6 H11 Q9.4 27.6 9.2 26.2 Z\" fill=\"#FAF0D7\" {o}/>"
+		+ "<path d=\"M18.2 10.4 H23.8 L22.4 25.8 Q22.2 27 20.8 27 H16.8 Z\" fill=\"#DFCFA8\"/>"
+		+ "<path d=\"M7.6 10 H24.4 L22.8 26.2 Q22.6 27.6 21 27.6 H11 Q9.4 27.6 9.2 26.2 Z\" fill=\"none\" {o}/>"
+		+ "<path d=\"M12.4 13.6 L13 23.8 M16 13.6 V23.8 M19.6 13.6 L19 23.8\" fill=\"none\" {i}/>",
+
+	# Colcheias duplas em latao dourado com barra chanfrada para a faixa de Musica.
+	"music": "<path d=\"M12.2 22.8 V8.4 L24.6 5.6 V20.2\" fill=\"none\" stroke=\"#2B2118\" stroke-width=\"4.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+		+ "<path d=\"M12.2 11.4 L24.6 8.6\" fill=\"none\" stroke=\"#2B2118\" stroke-width=\"4.6\" stroke-linecap=\"round\"/>"
+		+ "<path d=\"M12.2 22.8 V8.4 L24.6 5.6 V20.2\" fill=\"none\" stroke=\"#F2C144\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+		+ "<path d=\"M12.2 11.4 L24.6 8.6\" fill=\"none\" stroke=\"#FFF0B8\" stroke-width=\"2\" stroke-linecap=\"round\"/>"
+		+ "<ellipse cx=\"9.4\" cy=\"23.4\" rx=\"3.8\" ry=\"3\" transform=\"rotate(-16 9.4 23.4)\" fill=\"#F2C144\" {o}/>"
+		+ "<ellipse cx=\"21.8\" cy=\"20.8\" rx=\"3.8\" ry=\"3\" transform=\"rotate(-16 21.8 20.8)\" fill=\"#F2C144\" {o}/>",
 }
 
 static var _cache: Dictionary = {}

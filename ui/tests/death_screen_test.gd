@@ -112,9 +112,10 @@ func _run() -> void:
 	ds.open({"dropped_items": 1, "map_name": "Praia", "day": 2})
 	await _wait(2)
 	_check(ds.bag_label.text.contains("1 item"), "singular 1 item: '%s'" % ds.bag_label.text)
-	ds.open({"dropped_items": 0, "map_name": "Praia", "day": 2})
+	ds.open({"dropped_items": 0, "map_name": "Praia", "day": 2, "night": true})
 	await _wait(2)
 	_check(ds.bag_label.text == DeathScreen.BAG_EMPTY_TEXT, "mochila vazia: '%s'" % ds.bag_label.text)
+	_check(ds.location_label.text.contains("noite"), "modo noturno exibido na localização: '%s'" % ds.location_label.text)
 	var esc: InputEventAction = InputEventAction.new()
 	esc.action = &"ui_cancel"
 	esc.pressed = true

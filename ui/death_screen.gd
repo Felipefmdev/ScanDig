@@ -28,9 +28,11 @@ var info_card: PanelContainer = null
 var title_label: Label = null
 var subtitle_label: Label = null
 var location_row: HBoxContainer = null
+var _location_icon: TextureRect = null
 var location_label: Label = null
 var bag_icon: TextureRect = null
 var bag_label: Label = null
+var _actions_row: HBoxContainer = null
 var continue_button: Button = null
 var return_base_button: Button = null
 
@@ -166,6 +168,7 @@ func _open_after_die(player: Node, dropped_items: int) -> void:
 		"dropped_items": dropped_items,
 		"map_name": map_name,
 		"day": day,
+		"night": sm.is_night(),
 	})
 
 
@@ -353,6 +356,7 @@ func _build() -> void:
 	location_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	location_row.add_theme_constant_override(&"separation", 6)
 	var map_icon: TextureRect = TextureRect.new()
+	_location_icon = map_icon
 	map_icon.texture = UiIcons.get_icon("map", 24)
 	map_icon.custom_minimum_size = Vector2(18, 18)
 	map_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -387,6 +391,7 @@ func _build() -> void:
 	vbox.add_child(HSeparator.new())
 
 	var actions: HBoxContainer = HBoxContainer.new()
+	_actions_row = actions
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override(&"separation", 12)
 	vbox.add_child(actions)
@@ -398,6 +403,7 @@ func _build() -> void:
 	continue_button.custom_minimum_size = Vector2(210, 46)
 	continue_button.focus_mode = Control.FOCUS_ALL
 	continue_button.pressed.connect(_on_continue_pressed)
+	UiMotion.attach_button(continue_button)
 	actions.add_child(continue_button)
 
 	return_base_button = Button.new()
@@ -406,6 +412,7 @@ func _build() -> void:
 	return_base_button.custom_minimum_size = Vector2(180, 46)
 	return_base_button.focus_mode = Control.FOCUS_ALL
 	return_base_button.pressed.connect(_on_return_base_pressed)
+	UiMotion.attach_button(return_base_button)
 	actions.add_child(return_base_button)
 
 
@@ -417,9 +424,15 @@ func _apply_texts() -> void:
 
 	var map_name: String = str(_context.get("map_name", ""))
 	var day: int = int(_context.get("day", 0))
+	var night: bool = bool(_context.get("night", SessionManager.is_night()))
 	if not map_name.is_empty():
 		var shown_day: int = day if day > 0 else (GameState.instance.current_day if GameState.instance != null else 1)
-		location_label.text = tr("%s  •  Dia %d") % [tr(map_name), shown_day]
+		var map_title: String = tr(map_name)
+		if night:
+			map_title = tr("%s (noite)") % map_title
+		if _location_icon != null:
+			_location_icon.texture = UiIcons.get_icon("moon" if night else "map", 24)
+		location_label.text = tr("%s  •  Dia %d") % [map_title, shown_day]
 		location_row.visible = true
 	else:
 		location_row.visible = false
@@ -466,32 +479,36 @@ func _link_focus() -> void:
 
 func _animate_open() -> void:
 	_reset_animation()
-	root_control.modulate.a = 0.78
-	_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_tween.tween_property(root_control, ^"modulate:a", 1.0, FADE_DURATION)
+	var dim: CanvasItem = root_control.get_node_or_null(^"Dim") as CanvasItem
+	if dim != null:
+		UiMotion.fade_backdrop(dim, true, FADE_DURATION)
+	if card != null:
+		_tween = UiMotion.pop_in(card, true, 0.92, FADE_DURATION)
+	UiMotion.pop_in(info_card, true, 0.96, 0.17, 0.04)
+	UiMotion.pop_in(_actions_row, true, 0.97, 0.16, 0.08)
+	if int(_context.get("dropped_items", 0)) > 0 and bag_icon != null:
+		UiMotion.shake(bag_icon, 4.2, 0.26, true)
 	_start_badge_pulse.call_deferred()
 
 
 func _start_badge_pulse() -> void:
 	if not _open or skull_badge == null or not is_inside_tree():
 		return
-	skull_badge.pivot_offset = skull_badge.size * 0.5
-	if _badge_tween != null:
-		_badge_tween.kill()
-	_badge_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_loops()
-	_badge_tween.tween_property(skull_badge, ^"scale", Vector2(1.045, 1.045), 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_badge_tween.tween_property(skull_badge, ^"scale", Vector2.ONE, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_badge_tween = UiMotion.breathe_emblem(skull_badge, 1.055, 2.2, 1.1, true)
 
 
 func _reset_animation() -> void:
-	if _tween != null:
+	if _tween != null and _tween.is_valid():
 		_tween.kill()
-		_tween = null
-	if _badge_tween != null:
+	_tween = null
+	if _badge_tween != null and _badge_tween.is_valid():
 		_badge_tween.kill()
-		_badge_tween = null
+	_badge_tween = null
+	for ctrl: Control in [card, info_card, _actions_row, bag_icon]:
+		if ctrl != null:
+			UiMotion.stop(ctrl)
 	if skull_badge != null:
-		skull_badge.scale = Vector2.ONE
+		UiMotion.stop(skull_badge, true)
 	if root_control != null:
 		root_control.modulate.a = 1.0
 

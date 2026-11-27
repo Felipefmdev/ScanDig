@@ -57,12 +57,16 @@ var quit_button: Button = null
 var credits_panel: PanelContainer = null
 var credits_view: CreditsView = null
 var slots_panel: PanelContainer = null
+var slots_icon: TextureRect = null
 var slots_title: Label = null
 var slot_buttons: Array[Button] = []
 var slot_delete_buttons: Array[Button] = []
 ## Partes do card de cada slot (#139), na ordem dos slot_buttons.
 var slot_thumbnails: Array[TextureRect] = []
 var slot_thumb_placeholders: Array[Label] = []
+var slot_frames: Array[PanelContainer] = []
+var slot_bars: Array[ProgressBar] = []
+var slot_rows: Array[HBoxContainer] = []
 var slot_title_labels: Array[Label] = []
 var slot_summary_labels: Array[Label] = []
 var slot_meta_labels: Array[Label] = []
@@ -189,11 +193,16 @@ func show_main() -> void:
 func show_slots(mode: String) -> void:
 	slot_mode = mode
 	slots_title.text = str(SLOT_TITLES.get(mode, ""))
+	if slots_icon != null:
+		var slot_icon_name: String = "new" if mode == "new" else ("multiplayer" if mode == "coop" else "load")
+		slots_icon.texture = UiIcons.get_icon(slot_icon_name, 32)
 	refresh_slots()
 	main_card.visible = false
 	confirm_panel.visible = false
 	slots_panel.visible = true
 	_animate_card(slots_panel)
+	for i: int in slot_rows.size():
+		UiMotion.pop_in(slot_rows[i], false, 0.97, 0.15, float(i) * 0.035)
 	var preferred: int = _save().last_used_slot() if _save() != null else -1
 	if preferred < 1:
 		preferred = 1
@@ -279,6 +288,7 @@ func refresh_slots() -> void:
 func _fill_slot_card(i: int, summary: Dictionary) -> void:
 	var exists: bool = bool(summary.get("exists", false))
 	var valid: bool = bool(summary.get("valid", false))
+	var completed: bool = valid and bool(summary.get("game_completed", false))
 	slot_title_labels[i].text = _slot_title(i + 1, summary)
 	slot_summary_labels[i].text = _slot_summary_text(summary)
 	slot_summary_labels[i].add_theme_color_override(&"font_color", UiPalette.INK if exists else UiPalette.WOOD)
@@ -286,7 +296,39 @@ func _fill_slot_card(i: int, summary: Dictionary) -> void:
 	slot_meta_labels[i].visible = valid
 	slot_thumbnails[i].texture = _load_thumbnail(str(summary.get("thumbnail", "")))
 	slot_thumb_placeholders[i].visible = slot_thumbnails[i].texture == null
+	slot_thumb_placeholders[i].add_theme_color_override(&"font_color", UiPalette.WOOD_DARK if exists else Color(UiPalette.WOOD, 0.65))
+	if i < slot_frames.size() and slot_frames[i] != null:
+		var fstyle: StyleBoxFlat = StyleBoxFlat.new()
+		if completed:
+			fstyle.bg_color = UiPalette.PAPER_LIGHT.lerp(UiPalette.GOLD, 0.22)
+			fstyle.border_color = UiPalette.GOLD.darkened(0.15)
+		elif exists:
+			fstyle.bg_color = UiPalette.PAPER_DARK
+			fstyle.border_color = UiPalette.WOOD_DARK
+		else:
+			fstyle.bg_color = UiPalette.PAPER
+			fstyle.border_color = Color(UiPalette.WOOD, 0.55)
+		fstyle.set_border_width_all(2)
+		fstyle.set_corner_radius_all(4)
+		slot_frames[i].add_theme_stylebox_override(&"panel", fstyle)
+	if i < slot_bars.size() and slot_bars[i] != null:
+		var bar: ProgressBar = slot_bars[i]
+		bar.visible = valid
+		if valid:
+			var found: int = int(summary.get("museum_found", 0))
+			var total: int = maxi(int(summary.get("museum_total", 1)), 1)
+			bar.max_value = total
+			bar.value = clampi(found, 0, total)
+			var fill: StyleBoxFlat = StyleBoxFlat.new()
+			fill.bg_color = UiPalette.GREEN_BOTTLE if found >= total else UiPalette.ORANGE
+			fill.border_color = UiPalette.INK
+			fill.set_border_width_all(1)
+			fill.set_corner_radius_all(3)
+			bar.add_theme_stylebox_override(&"fill", fill)
 	var btn: Button = slot_buttons[i]
+	var accent: ColorRect = btn.get_node_or_null(^"CompletedAccent") as ColorRect
+	if accent != null:
+		accent.visible = completed
 	if not exists:
 		var empty_box: StyleBoxFlat = StyleBoxFlat.new()
 		empty_box.bg_color = UiPalette.PAPER
@@ -375,6 +417,7 @@ func _on_slot_pressed(n: int) -> void:
 	match slot_mode:
 		"new":
 			if occupied:
+				confirm_ok_button.icon = UiIcons.get_icon("new", 22)
 				_ask(tr(NEW_GAME_CONFIRM) % n, launch.bind(n, false, SessionManager.LAUNCH_SOLO))
 			else:
 				launch(n, false, SessionManager.LAUNCH_SOLO)
@@ -385,6 +428,7 @@ func _on_slot_pressed(n: int) -> void:
 
 
 func _on_delete_pressed(n: int) -> void:
+	confirm_ok_button.icon = UiIcons.get_icon("trash", 22)
 	_ask(tr(DELETE_CONFIRM) % n, _delete_slot.bind(n))
 
 
@@ -412,6 +456,7 @@ func launch(slot: int, continue_saved: bool, mode: String) -> Error:
 	if error != OK and error != ERR_FILE_CORRUPT and error != ERR_FILE_UNRECOGNIZED:
 		message_label.text = tr("Não foi possível usar o slot %d (erro %d).") % [slot, error]
 		message_label.visible = true
+		UiMotion.shake(message_label, 1.8, 0.22, false)
 		return error
 	SessionManager.launch_mode = mode
 	launched_scene = SessionManager.LOBBY_SCENE
@@ -426,6 +471,7 @@ func _ask(text: String, action: Callable) -> void:
 	slots_panel.visible = false
 	main_card.visible = false
 	confirm_panel.visible = true
+	_animate_card(confirm_panel)
 	confirm_cancel_button.grab_focus()
 
 
@@ -530,22 +576,36 @@ func _build() -> void:
 	# Seletor de slots
 	var slots_box: VBoxContainer = VBoxContainer.new()
 	slots_box.add_theme_constant_override("separation", 10)
+	var slots_header_row: HBoxContainer = HBoxContainer.new()
+	slots_header_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	slots_header_row.add_theme_constant_override(&"separation", 8)
+	slots_icon = TextureRect.new()
+	slots_icon.custom_minimum_size = Vector2(24, 24)
+	slots_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	slots_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	slots_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slots_icon.texture = UiIcons.get_icon("load", 32)
+	slots_header_row.add_child(slots_icon)
 	slots_title = Label.new()
 	slots_title.theme_type_variation = &"TitleLabel"
 	slots_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	slots_box.add_child(slots_title)
+	slots_header_row.add_child(slots_title)
+	slots_box.add_child(slots_header_row)
 	slots_box.add_child(HSeparator.new())
 	for i: int in SaveManager.SLOT_COUNT:
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		var slot_button: Button = _slot_card(i + 1)
 		slot_button.pressed.connect(_on_slot_pressed.bind(i + 1))
-		var delete_button: Button = _button("Apagar", &"DangerButton")
+		var delete_button: Button = _button("Apagar", &"DangerButton", "trash")
+		delete_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		delete_button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		delete_button.custom_minimum_size = Vector2(110, SLOT_CARD_SIZE.y)
 		delete_button.pressed.connect(_on_delete_pressed.bind(i + 1))
 		row.add_child(slot_button)
 		row.add_child(delete_button)
 		slots_box.add_child(row)
+		slot_rows.append(row)
 		slot_buttons.append(slot_button)
 		slot_delete_buttons.append(delete_button)
 	var bottom_row: HBoxContainer = HBoxContainer.new()
@@ -573,6 +633,11 @@ func _build() -> void:
 	confirm_emblem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	confirm_emblem.texture = UiIcons.get_icon("warning", 28)
 	confirm_box.add_child(confirm_emblem)
+	confirm_box.visibility_changed.connect(func() -> void:
+		if confirm_box.is_visible_in_tree():
+			UiMotion.breathe_emblem(confirm_emblem, 1.06, 2.5, 1.1, false)
+		else:
+			UiMotion.stop(confirm_emblem, true))
 	confirm_label = Label.new()
 	confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	confirm_box.add_child(confirm_label)
@@ -596,7 +661,18 @@ func _build() -> void:
 
 	message_label = Label.new()
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	message_label.add_theme_color_override(&"font_color", UiPalette.RED_BURNT)
+	var err_pill: StyleBoxFlat = StyleBoxFlat.new()
+	err_pill.bg_color = UiPalette.PAPER_LIGHT.lerp(UiPalette.RED_BURNT, 0.10)
+	err_pill.border_color = UiPalette.RED_BURNT
+	err_pill.set_border_width_all(2)
+	err_pill.set_corner_radius_all(6)
+	err_pill.content_margin_left = 12.0
+	err_pill.content_margin_right = 12.0
+	err_pill.content_margin_top = 4.0
+	err_pill.content_margin_bottom = 4.0
+	message_label.add_theme_stylebox_override(&"normal", err_pill)
 	message_label.visible = false
 	stack.add_child(message_label)
 
@@ -675,18 +751,48 @@ func _slot_card(n: int) -> Button:
 	frame.add_child(thumb)
 	row.add_child(frame)
 
+	var completed_stripe: ColorRect = ColorRect.new()
+	completed_stripe.name = "CompletedAccent"
+	completed_stripe.color = UiPalette.GOLD
+	completed_stripe.visible = false
+	button.add_child(completed_stripe)
+	completed_stripe.anchor_bottom = 1.0
+	completed_stripe.offset_left = 3.0
+	completed_stripe.offset_right = 7.0
+	completed_stripe.offset_top = 5.0
+	completed_stripe.offset_bottom = -5.0
+
 	var lines: VBoxContainer = VBoxContainer.new()
 	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lines.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	lines.add_theme_constant_override("separation", 2)
+	var title_row: HBoxContainer = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 8)
 	var title: Label = _card_label(20, UiPalette.INK)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(title)
+	var bar: ProgressBar = ProgressBar.new()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(88, 7)
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.focus_mode = Control.FOCUS_NONE
+	var track: StyleBoxFlat = StyleBoxFlat.new()
+	track.bg_color = UiPalette.PAPER_DARK
+	track.border_color = UiPalette.INK
+	track.set_border_width_all(1)
+	track.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override(&"background", track)
+	title_row.add_child(bar)
 	var summary: Label = _card_label(16, UiPalette.INK)
 	var meta: Label = _card_label(15, UiPalette.WOOD)
-	for label: Label in [title, summary, meta]:
+	lines.add_child(title_row)
+	for label: Label in [summary, meta]:
 		lines.add_child(label)
 	row.add_child(lines)
 	for node: Node in button.find_children("*", "Control", true, false):
 		(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot_frames.append(frame)
+	slot_bars.append(bar)
 	slot_thumbnails.append(thumb)
 	slot_thumb_placeholders.append(placeholder)
 	slot_title_labels.append(title)
@@ -717,60 +823,33 @@ func _button(text: String, variation: StringName = &"", icon_name: String = "") 
 		button.icon = UiIcons.get_icon(icon_name, 24)
 		button.expand_icon = false
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		_add_focus_scale(button)
+	_add_focus_scale(button)
 	return button
 
 
-## Hover do mouse e foco por teclado/controle crescem o botão um pouco; o contorno de foco do
-## tema só aparece fora do mouse. Foco com o mouse não cresce (#122): o primeiro botão focado ao
-## abrir (Continuar) fica da largura dos outros, destacado só pela cor.
+## Hover do mouse, foco por teclado/controle e mola de clique (#122, #252). Foco com o mouse não
+## cresce: o primeiro botão focado ao abrir fica da largura dos outros, destacado só pela cor.
 func _add_focus_scale(button: Button) -> void:
-	var feedback_tween: Array[Tween] = [null]
-	var held: Array[bool] = [false]
-	var set_feedback: Callable = func(emphasize: bool) -> void:
-		button.pivot_offset = button.size * 0.5
-		var target_scale: float = BUTTON_FOCUS_SCALE if emphasize else 1.0
-		if held[0]:
-			target_scale = BUTTON_PRESS_SCALE
-		var target: Vector2 = Vector2.ONE * target_scale
-		if feedback_tween[0] != null:
-			feedback_tween[0].kill()
-		if not button.is_inside_tree():
-			button.scale = target
-			return
-		feedback_tween[0] = button.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		feedback_tween[0].tween_property(button, ^"scale", target, BUTTON_FEEDBACK_DURATION)
-	button.mouse_entered.connect(set_feedback.bind(true))
-	button.focus_entered.connect(func() -> void: set_feedback.call(not InputDevice.using_pointer()))
-	button.mouse_exited.connect(func() -> void: set_feedback.call(button.has_focus() and not InputDevice.using_pointer()))
-	button.focus_exited.connect(func() -> void: set_feedback.call(button.is_hovered()))
-	button.button_down.connect(func() -> void:
-		held[0] = true
-		set_feedback.call(false)
-	)
-	button.button_up.connect(func() -> void:
-		held[0] = false
-		set_feedback.call(button.is_hovered() or (button.has_focus() and not InputDevice.using_pointer()))
-	)
+	UiMotion.attach_button(button, BUTTON_FOCUS_SCALE, BUTTON_PRESS_SCALE)
 
 
 func _animate_card(card: Control) -> void:
-	if _card_tween != null:
-		_card_tween.kill()
-	if is_instance_valid(_animated_card):
-		_animated_card.modulate.a = 1.0
+	if is_instance_valid(_animated_card) and _animated_card != card:
+		UiMotion.stop(_animated_card)
 	_animated_card = card
-	card.modulate.a = 0.8
-	_card_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_card_tween.tween_property(card, ^"modulate:a", 1.0, CARD_FADE_DURATION)
+	_card_tween = UiMotion.pop_in(card, false, 0.955, CARD_FADE_DURATION)
 
 
-## Balanço lento do logo (rotação em volta do centro), em loop.
+## Balanço lento do logo (rotação + respiração sutil de escala em volta do centro), em loop.
 func _animate_logo(logo: Label) -> void:
 	logo.resized.connect(func() -> void: logo.pivot_offset = logo.size * 0.5)
+	if UiMotion.is_snapshot():
+		return
 	var tween: Tween = logo.create_tween().set_loops().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(logo, "rotation", deg_to_rad(LOGO_SWAY_DEG), LOGO_SWAY_SECONDS)
+	tween.parallel().tween_property(logo, "scale", Vector2(1.022, 1.022), LOGO_SWAY_SECONDS)
 	tween.tween_property(logo, "rotation", deg_to_rad(-LOGO_SWAY_DEG), LOGO_SWAY_SECONDS)
+	tween.parallel().tween_property(logo, "scale", Vector2.ONE, LOGO_SWAY_SECONDS)
 
 
 func _card(child: Control) -> PanelContainer:
