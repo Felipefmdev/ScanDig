@@ -139,23 +139,49 @@ func _on_weather_changed(kind: String, phase: String) -> void:
 				show_toast(CLEAR_TEXT)
 
 
+static func _bg_for_icon(icon_name: String) -> Color:
+	match icon_name:
+		"sun":
+			return UiPalette.GREEN_BOTTLE
+		"ash":
+			return UiPalette.WOOD_DARK.lerp(UiPalette.RED_BURNT, 0.48)
+		"rain", "snow":
+			return UiPalette.METAL.darkened(0.28)
+	return UiPalette.GREEN_BOTTLE
+
+
+func _apply_toast_tone(panel: PanelContainer, bg: Color) -> void:
+	var base: StyleBoxFlat = panel.get_theme_stylebox(&"panel", &"ToastPanel") as StyleBoxFlat
+	var box: StyleBoxFlat = base.duplicate() as StyleBoxFlat if base != null else StyleBoxFlat.new()
+	if base == null:
+		box.set_border_width_all(2)
+		box.border_color = UiPalette.INK
+		box.set_corner_radius_all(6)
+		box.content_margin_left = 14.0
+		box.content_margin_right = 14.0
+		box.content_margin_top = 8.0
+		box.content_margin_bottom = 8.0
+	box.bg_color = bg
+	panel.add_theme_stylebox_override(&"panel", box)
+
+
 func show_toast(text: String) -> void:
 	if text.is_empty():
 		return
 	_cancel_toast_tween()
 	toast_label.text = text
+	var icon_name: String = _icon_for_toast(text)
+	_apply_toast_tone(toast_panel, _bg_for_icon(icon_name))
 	if _toast_icon != null:
-		var icon_name: String = _icon_for_toast(text)
 		_toast_icon.texture = UiIcons.get_icon(icon_name, 22) if not icon_name.is_empty() else null
 		_toast_icon.visible = _toast_icon.texture != null
 	toast_panel.modulate.a = 1.0
 	toast_panel.show()
 	if not is_inside_tree():
 		return
-	toast_panel.modulate.a = 0.8
+	UiMotion.toast_enter(toast_panel, _toast_icon, false)
 	_toast_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_STOP)
-	_toast_tween.tween_property(toast_panel, ^"modulate:a", 1.0, TOAST_ENTER_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_toast_tween.tween_interval(TOAST_SECONDS - TOAST_ENTER_DURATION)
+	_toast_tween.tween_interval(TOAST_SECONDS)
 	_toast_tween.tween_property(toast_panel, ^"modulate:a", 0.0, TOAST_EXIT_DURATION)
 	_toast_tween.tween_callback(toast_panel.hide)
 
@@ -188,3 +214,5 @@ func _cancel_toast_tween() -> void:
 	if _toast_tween != null:
 		_toast_tween.kill()
 		_toast_tween = null
+	UiMotion.stop(toast_panel)
+	UiMotion.stop(_toast_icon)

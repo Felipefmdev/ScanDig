@@ -124,6 +124,13 @@ func _render(c: CarriedItem) -> Texture2D:
 	sun.light_energy = 1.25
 	viewport.add_child(sun)
 	sun.look_at_from_position(Vector3(1.0, 2.0, 1.5), Vector3.ZERO)
+	var rim: DirectionalLight3D = DirectionalLight3D.new()
+	var is_rare: bool = not c.is_tool() and c.is_rare_variant
+	rim.light_color = UiPalette.GOLD.lightened(0.25) if is_rare else Color(1.0, 0.96, 0.88)
+	rim.light_energy = 0.68 if is_rare else 0.44
+	rim.shadow_enabled = false
+	viewport.add_child(rim)
+	rim.look_at_from_position(Vector3(-1.4, 0.85, -1.3), Vector3.ZERO)
 	var camera: Camera3D = Camera3D.new()
 	camera.fov = FOV
 	camera.current = true

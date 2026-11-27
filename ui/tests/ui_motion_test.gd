@@ -137,6 +137,64 @@ func _run() -> void:
 		"HUD atualiza dinheiro de forma síncrona em modo instantâneo")
 	hud.free()
 
+	# 9. Tons semânticos (#258): WeatherHud, CaptionsHud e SaveToast + som de abas em UISounds.
+	if WeatherHud.instance != null:
+		WeatherHud.instance.show_toast(WeatherHud.WARNING_TEXTS[WeatherManager.KIND_RAIN])
+		var rain_box: StyleBoxFlat = WeatherHud.instance.toast_panel.get_theme_stylebox(&"panel") as StyleBoxFlat
+		_check(rain_box != null and not rain_box.bg_color.is_equal_approx(UiPalette.GREEN_BOTTLE),
+			"WeatherHud usa tom de tempestade distinto de GREEN_BOTTLE na chuva")
+		WeatherHud.instance.show_toast(WeatherHud.CLEAR_TEXT)
+		var clear_box: StyleBoxFlat = WeatherHud.instance.toast_panel.get_theme_stylebox(&"panel") as StyleBoxFlat
+		_check(clear_box != null and clear_box.bg_color.is_equal_approx(UiPalette.GREEN_BOTTLE),
+			"WeatherHud preserva GREEN_BOTTLE em tempo limpo")
+		WeatherHud.instance.hide_toast()
+	if CaptionsHud.instance != null:
+		var cap_danger: PanelContainer = CaptionsHud.instance.show_line(A11y.CAPTION_CREATURE)
+		var cap_box: StyleBoxFlat = cap_danger.get_theme_stylebox(&"panel") as StyleBoxFlat
+		_check(cap_box != null and not cap_box.bg_color.is_equal_approx(UiPalette.GREEN_BOTTLE),
+			"CaptionsHud usa tom de alerta em legenda de perigo")
+		CaptionsHud.instance.clear()
+	if SessionUI.instance != null and SessionUI.instance.save_toast_panel != null:
+		var save_box: StyleBoxFlat = SessionUI.instance.save_toast_panel.get_theme_stylebox(&"panel") as StyleBoxFlat
+		_check(save_box != null and save_box.bg_color.is_equal_approx(UiPalette.RED_BURNT),
+			"SaveToast usa RED_BURNT para erro de gravação/versão")
+	var session_ui: SessionUI = SessionUI.instance
+	if session_ui != null:
+		UiMotion.force_enabled = true
+		var earned_only: Dictionary = {"entries": [], "money_start": 100, "money_end": 150, "money_earned": 50}
+		var final_total: String = tr("Total ganho: %s  (saldo: %s → %s)") % [UiFormat.money(50), UiFormat.money(100), UiFormat.money(150)]
+		session_ui._show_summary(earned_only)
+		_check(session_ui.summary_total_label.text.contains(tr("Total ganho: %s  (saldo: %s → %s)") % [UiFormat.money(0), UiFormat.money(100), UiFormat.money(100)]),
+			"o total do resumo começa em zero para ganhos sem venda ou doação")
+		await _wait(0.34)
+		_check(session_ui.summary_total_label.text.contains(final_total), "o total do resumo converge para o ganho líquido")
+		UiMotion.force_enabled = false
+		session_ui._on_leave_pressed()
+		session_ui.summary_close_button.grab_focus()
+		session_ui._on_summary_close_pressed()
+		_check(session_ui.leave_confirm_panel.visible and session_ui.leave_cancel_button.has_focus(),
+			"fechar o resumo devolve o foco à confirmação aberta")
+		session_ui._on_leave_cancel_pressed()
+	var tabs: TabContainer = TabContainer.new()
+	var page0: Control = Control.new()
+	page0.name = "A"
+	var page1: Control = Control.new()
+	page1.name = "B"
+	tabs.add_child(page0)
+	tabs.add_child(page1)
+	host.add_child(tabs)
+	await process_frame
+	var ui_sounds: UISounds = root.get_node_or_null(^"CoreUISounds") as UISounds
+	if ui_sounds != null:
+		var before_clicks: int = ui_sounds.played_count
+		tabs.current_tab = 1
+		_check(ui_sounds.played_count == before_clicks,
+			"troca programática de current_tab não dispara som")
+		tabs.get_tab_bar().tab_clicked.emit(0)
+		_check(ui_sounds.played_count == before_clicks + 1 and ui_sounds.last_played == &"click",
+			"clique em TabBar dispara UI_CLICK")
+	tabs.free()
+
 	host.free()
 	await process_frame
 	print("RESULT fails=%d" % _fails)

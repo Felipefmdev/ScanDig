@@ -80,6 +80,7 @@ var toast_panel: Control = null
 var _focus_before: Control = null
 var toast_label: Label = null
 var _toast_icon: TextureRect = null
+var _summary_title_icon: TextureRect = null
 ## Aviso de save: em qualquer tela (título, base, mapa) e por cima do carregamento.
 var save_toast_panel: PanelContainer = null
 var save_toast_label: Label = null
@@ -101,6 +102,7 @@ var _toast_token: int = 0
 var _save_toast_token: int = 0
 var _save_toast_active: bool = false
 var _loading_tween: Tween = null
+var _summary_money_tween: Tween = null
 ## Último resumo do dia mostrado (refeito ao trocar o idioma com ele aberto).
 var _last_summary: Dictionary = {}
 
@@ -156,6 +158,11 @@ func _ready() -> void:
 	leave_cancel_button.pressed.connect(_on_leave_cancel_pressed)
 	summary_close_button.pressed.connect(_on_summary_close_pressed)
 	host_lost_close_button.pressed.connect(_on_host_lost_close_pressed)
+	for btn: Button in [leave_button, leave_confirm_button, leave_cancel_button, summary_close_button, host_lost_close_button]:
+		UiMotion.attach_button(btn)
+	for panel_root: Control in [expedition_bar, summary_panel, host_lost_panel, leave_confirm_panel]:
+		if panel_root != null:
+			UiFocus.follow_pointer(panel_root.get_node_or_null(^"Margin") as Control)
 	multiplayer.connected_to_server.connect(_refresh_expedition_bar)
 	multiplayer.server_disconnected.connect(_refresh_expedition_bar)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -253,19 +260,43 @@ func _setup_visual_icons() -> void:
 		medallion.add_theme_stylebox_override(&"panel", med_style)
 	var loading_icon: TextureRect = get_node_or_null(^"%LoadingIcon") as TextureRect
 	if loading_icon != null:
-		loading_icon.texture = UiIcons.get_icon("detector", 56)
+		loading_icon.texture = UiIcons.get_icon("detector", 36)
 		loading_screen.visibility_changed.connect(_sync_loading_anim.bind(loading_icon))
 		_sync_loading_anim(loading_icon)
 	var total_icon: TextureRect = get_node_or_null(^"%SummaryTotalIcon") as TextureRect
 	if total_icon != null:
 		total_icon.texture = UiIcons.get_icon("coin", 24)
+	if summary_title_label != null and not (summary_title_label.get_parent() is HBoxContainer):
+		var sum_vbox: Control = summary_title_label.get_parent() as Control
+		var sum_idx: int = summary_title_label.get_index()
+		var sum_header_row: HBoxContainer = HBoxContainer.new()
+		sum_header_row.name = "SummaryTitleRow"
+		sum_header_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		sum_header_row.add_theme_constant_override(&"separation", 8)
+		sum_vbox.add_child(sum_header_row)
+		sum_vbox.move_child(sum_header_row, sum_idx)
+		_summary_title_icon = TextureRect.new()
+		_summary_title_icon.name = "SummaryTitleIcon"
+		_summary_title_icon.custom_minimum_size = Vector2(24, 24)
+		_summary_title_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_summary_title_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_summary_title_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_summary_title_icon.texture = UiIcons.get_icon("sun", 32)
+		sum_header_row.add_child(_summary_title_icon)
+		summary_title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		summary_title_label.reparent(sum_header_row, false)
 	summary_list.fixed_icon_size = Vector2i(20, 20)
 	if leave_confirm_button != null:
 		leave_confirm_button.icon = UiIcons.get_icon("door", 18)
+		leave_confirm_button.custom_minimum_size = Vector2(148, 44)
+	if leave_cancel_button != null:
+		leave_cancel_button.custom_minimum_size = Vector2(148, 44)
 	if summary_close_button != null:
 		summary_close_button.icon = UiIcons.get_icon("check", 18)
+		summary_close_button.custom_minimum_size = Vector2(180, 44)
 	if host_lost_close_button != null:
 		host_lost_close_button.icon = UiIcons.get_icon("check", 18)
+		host_lost_close_button.custom_minimum_size = Vector2(148, 44)
 	for emblem_path: NodePath in [^"%HostLostIcon", ^"%LeaveConfirmIcon"]:
 		var emblem: TextureRect = get_node_or_null(emblem_path) as TextureRect
 		if emblem != null:
@@ -273,7 +304,13 @@ func _setup_visual_icons() -> void:
 	var backdrop: Control = get_node_or_null(^"%ModalBackdrop") as Control
 	if backdrop != null:
 		var sync_backdrop: Callable = func() -> void:
-			backdrop.visible = summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible
+			var should_show: bool = summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible
+			var was_visible: bool = backdrop.visible
+			backdrop.visible = should_show
+			if should_show and not was_visible:
+				UiMotion.fade_backdrop(backdrop, true)
+			elif not should_show:
+				UiMotion.stop(backdrop)
 		for modal: Control in [summary_panel, host_lost_panel, leave_confirm_panel]:
 			modal.visibility_changed.connect(sync_backdrop)
 		sync_backdrop.call()
@@ -283,25 +320,37 @@ func _sync_loading_anim(loading_icon: TextureRect) -> void:
 	if _loading_tween != null:
 		_loading_tween.kill()
 		_loading_tween = null
+	var medallion: Control = get_node_or_null(^"%LoadingMedallion") as Control
+	if medallion != null:
+		medallion.scale = Vector2.ONE
 	if loading_icon == null:
 		return
 	loading_icon.rotation_degrees = 0.0
 	if loading_screen == null or not loading_screen.visible or not is_inside_tree():
 		return
 	loading_icon.pivot_offset = Vector2(28.0, 28.0)
+	if UiMotion.is_instant():
+		return
+	if medallion != null:
+		UiMotion.sync_center_pivot(medallion)
 	_loading_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_loops()
 	_loading_tween.tween_property(loading_icon, ^"rotation_degrees", 7.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if medallion != null:
+		_loading_tween.parallel().tween_property(medallion, ^"scale", Vector2(1.038, 1.038), 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_loading_tween.tween_property(loading_icon, ^"rotation_degrees", -7.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if medallion != null:
+		_loading_tween.parallel().tween_property(medallion, ^"scale", Vector2.ONE, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 func _sync_toast_icon() -> void:
 	if _toast_icon == null or toast_label == null:
 		return
 	var text: String = toast_label.text
+	var icon_name: String = ""
 	var show_icon: bool = not text.is_empty() and not text.begins_with("📖") and not text.begins_with("🏆")
 	if show_icon:
 		var low: String = text.to_lower()
-		var icon_name: String = "new"
+		icon_name = "new"
 		if low.contains("segredo") or low.contains("secret"):
 			icon_name = "gem"
 		elif low.contains("conquista") or low.contains("achievement"):
@@ -314,7 +363,30 @@ func _sync_toast_icon() -> void:
 		_toast_icon.visible = _toast_icon.texture != null
 	else:
 		_toast_icon.visible = false
+	_apply_toast_accent(text.begins_with("🏆") or icon_name == "trophy" or icon_name == "lock", icon_name == "lock")
 	_fit_toast_label_wrap()
+
+
+func _apply_toast_accent(gold_border: bool, warm_fill: bool) -> void:
+	if toast_panel == null:
+		return
+	if not gold_border:
+		toast_panel.remove_theme_stylebox_override(&"panel")
+		return
+	var base: StyleBoxFlat = toast_panel.get_theme_stylebox(&"panel", &"ToastPanel") as StyleBoxFlat
+	if base == null and toast_panel.theme != null:
+		base = toast_panel.theme.get_stylebox(&"panel", &"ToastPanel") as StyleBoxFlat
+	var box: StyleBoxFlat = base.duplicate() as StyleBoxFlat if base != null else StyleBoxFlat.new()
+	if base == null:
+		box.set_border_width_all(2)
+		box.set_corner_radius_all(6)
+		box.content_margin_left = 14.0
+		box.content_margin_right = 14.0
+		box.content_margin_top = 8.0
+		box.content_margin_bottom = 8.0
+	box.bg_color = UiPalette.WOOD_DARK if warm_fill else UiPalette.GREEN_BOTTLE
+	box.border_color = UiPalette.GOLD
+	toast_panel.add_theme_stylebox_override(&"panel", box)
 
 
 func _fit_toast_label_wrap() -> void:
@@ -420,10 +492,24 @@ func _is_online() -> bool:
 
 # --- Barra de expedição -------------------------------------------------------
 
+func _is_world_shop_open() -> bool:
+	if not is_inside_tree():
+		return false
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return false
+	for shop: Node in tree.get_nodes_in_group(&"world_upgrade_shops"):
+		if shop != null and is_instance_valid(shop) and shop.has_method(&"is_open") and bool(shop.call(&"is_open")):
+			return true
+	return false
+
+
 func _refresh_expedition_bar() -> void:
+	var was_visible: bool = expedition_bar.visible
 	var in_expedition: bool = bool(_session_call(&"is_in_expedition", false)) \
 			and not bool(_session_call(&"is_starting_expedition", false))
-	expedition_bar.visible = in_expedition and not loading_screen.visible
+	var modal_blocking: bool = summary_panel.visible or host_lost_panel.visible or leave_confirm_panel.visible or _is_world_shop_open() or PauseMenu.is_open() or VictoryScreen.is_open() or DeathScreen.is_open()
+	expedition_bar.visible = in_expedition and not loading_screen.visible and not modal_blocking
 	var can_leave: bool = in_expedition and _is_online()
 	# Solo/offline: "Voltar à base" (pausa) é o caminho; online, host e clientes podem sair.
 	leave_button.visible = can_leave
@@ -432,13 +518,21 @@ func _refresh_expedition_bar() -> void:
 		_update_mouse()
 	if not in_expedition:
 		return
+	var night: bool = SessionManager.is_night()
+	var bar_icon: TextureRect = expedition_info_label.get_node_or_null(^"Icon") as TextureRect
+	if bar_icon != null:
+		bar_icon.texture = UiIcons.get_icon("moon" if night else "map", 32)
 	var map_name: String = tr("Mapa desconhecido")
 	var map: MapData = _session_call(&"get_current_map") as MapData
 	if map != null:
 		map_name = tr(map.display_name) if not map.display_name.is_empty() else map.id
+	if night:
+		map_name = tr("%s (noite)") % map_name
 	var day: int = GameState.instance.current_day if GameState.instance != null else 1
 	expedition_info_label.text = tr("%s  •  Dia %d") % [map_name, day]
 	leave_button.disabled = false
+	if expedition_bar.visible and not was_visible:
+		UiMotion.pop_in(expedition_bar, false, 0.96, 0.18)
 
 
 ## "Voltar à base" do menu de pausa (#122): só o host, em expedição. Retorna se pediu.
@@ -453,17 +547,27 @@ func request_return_to_base() -> bool:
 func _on_leave_pressed() -> void:
 	leave_confirm_label.text = LEAVE_HOST_TEXT if _is_host() else LEAVE_CLIENT_TEXT
 	leave_confirm_panel.visible = true
+	UiMotion.pop_in(leave_confirm_panel, true)
+	UiMotion.breathe_emblem(get_node_or_null(^"%LeaveConfirmIcon") as Control, 1.06, 2.5, 1.0, true)
 	_update_mouse()
 	_focus_panel([leave_cancel_button, leave_confirm_button], leave_cancel_button)
+	expedition_bar.visible = false
 
 
 func _on_leave_cancel_pressed() -> void:
+	UiMotion.stop(get_node_or_null(^"%LeaveConfirmIcon") as Control, true)
+	UiMotion.stop(leave_confirm_panel)
 	leave_confirm_panel.visible = false
+	_refresh_expedition_bar()
 	_update_mouse()
+	if summary_panel.visible and get_viewport().gui_get_focus_owner() == null:
+		summary_close_button.grab_focus()
 	_restore_focus()
 
 
 func _on_leave_confirm_pressed() -> void:
+	UiMotion.stop(get_node_or_null(^"%LeaveConfirmIcon") as Control, true)
+	UiMotion.stop(leave_confirm_panel)
 	leave_confirm_panel.visible = false
 	_update_mouse()
 	if NetworkManager.instance == null:
@@ -475,6 +579,8 @@ func _on_leave_confirm_pressed() -> void:
 
 ## O próprio peer saiu: o SessionManager volta ao lobby sozinho, sem host_lost nem resumo.
 func _on_session_left(_was_host: bool) -> void:
+	UiMotion.stop(get_node_or_null(^"%LeaveConfirmIcon") as Control, true)
+	UiMotion.stop(leave_confirm_panel)
 	leave_confirm_panel.visible = false
 	_clear_toasts()
 	expedition_bar.visible = false
@@ -490,7 +596,10 @@ func _on_scene_changing(target_scene: String) -> void:
 	elif target_scene.contains("map_"):
 		text = "Partindo para a expedição..."
 	loading_label.text = text
+	var was_loading: bool = loading_screen.visible
 	loading_screen.visible = true
+	if not was_loading:
+		UiMotion.pop_in(get_node_or_null(^"%LoadingCard") as Control, true, 0.95, 0.20)
 	_refresh_expedition_bar()
 	_loading_token += 1
 	var token: int = _loading_token
@@ -546,9 +655,17 @@ func _on_expedition_ended(summary: Dictionary) -> void:
 
 func _on_host_lost() -> void:
 	expedition_bar.visible = false
+	if _summary_money_tween != null:
+		_summary_money_tween.kill()
+		_summary_money_tween = null
+	UiMotion.stop(summary_panel)
+	UiMotion.stop(get_node_or_null(^"%LeaveConfirmIcon") as Control, true)
+	UiMotion.stop(leave_confirm_panel)
 	summary_panel.visible = false
 	leave_confirm_panel.visible = false
 	host_lost_panel.visible = true
+	UiMotion.pop_in(host_lost_panel, true)
+	UiMotion.breathe_emblem(get_node_or_null(^"%HostLostIcon") as Control, 1.06, 2.5, 1.0, true)
 	_update_mouse()
 	_focus_panel([host_lost_close_button], host_lost_close_button)
 
@@ -573,6 +690,7 @@ func _on_connected_to_server() -> void:
 func _clear_toasts() -> void:
 	_toast_queue.clear()
 	_toast_token += 1
+	UiMotion.stop(toast_panel)
 	toast_panel.visible = false
 
 
@@ -624,18 +742,32 @@ func _enqueue_toast(text: String, anywhere: bool = false) -> void:
 ## Um aviso por vez; cada um fica TOAST_SEC na tela.
 func _show_next_toast() -> void:
 	if _toast_queue.is_empty():
+		UiMotion.stop(toast_panel)
 		toast_panel.visible = false
 		return
 	toast_label.text = _toast_queue.pop_front()
-	toast_panel.visible = true
 	_sync_toast_icon()
+	toast_panel.visible = true
 	_place_toast()
+	UiMotion.toast_enter(toast_panel, _toast_icon, true)
 	_toast_token += 1
 	var token: int = _toast_token
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
-	await tree.create_timer(TOAST_SEC, true, false, true).timeout
+	if UiMotion.is_instant():
+		await tree.create_timer(TOAST_SEC, true, false, true).timeout
+		if not is_inside_tree() or token != _toast_token:
+			return
+		_show_next_toast()
+		return
+	await tree.create_timer(maxf(TOAST_SEC - UiMotion.TOAST_OUT_DURATION, 0.1), true, false, true).timeout
+	if not is_inside_tree() or token != _toast_token:
+		return
+	var exit_tw: Tween = toast_panel.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	exit_tw.tween_property(toast_panel, ^"modulate:a", 0.0, UiMotion.TOAST_OUT_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	toast_panel.set_meta(UiMotion.META_TWEEN, exit_tw)
+	await exit_tw.finished
 	if not is_inside_tree() or token != _toast_token:
 		return
 	_show_next_toast()
@@ -685,6 +817,7 @@ func _free_toast_strip(view: Rect2, top: float, bottom: float) -> Vector2:
 
 ## Altura do texto completo; nenhum reposicionamento reinicia a fila ou o timer.
 func _fit_toast_height() -> void:
+	_fit_toast_label_wrap()
 	var height: float = maxf(_toast_home.size.y, toast_panel.get_combined_minimum_size().y)
 	toast_panel.offset_bottom = toast_panel.offset_top + height
 	if save_toast_panel != null and save_toast_panel.visible:
@@ -717,6 +850,19 @@ func _build_save_toast() -> void:
 	save_toast_panel.name = "SaveToast"
 	save_toast_panel.theme = toast_panel.theme
 	save_toast_panel.theme_type_variation = &"ToastPanel"
+	var err_base: StyleBoxFlat = toast_panel.theme.get_stylebox(&"panel", &"ToastPanel") as StyleBoxFlat if toast_panel.theme != null else null
+	var err_box: StyleBoxFlat = err_base.duplicate() as StyleBoxFlat if err_base != null else StyleBoxFlat.new()
+	if err_base == null:
+		err_box.set_border_width_all(2)
+		err_box.border_color = UiPalette.INK
+		err_box.set_corner_radius_all(6)
+		err_box.content_margin_left = 14.0
+		err_box.content_margin_right = 14.0
+		err_box.content_margin_top = 8.0
+		err_box.content_margin_bottom = 8.0
+	err_box.bg_color = UiPalette.RED_BURNT
+	err_box.border_color = UiPalette.INK
+	save_toast_panel.add_theme_stylebox_override(&"panel", err_box)
 	save_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	save_toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_reset_save_toast_place()
@@ -781,6 +927,8 @@ func show_save_toast(text: String) -> void:
 	save_toast_label.text = text
 	save_toast_panel.visible = true
 	_reset_save_toast_place()
+	var save_icon: Control = save_toast_panel.find_child("SaveToastIcon", true, false) as Control
+	UiMotion.toast_enter(save_toast_panel, save_icon, true)
 	# Depois dos outros ouvintes do sinal: o painel do menu já tem o aviso dele.
 	refresh_save_toast_layout.call_deferred()
 	_save_toast_token += 1
@@ -788,7 +936,18 @@ func show_save_toast(text: String) -> void:
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
-	await tree.create_timer(SAVE_TOAST_SEC, true, false, true).timeout
+	if UiMotion.is_instant():
+		await tree.create_timer(SAVE_TOAST_SEC, true, false, true).timeout
+		if is_inside_tree() and token == _save_toast_token:
+			hide_save_toast()
+		return
+	await tree.create_timer(maxf(SAVE_TOAST_SEC - UiMotion.TOAST_OUT_DURATION, 0.1), true, false, true).timeout
+	if not is_inside_tree() or token != _save_toast_token:
+		return
+	var exit_tw: Tween = save_toast_panel.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	exit_tw.tween_property(save_toast_panel, ^"modulate:a", 0.0, UiMotion.TOAST_OUT_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	save_toast_panel.set_meta(UiMotion.META_TWEEN, exit_tw)
+	await exit_tw.finished
 	if is_inside_tree() and token == _save_toast_token:
 		hide_save_toast()
 
@@ -873,6 +1032,7 @@ func hide_save_toast() -> void:
 	_save_toast_token += 1
 	_save_toast_active = false
 	if save_toast_panel != null:
+		UiMotion.stop(save_toast_panel)
 		save_toast_panel.visible = false
 
 
@@ -892,10 +1052,22 @@ func _notification(what: int) -> void:
 func _show_summary(summary: Dictionary) -> void:
 	_last_summary = summary
 	var day: int = int(summary.get("day", 0))
+	var is_night: bool = bool(summary.get("night", false))
 	var map_name: String = tr(str(summary.get("map_name", summary.get("map_id", ""))))
-	if bool(summary.get("night", false)):
+	if is_night:
 		map_name = tr("%s (noite)") % map_name
+	if _summary_title_icon != null:
+		_summary_title_icon.texture = UiIcons.get_icon("moon" if is_night else "sun", 32)
 	summary_title_label.text = tr("Resumo do Dia %d — %s") % [day, map_name]
+	var title_font: Font = summary_title_label.get_theme_font(&"font")
+	var title_size: int = summary_title_label.get_theme_font_size(&"font_size")
+	var title_w: float = title_font.get_string_size(summary_title_label.atr(summary_title_label.text), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x if title_font != null else 0.0
+	if title_w > 480.0:
+		summary_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		summary_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		summary_title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		summary_title_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	summary_list.clear()
 	var entries: Array = []
 	if summary.get("entries") is Array:
@@ -926,27 +1098,76 @@ func _show_summary(summary: Dictionary) -> void:
 	if summary_list.item_count == 0:
 		var empty_idx: int = summary_list.add_item(tr("Nenhum item vendido ou doado nesta expedição."), UiIcons.get_icon("compass", 24))
 		summary_list.set_item_custom_fg_color(empty_idx, UiPalette.WOOD)
-	var money_end: int = int(summary.get("money_end", 0))
-	var balance: String = UiFormat.money(money_end)
-	if summary.has("money_start"):
-		balance = "%s → %s" % [UiFormat.money(int(summary["money_start"])), balance]
-	summary_total_label.text = "\n".join(PackedStringArray([
-		"%s  +%s" % [tr("Vendido"), UiFormat.money(sold)],
-		"%s  +%s" % [tr("Doado ao museu"), UiFormat.money(donated)],
-		tr("Saldo da equipe: %s") % balance,
-	]))
+	if _summary_money_tween != null:
+		_summary_money_tween.kill()
+		_summary_money_tween = null
+	summary_total_label.text = _format_summary_total(sold, donated, summary, 1.0)
+	var already_open: bool = summary_panel.visible
 	summary_panel.visible = true
+	if not already_open:
+		UiMotion.pop_in(summary_panel, true)
+		UiMotion.switch_tab_page(summary_list, true, 0.16)
+		var total_icon_ctrl: Control = get_node_or_null(^"%SummaryTotalIcon") as Control
+		UiMotion.pulse(total_icon_ctrl, 1.18, 0.24, true)
+		if total_icon_ctrl != null and total_icon_ctrl.get_parent() != null:
+			UiMotion.pulse(total_icon_ctrl.get_parent().get_parent() as Control, 1.022, 0.20, true)
+		if not UiMotion.is_instant() and int(summary.get("money_earned", 0)) > 0 and is_inside_tree():
+			summary_total_label.text = _format_summary_total(sold, donated, summary, 0.0)
+			_summary_money_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+			_summary_money_tween.tween_method(func(ratio: float) -> void:
+				if summary_total_label != null:
+					summary_total_label.text = _format_summary_total(sold, donated, summary, ratio),
+				0.0, 1.0, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			_summary_money_tween.tween_callback(func() -> void:
+				if summary_total_label != null:
+					summary_total_label.text = _format_summary_total(sold, donated, summary, 1.0)
+				_summary_money_tween = null)
 	_update_mouse()
 	_focus_panel([summary_list, summary_close_button], summary_close_button)
+	expedition_bar.visible = false
+
+
+func _format_summary_total(sold_val: int, donated_val: int, summary: Dictionary, ratio: float) -> String:
+	var cur_sold: int = roundi(float(sold_val) * ratio)
+	var cur_donated: int = roundi(float(donated_val) * ratio)
+	var money_end: int = int(summary.get("money_end", 0))
+	var earned: int = int(summary.get("money_earned", 0))
+	var money_start: int = int(summary.get("money_start", money_end - earned))
+	var balance: String = UiFormat.money(money_end)
+	if summary.has("money_start"):
+		balance = "%s → %s" % [UiFormat.money(money_start), balance]
+	var total_line: String = tr("Saldo da equipe: %s") % balance
+	if earned > 0:
+		var shown_end: int = roundi(lerpf(float(money_start), float(money_end), ratio))
+		total_line = tr("Total ganho: %s  (saldo: %s → %s)") % [
+			UiFormat.money(roundi(float(earned) * ratio)), UiFormat.money(money_start), UiFormat.money(shown_end),
+		]
+	return "\n".join(PackedStringArray([
+		"%s  +%s" % [tr("Vendido"), UiFormat.money(cur_sold)],
+		"%s  +%s" % [tr("Doado ao museu"), UiFormat.money(cur_donated)],
+		total_line,
+	]))
 
 
 func _on_summary_close_pressed() -> void:
+	if _summary_money_tween != null:
+		_summary_money_tween.kill()
+		_summary_money_tween = null
+	UiMotion.stop(summary_panel)
 	summary_panel.visible = false
+	if not leave_confirm_panel.visible:
+		_refresh_expedition_bar()
 	_update_mouse()
+	if leave_confirm_panel.visible:
+		var focus: Control = get_viewport().gui_get_focus_owner()
+		if focus == null or not leave_confirm_panel.is_ancestor_of(focus):
+			leave_cancel_button.grab_focus()
 	_restore_focus()
 
 
 func _on_host_lost_close_pressed() -> void:
+	UiMotion.stop(get_node_or_null(^"%HostLostIcon") as Control, true)
+	UiMotion.stop(host_lost_panel)
 	host_lost_panel.visible = false
 	_update_mouse()
 	_restore_focus()

@@ -77,7 +77,9 @@ func show_line(text: String) -> PanelContainer:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override(&"separation", 6)
 	panel.add_child(row)
+	var icon_ctrl: TextureRect = null
 	var icon_name: String = _icon_for_caption(text)
+	_apply_caption_tone(panel, icon_name)
 	if not icon_name.is_empty():
 		var icon: TextureRect = TextureRect.new()
 		icon.name = "CaptionIcon"
@@ -88,6 +90,7 @@ func show_line(text: String) -> PanelContainer:
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon.texture = UiIcons.get_icon(icon_name, 18)
 		row.add_child(icon)
+		icon_ctrl = icon
 	var label: Label = Label.new()
 	label.name = "CaptionLabel"
 	label.theme_type_variation = &"ToastLabel"
@@ -95,6 +98,7 @@ func show_line(text: String) -> PanelContainer:
 	label.text = text
 	row.add_child(label)
 	stack.add_child(panel)
+	UiMotion.toast_enter(panel, icon_ctrl, false)
 	# Nunca mais linhas que o A11y deixa: a mais velha sai (avisos não passam pelo limite).
 	while stack.get_child_count() > A11y.CAPTION_MAX:
 		var oldest: Node = stack.get_child(0)
@@ -103,6 +107,32 @@ func show_line(text: String) -> PanelContainer:
 	if is_inside_tree():
 		_expire(panel)
 	return panel
+
+
+static func _bg_for_icon(icon_name: String) -> Color:
+	match icon_name:
+		"skull", "warning":
+			return UiPalette.RED_BURNT.darkened(0.10)
+		"rain":
+			return UiPalette.METAL.darkened(0.28)
+		"check":
+			return UiPalette.WOOD_DARK
+	return UiPalette.WOOD_DARK
+
+
+func _apply_caption_tone(panel: PanelContainer, icon_name: String) -> void:
+	var base: StyleBoxFlat = THEME.get_stylebox(&"panel", &"ToastPanel") as StyleBoxFlat
+	var box: StyleBoxFlat = base.duplicate() as StyleBoxFlat if base != null else StyleBoxFlat.new()
+	if base == null:
+		box.set_border_width_all(2)
+		box.border_color = UiPalette.INK
+		box.set_corner_radius_all(6)
+		box.content_margin_left = 14.0
+		box.content_margin_right = 14.0
+		box.content_margin_top = 8.0
+		box.content_margin_bottom = 8.0
+	box.bg_color = _bg_for_icon(icon_name)
+	panel.add_theme_stylebox_override(&"panel", box)
 
 
 static func _icon_for_caption(text: String) -> String:

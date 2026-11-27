@@ -70,9 +70,11 @@ func _run() -> void:
 		"defeated_bosses": ["king_crab", "ancient_guardian"],
 		"discovered_items": ["moeda_antiga", "alianca_ouro"],
 		"intact_items": ["alianca_ouro"],
+		"stats": {"items_found": 2, "digs": 250},
+		"achievements": ["first_find", "boss_king_crab"],
 	})
 	var tabs: TabContainer = base.get_node("%TabContainer") as TabContainer
-	var shot_names: Array[String] = ["loja", "museu", "expedicoes", "diario"]
+	var shot_names: Array[String] = ["loja", "museu", "expedicoes", "diario", "conquistas"]
 	for i in range(shot_names.size()):
 		tabs.current_tab = i
 		if shot_names[i] == "expedicoes":
@@ -134,10 +136,10 @@ func _run() -> void:
 	ui._show_summary({"day": 3, "map_name": "Praia", "money_start": 1200, "money_end": 1200, "money_earned": 0, "entries": []})
 	await _shot("resumo_vazio")
 	ui._on_summary_close_pressed()
+	ui._on_leave_pressed()
 	ui.leave_confirm_label.text = SessionUI.LEAVE_HOST_TEXT
-	ui.leave_confirm_panel.visible = true
 	await _shot("sair_confirmacao")
-	ui.leave_confirm_panel.visible = false
+	ui._on_leave_cancel_pressed()
 	ui.loading_label.text = "Partindo para a expedição..."
 	ui.loading_screen.visible = true
 	await _shot("carregamento")
@@ -207,6 +209,9 @@ func _run() -> void:
 		await _shot("config_audio")
 		pause.settings_menu.tabs.current_tab = 2
 		await _shot("config_controles")
+		pause.settings_menu.start_capture("move_forward", SettingsMenu.COLUMN_KEYBOARD)
+		await _shot("config_controles_captura")
+		pause.settings_menu._end_capture()
 		pause.settings_menu.tabs.current_tab = 3
 		await _shot("config_jogabilidade")
 		pause.settings_menu.tabs.current_tab = SettingsMenu.TAB_ACCESSIBILITY
@@ -283,6 +288,29 @@ func _run() -> void:
 			CaptionsHud.instance.show_line(A11y.CAPTION_WEATHER)
 			await _shot("legendas_a11y")
 			CaptionsHud.instance.clear()
+		session.set("_night", true)
+		ui._refresh_expedition_bar()
+		await _shot("expedicao_noite_barra")
+		session.set("_night", false)
+		ui._refresh_expedition_bar()
+		var nb_script: GDScript = load("res://ui/expedition_notebook.gd") as GDScript if ResourceLoader.exists("res://ui/expedition_notebook.gd") else null
+		if nb_script != null:
+			var nb_actor: SnapshotLocalActor = SnapshotLocalActor.new()
+			current_scene.add_child(nb_actor)
+			var nb: CanvasLayer = nb_script.new() as CanvasLayer
+			root.add_child(nb)
+			await process_frame
+			nb.call("bind", nb_actor)
+			nb.call("open")
+			await _shot("caderno_expedicao_diario")
+			var nb_tabs: TabContainer = nb.get("_tabs") as TabContainer
+			if nb_tabs != null:
+				nb_tabs.current_tab = 2
+				await _shot("caderno_expedicao_colecao")
+			nb.call("close")
+			nb.queue_free()
+			nb_actor.queue_free()
+			await process_frame
 		if ui_layer != null:
 			ui_layer.visible = true
 
@@ -294,8 +322,43 @@ func _run() -> void:
 	boss_hud.queue_free()
 	GameState.instance.reset_state()
 	await _pad_shots()
+	await _motion_shots()
 	await _title_shots()
 	quit()
+
+
+## Amostras das micro-animações (#252) com UiMotion ativo: quadro intermediário vs assentado.
+func _motion_shots() -> void:
+	var pause: PauseMenu = PauseMenu.instance
+	var ui: SessionUI = SessionUI.instance
+	if pause == null or ui == null:
+		return
+	UiMotion.force_enabled = true
+	if pause.open():
+		await create_timer(0.045, true, false, true).timeout
+		await RenderingServer.frame_post_draw
+		var mid_path: String = ProjectSettings.globalize_path(OUT_DIR + "%smotion_pausa_mid_%s.png" % [_prefix, _tag])
+		root.get_texture().get_image().save_png(mid_path)
+		print("SHOT %s" % mid_path)
+		await create_timer(0.24, true, false, true).timeout
+		await RenderingServer.frame_post_draw
+		var end_path: String = ProjectSettings.globalize_path(OUT_DIR + "%smotion_pausa_settled_%s.png" % [_prefix, _tag])
+		root.get_texture().get_image().save_png(end_path)
+		print("SHOT %s" % end_path)
+		pause.close()
+	ui.show_save_toast(SessionUI.SAVE_FAILED_TEXT)
+	await create_timer(0.05, true, false, true).timeout
+	await RenderingServer.frame_post_draw
+	var toast_mid: String = ProjectSettings.globalize_path(OUT_DIR + "%smotion_toast_mid_%s.png" % [_prefix, _tag])
+	root.get_texture().get_image().save_png(toast_mid)
+	print("SHOT %s" % toast_mid)
+	await create_timer(0.24, true, false, true).timeout
+	await RenderingServer.frame_post_draw
+	var toast_end: String = ProjectSettings.globalize_path(OUT_DIR + "%smotion_toast_settled_%s.png" % [_prefix, _tag])
+	root.get_texture().get_image().save_png(toast_end)
+	print("SHOT %s" % toast_end)
+	ui.hide_save_toast()
+	UiMotion.force_enabled = false
 
 
 ## Controle (#102): aba Controles com as duas colunas, foco visível no menu de pausa com o
@@ -305,7 +368,17 @@ func _pad_shots() -> void:
 	if pause == null or InputDevice.instance == null:
 		return
 	InputDevice.instance.set_using_gamepad(true)
+	InputDevice.instance.set_using_pointer(false)
+	var museum_view: MuseumView = current_scene.get_node_or_null(^"MuseumView") as MuseumView
+	if museum_view != null and museum_view.is_available():
+		museum_view.open()
+		await create_timer(MuseumView.TWEEN_TIME + 0.15, true, false, true).timeout
+		museum_view.back_button.grab_focus()
+		await _shot("vitrine_museu_comando")
+		museum_view.close()
+		await create_timer(MuseumView.TWEEN_TIME + 0.1, true, false, true).timeout
 	if pause.open():
+		pause.settings_button.grab_focus()
 		await _shot("pausa_foco_comando")
 		pause.settings_button.pressed.emit()
 		pause.settings_menu.tabs.current_tab = SettingsMenu.TAB_CONTROLS
@@ -329,6 +402,7 @@ func _pad_shots() -> void:
 		ui_layer.visible = true
 	player.queue_free()
 	InputDevice.instance.set_using_gamepad(false)
+	InputDevice.instance.set_using_pointer(true)
 
 
 ## Tela inicial e slots (#100): sem save, com save, seletor (1 com ★, 1 ocupado, 1 vazio) e a
@@ -368,4 +442,15 @@ func _title_shots() -> void:
 	title.slot_delete_buttons[1].pressed.emit()
 	await _shot("titulo_apagar")
 	title.queue_free()
+
+
+class SnapshotLocalActor extends Node:
+	var marker_wheel: Control = null
+	var is_downed: bool = false
+
+	func is_local() -> bool:
+		return true
+
+	func is_alive() -> bool:
+		return true
 

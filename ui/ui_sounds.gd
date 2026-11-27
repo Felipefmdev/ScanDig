@@ -32,11 +32,17 @@ func _ready() -> void:
 
 func _hook_all(node: Node) -> void:
 	_on_node_added(node)
-	for child: Node in node.get_children():
+	for child: Node in node.get_children(true):
 		_hook_all(child)
 
 
 func _on_node_added(node: Node) -> void:
+	var tb: TabBar = node as TabBar
+	if tb != null and not tb.has_meta(_HOOKED_META):
+		tb.set_meta(_HOOKED_META, true)
+		tb.tab_hovered.connect(_on_tab_hovered.bind(tb))
+		tb.tab_clicked.connect(_on_tab_clicked.bind(tb))
+		return
 	var b: BaseButton = node as BaseButton
 	if b == null or b.has_meta(_HOOKED_META):
 		return
@@ -47,7 +53,30 @@ func _on_node_added(node: Node) -> void:
 
 
 func _muted(b: BaseButton) -> bool:
-	return not is_instance_valid(b) or bool(b.get_meta(MUTE_META, false)) or b.is_in_group(MUTE_GROUP)
+	return _muted_control(b)
+
+
+func _muted_control(c: Control) -> bool:
+	if not is_instance_valid(c) or bool(c.get_meta(MUTE_META, false)) or c.is_in_group(MUTE_GROUP):
+		return true
+	var p: Control = c.get_parent() as Control
+	return p != null and (bool(p.get_meta(MUTE_META, false)) or p.is_in_group(MUTE_GROUP))
+
+
+func _on_tab_hovered(_tab: int, tb: TabBar) -> void:
+	if _muted_control(tb) or not tb.is_visible_in_tree():
+		return
+	var now: int = Time.get_ticks_msec()
+	if now - _last_hover_ms < HOVER_MIN_INTERVAL_MS:
+		return
+	_last_hover_ms = now
+	_play(&"hover", SFX.UI_HOVER, HOVER_DB)
+
+
+func _on_tab_clicked(_tab: int, tb: TabBar) -> void:
+	if _muted_control(tb) or not tb.is_visible_in_tree():
+		return
+	_play(&"click", SFX.UI_CLICK, CLICK_DB)
 
 
 func _on_hover(b: BaseButton, from_focus: bool) -> void:
