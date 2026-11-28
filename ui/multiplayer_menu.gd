@@ -922,14 +922,21 @@ func _setup_visual_icons() -> void:
 	if leave_button != null:
 		leave_button.icon = UiIcons.get_icon("door", 18)
 	if new_game_dialog != null:
+		new_game_dialog.min_size = Vector2i(420, 152)
+		var dlg_lbl: Label = new_game_dialog.get_label()
+		if dlg_lbl != null:
+			dlg_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			dlg_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			dlg_lbl.custom_minimum_size = Vector2(368, 52)
 		var ok_btn: Button = new_game_dialog.get_ok_button()
 		var cancel_btn: Button = new_game_dialog.get_cancel_button()
 		if ok_btn != null:
-			ok_btn.custom_minimum_size = Vector2(164, 42)
+			ok_btn.custom_minimum_size = Vector2(172, 42)
 			UiMotion.attach_button(ok_btn)
 			UiFocus.follow_pointer(ok_btn.get_parent() as Control)
 		if cancel_btn != null:
-			cancel_btn.custom_minimum_size = Vector2(120, 42)
+			cancel_btn.custom_minimum_size = Vector2(132, 42)
+			UiMotion.attach_button(cancel_btn)
 			UiMotion.attach_button(cancel_btn)
 	if status_label != null and not status_label.text.is_empty():
 		_style_status_label(status_label.text)

@@ -30,6 +30,7 @@ var _header_icon: TextureRect = null
 var _header_title: Label = null
 var _header_progress: Label = null
 var _header_bar: ProgressBar = null
+var _header_pct: Label = null
 var _open: bool = false
 var _tent_transform: Transform3D = Transform3D.IDENTITY
 var _tween: Tween = null
@@ -87,6 +88,10 @@ func _refresh_text() -> void:
 		fill.set_border_width_all(1)
 		fill.set_corner_radius_all(3)
 		_header_bar.add_theme_stylebox_override(&"fill", fill)
+	if _header_pct != null:
+		var pct: int = roundi(100.0 * float(clampi(discovered, 0, maxi(total, 1))) / float(maxi(total, 1))) if total > 0 else 0
+		_header_pct.text = "%d%%" % pct
+		_header_pct.add_theme_color_override(&"font_color", UiPalette.GREEN_BOTTLE if full else UiPalette.WOOD_DARK)
 
 
 func is_open() -> bool:
@@ -262,3 +267,10 @@ func _build_header() -> void:
 	track.set_corner_radius_all(3)
 	_header_bar.add_theme_stylebox_override(&"background", track)
 	row.add_child(_header_bar)
+
+	_header_pct = Label.new()
+	_header_pct.name = "MuseumHeaderPct"
+	_header_pct.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_header_pct.add_theme_font_size_override(&"font_size", 15)
+	_header_pct.add_theme_color_override(&"font_color", UiPalette.WOOD_DARK)
+	row.add_child(_header_pct)

@@ -81,6 +81,8 @@ var _focus_before: Control = null
 var toast_label: Label = null
 var _toast_icon: TextureRect = null
 var _summary_title_icon: TextureRect = null
+var _summary_empty_box: CenterContainer = null
+var _summary_empty_label: Label = null
 ## Aviso de save: em qualquer tela (título, base, mapa) e por cima do carregamento.
 var save_toast_panel: PanelContainer = null
 var save_toast_label: Label = null
@@ -310,6 +312,48 @@ func _setup_visual_icons() -> void:
 		summary_title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		summary_title_label.reparent(sum_header_row, false)
 	summary_list.fixed_icon_size = Vector2i(20, 20)
+	if summary_list != null and _summary_empty_box == null:
+		_summary_empty_box = CenterContainer.new()
+		_summary_empty_box.name = "SummaryEmptyBox"
+		_summary_empty_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_summary_empty_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_summary_empty_box.visible = false
+		var empty_vbox: VBoxContainer = VBoxContainer.new()
+		empty_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		empty_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		empty_vbox.add_theme_constant_override(&"separation", 8)
+		var empty_badge: PanelContainer = PanelContainer.new()
+		empty_badge.name = "SummaryEmptyBadge"
+		empty_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		empty_badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var empty_bstyle: StyleBoxFlat = StyleBoxFlat.new()
+		empty_bstyle.bg_color = UiPalette.PAPER
+		empty_bstyle.border_color = Color(UiPalette.WOOD, 0.75)
+		empty_bstyle.set_border_width_all(2)
+		empty_bstyle.set_corner_radius_all(24)
+		empty_bstyle.content_margin_left = 8.0
+		empty_bstyle.content_margin_right = 8.0
+		empty_bstyle.content_margin_top = 8.0
+		empty_bstyle.content_margin_bottom = 8.0
+		empty_badge.add_theme_stylebox_override(&"panel", empty_bstyle)
+		var empty_icon: TextureRect = TextureRect.new()
+		empty_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		empty_icon.custom_minimum_size = Vector2(26, 26)
+		empty_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		empty_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		empty_icon.texture = UiIcons.get_icon("compass", 28)
+		empty_badge.add_child(empty_icon)
+		empty_vbox.add_child(empty_badge)
+		_summary_empty_label = Label.new()
+		_summary_empty_label.name = "SummaryEmptyLabel"
+		_summary_empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_summary_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_summary_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_summary_empty_label.custom_minimum_size = Vector2(360, 0)
+		_summary_empty_label.add_theme_color_override(&"font_color", UiPalette.WOOD)
+		empty_vbox.add_child(_summary_empty_label)
+		_summary_empty_box.add_child(empty_vbox)
+		summary_list.add_child(_summary_empty_box)
 	if leave_confirm_button != null:
 		leave_confirm_button.icon = UiIcons.get_icon("door", 18)
 		leave_confirm_button.custom_minimum_size = Vector2(148, 44)
@@ -1158,7 +1202,12 @@ func _show_summary(summary: Dictionary) -> void:
 		var icon: Texture2D = UiIcons.get_icon("museum" if is_donated else "coin", 24)
 		var row_idx: int = summary_list.add_item("%s — %s (+%s)" % [tr(str(e.get("name", "?"))), action_text, UiFormat.money(amount)], icon)
 		summary_list.set_item_custom_bg_color(row_idx, Color(UiPalette.GREEN_BOTTLE, 0.08) if is_donated else Color(UiPalette.GOLD, 0.08))
-	if summary_list.item_count == 0:
+	var is_empty: bool = summary_list.item_count == 0
+	if _summary_empty_box != null:
+		if _summary_empty_label != null:
+			_summary_empty_label.text = tr("Nenhum item vendido ou doado nesta expedição.")
+		_summary_empty_box.visible = is_empty
+	elif is_empty:
 		var empty_idx: int = summary_list.add_item(tr("Nenhum item vendido ou doado nesta expedição."), UiIcons.get_icon("compass", 24))
 		summary_list.set_item_custom_fg_color(empty_idx, UiPalette.WOOD)
 	if _summary_money_tween != null:

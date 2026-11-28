@@ -294,6 +294,22 @@ const SHAPES: Dictionary = {
 		+ "<path d=\"M12.2 11.4 L24.6 8.6\" fill=\"none\" stroke=\"#FFF0B8\" stroke-width=\"2\" stroke-linecap=\"round\"/>"
 		+ "<ellipse cx=\"9.4\" cy=\"23.4\" rx=\"3.8\" ry=\"3\" transform=\"rotate(-16 9.4 23.4)\" fill=\"#F2C144\" {o}/>"
 		+ "<ellipse cx=\"21.8\" cy=\"20.8\" rx=\"3.8\" ry=\"3\" transform=\"rotate(-16 21.8 20.8)\" fill=\"#F2C144\" {o}/>",
+
+	# Sino acustico de latao com badalo e ondas de impacto para a faixa de Efeitos Sonoros.
+	"sfx": "<path d=\"M14 4.2 A2 2 0 0 1 18 4.2\" fill=\"none\" {o}/>"
+		+ "<path d=\"M8.5 19.5 C8.5 12.2 10.6 7.2 16 7.2 C21.4 7.2 23.5 12.2 23.5 19.5 L25.8 22.4 H6.2 Z\" fill=\"#F2C144\" {o}/>"
+		+ "<path d=\"M17.5 8 C21.2 9.2 22.8 13.4 22.8 19.4 L24.8 21.8 H18.6 C19.2 15.8 18.8 11.2 17.5 8 Z\" fill=\"#C98E18\"/>"
+		+ "<path d=\"M8.5 19.5 C8.5 12.2 10.6 7.2 16 7.2 C21.4 7.2 23.5 12.2 23.5 19.5 L25.8 22.4 H6.2 Z\" fill=\"none\" {o}/>"
+		+ "<circle cx=\"16\" cy=\"24.8\" r=\"2.6\" fill=\"#D9772B\" {o}/>"
+		+ "<path d=\"M4.4 11.5 A8.5 8.5 0 0 0 4.4 18.5 M27.6 11.5 A8.5 8.5 0 0 1 27.6 18.5\" fill=\"none\" {o}/>",
+
+	# Controle ergonomico cel-shaded com direcional em cruz e botoes de acao para Controles e Vibracao.
+	"gamepad": "<path d=\"M8.5 9.2 H23.5 C26.8 9.2 28.6 12.6 27.8 18.6 L26.8 23.8 C26.2 26.2 23.6 26.6 21.8 24.6 L19.2 21.4 H12.8 L10.2 24.6 C8.4 26.6 5.8 26.2 5.2 23.8 L4.2 18.6 C3.4 12.6 5.2 9.2 8.5 9.2 Z\" fill=\"#FAF0D7\" {o}/>"
+		+ "<path d=\"M19.2 21.4 L21.8 24.6 C23.6 26.6 26.2 26.2 26.8 23.8 L27.8 18.6 C28.3 14.8 27.4 11.8 25.6 10.2 C25.8 14.8 24.8 18.8 22.2 21.4 Z\" fill=\"#DFCFA8\"/>"
+		+ "<path d=\"M8.5 9.2 H23.5 C26.8 9.2 28.6 12.6 27.8 18.6 L26.8 23.8 C26.2 26.2 23.6 26.6 21.8 24.6 L19.2 21.4 H12.8 L10.2 24.6 C8.4 26.6 5.8 26.2 5.2 23.8 L4.2 18.6 C3.4 12.6 5.2 9.2 8.5 9.2 Z\" fill=\"none\" {o}/>"
+		+ "<path d=\"M10.4 13.2 V18.4 M7.8 15.8 H13\" fill=\"none\" stroke=\"#2B2118\" stroke-width=\"2.5\" stroke-linecap=\"round\"/>"
+		+ "<circle cx=\"22.4\" cy=\"14.2\" r=\"1.7\" fill=\"#D9772B\" {i}/>"
+		+ "<circle cx=\"19.6\" cy=\"17\" r=\"1.7\" fill=\"#4EA36E\" {i}/>",
 }
 
 static var _cache: Dictionary = {}

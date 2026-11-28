@@ -626,18 +626,35 @@ func _build() -> void:
 	# Confirmação (apagar / jogo novo por cima de um save)
 	var confirm_box: VBoxContainer = VBoxContainer.new()
 	confirm_box.add_theme_constant_override("separation", 12)
+	var confirm_badge: PanelContainer = PanelContainer.new()
+	confirm_badge.name = "ConfirmBadge"
+	confirm_badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var cbadge_style: StyleBoxFlat = StyleBoxFlat.new()
+	cbadge_style.bg_color = UiPalette.PAPER_LIGHT
+	cbadge_style.border_color = UiPalette.INK
+	cbadge_style.set_border_width_all(2)
+	cbadge_style.set_corner_radius_all(28)
+	cbadge_style.shadow_color = UiPalette.SHADOW
+	cbadge_style.shadow_size = 1
+	cbadge_style.shadow_offset = Vector2(1, 2)
+	cbadge_style.content_margin_left = 10.0
+	cbadge_style.content_margin_right = 10.0
+	cbadge_style.content_margin_top = 10.0
+	cbadge_style.content_margin_bottom = 10.0
+	confirm_badge.add_theme_stylebox_override(&"panel", cbadge_style)
 	var confirm_emblem: TextureRect = TextureRect.new()
 	confirm_emblem.custom_minimum_size = Vector2(28, 28)
 	confirm_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	confirm_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	confirm_emblem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	confirm_emblem.texture = UiIcons.get_icon("warning", 28)
-	confirm_box.add_child(confirm_emblem)
+	confirm_badge.add_child(confirm_emblem)
+	confirm_box.add_child(confirm_badge)
 	confirm_box.visibility_changed.connect(func() -> void:
 		if confirm_box.is_visible_in_tree():
-			UiMotion.breathe_emblem(confirm_emblem, 1.06, 2.5, 1.1, false)
+			UiMotion.breathe_emblem(confirm_badge, 1.055, 2.4, 1.1, false)
 		else:
-			UiMotion.stop(confirm_emblem, true))
+			UiMotion.stop(confirm_badge, true))
 	confirm_label = Label.new()
 	confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	confirm_box.add_child(confirm_label)

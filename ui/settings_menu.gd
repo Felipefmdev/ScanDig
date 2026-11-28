@@ -155,19 +155,36 @@ func _inset_card(child: Control, px: int = 12) -> PanelContainer:
 	return card
 
 
-func _dialog_emblem(box: VBoxContainer, title_text: String = "") -> void:
+func _dialog_emblem(box: VBoxContainer, title_text: String = "", icon_name: String = "warning") -> void:
+	var badge: PanelContainer = PanelContainer.new()
+	badge.name = "EmblemBadge"
+	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var bstyle: StyleBoxFlat = StyleBoxFlat.new()
+	bstyle.bg_color = UiPalette.PAPER_LIGHT
+	bstyle.border_color = UiPalette.INK
+	bstyle.set_border_width_all(2)
+	bstyle.set_corner_radius_all(24)
+	bstyle.shadow_color = UiPalette.SHADOW
+	bstyle.shadow_size = 1
+	bstyle.shadow_offset = Vector2(1, 2)
+	bstyle.content_margin_left = 8.0
+	bstyle.content_margin_right = 8.0
+	bstyle.content_margin_top = 8.0
+	bstyle.content_margin_bottom = 8.0
+	badge.add_theme_stylebox_override(&"panel", bstyle)
 	var icon: TextureRect = TextureRect.new()
-	icon.custom_minimum_size = Vector2(28, 28)
+	icon.custom_minimum_size = Vector2(26, 26)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	icon.texture = UiIcons.get_icon("warning", 28)
-	box.add_child(icon)
+	icon.texture = UiIcons.get_icon(icon_name, 28)
+	badge.add_child(icon)
+	box.add_child(badge)
 	box.visibility_changed.connect(func() -> void:
 		if box.is_visible_in_tree():
-			UiMotion.breathe_emblem(icon, 1.06, 2.2, 1.05, true)
+			UiMotion.breathe_emblem(badge, 1.055, 2.2, 1.05, true)
 		else:
-			UiMotion.stop(icon, true))
+			UiMotion.stop(badge, true))
 	if not title_text.is_empty():
 		var header: Label = Label.new()
 		header.text = title_text
@@ -332,7 +349,7 @@ func _build() -> void:
 	# Áudio
 	var audio: GridContainer = _grid()
 	audio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var audio_icons: Dictionary = {"master": "audio", "music": "music", "sfx": "bulb"}
+	var audio_icons: Dictionary = {"master": "audio", "music": "music", "sfx": "sfx"}
 	for key: String in AUDIO_LABELS.keys():
 		var row: Array = _slider_row(audio, AUDIO_LABELS[key], 0.0, 100.0, 5.0, str(audio_icons.get(key, "")))
 		var slider: HSlider = row[0]
@@ -366,7 +383,7 @@ func _build() -> void:
 		controls.add_child(label)
 		for column: String in [COLUMN_KEYBOARD, COLUMN_PAD]:
 			var bind_button: Button = Button.new()
-			bind_button.custom_minimum_size = Vector2(150, 36)
+			bind_button.custom_minimum_size = Vector2(166, 36)
 			bind_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			bind_button.focus_mode = Control.FOCUS_ALL
 			bind_button.clip_text = true
@@ -381,7 +398,7 @@ func _build() -> void:
 	# com o comando dá uma prévia.
 	var vibration_grid: GridContainer = _grid()
 	vibration_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var vibration_row: Array = _slider_row(vibration_grid, "Vibração", 0.0, 100.0, 5.0)
+	var vibration_row: Array = _slider_row(vibration_grid, "Vibração", 0.0, 100.0, 5.0, "gamepad")
 	vibration_slider = vibration_row[0]
 	vibration_value = vibration_row[1]
 	vibration_slider.value_changed.connect(_on_vibration_changed)
@@ -488,7 +505,7 @@ func _build() -> void:
 	tabs.add_child(a11y_scroll)
 	var tab_bar: TabBar = tabs.get_tab_bar()
 	tab_bar.add_theme_constant_override(&"icon_max_width", 16)
-	var tab_icons: Array[String] = ["display", "audio", "wrench", "compass", "bulb"]
+	var tab_icons: Array[String] = ["display", "audio", "gamepad", "compass", "bulb"]
 	for i: int in mini(tabs.get_tab_count(), tab_icons.size()):
 		tabs.set_tab_icon(i, UiIcons.get_icon(tab_icons[i], 16))
 
@@ -521,7 +538,7 @@ func _build() -> void:
 	confirm_panel.visible = false
 	var confirm_box: VBoxContainer = VBoxContainer.new()
 	confirm_box.add_theme_constant_override("separation", 10)
-	_dialog_emblem(confirm_box, "Modo de janela")
+	_dialog_emblem(confirm_box, "Modo de janela", "display")
 	confirm_label = Label.new()
 	confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	confirm_box.add_child(confirm_label)
@@ -549,7 +566,7 @@ func _build() -> void:
 	conflict_panel.visible = false
 	var conflict_box: VBoxContainer = VBoxContainer.new()
 	conflict_box.add_theme_constant_override("separation", 10)
-	_dialog_emblem(conflict_box, "Controles")
+	_dialog_emblem(conflict_box, "Controles", "gamepad")
 	conflict_label = Label.new()
 	conflict_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	conflict_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -990,8 +1007,8 @@ func _style_bind_button(button: Button, waiting: bool) -> void:
 		wait_box.set_border_width_all(2)
 		wait_box.border_width_bottom = 3
 		wait_box.set_corner_radius_all(4)
-		wait_box.content_margin_left = 4.0
-		wait_box.content_margin_right = 4.0
+		wait_box.content_margin_left = 10.0
+		wait_box.content_margin_right = 10.0
 		wait_box.content_margin_top = 4.0
 		wait_box.content_margin_bottom = 4.0
 		for state: StringName in [&"normal", &"hover", &"pressed"]:

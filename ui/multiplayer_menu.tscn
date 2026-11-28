@@ -250,7 +250,8 @@ size_flags_vertical = 3
 [node name="NewGameDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
 title = "Novo jogo"
-size = Vector2i(380, 120)
+size = Vector2i(420, 152)
+unresizable = true
 ok_button_text = "Apagar e começar"
 cancel_button_text = "Cancelar"
 dialog_autowrap = true
